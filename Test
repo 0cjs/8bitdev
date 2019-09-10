@@ -38,3 +38,11 @@ builddir="$basedir/.build"
 
 download_asxxxx
 . ./activate -q
+
+export PATH="$builddir/bin:$PATH"
+cd "$basedir"
+mkdir -p "$builddir/obj"
+
+as6500 -l -o "$builddir/obj/simple.rel" src/simple.a65
+#   Replace form feeds since we view listing only on screen.
+sed -i -e 's/\f/\n/' "$builddir/obj/simple.lst"

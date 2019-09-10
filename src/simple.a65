@@ -1,0 +1,15 @@
+;   Simple 6502 routines to test
+
+            .radix h
+
+            .area   code (abs)
+            .org    400
+
+;   Add X and Y, storing the result in xybuf and returning it in A
+            .globl addxy,xybuf
+addxy:      txa
+            sty xybuf
+            clc
+            adc xybuf
+            rts
+xybuf:      .ds     1

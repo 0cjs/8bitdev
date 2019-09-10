@@ -33,6 +33,9 @@ download_asxxxx() {
     #   help message returns an error exit code.
 }
 
+####################################################################
+#   Main
+
 basedir=$(cd "$(dirname "$0")" && pwd -P)
 builddir="$basedir/.build"
 
@@ -43,6 +46,13 @@ export PATH="$builddir/bin:$PATH"
 cd "$basedir"
 mkdir -p "$builddir/obj"
 
+####################################################################
+#   Build code
+#
+#   This is hardcoded to build and test just src/simple.a65 and has
+#   no dependency graph so it rebuilds everything each time.
+#   (Fortunately this is quite fast.)
+
 as6500 -l -o "$builddir/obj/simple.rel" src/simple.a65
 aslink -n -u -t "$builddir/obj/simple.rel"
 
@@ -51,3 +61,6 @@ aslink -n -u -t "$builddir/obj/simple.rel"
 #   otherwise the extra newlines make the linker edit the wrong lines
 #   in the .lst file.
 sed -i -e 's/\f/\n/' "$builddir"/obj/*.[lr]st
+
+#   XXX This probably relies on the cwd to find the pytest.ini.
+pytest -q src/

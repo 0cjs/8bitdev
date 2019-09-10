@@ -72,5 +72,6 @@ aslink -n -u -m -t "$builddir/obj/simple.rel"
 #   in the .lst file.
 sed -i -e 's/\f/\n/' "$builddir"/obj/*.{lst,rst,map}
 
+export PYTHONPATH="$basedir/pylib"
 #   XXX This probably relies on the cwd to find the pytest.ini.
-pytest $quiet src/
+pytest $quiet pylib/ src/

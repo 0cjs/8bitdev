@@ -44,5 +44,10 @@ cd "$basedir"
 mkdir -p "$builddir/obj"
 
 as6500 -l -o "$builddir/obj/simple.rel" src/simple.a65
-#   Replace form feeds since we view listing only on screen.
-sed -i -e 's/\f/\n/' "$builddir/obj/simple.lst"
+aslink -n -u -t "$builddir/obj/simple.rel"
+
+#   Replace form feeds since we view listing only on screen. This must
+#   be done *after* the .rst file is created by the linker because
+#   otherwise the extra newlines make the linker edit the wrong lines
+#   in the .lst file.
+sed -i -e 's/\f/\n/' "$builddir"/obj/*.[lr]st

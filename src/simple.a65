@@ -4,6 +4,7 @@
 
             .area   code (abs)
             .org    400
+            .end    400         ; entry point
 
 ;   Add X and Y, storing the result in xybuf and returning it in A
             .globl addxy,xybuf

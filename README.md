@@ -2,6 +2,16 @@
 =======
 
 
+This demonstrates unit testing of machine-language code using pytest.
+The code is built and linked with [ASxxxx]. We then bring up an
+instance of a [py65] CPU within our test framework, load the binary
+file into its memory, run a bit of code, and then check that the
+registers and memory are correct. (The APIs for doing this still need
+a _lot_ of work.)
+
+Run the top-level `./Test` script to see everything go.
+
+
 py65
 ----
 
@@ -63,3 +73,5 @@ Execution:
 [py65]: http://py65.readthedocs.org/
 [py65src]: https://github.com/mnaberez/py65
 [vice-mon]: http://vice-emu.sourceforge.net/vice_12.html
+
+[ASxxxx]: http://shop-pdp.net/ashtml/asxxxx.htm

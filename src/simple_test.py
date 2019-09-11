@@ -1,28 +1,33 @@
 from tmpu import TMPU
 
-LDAi    = 0xA9      # immediate
-LDXz    = 0xA6      # zero page
+JSR     = 0x20
 NOP     = 0xEA
 
-def test_mpu_step():
-    ''' Test a little program we've hand assembled here to show
-        that we're using the MPU API correctly.
-    '''
-    #   See py65/monitor.py for examples of how to set up and use the MPU.
+def test_addxy():
     tmpu = TMPU()
 
-    tmpu.deposit(7, [0x7E])
-    tmpu.deposit(0x400, [
-        LDAi, 0xEE,
-        LDXz, 0x07,
-        NOP,
-    ])
-    assert   0x07 == tmpu.mpu.ByteAt(0x403)
-    assert 0xEEA9 == tmpu.mpu.WordAt(0x400)  # LSB, MSB
+    #   XXX Not the best way to find this file: duplicates definition
+    #   of $buildir in Test and dependent on CWD.
+    with open('.build/obj/simple.bin', 'rb') as f:
+        tmpu.load_bin(f.read())
 
-    tmpu.assertregs(0, 0, 0, 0)
-    tmpu.setregs(pc=0x400)
+    #   XXX We should be looking up these symbol locations from a
+    #   debugger symbol table file.
+    ident = 0x400
+    addxy = 0x40a
+    xybuf = 0x416
 
-    tmpu.step(); tmpu.assertregs(0x402, a=0xEE)
-    tmpu.step(); tmpu.assertregs(0x404, x=0x7E)
-    tmpu.step(); tmpu.assertregs(0x405, 0xEE, 0x7E, 0x00)
+    #   Confirm we've loaded the correct file.
+    ident_str = "simple.a65"
+    assert ident_str == tmpu.strAt(ident, len(ident_str))
+
+    tmpu.deposit(0x8000, [
+        JSR, addxy & 0xff, (addxy & 0xff00) >> 8,
+        NOP, NOP, NOP, NOP ])
+    assert addxy == tmpu.wordAt(0x8001)     # Did we set it up right?
+    tmpu.setregs(pc=addxy, x=0x12, y=0x34)
+    #   XXX Test entry with carry flag set.
+    tmpu.deposit(xybuf, [0xff])
+    tmpu.step(7+2)      # Execute a couple NOPs for safety
+    tmpu.assertregs(a=0x12+0x34)
+    assert 0x12+0x34 == tmpu.byteAt(xybuf)

@@ -6,11 +6,14 @@
             .org    400
             .end    400         ; entry point
 
+ident:      .str    "simple.a65"
+
 ;   Add X and Y, storing the result in xybuf and returning it in A
             .globl addxy,xybuf
 addxy:      txa
             sty xybuf
             clc
             adc xybuf
+            sta xybuf
             rts
 xybuf:      .ds     1

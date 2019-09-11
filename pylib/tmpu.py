@@ -2,6 +2,7 @@
 '''
 
 from    struct  import unpack_from
+from    itertools  import repeat
 from    py65.devices.mpu6502  import MPU
 
 class TMPU():
@@ -27,6 +28,12 @@ class TMPU():
             - Hex comparisions would be nice.
             - Can we end the stack trace one level above this?
         '''
+        #   XXX The assertions must not happen here because this is not
+        #   compiled with pytest's instrumentation, so we don't see the
+        #   values that failed. Change the API to take a set of registers
+        #   (and flags?) to return and return a (named?) tuple that the
+        #   caller can compare. Or just return everything and let the
+        #   object's comparison routine ignore any unset values?
         m = self.mpu
         if pc is not None:  assert pc == m.pc
         if  a is not None:  assert  a == m.a
@@ -37,7 +44,19 @@ class TMPU():
             #   Ignore unused bits 5 and 4 in the processor status register.
             assert  p & 0b11001111 == m.p & 0b11001111
 
+    #   XXX This "examine" interface isn't so nice. Perhaps we can condense
+    #   in down to a single examine() function that takes a length and type?
+
+    def byteAt(self, addr):
+        ' Examine a byte from memory. '
+        return self.mpu.ByteAt(addr)
+
+    def wordAt(self, addr):
+        ' Examine a word from memory. '
+        return self.mpu.WordAt(addr)
+
     def strAt(self, addr, len):
+        ' Examine a string from memory. '
         #   This currently throws an exception if any of the bytes
         #   in the memory range are >0x7f. It's not clear how we
         #   should be decoding those. Possibly we want an option to
@@ -53,8 +72,9 @@ class TMPU():
             self.deposit(addr, data)
         self.mpu.pc = recs.entrypoint
 
-    def step(self):
-        self.mpu.step()
+    def step(self, count=1):
+        for _ in repeat(None, count):
+            self.mpu.step()
 
 class ParseBin(list):
     ''' Parse records in "Tandy CoCo Disk BASIC binary" (.bin) format

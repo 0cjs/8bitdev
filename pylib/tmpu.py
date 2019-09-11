@@ -37,6 +37,13 @@ class TMPU():
             #   Ignore unused bits 5 and 4 in the processor status register.
             assert  p & 0b11001111 == m.p & 0b11001111
 
+    def strAt(self, addr, len):
+        #   This currently throws an exception if any of the bytes
+        #   in the memory range are >0x7f. It's not clear how we
+        #   should be decoding those. Possibly we want an option to
+        #   clear the high bit on all chars before decoding.
+        return bytes(self.mpu.memory[addr:addr+len]).decode('ASCII')
+
     def deposit(self, addr, values):
         self.mpu.memory[addr:addr+len(values)] = values
 
@@ -58,6 +65,9 @@ class ParseBin(list):
         produce valid output.
     '''
     def __init__(self, buf):
+        #   There's not really any reason to keep the buf here, actually,
+        #   so it would be more efficient to change this to use a binary
+        #   input stream.
         self.buf = buf
         pos = 0
         while True:

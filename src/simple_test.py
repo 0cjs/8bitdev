@@ -31,3 +31,35 @@ def test_addxy():
     tmpu.step(7+2)      # Execute a couple NOPs for safety
     tmpu.assertregs(a=0x12+0x34)
     assert 0x12+0x34 == tmpu.byteAt(xybuf)
+
+def test_jmpptr():
+    tmpu = TMPU()
+    with open('.build/obj/simple.bin', 'rb') as f:
+        tmpu.load_bin(f.read())
+
+    ident       = 0x0400
+    jmpptr      = 0x0010
+    jmpabs      = 0x0417
+    jmplist     = 0x0427
+
+    ident_str = "simple.a65"
+    assert ident_str == tmpu.strAt(ident, len(ident_str))
+
+    #   Step by step testing, to make _really_ sure the instructions
+    #   are doing what I intend. Maybe overkill?
+
+    tmpu.setregs(pc=jmpabs, a=2)
+    tmpu.step()                 # asl
+    tmpu.assertregs(a=4)
+    tmpu.step()                 # tax
+    tmpu.step()                 # lda jmplist,X  ;LSB
+    tmpu.assertregs(a=0xbc)
+    tmpu.step()                 # sta jmpptr
+    tmpu.step()                 # indx
+    tmpu.step()                 # lda jmplist,X  ;MSB
+    tmpu.step()                 # sta jmpptr+1
+    assert 0x9abc == tmpu.wordAt(jmpptr)
+    tmpu.step()                 # jmp [jmpptr]
+    tmpu.assertregs(pc=0x9abc)
+
+    #print(hex(tmpu.mpu.pc), hex(tmpu.mpu.a), hex(tmpu.mpu.x))

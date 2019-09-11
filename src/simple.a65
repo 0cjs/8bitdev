@@ -17,3 +17,27 @@ addxy:      txa
             sta xybuf
             rts
 xybuf:      .ds     1
+
+;----------------------------------------------------------------------
+;   JMP [addr] vs PHA/RTS
+;   See Woz's Sweet 16 article for details.
+;   Enter with the index (0-3) of the jmplist routine in A.
+
+jmpptr      =       0010        ; zero page
+
+jmpabs:     asl                 ; convert index to word offset
+            tax
+            lda     jmplist,X   ; destination addr LSB
+            sta     jmpptr
+            inx
+            lda     jmplist,X   ; destination addr MSB
+            sta     jmpptr+1
+            jmp     [jmpptr]
+
+
+;   This is a table of entry points for routines.
+;   WARNING: It must not cross a page boundary!
+jmplist:    .dw     1234
+            .dw     5678
+            .dw     9abc
+            .dw     $$def0      ; Starts with letter = read as symbol

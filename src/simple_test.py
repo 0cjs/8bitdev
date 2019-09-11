@@ -55,7 +55,7 @@ def test_jmpptr():
     tmpu.step()                 # lda jmplist,X  ;LSB
     tmpu.assertregs(a=0xbc)
     tmpu.step()                 # sta jmpptr
-    tmpu.step()                 # indx
+    tmpu.step()                 # inx
     tmpu.step()                 # lda jmplist,X  ;MSB
     tmpu.step()                 # sta jmpptr+1
     assert 0x9abc == tmpu.wordAt(jmpptr)
@@ -63,3 +63,25 @@ def test_jmpptr():
     tmpu.assertregs(pc=0x9abc)
 
     #print(hex(tmpu.mpu.pc), hex(tmpu.mpu.a), hex(tmpu.mpu.x))
+
+def test_jmpabsrts():
+    tmpu = TMPU()
+    with open('.build/obj/simple.bin', 'rb') as f:
+        tmpu.load_bin(f.read())
+
+    ident       = 0x0400
+    jmplist     = 0x0427
+    jmpabsrts   = 0x0437
+
+    ident_str = "simple.a65"
+    assert ident_str == tmpu.strAt(ident, len(ident_str))
+
+    tmpu.setregs(pc=jmpabsrts, a=1)
+    tmpu.step()                 # asl
+    tmpu.step()                 # tax
+    tmpu.step()                 # lda MSB
+    tmpu.step()                 # pha
+    tmpu.step()                 # lda ;LSB
+    tmpu.step()                 # pha
+    tmpu.step()                 # rts
+    tmpu.assertregs(pc=0x5678)

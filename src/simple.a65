@@ -34,10 +34,23 @@ jmpabs:     asl                 ; convert index to word offset
             sta     jmpptr+1
             jmp     [jmpptr]
 
-
 ;   This is a table of entry points for routines.
 ;   WARNING: It must not cross a page boundary!
 jmplist:    .dw     1234
             .dw     5678
             .dw     9abc
             .dw     $$def0      ; Starts with letter = read as symbol
+
+;   Stores the address _before_ the routine, to avoid an add in jmpabsrts
+jmprtslist: .dw     1234-1
+            .dw     5678-1
+            .dw     9abc-1
+            .dw     $$def0-1    ; Starts with letter = read as symbol
+
+jmpabsrts:  asl                 ; convert index to word offset
+            tax
+            lda     jmprtslist+1,X ; dest addr MSB
+            pha
+            lda     jmprtslist,X   ; dest addr LSB
+            pha
+            rts

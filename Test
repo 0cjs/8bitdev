@@ -59,7 +59,7 @@ mkdir -p "$builddir/obj"
 #   no dependency graph so it rebuilds everything each time.
 #   (Fortunately this is quite fast.)
 
-as6500 -l -o "$builddir/obj/simple.rel" src/simple.a65
+as6500 -p -l -o "$builddir/obj/simple.rel" src/simple.a65
 aslink -n -u -m -t "$builddir/obj/simple.rel"
 
 #   Replace form feeds since we view listing only on screen. This must

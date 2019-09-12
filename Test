@@ -46,7 +46,7 @@ basedir=$(cd "$(dirname "$0")" && pwd -P)
 builddir="$basedir/.build"
 
 download_asxxxx
-. ./activate ${verbose:+-q}
+. ./activate -q
 
 export PATH="$builddir/bin:$PATH"
 cd "$basedir"

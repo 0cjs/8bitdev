@@ -1,4 +1,4 @@
-from tmpu import TMPU
+from tmpu import TMPU, Regs as R
 
 JSR     = 0x20
 NOP     = 0xEA
@@ -29,7 +29,7 @@ def test_addxy():
     #   XXX Test entry with carry flag set.
     tmpu.deposit(xybuf, [0xff])
     tmpu.step(7+2)      # Execute a couple NOPs for safety
-    tmpu.assertregs(a=0x12+0x34)
+    assert R(a=0x12+0x34) == tmpu.regs
     assert 0x12+0x34 == tmpu.byteAt(xybuf)
 
 def test_jmpptr():
@@ -50,17 +50,17 @@ def test_jmpptr():
 
     tmpu.setregs(pc=jmpabs, a=2)
     tmpu.step()                 # asl
-    tmpu.assertregs(a=4)
+    assert R(a=4) == tmpu.regs
     tmpu.step()                 # tax
     tmpu.step()                 # lda jmplist,X  ;LSB
-    tmpu.assertregs(a=0xbc)
+    assert R(a=0xBC) == tmpu.regs
     tmpu.step()                 # sta jmpptr
     tmpu.step()                 # inx
     tmpu.step()                 # lda jmplist,X  ;MSB
     tmpu.step()                 # sta jmpptr+1
     assert 0x9abc == tmpu.wordAt(jmpptr)
     tmpu.step()                 # jmp [jmpptr]
-    tmpu.assertregs(pc=0x9abc)
+    assert R(pc=0x9ABC) == tmpu.regs
 
     #print(hex(tmpu.mpu.pc), hex(tmpu.mpu.a), hex(tmpu.mpu.x))
 
@@ -84,4 +84,4 @@ def test_jmpabsrts():
     tmpu.step()                 # lda ;LSB
     tmpu.step()                 # pha
     tmpu.step()                 # rts
-    tmpu.assertregs(pc=0x5678)
+    assert R(pc=0x5678) == tmpu.regs

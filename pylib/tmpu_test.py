@@ -1,5 +1,99 @@
-from tmpu import TMPU           # public
-from tmpu import ParseBin       # internal
+from    tmpu import  TMPU, Regs         # public
+from    tmpu import  ParseBin           # internal
+import  pytest
+
+####################################################################
+#   Regs
+
+def test_Regs_cons():
+    r = Regs(0x1234, x=0x56, C=1, I=0)
+    assert r.pc == 0x1234
+    assert r.a  is None
+    assert r.x  == 0x56
+    assert r.y  is None
+    assert r.Z  == None
+    assert r.C  == 1
+    assert r.I  == 0
+
+    #   Immutable
+    with pytest.raises(AttributeError) as e:
+        r.I = 1
+    assert e.match("can't set attribute")
+
+def test_Regs_cons_badvalue():
+    with pytest.raises(ValueError) as e:
+        Regs('hello')
+    assert e.match('bad value: hello')
+    with pytest.raises(ValueError) as e:
+        Regs(-1)
+    assert e.match('bad value: -1')
+
+def test_Regs_conspsr():
+    ' Construction with a program status register byte as pushed on stack. '
+
+    with pytest.raises(AttributeError) as e:
+        Regs(psr=0xff, V=0)
+    assert e.match("must not give both psr and flag values")
+
+    with pytest.raises(AttributeError) as e:
+        Regs(psr=0x123)
+    assert e.match('invalid psr: 0x123')
+
+    r = Regs(psr=0xff)
+    assert (  1,   1, 1,   1,   1,   1) \
+        == (r.N, r.V, r.D, r.I, r.Z, r.C)
+
+    r = Regs(psr=0)
+    assert (  0,   0, 0,   0,   0,   0) \
+        == (r.N, r.V, r.D, r.I, r.Z, r.C)
+
+def test_Regs_repr_1():
+    r = Regs(1, 2, 0xa0, sp=0xfe, psr=0b10101010)
+    rs = '6502 pc=0001 a=02 x=A0 y=-- sp=FE Nv--DiZc'
+    assert rs == repr(r)
+    assert rs == str(r)
+
+def test_Regs_repr_2():
+    r = Regs(y=7, V=1, Z=0)
+    rs = '6502 pc=---- a=-- x=-- y=07 sp=-- -V----z-'
+    assert rs == repr(r)
+    assert rs == str(r)
+
+def test_Regs_eq_pc_only():
+    assert Regs(1234) != 1234
+    assert      1234  != Regs(1234)
+    assert Regs(1234) == Regs(1234)
+    assert Regs(None) == Regs(1234)
+    assert Regs(1234) == Regs(None)
+    assert Regs(None) == Regs(None)
+    assert Regs(1234) != Regs(1235)
+
+def test_Regs_eq():
+    all     = Regs(0x1234, 0x56, 0x78, 0x9a, 0xbc, psr=0b01010101)
+    again   = Regs(0x1234, 0x56, 0x78, 0x9a, 0xbc, psr=0b01010101)
+
+    assert      all == all
+    assert not (all != all)     # Were we seeing __ne__() delgation problems?
+    assert      all == again
+    assert not (all != again)
+
+    assert all != Regs(0)
+    assert all != Regs(1)
+    assert all == Regs(0x1234)
+
+    assert all != Regs(a=0)
+    assert all != Regs(a=1)
+    assert all == Regs(a=0x56)
+
+    assert all != Regs(C=0)
+    assert all == Regs(C=1)
+    assert all == Regs(y=0x9a, sp=0xbc, V=1, D=0, I=1, Z=0)
+
+
+####################################################################
+#   TMPU and loader
+
+R = Regs
 
 LDAi    = 0xA9      # immediate
 LDXz    = 0xA6      # zero page
@@ -30,47 +124,16 @@ BINDATA = bytes.fromhex(''
     + 'ff 0000 0403'    # final record has entry point
     )
 
-def test_parse_bin():
-    p = ParseBin(BINDATA)
-    rec0data = [0xee]
-    rec1data = [0x8a, 0x8c, 0x09, 0x04, 0x18, 0x6d, 0x09, 0x04, 0x60]
-    assert (0x0123, rec0data) == p[0]
-    assert (0x0400, rec1data) == p[1]
-    #   Entries only for data records, not the entrypoint record
-    assert 2 == len(p)
-    assert 0x0403 == p.entrypoint
-
-def test_load_bin():
-    expected_mem \
-        = [0] * 0x123 \
-        + [0xEE] \
-        + [0] * (0x400 - 0x124) \
-        + [0x8a, 0x8c, 0x09, 0x04, 0x18, 0x6d, 0x09, 0x04, 0x60] \
-        + [0] * (0x10000 - 0x400 - 9)
+def test_tmpu_setregs():
     tmpu = TMPU()
-    tmpu.load_bin(BINDATA)
-    tmpu.assertregs(pc=0x0403)
-    assert expected_mem == tmpu.mpu.memory
-
-def test_regs():
-    tmpu = TMPU()
-    tmpu.assertregs(0, 0, 0, 0, 0xff)
 
     tmpu.setregs(y=4, a=2)
-    tmpu.assertregs(y=4, a=2)
-    tmpu.assertregs(0000, 2, 0, 4, 0xff)
+    assert  R(y=4, a=2) == tmpu.regs
 
-    tmpu.setregs(1, 3, 5, 7, 0x80)
-    tmpu.assertregs(1, 3, 5, 7, 0x80)
-
-    #   We should never compare P status register bits 5 and 4.
-    #   Some of these values for P are probably invalid in this
-    #   emulator, but we never run in these states.
-    tmpu.assertregs(p=0b00110000); tmpu.assertregs(p=0)
-    tmpu.mpu.p = 0
-    tmpu.assertregs(p=0b00110000); tmpu.assertregs(p=0)
-    tmpu.mpu.p = 0xff
-    tmpu.assertregs(p=0b11001111); tmpu.assertregs(p=0xff)
+    tmpu.mpu.p = 0b01010101
+    tmpu.setregs(0x1234, 0x56, 0x78, 0x9a, 0xbc)
+    r     = R(0x1234, 0x56, 0x78, 0x9a, 0xbc, psr=0b01010101)
+    assert r == tmpu.regs
 
 def test_mpu_step():
     ''' Test a little program we've hand assembled here to show
@@ -88,9 +151,35 @@ def test_mpu_step():
     assert   0x07 == tmpu.mpu.ByteAt(0x403)
     assert 0xEEA9 == tmpu.mpu.WordAt(0x400)  # LSB, MSB
 
-    tmpu.assertregs(0, 0, 0, 0)
+    assert R(0, 0, 0, 0) == tmpu.regs
     tmpu.setregs(pc=0x400)
 
-    tmpu.step(); tmpu.assertregs(0x402, a=0xEE)
-    tmpu.step(); tmpu.assertregs(0x404, x=0x7E)
-    tmpu.step(); tmpu.assertregs(0x405, 0xEE, 0x7E, 0x00)
+    tmpu.step(); assert R(0x402, a=0xEE) == tmpu.regs
+    tmpu.step(); assert R(0x404, x=0x7E) == tmpu.regs
+    tmpu.step(); assert R(0x405, 0xEE, 0x7E, 0x00) == tmpu.regs
+
+####################################################################
+#   ParseBin - CoCo Disk BASIC binary file loader
+
+def test_ParseBin():
+    p = ParseBin(BINDATA)
+    rec0data = [0xee]
+    rec1data = [0x8a, 0x8c, 0x09, 0x04, 0x18, 0x6d, 0x09, 0x04, 0x60]
+    assert (0x0123, rec0data) == p[0]
+    assert (0x0400, rec1data) == p[1]
+    #   Entries only for data records, not the entrypoint record
+    assert 2 == len(p)
+    assert 0x0403 == p.entrypoint
+
+def test_TMPU_load_bin():
+    expected_mem \
+        = [0] * 0x123 \
+        + [0xEE] \
+        + [0] * (0x400 - 0x124) \
+        + [0x8a, 0x8c, 0x09, 0x04, 0x18, 0x6d, 0x09, 0x04, 0x60] \
+        + [0] * (0x10000 - 0x400 - 9)
+    tmpu = TMPU()
+    tmpu.load_bin(BINDATA)
+    assert Regs(pc=0x0403) == tmpu.regs
+    assert expected_mem    == tmpu.mpu.memory
+

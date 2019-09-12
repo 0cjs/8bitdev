@@ -11,6 +11,17 @@ a _lot_ of work.)
 
 Run the top-level `./Test` script to see everything go.
 
+#### 32-bit Support for ASxxxx
+
+The ASxxxx binaries installed by the build system are 32-bit Linux
+binaries. On 64-bit systems these will error out with "No such file or
+directory" when run unless the 32-bit dynamic linker (`ld-linux.so.2`)
+and libraries are installed. To do this on a 64-bit Debian 9 system:
+
+    dpkg --add-architecture i386
+    apt update
+    apt install libc6-i386
+
 
 py65
 ----
@@ -69,9 +80,9 @@ Execution:
 
 
 <!-------------------------------------------------------------------->
+[ASxxxx]: http://shop-pdp.net/ashtml/asxxxx.htm
+
 [py65-cmds]: https://py65.readthedocs.io/en/latest/index.html#command-reference
 [py65]: http://py65.readthedocs.org/
 [py65src]: https://github.com/mnaberez/py65
 [vice-mon]: http://vice-emu.sourceforge.net/vice_12.html
-
-[ASxxxx]: http://shop-pdp.net/ashtml/asxxxx.htm

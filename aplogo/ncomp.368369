@@ -1,0 +1,731 @@
+
+;COMPARISON OF DSK:APLOGO;NLOGO 368 AND DSK:APLOGO;NLOGO 369
+;OPTIONS ARE    /3
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-91 (3682)
+OTPFLG	= $54	;Nonzero means print-to-buffer mode
+**** FILE DSK:APLOGO;NLOGO 369, 1-91 (3682)
+OTPFLG	= $54	;Nonzero means special print mode (no funny-pname quotes)
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-129 (5420)
+EPOINT	= $9A	;Editor point (also used by Graphics)
+**** FILE DSK:APLOGO;NLOGO 369, 1-129 (5442)
+EPOINT	= $9A	;Editor point
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-166 (6778)
+DOSERR	= $D8	;DOS "ONERR GOTO" flag
+**** FILE DSK:APLOGO;NLOGO 369, 1-166 (6776)
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-174 (7093)
+WRPFLG	= $E1	;Set indicates graphics wrapping
+DEFINP	= $E2	;Normal INPDEV routine address
+DEFOUT	= $E4	;Normal OTPDEV routine address
+TRFLG	= $E6	;Tail-recursion flag (set to value of NEST by OUTPUT)
+**** FILE DSK:APLOGO;NLOGO 369, 1-173 (7054)
+WRPFLG	= $E2	;Set indicates graphics wrapping
+DEFINP	= $E3	;Normal INPDEV routine address
+DEFOUT	= $E5	;Normal OTPDEV routine address
+TRFLG	= $E7	;Tail-recursion flag (set to value of NEST by OUTPUT)
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-183 (7382)
+CHBLEN	=64		;Length of character buffer
+**** FILE DSK:APLOGO;NLOGO 369, 1-182 (7343)
+CHBLEN	=$40		;Length of character buffer
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-262 (9943)
+EBFEND	=$3FFB		;End of edit buffer (leaving room for CR)
+**** FILE DSK:APLOGO;NLOGO 369, 1-261 (9905)
+EBFEND	=$3FFE		;End of edit buffer (leaving room for CR)
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-297 (11360)
+;???The following seven addresses are all probably wrong:
+**** FILE DSK:APLOGO;NLOGO 369, 1-296 (11322)
+;???The following six addresses are all probably wrong:
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-896 (23347)
+**** FILE DSK:APLOGO;NLOGO 369, 1-894 (23305)
+TOPVAL	=TEMPX1		;Toplevel output value
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-998 (25896)
+	ERROR XNMI,CURTOK
+SYSBG1:	LDA #$01	;Bad tok¸ªñÙÛpecod¸®4ÓA¸{ˆÌ√nd line
+	JMP SYSBUG
+;String dispatch. If it's not an atom or satom, then it's an error.
+**** FILE DSK:APLOGO;NLOGO 369, 1-998 (25896)
+	ERROR XNMI,CURTOK	;CURTOK NEEDS MORE INPUTS
+SYSBG1:	LDA #$01	;Bad token-typecode in command line
+	JMP SYSBUG
+;String dispatch. If it's not an satom, then it's an error.
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-1005 (26122)
+	CMP #ATOM
+	BEQ CASST1
+	CMP #SATOM
+	BNE CASEA1	;Error - Haven't told me how to ...
+CASST1:	MOV CURTOK,ATMPTR	;It's interned, update the pointer
+**** FILE DSK:APLOGO;NLOGO 369, 1-1005 (26140)
+	CMP #SATOM
+	BNE CASEA1	;Error - Haven't told me how to ...
+	MOV CURTOK,ATMPTR	;It's interned, update the pointer
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-1022 (26634)
+	LDA #XHNV
+**** FILE DSK:APLOGO;NLOGO 369, 1-1020 (26620)
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-1058 (27756)
+	BEQ ARGLP1	;Done if no args to be gotten
+Ò3"AANARGS
+**** FILE DSK:APLOGO;NLOGO 369, 1-1055 (27730)
+	BEQ ARGDON	;Done if no args to be gotten
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-1067 (27921)
+;AL1 gets one arg.
+**** FILE DSK:APLOGO;NLOGO 369, 1-1062 (27881)
+;	...
+;AL1 gets one arg.
+;	...
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-1080 (28182)
+ARGLP1:	JMP POPJ
+**** FILE DSK:APLOGO;NLOGO 369, 1-1079 (28160)
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-1095 (28498)
+	JMP POPJ
+**** FILE DSK:APLOGO;NLOGO 369, 1-1092 (28456)
+ARGDON:	JMP POPJ
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-1132 (29441)
+;VARGLP gets the args for a variable-arg clause.
+**** FILE DSK:APLOGO;NLOGO 369, 1-1128 (29404)
+;	...
+;VARGLP gets the args for a variable-arg clause.
+;	...
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-1201 (31261)
+	JSR TOKADV	;Else get the next tokens
+**** FILE DSK:APLOGO;NLOGO 369, 1-1200 (31240)
+	JSR TOKADV	;Else get the next token
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-1226 (31882)
+	VPOP VALUE	;Else get the value back
+**** FILE DSK:APLOGO;NLOGO 369, 1-1225 (31860)
+	VPOP TOPVAL	;Else get the value back
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-1235 (32182)
+	INC OTPFLG		;(Print funny-pname quotes)
+	LDX #VALUE
+	JSR TYPE0		;Print the output
+Ò1"√A˘ı(FôG		;(restore to prev˝;˙ÛA˛ÿvuÀ)
+**** FILE DSK:APLOGO;NLOGO 369, 1-1234 (32161)
+	LDX #TOPVAL
+	JSR TYPE0Ò"]–Âint t˝PoÎtput
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-1347 (35614)
+UFUN11:	LDA NEST	;Tail recursion: Level-number must be nonzero,
+	BEQ UFUN12	;nest must be zero unless tail-recursion-flag
+	CMP TRFLG	;equals nesting level.
+	BEQ UFUN6	;unless Nest=0 and Level-number<>0
+	LDA #$00	;Reset TRFLG
+	STA TRFLG
+UFUN1ˆNÑÃâA LEVNUM
+**** FILE DSK:APLOGO;NLOGO 369, 1-1344 (35509)
+UFUN11:	LDA NEST	;Tail recursion:
+	BEQ UFUN12	;nest must be zero unless tail-recursion-flag
+	CMP TRFLG	;equals nesting level.
+	BEQ UFUN12
+	LDA #$00	˜t≤ÛÀ˛à*RçLG
+	STA TRFLG
+	BEQ UFUN6	;(Always)
+UFUN12:	LDA LEVNUM	;Level-number must be nonzero
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-1361 (36074)
+	JMP UFUN1B	;Yes, tail-recurse
+**** FILE DSK:APLOGO;NLOGO 369, 1-1359 (35957)
+	BEQ UFUN1B	;(Always) Yes, tail-recurse
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-1426 (37484)
+	INC LEVNUM	;Increment Level-number
+	BNE ˙±™ŒmC
+	INC LEVNUM+1
+	BNE UFUN6C
+	INC LEVNUM+2
+	BNE UFUN6C
+	LDX #XPNEST
+	JMP EXCED	;Procedure nesting too deep
+UFUN6C:	RPLACA FUNCT,FRAME	;Set the function's frame pointer
+**** FILE DSK:APLOGO;NLOGO 369, 1-1424 (37376)
+	JSR INCLEV
+	RPLACA FUNCT,FRAME	;Set the function's frame pointer
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-1487 (39261)
+	BMI UF2AL
+	LDA #$00
+	STA STPFLG	;Reset Stop-flag
+**** FILE DSK:APLOGO;NLOGO 369, 1-1478 (38999)
+	BNE UF2AL
+	STX STPFLG	;Reset Stop-flag
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-1516 (39939)
+**** FILE DSK:APLOGO;NLOGO 369, 1-1507 (39668)
+INCLEV:	INC LEVNUM	;Increment Level-number
+Ò0ßEA˘3+R©S
+	INC LEVNUM+1
+	BNE ILVRTS
+	INC LEVNUM+2
+	BNE ILVRTS
+	LDX #XPNEST
+	JMP EXCED	;Error - Procedure nesting too deep
+ILVRTS:	RTS
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-1520 (40023)
+	INC LEVNUM	;Increment Level-number
+	BNE UTAIL1
+	INC LEVNUM+1
+	BNE UTAIL1
+	INC LEVNUM+2
+	BNE UTAIL1
+	LDX #XPNEST
+	JMP EXCED	;Error - Procedure nesting too deep
+UTAIL1:	INC TLLEVS	;Increment Tail-levels
+**** FILE DSK:APLOGO;NLOGO 369, 1-1520 (39940)
+	JSR INCLEV	;Le˛€∫ÌA:= levnum + 1
+	INC TLLEV˙b]…›¸|≤ÌÀnt Tail-levels
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-1677 (44373)
+	CMP #END&$FF		;Else see if the first token is END
+**** FILE DSK:APLOGO;NLOGO 369, 1-1670 (44150)
+	CMP #END&$FF	;Else see if the first token is END
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-1777 (47162)
+	LDA #LIST
+	STA UFRMAT	;Command line is typecode List
+	LDA #$00
+**** FILE DSK:APLOGO;NLOGO 369, 1-1770 (46938)
+	LDA #$00
+	STA UFRMAT	;Command line is typecode List
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-1849 (49266)
+	INC PRSFLG	;Tells CONS we're in the parser (if nonzero)
+**** FILE DSK:APLOGO;NLOGO 369, 1-1841 (49030)
+	INC PRSFLG	;Tells CONS we're in the parser
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-1908 (50881)
+TKRBR:	DEC LSNEST	;End list - decrement list nesting counter
+	BMI TKRBR2	;Error if unbalanced brackets
+	JSR INCPLN	;Skip to next character
+**** FILE DSK:APLOGO;NLOGO 369, 1-1900 (50632)
+TKRBR:	JSR INCPLN	;Skip to next character
+	LDA LSNEST
+	BEQ TKRBR2
+	DEC ˘îÁEßT
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-1916 (51186)
+	INC LSNEST	;Reset brackets counter
+	JSR INCPLN	;Skip this bracket
+**** FILE DSK:APLOGO;NLOGO 369, 1-1909 (50877)
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-1972 (52742)
+	INC PLINE	;Get next digit
+	BNE ATM1
+	INC PLINE+1
+	BNE ATM1	;(Always)
+**** FILE DSK:APLOGO;NLOGO 369, 1-1963 (52364)
+	INC1 PLINE	;Get next digit
+Ò2¶–AATM1
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-2064 (55283)
+	BNE LKATM1	;(Always) Give it typecode and link it
+**** FILE DSK:APLOGO;NLOGO 369, 1-2053 (54871)
+	JMP LKATM1	;Give it typecode and link it
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-2539 (66433)
+	JSR RSTIO	;Set I/O to to default
+**** FILE DSK:APLOGO;NLOGO 369, 1-2528 (66012)
+	JSR RSTIO	;Set I/O to default
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-2793 (72469)
+;(Subrs: RDKEY1)
+;Check for interrupt characters, incl. PAUSE
+CKINTZ:	CMP #PAUSKY
+	BEQ ˘î ’ßE
+**** FILE DSK:APLOGO;NLOGO 369, 1-2782 (72045)
+;(Subrs: GETCHR)
+;Check for interrupt characters, incl. PAUSE
+¯r‰Œ©Z:	CMP #PAUSKY
+	BEQ SPAUSE
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-2815 (73018)
+LWAIT:	JSR RDKEY1	;Wait for a character before continuing (doesn't reset strobe)
+**** FILE DSK:APLOGO;NLOGO 369, 1-2804 (72594)
+LWAIT:	JSR GETCHR	;Wait for a character before continuing (doesn't reset strobe)
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-2824 (73299)
+;This should be the ˛xvÂAas SPAUSE, more or less.
+LPAUSE:	LDA LEVNUM
+	ORA LEVNUM+1
+	ORA LEVNUM+2
+	BEQ LWAIT1		;No pausing at toplevel
+	ERROR XBRK		;Pause break
+**** FILE DSK:APLOGO;NLOGO 369, 1-2813 (72875)
+SPAUSE:	ERROR XBRK		;Pause break
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-3346 (85427)
+	STA $01,X
+**** FILE DSK:APLOGO;NLOGO 369, 1-3330 (84871)
+ULDV3:	STA $01,X
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-3370 (85724)
+ULDV3:	STA $01,X
+TPLRTS:	RTS
+**** FILE DSK:APLOGO;NLOGO 369, 1-3355 (85176)
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-3381 (86001)
+	BEQ TPLRTS
+**** FILE DSK:APLOGO;NLOGO 369, 1-3363 (85420)
+	BEQ GTTRTS
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-3504 (87957)
+BODY	=TEMPNH		;Body ptr.
+**** FILE DSK:APLOGO;NLOGO 369, 1-3486 (87376)
+BODY	=TEMPN2		;Body ptr.
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-3517 (88396)
+	LDA $00,X
+	STA BODY
+	PHA
+	LDA $01,X
+	STA BODY+1
+	PHA
+**** FILE DSK:APLOGO;NLOGO 369, 1-3499 (87815)
+	GETX BODY
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-3530 (88546)
+	PLA
+	STA BODY+1
+	PLA
+	STA BODY
+**** FILE DSK:APLOGO;NLOGO 369, 1-3507 (87917)
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-3566 (89048)
+STFF2:	LDA INDEX
+	STA AREA2
+	STA INDEX1
+Ò3"AAINDEX+1
+	STA AREA2+1
+	STA INDEX1+1
+**** FILE DSK:APLOGO;NLOGO 369, 1-3539 (88383)
+STFF2:	MOV AREA2,INDEX1,INDEX
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-3638 (90238)
+	JSR TSTPOL
+**** FILE DSK:APLOGO;NLOGO 369, 1-3606 (89518)
+	JSR TSTSTK
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-3756 (92614)
+**** FILE DSK:APLOGO;NLOGO 369, 1-3724 (91894)
+	LDA $01,X
+	BEQ SBFNF
+	STA STRNG1+1
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-3759 (92650)
+	LDA $01,X
+	STA STRNG1+1
+MTC1W:	LDA STRNG1+1
+	BEQ SBFNF
+MTC1W1:	CAR CHARS,STRNG1
+	LDY #$00
+	REGRAM		;Enable ghost-memory
+	LDA (SOBNAM),Y
+	NODRAM		;Disable ghost-memory
+**** FILE DSK:APLOGO;NLOGO 369, 1-3730 (91969)
+	LDY #$00
+MTC1W1:	CAR CHARS,STRNG1
+	REGRAM		;Enable ghost-memory
+	LDA (SOBNAM),Y
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-3771 (92865)
+	REGRAM		;Enable ghost-memory
+	LDA (SOBNAM),Y
+	NODRAM		;Disable ghost-memory
+	CMP CHARS+1
+	BNE SBFNF
+	CDRME STRNG1
+	REGRAM		;Enable ghost-memory
+	LDY #$00
+	LDA (SOBNAM),Y
+	NODRAM		;Disable ghost-memory
+	TAX
+	BEQ SBFFND
+	INC1 SOBNAM
+	LDA STRNG1+1
+	BNE MTC1W1
+	REGRAM		;Enable ghost-memory
+	LDA (SOBNAM),Y
+	NODRAM		;Disable ghost-memory
+	TAX
+	BEQ SBFFND
+SBFNF:	LDX RETPTR	;not this soblist object
+	INC4X
+	JMP SBFWX
+SBFFND:	LDA #SATOM	;Found it, it's an satom
+**** FILE DSK:APLOGO;NLOGO 369, 1-3737 (92092)
+Ò3"AA(SOBNAM),Y
+	CMP CHARS+1
+	BNE SBFNF
+	INC1 SOBNAM
+	CDRME STRNG1
+	BNE MTC1W1
+	LDA ıÁ¬ùAM),Y
+	BEQ SBFFND
+SBFNF˜BgOâRAM
+	LDX ˙QjP©˙B]Óﬂ˛à:h”s soblist object
+	INC4X
+	JMP SBFWX
+SBFFND:	NODRAM
+	LDA #SATOM	;Found it, it's an satom
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-3999 (97800)
+	BCS ERRW3	;(Always)
+ERRW1:	LDX ERRY
+ERRW3:	INC OTPFLG	;Fake out TYPE so funny-pnames are quoted
+	JSR TYPE0
+	DEC OTPFLG	;Restore flag
+**** FILE DSK:APLOGO;NLOGO 369, 1-3955 (96788)
+	JMP ERRW3
+ERRW1:	LDX ERRY
+ERRW3:	JSR TYPE0
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-4185 (101962)
+	BNE GCOBD1		;(Always - There's always something there (TRUE,FALSE))
+**** FILE DSK:APLOGO;NLOGO 369, 1-4139 (100858)
+	JMP GCOBD1
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-4218 (102903)
+	JMP SWAPT2
+;Special garbage collector error handler
+GCLERR:	LDA #$00	;Must preserve ERRY until ERROR1...
+**** FILE DSK:APLOGO;NLOGO 369, 1-4172 (101742)
+	JMP SWAPT2		;Swap back temps and exit
+;Special garbage collector error handler. Must preserve ERRY until ERROR1.
+¯ÊE•R:	LDA #$00
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-4362 (105855)
+MRKCP:	CAR LINE,NODE		;LINE is line pointer
+MRKCP1:	CDR LINEND,NODE		;LINEND is next-line pointer or 0
+**** FILE DSK:APLOGO;NLOGO 369, 1-4316 (104719)
+MRKCP:	CAR LINE,NODE	;LINE is line pointer
+MRKCP1:	CDR LINEND,NODE	;LINEND is next-line pointer or 0
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-4537 (108701)
+	BEQ TPATMW
+	TPCHR QUOTE	;Type quote if printing to buffer or funny-pname
+**** FILE DSK:APLOGO;NLOGO 369, 1-4491 (107563)
+	BNE TPATMW	;If OTPFLG set, don't print funny-pname quote
+	TPCH˙H(’üTE
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-4553 (108973)
+	BEQ LTRTS1
+	TPCHR QUOTE	;Tˇ<2†„˛ª˙eAif printin¸Ë:oAbuffer
+	RTS
+**** FILE DSK:APLOGO;NLOGO 369, 1-4507 (107832)
+	BNE LTRTS1	;Don't type funny-pname quote if OTPFLG set
+	TPCH˙H(’üTE
+LTRTS1:	RTS
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-4566 (109229)
+LTRTS1:	RTS
+**** FILE DSK:APLOGO;NLOGO 369, 1-4520 (108105)
+	RTS
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-4601 (110119)
+;(Subrs: PONAME)
+PONAMS:	MOV OBPTR,OBLIST	;OBPTR is OBLIST pointer
+**** FILE DSK:APLOGO;NLOGO 369, 1-4554 (108986)
+BUFFLG	=ANSN3		;Print-to-buffer flag
+;(Subrs: PONAME)
+˙ÁAõ˙nÑ”©¯(!Uç¯”#â;Nonzero if pri˝›4ÓœÙ7†≈uffer
+	MOV OBPTR,OBLIST	;OBPTR is OBLIST pointer
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-4620 (110604)
+	LDA OTPFLG
+	BNE PON1B	;Use MAKE if printing to buffer
+	TPCHR '"
+	INC OTPFLG	;Always print quotes
+**** FILE DSK:APLOGO;NLOGO 369, 1-4576 (109556)
+	LDA BUFFLG
+	BNE PON1B	;Use MAKE if printing to buffer
+	TPCHR '"
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-4629 (110777)
+	DEC OTPFLG	;Restore it
+**** FILE DSK:APLOGO;NLOGO 369, 1-4584 (109695)
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-4701 (112264)
+	INC OTPFLG	;Print funny-pname quotes
+**** FILE DSK:APLOGO;NLOGO 369, 1-4655 (111157)
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-4717 (112581)
+	BEQ PTXRTS
+**** FILE DSK:APLOGO;NLOGO 369, 1-4670 (111435)
+	BEQ PFNRTS
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-4728 (112786)
+PTXRTS:	DEC OTPFLG	;Reset OTPFLG to its previous value
+**** FILE DSK:APLOGO;NLOGO 369, 1-4681 (111640)
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-4738 (113040)
+	DEC OTPFLG	;Reset OTPFLG to its previou˛h;aŸue
+**** FILE DSK:APLOGO;NLOGO 369, 1-4690 (111838)
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-5342 (126892)
+EDTX2:	INC OTPFLG
+	JSR PONAMS
+	DEC OTPFLG
+**** FILE DSK:APLOGO;NLOGO 369, 1-5293 (125641)
+EDTX2:	LDA #$01
+	JSR PONAMS
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-5359 (127226)
+	INC OTPFLG
+**** FILE DSK:APLOGO;NLOGO 369, 1-5309 (125960)
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-5372 (127424)
+EDTN2:	DEC OTPFLG
+	JSR BREAK1
+**** FILE DSK:APLOGO;NLOGO 369, 1-5321 (126145)
+EDTN2:	JSR BREAK1
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-6280 (149873)
+	INC OTPFLG	;Indicate print-to-buffer
+Ò2©“A˙ÁAõS	;get var˝8qlÀ˛h4ÓÈo buffer
+	DEC ˘ı(Fô¯‚]≈›¸à8r”˝›Ùﬂı∏∫ÊÕer mode
+**** FILE DSK:APLOGO;NLOGO 369, 1-6228 (148581)
+	LDA #$01
+	JSR PONAMS	;get variables into buffer
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-8322 (192102)
+;This should be the same as LPAUSE, more or less.
+SPAUSE:	LDA LEVNUM
+	ORA LEVNUM+1
+	ORA LEVNUM+2
+	BEQ CNTNDN		;No pausing at toplevel
+	ERROR XBRK		;Pause break
+SCNTIN:	LDA FBODY+1
+	BNE CNTNDN	;Ignore if in break-loop toplevel
+	LDA LEVNUM
+	ORA LEVNUM+1
+	ORA LEVNUM+2
+	BNE SCNTN1
+	LDA RUNFLG
+Ò0¢—ACNTNDN	;Ignore if to˛2ˆÀl
+SCNTN1:	LDA #$01
+**** FILE DSK:APLOGO;NLOGO 369, 1-8269 (190743)
+SCNTIN:	LDA BRKSP+1
+	BEQ CNTNDN	;Ignore if not in a break-loop
+	LDA #$01
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-8837 (202058)
+	JSR TYPE1
+**** FILE DSK:APLOGO;NLOGO 369, 1-8771 (200419)
+	INC OTPFLG	;Tells not to print funny-pname quotes
+	JSR TYPE
+	DEC OTPFLG	;Reset OTPFLG
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-8865 (202466)
+SPON:	LDA #$01
+	JSR PONAMS
+**** FILE DSK:APLOGO;NLOGO 369, 1-8801 (200905)
+SPON:	JSR PONAMS
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-11560 (261924)
+	JSR RSTIO	;Restore I/O Drivers
+**** FILE DSK:APLOGO;NLOGO 369, 1-11495 (260352)
+	JSR RSTINP	;Restore I/O Drivers
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-11615 (263324)
+RSTIO1:	STA OTPFLG	;Reset from print-to-buffer mode
+**** FILE DSK:APLOGO;NLOGO 369, 1-11550 (261753)
+RSTIO1:	STA OTPFLG	;Reset to normal printing mode
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-11625 (263626)
+SETNRM:	LDA #$80	;(Negative flag ignored)
+**** FILE DSK:APLOGO;NLOGO 369, 1-11560 (262053)
+SETNRM:	LDA #$80
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-11748 (266220)
+;Get a character from the buffer or the input device (waits for one).
+RDKEY:	JSR GTBUF	;Get character from the buffer if non-empty
+	TAX
+	BNE KRTS
+	JMP (INPDEV)
+;Keyboard input routine.
+KEYIN:	LDY CH
+**** FILE DSK:APLOGO;NLOGO 369, 1-11683 (264622)
+;Get a character from the input device.
+;Leaves nodespace memory enabled.
+RDKEY:	CMPV DEFOUT,COUT
+	BNE RDKEY1	;Don't flash cursor if not screen output
+	LDY CH
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-11761 (266548)
+	JSR RDKEY1	;Waits until a character appears
+	BIT KBDCLR	;Reset kbd strobe
+**** FILE DSK:APLOGO;NLOGO 369, 1-11693 (264906)
+	JSR RDKEYX	;Get the input character
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-11767 (266707)
+KRTS:	RTS
+;Wait for a kbd character. Shouldn't bash Y!
+RDKEY1:	INC1 RNDL	;Update random number seed
+	JSR TSTCHR	;Test the kbd flag, get char. (carry clear if got one)
+	BCC RDKEY1	;Keep waiting
+	RTS
+.PAGE
+;Check for input character. Return with carry set and character in A if
+;character pending, else carry clear. Supplies "[" for "M" and $FF for null
+;replacement characters. Shouldn't bash Y!
+˙îÍCëR:	BIT KBDBYT
+	BPL ˘sßŒã
+	LDA KBDBYT
+	AND #$7F
+	BNE TSTC1
+	LDA #$FF	;translation for null character so it can't be typed.
+	SEC
+	RTS
+TSTC1˜BaÕ° #LBRAK
+	BNE TRTS1
+	LDA #'[
+TRTS1:	SEC
+	RTS
+KNONE:	CLC		;Return carry clear if no character
+	RTS
+**** FILE DSK:APLOGO;NLOGO 369, 1-11698 (265026)
+	BNE RDKEY2	;(Always)
+RDKEY1:	JSR RDKEYX
+RDKEY2:	EOR #$80	;Translate to Ascii
+Ò3ßƒ•AM
+	RTS
+˙Q%≈≥˚Ñ õP (INPDEV)
+;Keyboard input routine.
+KEYIN:	JSR GTBUF	;Get character from the buffer if non-empty
+	TAX
+	BNE TRTS1
+GETCHR:	INC1 RNDL	;Update random number seed
+	BIT KBDBYT
+	BPL GETCHR
+	BIT ˘p¢CôR	;Reset k¸YsÈrobe
+	LDA KBDBYT
+	CMP #$80
+	BNE TSTC1
+	LDA #$7F	;translation for null character so it can't be typed.
+	RTS
+TSTC1:	CMP #LBRAK+$80
+	BNE TRTS1
+	LDA #$DB
+TRTS1:	RTS
+.PAGE
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-11920 (270159)
+**** FILE DSK:APLOGO;NLOGO 369, 1-11850 (268313)
+	LDX CHRIND
+	LDA #CR
+	STA ˘ígB´F,X	;˘ª˚eAthe c˛H1a«˝h:oA˛ö2†«˛ºπe›t pos˝=4Ô›
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-12427 (280652)
+	.ASCIZ "         MIT LOGO SCREEN EDITOR         "
+**** FILE DSK:APLOGO;NLOGO 369, 1-12360 (278886)
+	.ASCIZ "         MIT LOGO SCREEN EDITOR        "
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-12833 (286176)
+	PRIM 0,0,ICHARP,"RC?"
+**** FILE DSK:APLOGO;NLOGO 369, 1-12766 (284409)
+	PRIM 0,0,ICHARP,"CHAR?"
+***************
+
+**** FILE DSK:APLOGO;NLOGO 368, 1-13024 (290451)
+**** FILE DSK:APLOGO;NLOGO 369, 1-12957 (288686)
+	$00
+	$00
+	$00
+	$48
+	$41
+	$4C
+	$00
+***************
+

@@ -1,0 +1,75 @@
+How apple music should work.
+
+The idea is to "compile" a music buffer of pitch-duration pairs for one,
+two, or three voices and then play them out in real time.
+
+n.b.: i can't think of any reasonable place to put the music buffer other
+than in the high-res page.  Maybe someday we'll think of some clever
+swapping strategy, but let's use high-res for now.
+
+n.b.:i heard a rumor that you can specify amplitutde to the music card.  if
+so, i don't think its worth the extra storage to specify amplitude for
+every note.  maybe just choose a good default for now.
+--------------------
+
+Here are the primitives:
+
+NVOICES (1, 2 or 3) specifies the number of voices.  (This is purely
+to save storage inthe music buffer---with only one voice you can
+generate a tune three times as long as with three voices.)  NVOICES
+reconfigures the music buffer, so it destroys whatever tunes
+were in there.
+
+NOTE <pitch> <duration>  -- takes two numbers and adds them on to the
+list for the current voice.  pitches are numbered chromatically.  some
+special value should be reserved for a pitch of "rest".  if you can
+figure out how to generate a percussion sound, then some special pitch
+should be reserved for that, too.  duration should be in units ofthe
+shortest not we want. 1/10 second seems about right.
+
+VOICE {n, where 1 <= n <= current setting of nvoices}
+says that the next NOTES will be added to VOICE n
+
+PLAYMUSIC (abb PM) plays the stuff in the buffer.  in the 11 version,
+PM destroyed the buffer, due to programmer braindamage (i was the
+programmer). it should not do this.  if apple allows you do specify
+amplitide, a reasonable way to do it would be as an arg to PM.
+
+--------------------
+
+How this is implemented.
+
+Keep around, for each voice, pointers to the beginning and end of the voice
+info in the buffer.  E.g., with NVOICES 2, the buffer is split in
+half. Also keep a "register" for each voice.  An entry in the buffer
+is a pitch-duration pair <a byte should suffice for each>
+
+When a note command is given, add a new pair to the right place.  You
+can optimize storage for consecutine notes of the same pitch, e.g.,
+so that
+NOTE 10 1
+NOTE 10 3
+will end up putting a 10,4 pair inthe buffer.  with typical use, this
+optimization is not worth it.
+
+here's what to do for PM
+
+load each voice register with the first P-D pair for the voice.
+
+do until all voices are done
+    for each voice:
+      stuff the pitch into the music generator
+      decrement the duration
+      if the duration is zero load the next P-D pair
+      if voice has run out stop generating for this voice
+
+
+note that a percussion sound of n should actualy be treated as a
+"gritch" of 1 followed by a rest of n-1.
+
+--------------------
+11logo also had a MUTYO command which did a real-time frb to the music
+box, e.g, for programming the keyboard to act as an "organ".  play
+with this.  we can probably just as easily write this as a Logo
+function using .DEPOSIT
+

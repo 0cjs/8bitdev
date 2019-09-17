@@ -285,3 +285,35 @@ class SymTab(dict):
             return self[name]
         else:
             raise AttributeError("No such attribute: " + name)
+
+class Instructions():
+    ''' Opcode constants for the 6502, named after the assembly
+        instructions.
+
+        There are often multiple opcodes per instruction, one for each
+        of the different addressing modes. We distinguish these with a
+        lower-case suffix:
+
+                             implied
+                  #nn        immediate
+            z     nn         zero page
+            zx    nn,X       zero indexed by X
+            zy    nn,Y       zero indexed by Y
+            a     addr       absolute (extended)
+            ax    addr,X     absolute,X
+            ay    addr,Y     absolute,Y
+            i     [addr]     indirect
+            ix    [addr,X]   indexed indirect
+            iy    [addr],Y   indirect indexed
+
+
+        One day we might find it worthwhile to have an Assembler class
+        that can itself determine correct addressing modes and whatnot
+        when assembling instructions, but there doesn't seem to be any
+        gain from that at the moment.
+    '''
+
+    JSR     = 0x20
+    LDXz    = 0xA6
+    LDA     = 0xA9
+    NOP     = 0xEA

@@ -1,4 +1,4 @@
-from    testmc.m6502 import  Machine, Registers as R
+from    testmc.m6502 import  Machine, Registers as R, Instructions as I
 from    testmc.m6502 import  ParseBin, SymTab
 
 from    io  import StringIO
@@ -95,10 +95,6 @@ def test_Regs_eq():
 ####################################################################
 #   Machine and loader
 
-LDAi    = 0xA9      # immediate
-LDXz    = 0xA6      # zero page
-NOP     = 0xEA
-
 @pytest.fixture
 def M():
     return Machine()
@@ -141,9 +137,9 @@ def test_mpu_step(M):
     #   See py65/monitor.py for examples of how to set up and use the MPU.
     M.deposit(7, [0x7E])
     M.deposit(0x400, [
-        LDAi, 0xEE,
-        LDXz, 0x07,
-        NOP,
+        I.LDA,  0xEE,
+        I.LDXz, 0x07,
+        I.NOP,
     ])
     assert   0x07 == M.mpu.ByteAt(0x403)
     assert 0xEEA9 == M.mpu.WordAt(0x400)  # LSB, MSB

@@ -1,8 +1,5 @@
-from    testmc.m6502 import  Machine, Registers as R
+from    testmc.m6502 import  Machine, Registers as R, Instructions as I
 import  pytest
-
-JSR     = 0x20
-NOP     = 0xEA
 
 @pytest.fixture
 def M():
@@ -20,8 +17,8 @@ def test_addxy(M):
     assert ident_str == M.strAt(S.ident, len(ident_str))
 
     M.deposit(0x8000, [
-        JSR, S.addxy & 0xff, (S.addxy & 0xff00) >> 8,
-        NOP, NOP, NOP, NOP ])
+        I.JSR, S.addxy & 0xff, (S.addxy & 0xff00) >> 8,
+        I.NOP, I.NOP, I.NOP, I.NOP ])
     assert S.addxy == M.wordAt(0x8001)     # Did we set it up right?
     M.setregs(pc=S.addxy, x=0x12, y=0x34)
     #   XXX Test entry with carry flag set.

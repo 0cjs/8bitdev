@@ -1,4 +1,6 @@
-''' Test framework for code on py65 MPU.
+''' testmc.m6502 - test framework for 6502 microcomputer code
+
+    This uses the py65 emulator to emulate a 6502 microcomputer system.
 '''
 
 from    collections  import namedtuple

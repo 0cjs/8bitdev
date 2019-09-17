@@ -1,5 +1,5 @@
-from    tmpu import  Machine, Registers as R
-from    tmpu import  ParseBin, SymTab
+from    testmc.m6502 import  Machine, Registers as R
+from    testmc.m6502 import  ParseBin, SymTab
 
 from    io  import StringIO
 import  pytest

@@ -1,4 +1,4 @@
-from    tmpu  import Machine, Registers as R
+from    testmc.m6502 import  Machine, Registers as R
 import  pytest
 
 JSR     = 0x20

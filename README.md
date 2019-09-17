@@ -22,6 +22,19 @@ and libraries are installed. To do this on a 64-bit Debian 9 system:
     apt update
     apt install libc6-i386
 
+#### MAME Support
+
+As well as using the Python emulators for unit tests, you may wish to
+do functional testing on more realistic platforms supplied by MAME.
+You can install or build the latest version from `mamedev.org` or just
+use your system packages; on Debian 9 they'd be installed with:
+
+    sudo apt-get install mame mame-tools mame-doc
+
+The documentation installed by `mame-doc`, under
+<file:///usr/share/doc/mame-doc/singlehtml/index.html>, is just an
+older version of what's found at <https://docs.mamedev.org>
+
 
 py65
 ----

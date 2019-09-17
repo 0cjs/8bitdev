@@ -1,14 +1,14 @@
-from    tmpu import  TMPU, Regs
+from    tmpu import  Machine, Registers as R
 from    tmpu import  ParseBin, SymTab
 
 from    io  import StringIO
 import  pytest
 
 ####################################################################
-#   Regs
+#   Registers
 
 def test_Regs_cons():
-    r = Regs(0x1234, x=0x56, C=1, I=0)
+    r = R(0x1234, x=0x56, C=1, I=0)
     assert r.pc == 0x1234
     assert r.a  is None
     assert r.x  == 0x56
@@ -24,96 +24,95 @@ def test_Regs_cons():
 
 def test_Regs_cons_badvalue():
     with pytest.raises(ValueError) as e:
-        Regs('hello')
+        R('hello')
     assert e.match('bad value: hello')
     with pytest.raises(ValueError) as e:
-        Regs(-1)
+        R(-1)
     assert e.match('bad value: -1')
 
 def test_Regs_conspsr():
     ' Construction with a program status register byte as pushed on stack. '
 
     with pytest.raises(AttributeError) as e:
-        Regs(psr=0xff, V=0)
+        R(psr=0xff, V=0)
     assert e.match("must not give both psr and flag values")
 
     with pytest.raises(AttributeError) as e:
-        Regs(psr=0x123)
+        R(psr=0x123)
     assert e.match('invalid psr: 0x123')
 
-    r = Regs(psr=0xff)
+    r = R(psr=0xff)
     assert (  1,   1, 1,   1,   1,   1) \
         == (r.N, r.V, r.D, r.I, r.Z, r.C)
 
-    r = Regs(psr=0)
+    r = R(psr=0)
     assert (  0,   0, 0,   0,   0,   0) \
         == (r.N, r.V, r.D, r.I, r.Z, r.C)
 
 def test_Regs_repr_1():
-    r = Regs(1, 2, 0xa0, sp=0xfe, psr=0b10101010)
+    r = R(1, 2, 0xa0, sp=0xfe, psr=0b10101010)
     rs = '6502 pc=0001 a=02 x=A0 y=-- sp=FE Nv--DiZc'
     assert rs == repr(r)
     assert rs == str(r)
 
 def test_Regs_repr_2():
-    r = Regs(y=7, V=1, Z=0)
+    r = R(y=7, V=1, Z=0)
     rs = '6502 pc=---- a=-- x=-- y=07 sp=-- -V----z-'
     assert rs == repr(r)
     assert rs == str(r)
 
 def test_Regs_eq_pc_only():
-    assert Regs(1234) != 1234
-    assert      1234  != Regs(1234)
-    assert Regs(1234) == Regs(1234)
-    assert Regs(None) == Regs(1234)
-    assert Regs(1234) == Regs(None)
-    assert Regs(None) == Regs(None)
-    assert Regs(1234) != Regs(1235)
+    assert R(1234) != 1234
+    assert      1234  != R(1234)
+    assert R(1234) == R(1234)
+    assert R(None) == R(1234)
+    assert R(1234) == R(None)
+    assert R(None) == R(None)
+    assert R(1234) != R(1235)
 
 def test_Regs_eq():
-    all     = Regs(0x1234, 0x56, 0x78, 0x9a, 0xbc, psr=0b01010101)
-    again   = Regs(0x1234, 0x56, 0x78, 0x9a, 0xbc, psr=0b01010101)
+    all     = R(0x1234, 0x56, 0x78, 0x9a, 0xbc, psr=0b01010101)
+    again   = R(0x1234, 0x56, 0x78, 0x9a, 0xbc, psr=0b01010101)
 
     assert      all == all
     assert not (all != all)     # Were we seeing __ne__() delgation problems?
     assert      all == again
     assert not (all != again)
 
-    assert all != Regs(0)
-    assert all != Regs(1)
-    assert all == Regs(0x1234)
+    assert all != R(0)
+    assert all != R(1)
+    assert all == R(0x1234)
 
-    assert all != Regs(a=0)
-    assert all != Regs(a=1)
-    assert all == Regs(a=0x56)
+    assert all != R(a=0)
+    assert all != R(a=1)
+    assert all == R(a=0x56)
 
-    assert all != Regs(C=0)
-    assert all == Regs(C=1)
-    assert all == Regs(y=0x9a, sp=0xbc, V=1, D=0, I=1, Z=0)
+    assert all != R(C=0)
+    assert all == R(C=1)
+    assert all == R(y=0x9a, sp=0xbc, V=1, D=0, I=1, Z=0)
 
 
 ####################################################################
-#   TMPU and loader
-
-R = Regs
+#   Machine and loader
 
 LDAi    = 0xA9      # immediate
 LDXz    = 0xA6      # zero page
 NOP     = 0xEA
 
-def test_testmpu():
-    tmpu = TMPU()
-    assert [0]*0x10000 == tmpu.mpu.memory
+@pytest.fixture
+def M():
+    return Machine()
 
-def test_deposit():
-    tmpu = TMPU()
-    tmpu.deposit(6, [9, 2, 3, 8])
-    assert [0]*6 + [9, 2, 3, 8] + [0]*(0x10000 - 6 - 4) == tmpu.mpu.memory
+def test_Machine_memory_zeroed(M):
+    assert [0]*0x10000 == M.mpu.memory
 
-def test_strAt():
-    tmpu = TMPU()
-    tmpu.deposit(0x100, [0x40, 0x41, 0x42, 0x63, 0x64])
-    assert '@ABcd' == tmpu.strAt(0x100, 5)
+def test_Machine_deposit(M):
+    M.deposit(6, [9, 2, 3, 8])
+    assert [0]*6 + [9, 2, 3, 8] + [0]*(0x10000 - 6 - 4) == M.mpu.memory
+
+def test_Machine_strAt(M):
+    M.deposit(0x100, [0x40, 0x41, 0x42, 0x63, 0x64])
+    assert '@ABcd' == M.strAt(0x100, 5)
     #   Test chars with high bit set here,
     #   once we figure out how to handle them.
 
@@ -126,39 +125,35 @@ BINDATA = bytes.fromhex(''
     + 'ff 0000 0403'    # final record has entry point
     )
 
-def test_tmpu_setregs():
-    tmpu = TMPU()
+def test_Machine_setregs(M):
+    M.setregs(y=4, a=2)
+    assert  R(y=4, a=2) == M.regs
 
-    tmpu.setregs(y=4, a=2)
-    assert  R(y=4, a=2) == tmpu.regs
-
-    tmpu.mpu.p = 0b01010101
-    tmpu.setregs(0x1234, 0x56, 0x78, 0x9a, 0xbc)
+    M.mpu.p = 0b01010101
+    M.setregs(0x1234, 0x56, 0x78, 0x9a, 0xbc)
     r     = R(0x1234, 0x56, 0x78, 0x9a, 0xbc, psr=0b01010101)
-    assert r == tmpu.regs
+    assert r == M.regs
 
-def test_mpu_step():
+def test_mpu_step(M):
     ''' Test a little program we've hand assembled here to show
         that we're using the MPU API correctly.
     '''
     #   See py65/monitor.py for examples of how to set up and use the MPU.
-    tmpu = TMPU()
-
-    tmpu.deposit(7, [0x7E])
-    tmpu.deposit(0x400, [
+    M.deposit(7, [0x7E])
+    M.deposit(0x400, [
         LDAi, 0xEE,
         LDXz, 0x07,
         NOP,
     ])
-    assert   0x07 == tmpu.mpu.ByteAt(0x403)
-    assert 0xEEA9 == tmpu.mpu.WordAt(0x400)  # LSB, MSB
+    assert   0x07 == M.mpu.ByteAt(0x403)
+    assert 0xEEA9 == M.mpu.WordAt(0x400)  # LSB, MSB
 
-    assert R(0, 0, 0, 0) == tmpu.regs
-    tmpu.setregs(pc=0x400)
+    assert R(0, 0, 0, 0) == M.regs
+    M.setregs(pc=0x400)
 
-    tmpu.step(); assert R(0x402, a=0xEE) == tmpu.regs
-    tmpu.step(); assert R(0x404, x=0x7E) == tmpu.regs
-    tmpu.step(); assert R(0x405, 0xEE, 0x7E, 0x00) == tmpu.regs
+    M.step(); assert R(0x402, a=0xEE) == M.regs
+    M.step(); assert R(0x404, x=0x7E) == M.regs
+    M.step(); assert R(0x405, 0xEE, 0x7E, 0x00) == M.regs
 
 ####################################################################
 #   ParseBin - CoCo Disk BASIC binary file loader
@@ -173,17 +168,16 @@ def test_ParseBin():
     assert 2 == len(p)
     assert 0x0403 == p.entrypoint
 
-def test_TMPU_load_bin():
+def test_Machine_load_bin(M):
     expected_mem \
         = [0] * 0x123 \
         + [0xEE] \
         + [0] * (0x400 - 0x124) \
         + [0x8a, 0x8c, 0x09, 0x04, 0x18, 0x6d, 0x09, 0x04, 0x60] \
         + [0] * (0x10000 - 0x400 - 9)
-    tmpu = TMPU()
-    tmpu.load_bin(BINDATA)
-    assert Regs(pc=0x0403) == tmpu.regs
-    assert expected_mem    == tmpu.mpu.memory
+    M.load_bin(BINDATA)
+    assert R(pc=0x0403)    == M.regs
+    assert expected_mem    == M.mpu.memory
 
 ####################################################################
 #   ParseSym - Parse symbol table from ASxxxx listing file

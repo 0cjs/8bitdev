@@ -1,73 +1,74 @@
-from tmpu import TMPU, Regs as R
+from    tmpu  import Machine, Registers as R
+import  pytest
 
 JSR     = 0x20
 NOP     = 0xEA
 
-def test_addxy():
-    tmpu = TMPU()
+@pytest.fixture
+def M():
+    return Machine()
 
+def test_addxy(M):
     #   XXX Not the best way to find this file: duplicates definition
     #   of $buildir in Test and dependent on CWD.
-    tmpu.load('.build/obj/simple')
-    S = tmpu.symtab
+    M.load('.build/obj/simple')
+    S = M.symtab
 
     #   Confirm we've loaded the correct file.
     assert S.ident == 0x400
     ident_str = 'simple.a65'
-    assert ident_str == tmpu.strAt(S.ident, len(ident_str))
+    assert ident_str == M.strAt(S.ident, len(ident_str))
 
-    tmpu.deposit(0x8000, [
+    M.deposit(0x8000, [
         JSR, S.addxy & 0xff, (S.addxy & 0xff00) >> 8,
         NOP, NOP, NOP, NOP ])
-    assert S.addxy == tmpu.wordAt(0x8001)     # Did we set it up right?
-    tmpu.setregs(pc=S.addxy, x=0x12, y=0x34)
+    assert S.addxy == M.wordAt(0x8001)     # Did we set it up right?
+    M.setregs(pc=S.addxy, x=0x12, y=0x34)
     #   XXX Test entry with carry flag set.
-    tmpu.deposit(S.xybuf, [0xff])
-    tmpu.step(7+2)      # Execute a couple NOPs for safety
-    assert R(a=0x12+0x34) == tmpu.regs
-    assert 0x12+0x34 == tmpu.byteAt(S.xybuf)
+    M.deposit(S.xybuf, [0xff])
+    M.step(7+2)      # Execute a couple NOPs for safety
+    assert R(a=0x12+0x34) == M.regs
+    assert 0x12+0x34 == M.byteAt(S.xybuf)
 
-def test_jmpptr():
-    tmpu = TMPU()
-    tmpu.load('.build/obj/simple')
-    S = tmpu.symtab
+def test_jmpptr(M):
+    M.load('.build/obj/simple')
+    S = M.symtab
 
     ident_str = "simple.a65"
-    assert ident_str == tmpu.strAt(S.ident, len(ident_str))
+    assert ident_str == M.strAt(S.ident, len(ident_str))
 
     #   Step by step testing, to make _really_ sure the instructions
     #   are doing what I intend. Maybe overkill?
 
-    tmpu.setregs(pc=S.jmpabs, a=2)
-    tmpu.step()                 # asl
-    assert R(a=4) == tmpu.regs
-    tmpu.step()                 # tax
-    tmpu.step()                 # lda jmplist,X  ;LSB
-    assert R(a=0xBC) == tmpu.regs
-    tmpu.step()                 # sta jmpptr
-    tmpu.step()                 # inx
-    tmpu.step()                 # lda jmplist,X  ;MSB
-    tmpu.step()                 # sta jmpptr+1
-    assert 0x9abc == tmpu.wordAt(S.jmpptr)
-    tmpu.step()                 # jmp [jmpptr]
-    assert R(pc=0x9ABC) == tmpu.regs
+    M.setregs(pc=S.jmpabs, a=2)
+    M.step()                 # asl
+    assert R(a=4) == M.regs
+    M.step()                 # tax
+    M.step()                 # lda jmplist,X  ;LSB
+    assert R(a=0xBC) == M.regs
+    M.step()                 # sta jmpptr
+    M.step()                 # inx
+    M.step()                 # lda jmplist,X  ;MSB
+    M.step()                 # sta jmpptr+1
+    assert 0x9abc == M.wordAt(S.jmpptr)
+    M.step()                 # jmp [jmpptr]
+    assert R(pc=0x9ABC) == M.regs
 
-    #print(hex(tmpu.mpu.pc), hex(tmpu.mpu.a), hex(tmpu.mpu.x))
+    #print(hex(M.mpu.pc), hex(M.mpu.a), hex(M.mpu.x))
 
-def test_jmpabsrts():
-    tmpu = TMPU()
-    tmpu.load('.build/obj/simple')
-    S = tmpu.symtab
+def test_jmpabsrts(M):
+    M.load('.build/obj/simple')
+    S = M.symtab
 
     ident_str = "simple.a65"
-    assert ident_str == tmpu.strAt(S.ident, len(ident_str))
+    assert ident_str == M.strAt(S.ident, len(ident_str))
 
-    tmpu.setregs(pc=S.jmpabsrts, a=1)
-    tmpu.step()                 # asl
-    tmpu.step()                 # tax
-    tmpu.step()                 # lda MSB
-    tmpu.step()                 # pha
-    tmpu.step()                 # lda ;LSB
-    tmpu.step()                 # pha
-    tmpu.step()                 # rts
-    assert R(pc=0x5678) == tmpu.regs
+    M.setregs(pc=S.jmpabsrts, a=1)
+    M.step()                 # asl
+    M.step()                 # tax
+    M.step()                 # lda MSB
+    M.step()                 # pha
+    M.step()                 # lda ;LSB
+    M.step()                 # pha
+    M.step()                 # rts
+    assert R(pc=0x5678) == M.regs

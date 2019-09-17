@@ -7,10 +7,10 @@ from    struct  import unpack_from
 from    py65.devices.mpu6502  import MPU
 import  re
 
-__all__ = ['Regs', 'TMPU']
+__all__ = ['Registers', 'Machine']
 
-RegsTuple = namedtuple('RegsTuple', 'pc a x y sp N V D I Z C')
-class Regs(RegsTuple):
+RegistersTuple = namedtuple('RegistersTuple', 'pc a x y sp N V D I Z C')
+class Registers(RegistersTuple):
     ''' The register set, including flags, of the 6502.
 
         Any values set to `None` will be ignored in comparisons
@@ -60,7 +60,8 @@ class Regs(RegsTuple):
             V = 1 if psr & 0x40 else 0
             N = 1 if psr & 0x80 else 0
 
-        self = super(Regs, cls).__new__(cls, pc, a, x, y, sp, N, V, D, I, Z, C)
+        self = super(Registers, cls) \
+            .__new__(cls, pc, a, x, y, sp, N, V, D, I, Z, C)
         return self
 
     def __repr__(self):
@@ -105,7 +106,7 @@ class Regs(RegsTuple):
 
         return True
 
-class TMPU():
+class Machine():
 
     def __init__(self):
         self.mpu = MPU()
@@ -114,7 +115,7 @@ class TMPU():
     @property
     def regs(self):
         m = self.mpu
-        return Regs(m.pc, m.a, m.x, m.y, m.sp, psr=m.p)
+        return Registers(m.pc, m.a, m.x, m.y, m.sp, psr=m.p)
 
     def setregs(self, pc=None, a=None, x=None, y=None, sp=None):
         m = self.mpu

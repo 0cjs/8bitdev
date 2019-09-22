@@ -92,7 +92,7 @@ and what some popular keyboards have.
     @[\]^_`{|}~     Full set
 
      [ ]  `{ }~     SWTPC CT-1024 (TV Typewriter)
-    @[\]^_`         PET 2001 (chicklet&typewriter) (↑=^ ←=_)
+    @[\]↑←`         PET 2001 (calculator and typewriter)
     @   ^           Apple II ( ] is on international kbd?)
     @               TRS-80 Model I
 

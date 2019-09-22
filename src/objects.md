@@ -49,7 +49,7 @@ followed by the GC.
 
     MSB LSB (binary) R  Description
     00   000000 x0      nil
-    00   000001 x0      t (true)
+    00   000001 x0      true, t
     00   ?????? x0      (other special values?)
     AA   aaaaaa x0   R  pointer into heap (except special values above)
     NN   000000 01      byte/char (unsigned) value NN
@@ -82,7 +82,147 @@ individual objects, but then individual types that did not entirely
 fill the space would need an additional length or termination bytes to
 determine the actual length of their data.)
 
-### Considerations and Potential Adjustments
+Following are the heapdata types, given as both the least significant
+byte in hex (always having least significant bits set to `01`) and the
+most significant six bits interpreted as a decimal number in
+parentheses.
+
+XXX These may want to be renumbered to make comparisons easier, once
+we have enough of this worked out to see better ways of organizing
+this.
+
+- `$05` (1): __symbol__ (or __string__). Data is vector of _len_
+  bytes, usually interpreted as ASCII characters but they may be any
+  byte values. Symbols are immutable once created in order to allow
+  storage in ROM.
+
+- `$09` (2): __word__: _len_=2. Data is an unsigned 16-bit (two-byte)
+  integer. Arithmetic is modular and overflow is ignored.
+
+- `$0d` (3): __longword__: _len=4_. Data is an unsigned 32-bit
+  (four-byte) integer. Arithmetic is modular and overflow is ignored.
+
+- `$11` (4): __fixnum__: A signed integer value of arbitrary length
+  (up to 255). Data is a vector of _len_ bytes, LSB to MSB, with sign
+  as the highest bit of the MSB. Arithmetic sign-extends the smaller
+  value.
+
+- `$7d`,`$fd` (31,63): __flonum__: Positive and negative floating
+  point numbers with mantessa of _len_-1 bytes. The first byte of data
+  is the (always 8-bit) exponent (2's complement with reversed sign;
+  `$80` is zero) and the remaining bytes are the mantessa MSB to LSB.
+  See below for more details.
+
+#### Floating Point Format and Representation
+
+Floating point values always consist of an 8-bit exponent in the first
+byte, followed by however many bytes of mantessa. The mantessa sign is
+kept separately as part of the object type; i.e. negative and positive
+mantessas are technically separate types.
+
+The exponent is, in the usual way, offset by $80: 0 = $80, 1 = $81,
+-1 = $79, etc.
+
+The mantessa, when normalized, is assumed to have an implicit `1` bit
+before it. For simplicity we may decide to disallow denormalized
+mantessas (with one or more leading zeros) even though this slightly
+reduces the range that can be represented by a floating point value.
+
+The mantessa sign is kept separately as part of the type. This makes
+computations easier.
+
+
+Types and Literals
+------------------
+
+#### Special Constants
+
+- __nil__
+- __true__, __t__
+
+#### Modular Numbers
+
+- __byte__ (__char__): Unsigned 8-bit value; modular arithmetic.
+  - Literal: `$xx` where _xx_ is a one- or two-digit hexadecimal value
+  - Literal: `%n` where _n_ is a 1-8 digit binary value.
+  - Literal: `:c` where _c_ is a character (potentially escaped; see below).
+  - Uses: character; data for examine/deposit.
+
+- __word__: Unsigned 16-bit value; modular arithmetic.
+  - Literal: `$xxxx` where _xxxx_ is four hex digits (one alternative).
+  - Literal: `$$n` where _n_ is a 1-4 hex digits (other alternative).
+  - Literal: `%n.n` for high/low bytes where _n_ is 1-8 binary digits.
+  - Uses: addresses for examine/deposit.
+
+#### Numbers
+
+- __sfixnum__: Signed 14-bit integer; fits into a tagged pointer. This
+  would normally not be considered by the programmer as the system
+  will automatically convert between these and fixnums as necessary.
+
+- __fixnum__: Signed arbitrary-precision integer. For operations
+  between two integers of different precisions, the smaller is
+  sign-extended to the size of the larger. Overflow increases the size
+  of the result; the size of a result will automatically be decreased
+  when possible. (The actual maximum precision is 255 bytes, including
+  sign, holding absolute values of >63e612; overflowing this results
+  in an error.)
+  - Literal: optional `+` or `-` followed by digits with no `.`.
+
+- __flonum__: 8-bit exponent; arbitary precision. No infinity or NaN;
+  operations that would produce these are an error. Overflow/underflow
+  is an error? Literals are:
+  - Optional `+` or `-`, followed by one or more digits `[0-9]` and
+    then a decimal point. (This is how we recognize it's a flonum and
+    not a fixnum.)
+  - Zero or more digits after the decimal point.
+  - optional `e` followed by optional `+` or `-` followed by digits
+    for the exponent.
+
+  A flonum literal will be given the minimum precision necessary to
+  fully represent it. Operations between flonums will produce results
+  with the same precision as the highest-precision flonum.
+
+#### Other
+
+- __proc__: Executable code. Not sure about argument list
+  specification; should it just take care of that (and checking of it)
+  itself? Possibly need different versions for PROC vs. FPROC (the
+  latter getting unevaluated arguments), and for interpreted (EXPR)
+  vs. machine code (SUBR), à la LISP 1.5.
+
+- __symbol__, __string__: Actually the same thing.
+  - "Escaped chars" are `\c` combinations; see below.
+  - Literal: `"…"`.
+  - Literal: `'` followed by chars; any "auto-quoted" literal above is
+    parsed as that type instead. Use `"…"` to create a symbol instead
+    of a literal of another type. Terminated by space, `)`, maybe some
+    other things (see what R²RS suggests).
+
+- __environment__:
+
+### Escaped Character Literals
+
+`\` (`↓` on TRS-80, `£` on VIC) followed by a single character; any
+chars not listed here generate a parse error. There are two sets.
+
+The "double-quote" set is used with symbol/string literals using `"…"`:
+
+    \               To escape itself
+    0bfrn           The usual codes for non-printing chars.
+    "               To escape closing quote.
+
+The "quote" set is all of the above, plus
+
+    '
+    ␢               Space ("blank") character
+    ()[]{}
+
+
+Considerations and Alternatives
+-------------------------------
+
+### Representation
 
 - To avoid duplicate symbols, and just for general symbol lookup, we
   need to be able to search through all symbols in memory. This
@@ -105,25 +245,6 @@ determine the actual length of their data.)
     short strings due to all the additional pointers, empty end nodes,
     etc.
 
-### Floating Point Format and Representation
-
-Floating point values always consist of an 8-bit exponent in the first
-byte, followed by however many bytes of mantessa. The mantessa sign is
-kept separately as part of the object type; i.e. negative and positive
-mantessas are technically separate types.
-
-The exponent is, in the usual way, offset by $80: 0 = $80, 1 = $81,
--1 = $79, etc.
-
-The mantessa, when normalized, is assumed to have an implicit `1` bit
-before it. For simplicity we may decide to disallow denormalized
-mantessas (with one or more leading zeros) even though this slightly
-reduces the range that can be represented by a floating point value.
-
-
-Types and Literals
-------------------
-
 #### Keyboard Issues
 
 Need to be careful having literals using punctuation chars from the
@@ -138,85 +259,42 @@ and what some popular keyboards have.
     @   ^           Apple II ( ] is on international kbd?)
     @               TRS-80 Model I
 
-#### Modular (Unsigned) Integers
+#### Types and Literals
 
-- __byte8__: Unsigned 8-bit value; modular arithmetic.
-  - Literal: `$xx` where _xx_ is a one- or two-digit hexadecimal value
-  - Literal: `%n` where _n_ is a 1-8 digit binary value.
-  - Uses: data for examine/deposit.
+A basic decision to make is whether or not we want to recognize
+non-symbol literals by the _initial chars_ of the literal, and
+generate an error if the rest of the format is not correct. If we do
+that certain strings such as `+123a` will be invalid; otherwise they
+would be valid symbols. The former seems better in that it's likely to
+catch programmer errors; using symbols like `12O` seems inadvisable.
+(Also, the former gives us room for future expansion of parsing, such
+as `1a0h` for hexadecimal, or `12cm` in a system with user-defined
+unit suffixes.)
 
-- __char__: Unsigned 8-bit value. Different from byte8? Probably does
-  not need to be if it's separate from the string type. Literals:
-  - Not sure yet. Want to avoid `'`; we need that for quoting atoms.
-    Maybe `^` or `:` or `&`
+- __byte__: Other options considered for literal __char__ were:
+  - `^`: Not available on TRS-80 keyboard. `↑` in PET and TRS-80 charset.
+  - `&`: Looks bigger and more awkward than `:`.
+  - Haven't investigated use of any of these symbols in earlier LISPs.
 
-- __byte16__: Unsigned 16-bit value; modular arithmetic.
-  - Literal: `$xxxx` where _xxxx_ is four hex digits (one alternative).
-  - Literal: `$$n` where _n_ is a 1-4 hex digits (other alternative).
-  - Literal: `%n.n` for high/low bytes where _n_ is 1-8 binary digits.
-  - Uses: addresses for examine/deposit.
+- __fixnum__: Making this a fixed size, rather than arbitrary
+  precision, actually saves basically no effort since operations are
+  done byte-wise, anyway. This may change if we decide to support
+  vectors or arrays.
 
-#### Signed Integers
-
-- __smallint__: Signed value that fits into a tagged pointer.
-  14 bits, `-8192` to `8191`.
-- __int8__: Signed 8-bit value; grows to a larger type on arithemtic
-  overflow. Literals are `-128` to `127`.
-- __int16__: Signed 15-bit value; grows to a larger type on arithemtic
-  overflow. Literals are `-16384` to `-129` and `128` to `16383`.
-- __int32__: Signed 32-bit value. Not sure what to do about overflow:
-  Error? Convert to floating point? Convert to bigint (if we have it)?
-
-Potentially it's actually easier to replace all of the above (except
-__smallint__) with an arbitrary-length __bigint__, since the addition
-routines are a similar amount of work anyway.
-
-#### Other
-
-- __float__: See above for size. No infinity or NaN; operations that
-  would produce these are an error. Overflow/underflow is an error?
-  Literals are:
-  - Optional `-`, followed by one or more digits `[0-9]`.
-  - Required decimal point `.` (this is how we recognize it's an FP
-    not an int)
-  - Zero or more digits after the decimal point.
-  - optional `e` followed by a negative or positive int for the
-    exponent.
-
-- __proc__: Executable code. Not sure about argument list
-  specification; should it just take care of that (and checking of it)
-  itself? Possibly need different versions for PROC vs. FPROC (the
-  latter getting unevaluated arguments), and for interpreted (EXPR)
-  vs. machine code (SUBR), à la LISP 1.5.
-
-- __symbol__, __string__: Actually the same thing.
-  - "Escaped chars" are `\c` combinations; see below.
-  - Literal: `"…"`.
-  - Literal: `'` followed by chars; any "auto-quoted" literal above is
-    parsed as that type instead. Use `"…"` to create a symbol instead
-    of a literal of another type. Terminated by space, `)`, maybe some
-    other things (see what R²RS suggests).
-
-- __nil__, __true__: Special values.
-
-- __environment__:
-
-#### Escaped Character Literals
-
-Backslash followed by a single character; any chars not listed here
-generate a parse error. There are two sets.
-
-The "double-quote" set is used with symbol/string literals using `"…"`:
-
-    \               To escape itself
-    0bfrn           The usual codes for non-printing chars.
-    "               To escape closing quote.
-
-The "quote" set is all of the above, plus
-
-    '
-    (space)
-    ()[]{}
+- __flonum__:
+  - As with fixnums, making the mantessa a fixed size rather than
+    arbitrary precision saves basically no effort. However, having
+    more than one size of exponent would involve extra effort, so
+    exponents are always 8 bits. (Again, this may change if we decide
+    to support vectors or arrays.) It may be worth the effort of
+    adding the option of 16-bit exponents at some point; there's
+    probably no sense in going further than that since this is already
+    considerably larger than an IEEE double-precision exponent (11
+    bits).
+  - Possibly we should allow dropping the decimal point if an exponent
+    is supplied.
+  - It's not clear on the best way to assign precision at initial
+    allocation.
 
 
 References

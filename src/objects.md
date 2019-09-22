@@ -319,9 +319,20 @@ References
 
 #### Modern
 
+- ["Memory Management Glossary"][mps-glos] from the Memory Pool System
+  documentation. Ravenbrook. 1997-present. Very useful to find
+  particular techniques and references from terms.
+- [_Memory Management Reference_][mmr]. Site devoted to memory
+  management.
 - David Gries, ["Presentation of the Schorr-Waite graph marking
   algorithm"][gries2006]. 2006. GC w/o recursion. Algorithm appeared
   in 1968. Also attributed to Peter Deutsch.
+- St-Amour and Feeley, ["PICOBIT: A Compact Scheme System for
+  Microcontrollers"][picobit09]. Symposium on the Implementation of
+  Functional Languages. 2009. Fits in 7 KB. Stack-based VM. First
+  class continuations are 30 lines of Scheme compiling to 141 bytes of
+  bytecode. Whole-program compilation and a treeshaker heavily
+  optimize size.
 
 #### Other Notes
 
@@ -353,6 +364,9 @@ References
 
 <!-- Refs: Modern -->
 [gries2006]: https://www.cs.cornell.edu/courses/cs312/2007fa/lectures/lec21-schorr-waite.pdf
+[mmr]: https://www.memorymanagement.org
+[mps-glos]: https://www.ravenbrook.com/project/mps/master/manual/html/glossary/index.html
+[picobit09]: https://www.ccs.neu.edu/home/stamourv/papers/picobit.pdf
 
 <!-- Refs: Other Notes -->
 [wp-maclisp]: https://en.wikipedia.org/wiki/Maclisp

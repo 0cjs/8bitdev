@@ -4,64 +4,106 @@ Objects for a Small Language
 This is just kicking around some ideas for the data types one would
 want for a small language to run on an 8-bit microprocessor system.
 
-Representation
---------------
+Representation of Objects in Memory
+-----------------------------------
+
+Pointers are stored in 16-bit _words_ as _[tagged]_ values that in
+some cases represent the object itself, rather than pointing to
+storage for the object. A pointer will only ever actually reference
+memory in the heap if it points to a _cons cell_ or a _heapdata
+header_.
 
 Objects are allocated on the heap with both address and size [aligned]
-to a word (two byte) boundry. Pointers are 16 bits but are _[tagged]_
-so that some of their values instead represent type/length information
-about the object in the following data or small numbers.
+to a two word (four byte) boundry. Objects in the heap either:
+- start with a heapdata header giving type and length information,
+  followed object data, of arbitrary length; or
+- are a cons cell of two pointer words, the _car_ followed by the
+  _cdr_.
 
-Values with the least significant bit clear are always pointers into
-the heap. Values with the least siginificant bit set are one of three
-types: an unsigned byte (or char), a small (14-bit) signed integer, or
-a type and length information for the object, with the objects data
-following it.
+Given an arbitrary (properly aligned) address in the heap we cannot
+tell if it points to a cons cell or a heapdata object because it might
+point into the middle of a heapdata object; thus walking the entire
+heap must be done by starting at its lowest location in memory.
+(Unallocated heap elements must be initialized to "empty" cons cells
+of `(nil,nil)`.)
 
-An exception is heap pointers pointing to one of the first few
-addreses in memory: these are not actually stored in memory but
-represent specific constant values (nil, true, etc.). This causes no
-real issues since all 8-bit processors have a special use for the
-lowest bytes of memory, anyway (zero page for 6800 and 6502, vectors
-for the 8080).
+This allows us to tag pointers in the following way:
+- Heapdata headers are never pointers, because they must be
+  distinguishable from pointers in order to determine that a heap
+  object is not a cons cell.
+- Values with the least siginificant bit set are one of two types: an
+  unsigned byte (or char) or a small (14-bit) signed integer.
+- Values with the least significant bit clear and a non-zero high
+  address byte are pointers into the heap.
+- Values with the LSB clear and a zero high address byte are fixed
+  constant objects identified by their location so that no heap
+  storage is necessary for them. (The first 256 bytes of memory cannot
+  be used for heap storage; this isn't a problem since most 8-bit
+  processors have other more important uses for this anyway: zero page
+  on 6800/6502 and interrupt vectors on the 8080.)
 
-    MSB LSB (binary)    Description
-    00   000000 00      nil
-    00   000001 00      true
-    00   ?????? 00      (other special values?)
-    AA   aaaaaa a0      pointer into heap (except special values above)
+The following table shows the details of tagging and determining
+values. `x` represents a don't-care bit, but see below. Objects marked
+`R` may contain pointers themselves and need to be recursively
+followed by the GC.
+
+    MSB LSB (binary) R  Description
+    00   000000 x0      nil
+    00   000001 x0      t (true)
+    00   ?????? x0      (other special values?)
+    AA   aaaaaa x0   R  pointer into heap (except special values above)
     NN   000000 01      byte/char (unsigned) value NN
-    LL   tttttt 01      heap object header: length LL, type tttttt (1-63)
+    LL   tttttt 01   R  heapdata header: length LL, type tttttt (1-63)
     nn   nnnnnn 11      signed 14-bit int: -8192 to 8191
 
-The objects themselves do not include any bits for GC marking. These
-are stored as a separate array for each heap area both because they're
-not necessary for ROM heaps and because adding them to the objects
-themselves would force adding another byte (word, when alignment is
-taken into account) to each heap entry or reducing the pointer size.
+The `x` bit on pointers into the heap is available for use by the
+garbage collector. However, as an alternative a separate bit array
+could be allocated for this (one bit for every possible address on
+the heap, even those that may be in the middle of heapdata objects),
+increasing heap overhead by about 12.5%. (This would not be necessary
+for read-only heap areas.) A Schorr-Wait algorithm would require two
+bits.
+
+### Heapdata Types
+
+A heapdata object starts with a header having least significant bits
+`01` with the type (1 through 63) in the most significant 6 bits of
+the LSB and the length in the MSB. This is followed by the data
+itself. (Type 0 is a `byte` with value in the MSB, and thus has no
+additional data and is the car of a cons cell.)
+
+To simplify determining the storage used by object, the length is
+always given as the number of bytes after the header (0-255) and the
+storage allocated is that rounded up to the next 2-word aligned
+address. Thus it requires no knowledge of the types themselves to
+determine the location of the next object after this one on the heap.
+(Storing the length in longwords was also considered, allowing larger
+individual objects, but then individual types that did not entirely
+fill the space would need an additional length or termination bytes to
+determine the actual length of their data.)
 
 ### Considerations and Potential Adjustments
 
-- It may make sense to align heap entries to 4 bytes rather than two.
-  This would:
-  - Free a bit to use for GC marking, thus saving 32 bytes (256 bits)
-    per 256-byte page during GC. >11% space savings!
-  - Int32 6→8 bytes, +33%. But maybe should be using bignum after 16 bits?
-  - Strings now waste avg. 1.5 bytes instead of avg. 0.5.
-  - Floating point probably wastes no space at all since len/type(2) +
-    exp(1) + mantessa(4) (IEEE single prec.) = 7. If we go with
-    9-digit instead of 7-digit precision (like MS BASIC) we waste
-    nothing at all.
+- To avoid duplicate symbols, and just for general symbol lookup, we
+  need to be able to search through all symbols in memory. This
+  happens only when parsing input, though. Options:
+  - Search every object in the heap.
+  - Add a "next" pointer to every symbol object. This could even allow
+    us to keep them in sorted order, letting us shortcut a search,
+    though it doesn't seem to allow binary searches even if we add a
+    prev pointer as well.
+  - Keep a separate binary tree index: speeds searches but adds space
+    overhead and maybe "insert" time overhead. This could be optional,
+    only for larger-memory systems?
+  - Instead use a separate string heap. Probably would have to grow
+    down from top, but seems doable. Makes GC more complex because we
+    now have two heaps to collect when they collide?
 
 - Use a [radix tree] to store the symbols?
   - How do we get a symbol name/string back from its pointer, then?
   - Probably not worth the effort; the overhead seems high for many
     short strings due to all the additional pointers, empty end nodes,
     etc.
-
-- Use words instead of bytes for the object length? This would allow
-  us to have objects longer than 255 bytes, but then we'd need a
-  terminator on strings, etc. Not worth it.
 
 ### Floating Point Format and Representation
 
@@ -199,6 +241,10 @@ References
 
 #### Modern
 
+- David Gries, ["Presentation of the Schorr-Waite graph marking
+  algorithm"][gries2006]. 2006. GC w/o recursion. Algorithm appeared
+  in 1968. Also attributed to Peter Deutsch.
+
 #### Other Notes
 
 [Maclisp][wp-maclisp] (1966-1980 or so), descendent of LISP 1.5:
@@ -218,7 +264,7 @@ References
 [radix tree]: https://en.wikipedia.org/wiki/Radix_tree
 [tagged]: https://en.wikipedia.org/wiki/Tagged_pointer
 
-<!-- Refs: pre-1975 -->
+<!-- Refs: Pre-1975 -->
 [interlisp74]: https://archive.org/details/bitsavers_xeroxinterfMan_35779510
 [lisp1.5]: http://web.cse.ohio-state.edu/~rountev.1/6341/pdf/Manual.pdf
 [moonual]: https://en.wikipedia.org/wiki/David_A._Moon
@@ -226,6 +272,9 @@ References
 <!-- Refs: 1975-1985 -->
 [byte7908]: https://archive.org/details/BYTE_Vol_04-08_1979-08_Lisp
 [taft79]: https://archive.org/details/BYTE_Vol_04-08_1979-08_Lisp/page/n133
+
+<!-- Refs: Modern -->
+[gries2006]: https://www.cs.cornell.edu/courses/cs312/2007fa/lectures/lec21-schorr-waite.pdf
 
 <!-- Refs: Other Notes -->
 [wp-maclisp]: https://en.wikipedia.org/wiki/Maclisp

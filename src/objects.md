@@ -82,33 +82,43 @@ individual objects, but then individual types that did not entirely
 fill the space would need an additional length or termination bytes to
 determine the actual length of their data.)
 
-Following are the heapdata types, given as both the least significant
-byte in hex (always having least significant bits set to `01`) and the
-most significant six bits interpreted as a decimal number in
-parentheses.
+Following are the heapdata types. The table gvies the type numbers in
+decimal, hex and most siginficant six bits in binary; the size on the
+heap and the length value, if not variable; and the name. Following
+this are more detailed descriptions of the individual formats.
+
+    dec  hex  binary  siz  len  descr
+      1  $05  000001            symbol (string)
+      2  $09  000010    4  2    word
+      3  $0D  000011    8  4    longword
+      4  $11  000100            fixnum
+     31  $7D  011111            flonum positive mantessa
+     63  $FD  111111            flonum negative mantessa
 
 XXX These may want to be renumbered to make comparisons easier, once
 we have enough of this worked out to see better ways of organizing
 this.
 
-- `$05` (1): __symbol__ (or __string__). Data is vector of _len_
-  bytes, usually interpreted as ASCII characters but they may be any
-  byte values. Symbols are immutable once created in order to allow
-  storage in ROM.
+- __symbol__ (or __string__). Data is vector of _len_ bytes, usually
+  interpreted as ASCII characters but they may be any byte values.
+  Symbols are immutable once created in order to allow storage in ROM.
+  Generally symbols would be unique, with new symbols being intern'd
+  to maintain uniqueness.
 
-- `$09` (2): __word__: _len_=2. Data is an unsigned 16-bit (two-byte)
+- __word__: _len_=2. Data is an unsigned 16-bit (two-byte) integer.
+  Arithmetic is modular and overflow is ignored.
+
+- __longword__: _len=4_. Data is an unsigned 32-bit (four-byte)
   integer. Arithmetic is modular and overflow is ignored.
 
-- `$0d` (3): __longword__: _len=4_. Data is an unsigned 32-bit
-  (four-byte) integer. Arithmetic is modular and overflow is ignored.
-
-- `$11` (4): __fixnum__: A signed integer value of arbitrary length
-  (up to 255). Data is a vector of _len_ bytes, LSB to MSB, with sign
-  as the highest bit of the MSB. Arithmetic sign-extends the smaller
+- __fixnum__: A signed integer value of arbitrary length (up to 255
+  bytes). Data is a vector of _len_ bytes, LSB to MSB, with sign as
+  the highest bit of the MSB. Arithmetic sign-extends the smaller
   value.
 
-- `$7d`,`$fd` (31,63): __flonum__: Positive and negative floating
-  point numbers with mantessa of _len_-1 bytes. The first byte of data
+- __flonum__: Positive and negative floating point numbers with
+  mantessa of _len_-1 bytes. (Storing the mantessa sign outside of the
+  mantessa itself makes calculations easier.) The first byte of data
   is the (always 8-bit) exponent (2's complement with reversed sign;
   `$80` is zero) and the remaining bytes are the mantessa MSB to LSB.
   See below for more details.

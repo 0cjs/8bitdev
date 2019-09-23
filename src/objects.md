@@ -15,17 +15,18 @@ header_.
 
 Objects are allocated on the heap with both address and size [aligned]
 to a two word (four byte) boundry. Objects in the heap either:
-- start with a heapdata header giving type and length information,
+- start with a heapdata header giving format and length information,
   followed object data, of arbitrary length; or
 - are a cons cell of two pointer words, the _car_ followed by the
   _cdr_.
+
+Unallocated heap elements must be initialized to "empty" cons cells of
+`(nil,nil)`.
 
 Given an arbitrary (properly aligned) address in the heap we cannot
 tell if it points to a cons cell or a heapdata object because it might
 point into the middle of a heapdata object; thus walking the entire
 heap must be done by starting at its lowest location in memory.
-(Unallocated heap elements must be initialized to "empty" cons cells
-of `(nil,nil)`.)
 
 This allows us to tag pointers in the following way:
 - Heapdata headers are never pointers, because they must be
@@ -53,7 +54,7 @@ followed by the GC.
     00   ?????? x0      (other special values?)
     AA   aaaaaa x0   R  pointer into heap (except special values above)
     NN   000000 01      byte/char (unsigned) value NN
-    LL   tttttt 01   R  heapdata header: length LL, type tttttt (1-63)
+    LL   ffffff 01   R  heapdata header: length LL, format id ffffff (1-63)
     nn   nnnnnn 11      signed 14-bit int: -8192 to 8191
 
 The `x` bit on pointers into the heap is available for use by the
@@ -64,30 +65,38 @@ increasing heap overhead by about 12.5%. (This would not be necessary
 for read-only heap areas.) A Schorr-Wait algorithm would require two
 bits.
 
-### Heapdata Types
+### Heapdata Formats
 
-A heapdata object starts with a header having least significant bits
-`01` with the type (1 through 63) in the most significant 6 bits of
-the LSB and the length in the MSB. This is followed by the data
-itself. (Type 0 is a `byte` with value in the MSB, and thus has no
-additional data and is the car of a cons cell.)
+Note that these are "formats" rather than types: some data types (e.g.
+symbol, flonum) have multiple formats for storage as heapdata objects.
 
-To simplify determining the storage used by object, the length is
-always given as the number of bytes after the header (0-255) and the
-storage allocated is that rounded up to the next 2-word aligned
-address. Thus it requires no knowledge of the types themselves to
-determine the location of the next object after this one on the heap.
-(Storing the length in longwords was also considered, allowing larger
-individual objects, but then individual types that did not entirely
-fill the space would need an additional length or termination bytes to
+A heapdata object starts with a two-byte header.
+
+The LSB describes the format and always has its least significant two
+bits set to `01`. The upper six bits are the format identifier
+(ranging from 1-63); when shifted left two bits iwth the lowest two
+bits set to the required `01` this whole byte is referred to as the
+_format number_. (Format number `$01` is a `byte` with value in the
+MSB and no additional data; in the heap this is recognized as the car
+of a cons cell rather than as heapdata.)
+
+The MSB indicates the length of the data after the header, in bytes.
+(The actual storage used will be _len + 2_ rounded up to the next
+longword boundary.) This allows determination of the exact size of any
+object on the heap (and thus the location of the next object on the
+heap) with no knowledge of the particular heapdata formats. (Storing
+the length in longwords was also considered, allowing larger
+individual objects, but then individual formats that did not entirely
+fill the space would need additional length or termination bytes to
 determine the actual length of their data.)
 
-Following are the heapdata types. The table gvies the type numbers in
-decimal, hex and most siginficant six bits in binary; the size on the
-heap and the length value, if not variable; and the name. Following
-this are more detailed descriptions of the individual formats.
+Following are the heapdata formats. The table gives the format
+identifier in decimal, format number in hex and most siginficant six
+bits in binary; the size on the heap and the length value when not
+variable; and the name of the format or type using it. Following this
+are more detailed descriptions of the individual formats.
 
-    dec  hex  binary  siz  len  descr
+     id  num  binary  siz  len  descr
       1  $05  000001            symbol (string)
       2  $09  000010    4  2    word
       3  $0D  000011    8  4    longword
@@ -126,9 +135,10 @@ this.
 #### Floating Point Format and Representation
 
 Floating point values always consist of an 8-bit exponent in the first
-byte, followed by however many bytes of mantessa. The mantessa sign is
-kept separately as part of the object type; i.e. negative and positive
-mantessas are technically separate types.
+byte, followed by however many bytes of mantessa. Negative and
+positive numbers are separate heapdata formats; keeping the mantessa's
+sign separate from the mantessa itself makes calculations easier. The
+sign can be determined from the high bit of the format number.
 
 The exponent is, in the usual way, offset by $80: 0 = $80, 1 = $81,
 -1 = $79, etc.
@@ -137,9 +147,6 @@ The mantessa, when normalized, is assumed to have an implicit `1` bit
 before it. For simplicity we may decide to disallow denormalized
 mantessas (with one or more leading zeros) even though this slightly
 reduces the range that can be represented by a floating point value.
-
-The mantessa sign is kept separately as part of the type. This makes
-computations easier.
 
 
 Types and Literals

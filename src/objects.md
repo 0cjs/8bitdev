@@ -90,35 +90,48 @@ individual objects, but then individual formats that did not entirely
 fill the space would need additional length or termination bytes to
 determine the actual length of their data.)
 
-Following are the heapdata formats. The table gives the format
-identifier in decimal, format number in hex and most siginficant six
-bits in binary; the size on the heap and the length value when not
-variable; and the name of the format or type using it. Following this
-are more detailed descriptions of the individual formats.
+Following are the heapdata formats. The table gives the format number
+in hexadecimal; the format identifier in binary and decimal; the size
+on the heap and the length value when not variable; and the name of
+the format and type using it. Following this are more detailed
+descriptions of the individual formats.
 
-     id  num  binary  siz  len  descr
-      1  $05  000001            symbol (string)
-      2  $09  000010    4  2    word
-      3  $0D  000011    8  4    longword
-      4  $11  000100            fixnum
-     31  $7D  011111            flonum positive mantessa
-     63  $FD  111111            flonum negative mantessa
+    num   binary  id siz len descr
+    $21  0010 00   8          symbol (string)
+    $25  0010 01   9   8  4   symbol substring
+    $61  0110 00  24          fixnum
+    $69  0110 10  26          flonum positive mantessa
+    $79  0111 10  30   4  2   word
+    $7D  0111 11  31   8  4   longword
+    $E9  1110 10  58          flonum negative mantessa
 
-XXX These may want to be renumbered to make comparisons easier, once
-we have enough of this worked out to see better ways of organizing
-this.
+    Bit assignments:
+      5     Sign bit: flonums, ...
+      4     Number, including modular
+      3     Atomic (?)
+      2
+      1
+      0
 
-- __symbol__ (or __string__). Data is vector of _len_ bytes, usually
+- __symbol__ (or __string__). Data are vector of _len_ bytes, usually
   interpreted as ASCII characters but they may be any byte values.
   Symbols are immutable once created in order to allow storage in ROM.
   Generally symbols would be unique, with new symbols being intern'd
   to maintain uniqueness.
 
-- __word__: _len_=2. Data is an unsigned 16-bit (two-byte) integer.
-  Arithmetic is modular and overflow is ignored.
+- __symbol__ substring: _len=4_. Data are a pointer to a symbol, start
+  point and length. Start point (0-based) plus length must not extend
+  past the end of the data of the symbol this references. Not sure yet
+  if this could also reference another substring. This is intended to
+  make substring operations, particularly recursive `(car somesym)`
+  more efficient, but we need to look at ways of turning these into
+  symbols (and dealing with their references, if they exist) so that
+  the original symbol can be GC'd if it's not directly referenced and
+  much of it is no longer needed.
 
-- __longword__: _len=4_. Data is an unsigned 32-bit (four-byte)
-  integer. Arithmetic is modular and overflow is ignored.
+- __word__; __longword__: _len_=2; _len=4_. Data are unsigned 16-bit
+  resp. 32-bit integers. Arithmetic is modular and overflow is
+  ignored.
 
 - __fixnum__: A signed integer value of arbitrary length (up to 255
   bytes). Data is a vector of _len_ bytes, LSB to MSB, with sign as
@@ -159,6 +172,14 @@ Types and Literals
 
 #### Modular Numbers
 
+Whenever a modular number is involved in an expression, the result is
+always a modular number of the largest size involved; smaller sizes
+are sign-extended. Fixnums are converted to a sign-extended modular
+number of the smallest size able to hold the value and its sign bit,
+or an overflow error is generated. Flonums cannot be converted and
+always generate an error. This is intended to make it easy to do
+indexed addressing, e.g., `(+ $FF00 2)`.
+
 - __byte__ (__char__): Unsigned 8-bit value; modular arithmetic.
   - Literal: `$xx` where _xx_ is a one- or two-digit hexadecimal value
   - Literal: `%n` where _n_ is a 1-8 digit binary value.
@@ -171,7 +192,20 @@ Types and Literals
   - Literal: `%n.n` for high/low bytes where _n_ is 1-8 binary digits.
   - Uses: addresses for examine/deposit.
 
+- __longword__: Unsigned 32-bit value; modular arithmetic. Probably
+  won't be implemented, but would work like above. Could consider
+  64-bit quadword, too, but large sizes seem wanted only for
+  cryptogaphy functions which probably want even larger modular
+  integers, maybe expressed as bitfields.
+
 #### Numbers
+
+An expression consisting solely of fixnums produces a fixnum of the
+smallest size large enough to hold the value. (Or maybe larger, in
+intermediate results?) Any flonum in an expression will cause all
+fixnums to be converted to flonums (generating error on overflow),
+producing a flonum result. If modular numbers are involved, see that
+section above.
 
 - __sfixnum__: Signed 14-bit integer; fits into a tagged pointer. This
   would normally not be considered by the programmer as the system
@@ -261,6 +295,12 @@ Considerations and Alternatives
   - Probably not worth the effort; the overhead seems high for many
     short strings due to all the additional pointers, empty end nodes,
     etc.
+
+- Should we rename fixnum and flonum to "int" and "float" to avoid
+  confusion with Maclisp? In Maclisp our fixnum is actually a bignum,
+  and fixnums are modular like our byte and word.
+
+- Add rational numbers type?
 
 #### Keyboard Issues
 

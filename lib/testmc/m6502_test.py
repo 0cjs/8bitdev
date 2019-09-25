@@ -164,7 +164,7 @@ def test_Machine_setregs(M):
     r     = R(0x1234, 0x56, 0x78, 0x9a, 0xbc, psr=0b01010101)
     assert r == M.regs
 
-def test_mpu_step(M):
+def test_Machine_step(M):
     ''' Test a little program we've hand assembled here to show
         that we're using the MPU API correctly.
     '''
@@ -184,6 +184,25 @@ def test_mpu_step(M):
     M.step(); assert R(0x402, a=0xEE) == M.regs
     M.step(); assert R(0x404, x=0x7E) == M.regs
     M.step(); assert R(0x405, 0xEE, 0x7E, 0x00) == M.regs
+
+def test_Machine_stepto(M):
+    M.deposit(0x300, [I.NOP, I.LDA, 2, I.NOP, I.RTS, I.BRK])
+
+    M.setregs(pc=0x300)
+    M.stepto(I.NOP)                 # Always executes at least one instruction
+    assert R(0x303) == M.regs
+    assert M.mpu.processorCycles == 4
+
+    M.setregs(pc=0x300)
+    M.stepto(I.RTS)
+    assert R(0x304) == M.regs
+
+    M.setregs(pc=0x300)
+    with pytest.raises(M.Timeout):
+        #   0x02 is an illegal instruciton that we should never encounter.
+        #   We use about 1/10 the default timeout to speed up this test,
+        #   but it's still >100 ms.
+        M.stepto(0x02, 10000)
 
 ####################################################################
 #   ParseBin - CoCo Disk BASIC binary file loader

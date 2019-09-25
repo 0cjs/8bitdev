@@ -61,13 +61,7 @@ def test_jmpabsrts(M):
     assert ident_str == M.str(S.ident, len(ident_str))
 
     M.setregs(pc=S.jmpabsrts, a=1)
-    M.step()                 # asl
-    M.step()                 # tax
-    M.step()                 # lda MSB
-    M.step()                 # pha
-    M.step()                 # lda ;LSB
-    M.step()                 # pha
+    M.stepto(I.RTS)
     assert 0x5678-1 == M.spword()
-
     M.step()                 # rts
     assert R(pc=0x5678) == M.regs

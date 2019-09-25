@@ -110,6 +110,10 @@ class Registers(RegistersTuple):
 
 class Machine():
 
+    class Timeout(RuntimeError):
+        ' The emulator ran longer than requested. '
+        pass
+
     def __init__(self):
         self.mpu = MPU()
         self.symtab = dict()
@@ -192,6 +196,16 @@ class Machine():
     def step(self, count=1):
         for _ in repeat(None, count):
             self.mpu.step()
+
+    def stepto(self, instr, maxinstrs=100000):
+        self.step()
+        count = maxinstrs - 1
+        while instr != self.byte(self.mpu.pc):
+            self.step()
+            count -= 1
+            if count <= 0:
+                raise self.Timeout(
+                    'Timeout after {} instructions'.format(maxinstrs))
 
 class ParseBin(list):
     ''' Parse records in "Tandy CoCo Disk BASIC binary" (.bin) format
@@ -328,7 +342,9 @@ class Instructions():
         gain from that at the moment.
     '''
 
+    BRK     = 0x00
     JSR     = 0x20
+    RTS     = 0x60
     LDXz    = 0xA6
     LDA     = 0xA9
     NOP     = 0xEA

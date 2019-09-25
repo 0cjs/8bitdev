@@ -97,6 +97,8 @@ the format and type using it. Following this are more detailed
 descriptions of the individual formats.
 
     num   binary  id siz len descr
+    $09  0000 10   2   8  6   env-header
+    $0D  0000 11   3   8  6   env-entry
     $21  0010 00   8          symbol (string)
     $25  0010 01   9   8  4   symbol substring
     $61  0110 00  24          fixnum
@@ -109,9 +111,16 @@ descriptions of the individual formats.
       5     Sign bit: flonums, ...
       4     Number, including modular
       3     Atomic (?)
-      2
-      1
-      0
+
+- __env-header__: _len=6_. The header record for an environment. The
+  data are as follows. All pointers may be `nil` for no value.
+  - Pointer to first _env-entry_
+  - Pointer to parent environment _env-header_
+  - Pointer to symbol for environment name
+
+- __env-entry__: _len=6_. An entry in an environment. The data are
+  three pointers to the entry's symbol (name), entry's value, and next
+  entry in the environment.
 
 - __symbol__ (or __string__). Data are vector of _len_ bytes, usually
   interpreted as ASCII characters but they may be any byte values.

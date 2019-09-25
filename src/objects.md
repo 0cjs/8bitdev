@@ -55,7 +55,7 @@ followed by the GC.
     AA   aaaaaa x0   R  pointer into heap (except special values above)
     NN   000000 01      byte/char (unsigned) value NN
     LL   ffffff 01   R  heapdata header: length LL, format id ffffff (1-63)
-    nn   nnnnnn 11      signed 14-bit int: -8192 to 8191
+    NN   nnnnnn 11      smallint: -8192 to 8191
 
 The `x` bit on pointers into the heap is available for use by the
 garbage collector. However, as an alternative a separate bit array
@@ -68,7 +68,7 @@ bits.
 ### Heapdata Formats
 
 Note that these are "formats" rather than types: some data types (e.g.
-symbol, flonum) have multiple formats for storage as heapdata objects.
+symbol, float) have multiple formats for storage as heapdata objects.
 
 A heapdata object starts with a two-byte header.
 
@@ -101,14 +101,14 @@ descriptions of the individual formats.
     $0D  0000 11   3   8  6   env-entry
     $21  0010 00   8          symbol (string)
     $25  0010 01   9   8  4   symbol substring
-    $61  0110 00  24          fixnum
-    $69  0110 10  26          flonum positive mantessa
+    $61  0110 00  24          integer
+    $69  0110 10  26          float, positive mantessa
     $79  0111 10  30   4  2   word
     $7D  0111 11  31   8  4   longword
-    $E9  1110 10  58          flonum negative mantessa
+    $E9  1110 10  58          float, negative mantessa
 
     Bit assignments:
-      5     Sign bit: flonums, ...
+      5     Sign bit: floats, ...
       4     Number, including modular
       3     Atomic (?)
 
@@ -142,12 +142,12 @@ descriptions of the individual formats.
   resp. 32-bit integers. Arithmetic is modular and overflow is
   ignored.
 
-- __fixnum__: A signed integer value of arbitrary length (up to 255
+- __integer__: A signed integer value of arbitrary length (up to 255
   bytes). Data is a vector of _len_ bytes, LSB to MSB, with sign as
   the highest bit of the MSB. Arithmetic sign-extends the smaller
   value.
 
-- __flonum__: Positive and negative floating point numbers with
+- __float__: Positive and negative floating point numbers with
   mantessa of _len_-1 bytes. (Storing the mantessa sign outside of the
   mantessa itself makes calculations easier.) The first byte of data
   is the (always 8-bit) exponent (2's complement with reversed sign;
@@ -183,9 +183,9 @@ Types and Literals
 
 Whenever a modular number is involved in an expression, the result is
 always a modular number of the largest size involved; smaller sizes
-are sign-extended. Fixnums are converted to a sign-extended modular
+are sign-extended. Integers are converted to a sign-extended modular
 number of the smallest size able to hold the value and its sign bit,
-or an overflow error is generated. Flonums cannot be converted and
+or an overflow error is generated. Floats cannot be converted and
 always generate an error. This is intended to make it easy to do
 indexed addressing, e.g., `(+ $FF00 2)`.
 
@@ -209,18 +209,18 @@ indexed addressing, e.g., `(+ $FF00 2)`.
 
 #### Numbers
 
-An expression consisting solely of fixnums produces a fixnum of the
+An expression consisting solely of integers produces an integer of the
 smallest size large enough to hold the value. (Or maybe larger, in
-intermediate results?) Any flonum in an expression will cause all
-fixnums to be converted to flonums (generating error on overflow),
-producing a flonum result. If modular numbers are involved, see that
+intermediate results?) Any float in an expression will cause all
+integers to be converted to floats (generating error on overflow),
+producing a float result. If modular numbers are involved, see that
 section above.
 
-- __sfixnum__: Signed 14-bit integer; fits into a tagged pointer. This
+- __smallint__: Signed 14-bit integer; fits into a tagged pointer. This
   would normally not be considered by the programmer as the system
-  will automatically convert between these and fixnums as necessary.
+  will automatically convert between these and integers as necessary.
 
-- __fixnum__: Signed arbitrary-precision integer. For operations
+- __integer__: Signed arbitrary-precision integer. For operations
   between two integers of different precisions, the smaller is
   sign-extended to the size of the larger. Overflow increases the size
   of the result; the size of a result will automatically be decreased
@@ -229,19 +229,19 @@ section above.
   in an error.)
   - Literal: optional `+` or `-` followed by digits with no `.`.
 
-- __flonum__: 8-bit exponent; arbitary precision. No infinity or NaN;
+- __float__: 8-bit exponent; arbitary precision. No infinity or NaN;
   operations that would produce these are an error. Overflow/underflow
   is an error? Literals are:
   - Optional `+` or `-`, followed by one or more digits `[0-9]` and
-    then a decimal point. (This is how we recognize it's a flonum and
-    not a fixnum.)
+    then a decimal point. (This is how we recognize it's a float and
+    not a integer.)
   - Zero or more digits after the decimal point.
   - optional `e` followed by optional `+` or `-` followed by digits
     for the exponent.
 
-  A flonum literal will be given the minimum precision necessary to
-  fully represent it. Operations between flonums will produce results
-  with the same precision as the highest-precision flonum.
+  A float literal will be given the minimum precision necessary to
+  fully represent it. Operations between floats will produce results
+  with the same precision as the highest-precision float.
 
 #### Other
 
@@ -305,10 +305,6 @@ Considerations and Alternatives
     short strings due to all the additional pointers, empty end nodes,
     etc.
 
-- Should we rename fixnum and flonum to "int" and "float" to avoid
-  confusion with Maclisp? In Maclisp our fixnum is actually a bignum,
-  and fixnums are modular like our byte and word.
-
 - Add rational numbers type?
 
 #### Keyboard Issues
@@ -342,13 +338,13 @@ unit suffixes.)
   - `&`: Looks bigger and more awkward than `:`.
   - Haven't investigated use of any of these symbols in earlier LISPs.
 
-- __fixnum__: Making this a fixed size, rather than arbitrary
+- __integer__: Making this a fixed size, rather than arbitrary
   precision, actually saves basically no effort since operations are
   done byte-wise, anyway. This may change if we decide to support
   vectors or arrays.
 
-- __flonum__:
-  - As with fixnums, making the mantessa a fixed size rather than
+- __float__:
+  - As with integers, making the mantessa a fixed size rather than
     arbitrary precision saves basically no effort. However, having
     more than one size of exponent would involve extra effort, so
     exponents are always 8 bits. (Again, this may change if we decide

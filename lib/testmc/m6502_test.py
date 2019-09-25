@@ -204,6 +204,17 @@ def test_Machine_stepto(M):
         #   but it's still >100 ms.
         M.stepto(0x02, 10000)
 
+def test_Machine_stepto_multi(M):
+    M.deposit(0x700, [I.NOP, I.INX, I.NOP, I.INY, I.RTS, I.BRK])
+
+    M.setregs(pc=0x700)
+    M.stepto([I.INY])
+    assert R(0x703) == M.regs
+
+    M.setregs(pc=0x700)
+    M.stepto((I.INY, I.INX))
+    assert R(0x701) == M.regs
+
 ####################################################################
 #   ParseBin - CoCo Disk BASIC binary file loader
 

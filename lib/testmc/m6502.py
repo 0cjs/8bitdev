@@ -4,6 +4,7 @@
 '''
 
 from    collections  import namedtuple
+from    collections.abc   import Container
 from    itertools  import repeat
 from    struct  import unpack_from
 from    py65.devices.mpu6502  import MPU
@@ -197,15 +198,19 @@ class Machine():
         for _ in repeat(None, count):
             self.mpu.step()
 
-    def stepto(self, instr, maxinstrs=100000):
+    def stepto(self, instrs, maxinstrs=100000):
+        if not isinstance(instrs, Container):
+            instrs = (instrs,)
         self.step()
         count = maxinstrs - 1
-        while instr != self.byte(self.mpu.pc):
+        while self.byte(self.mpu.pc) not in instrs:
             self.step()
             count -= 1
             if count <= 0:
                 raise self.Timeout(
                     'Timeout after {} instructions'.format(maxinstrs))
+
+    #   XXX Should also check for stack overflows in all of the above.
 
 class ParseBin(list):
     ''' Parse records in "Tandy CoCo Disk BASIC binary" (.bin) format
@@ -347,4 +352,6 @@ class Instructions():
     RTS     = 0x60
     LDXz    = 0xA6
     LDA     = 0xA9
+    INY     = 0xC8
+    INX     = 0xE8
     NOP     = 0xEA

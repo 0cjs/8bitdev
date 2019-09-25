@@ -106,6 +106,13 @@ def test_Machine_deposit(M):
     M.deposit(6, [9, 2, 3, 8])
     assert [0]*6 + [9, 2, 3, 8] + [0]*(0x10000 - 6 - 4) == M.mpu.memory
 
+def test_Machine_examine(M):
+    M.mpu.memory[0x180:0x190] = range(0xE0, 0xF0)
+    assert   0xE0 == M.byteAt(0x180)
+    assert 0xE1E0 == M.wordAt(0x180)
+    assert   0xE8 == M.byteAt(0x188)
+    assert 0xE9E8 == M.wordAt(0x188)
+
 def test_Machine_strAt(M):
     M.deposit(0x100, [0x40, 0x41, 0x42, 0x63, 0x64])
     assert '@ABcd' == M.strAt(0x100, 5)

@@ -67,6 +67,7 @@ def test_jmpabsrts(M):
     M.step()                 # pha
     M.step()                 # lda ;LSB
     M.step()                 # pha
-    #assert 0x5678 == M.stackword()
+    assert 0x5678-1 == M.spword()
+
     M.step()                 # rts
     assert R(pc=0x5678) == M.regs

@@ -143,6 +143,19 @@ class Machine():
         '''
         return self.mpu.WordAt(addr)
 
+    def _stackaddr(self, depth, size):
+        addr = 0x100 + self.mpu.sp + 1 + depth
+        if addr >= 0x201 - size:
+            raise IndexError("stack underflow: addr={:04X} size={}" \
+                .format(addr, size))
+        return addr
+
+    def spbyte(self, depth=0):
+        return self.byte(self._stackaddr(depth, 1))
+
+    def spword(self, depth=0):
+        return self.word(self._stackaddr(depth, 2))
+
     def str(self, addr, len):
         ' Examine a string from memory. '
         #   This currently throws an exception if any of the bytes

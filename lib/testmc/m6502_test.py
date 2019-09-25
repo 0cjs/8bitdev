@@ -113,6 +113,33 @@ def test_Machine_examine(M):
     assert   0xE8 == M.byte(0x188)
     assert 0xE9E8 == M.word(0x188)
 
+def test_Machine_examine_stack(M):
+    #   Confirm the emulator's internal format is the bottom 8 bits of the SP.
+    assert 0xff == M.mpu.sp
+
+    M.mpu.memory[0x180:0x190] = range(0xE0, 0xF0)
+
+    M.setregs(sp=0x87)
+    assert   0xE8 == M.spbyte()
+    assert 0xE9E8 == M.spword()
+    assert   0xEB == M.spbyte(3)
+    assert 0xECEB == M.spword(3)
+
+    M.setregs(sp=0x7F)
+    assert   0xE0 == M.spbyte()
+    assert 0xE1E0 == M.spword()
+
+    M.setregs(sp=0xFE)
+    assert 0 == M.spbyte()
+    with pytest.raises(IndexError) as e:
+        M.spword()
+    assert e.match('stack underflow: addr=01FF size=2')
+
+    with pytest.raises(IndexError): M.spbyte(1)
+    with pytest.raises(IndexError): M.spword(1)
+    with pytest.raises(IndexError): M.spbyte(0xFFFF)
+    with pytest.raises(IndexError): M.spword(0xFFFF)
+
 def test_Machine_str(M):
     M.deposit(0x100, [0x40, 0x41, 0x42, 0x63, 0x64])
     assert '@ABcd' == M.str(0x100, 5)

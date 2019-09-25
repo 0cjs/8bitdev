@@ -14,25 +14,25 @@ def test_addxy(M):
     #   Confirm we've loaded the correct file.
     assert S.ident == 0x400
     ident_str = 'simple.a65'
-    assert ident_str == M.strAt(S.ident, len(ident_str))
+    assert ident_str == M.str(S.ident, len(ident_str))
 
     M.deposit(0x8000, [
         I.JSR, S.addxy & 0xff, (S.addxy & 0xff00) >> 8,
         I.NOP, I.NOP, I.NOP, I.NOP ])
-    assert S.addxy == M.wordAt(0x8001)     # Did we set it up right?
+    assert S.addxy == M.word(0x8001)     # Did we set it up right?
     M.setregs(pc=S.addxy, x=0x12, y=0x34)
     #   XXX Test entry with carry flag set.
     M.deposit(S.xybuf, [0xff])
     M.step(7+2)      # Execute a couple NOPs for safety
     assert R(a=0x12+0x34) == M.regs
-    assert 0x12+0x34 == M.byteAt(S.xybuf)
+    assert 0x12+0x34 == M.byte(S.xybuf)
 
 def test_jmpptr(M):
     M.load('.build/obj/simple')
     S = M.symtab
 
     ident_str = "simple.a65"
-    assert ident_str == M.strAt(S.ident, len(ident_str))
+    assert ident_str == M.str(S.ident, len(ident_str))
 
     #   Step by step testing, to make _really_ sure the instructions
     #   are doing what I intend. Maybe overkill?
@@ -47,7 +47,7 @@ def test_jmpptr(M):
     M.step()                 # inx
     M.step()                 # lda jmplist,X  ;MSB
     M.step()                 # sta jmpptr+1
-    assert 0x9abc == M.wordAt(S.jmpptr)
+    assert 0x9abc == M.word(S.jmpptr)
     M.step()                 # jmp [jmpptr]
     assert R(pc=0x9ABC) == M.regs
 
@@ -58,7 +58,7 @@ def test_jmpabsrts(M):
     S = M.symtab
 
     ident_str = "simple.a65"
-    assert ident_str == M.strAt(S.ident, len(ident_str))
+    assert ident_str == M.str(S.ident, len(ident_str))
 
     M.setregs(pc=S.jmpabsrts, a=1)
     M.step()                 # asl
@@ -67,5 +67,6 @@ def test_jmpabsrts(M):
     M.step()                 # pha
     M.step()                 # lda ;LSB
     M.step()                 # pha
+    #assert 0x5678 == M.stackword()
     M.step()                 # rts
     assert R(pc=0x5678) == M.regs

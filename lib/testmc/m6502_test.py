@@ -108,14 +108,14 @@ def test_Machine_deposit(M):
 
 def test_Machine_examine(M):
     M.mpu.memory[0x180:0x190] = range(0xE0, 0xF0)
-    assert   0xE0 == M.byteAt(0x180)
-    assert 0xE1E0 == M.wordAt(0x180)
-    assert   0xE8 == M.byteAt(0x188)
-    assert 0xE9E8 == M.wordAt(0x188)
+    assert   0xE0 == M.byte(0x180)
+    assert 0xE1E0 == M.word(0x180)
+    assert   0xE8 == M.byte(0x188)
+    assert 0xE9E8 == M.word(0x188)
 
-def test_Machine_strAt(M):
+def test_Machine_str(M):
     M.deposit(0x100, [0x40, 0x41, 0x42, 0x63, 0x64])
-    assert '@ABcd' == M.strAt(0x100, 5)
+    assert '@ABcd' == M.str(0x100, 5)
     #   Test chars with high bit set here,
     #   once we figure out how to handle them.
 
@@ -148,8 +148,8 @@ def test_mpu_step(M):
         I.LDXz, 0x07,
         I.NOP,
     ])
-    assert   0x07 == M.mpu.ByteAt(0x403)
-    assert 0xEEA9 == M.mpu.WordAt(0x400)  # LSB, MSB
+    assert   0x07 == M.byte(0x403)
+    assert 0xEEA9 == M.word(0x400)  # LSB, MSB
 
     assert R(0, 0, 0, 0) == M.regs
     M.setregs(pc=0x400)

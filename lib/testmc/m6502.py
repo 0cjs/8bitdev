@@ -133,15 +133,17 @@ class Machine():
     #   XXX This "examine" interface isn't so nice. Perhaps we can condense
     #   in down to a single examine() function that takes a length and type?
 
-    def byteAt(self, addr):
+    def byte(self, addr):
         ' Examine a byte from memory. '
         return self.mpu.ByteAt(addr)
 
-    def wordAt(self, addr):
-        ' Examine a word from memory. '
+    def word(self, addr):
+        ''' Examine a word from memory.
+            Native endianness NESS is decoded to give a 16-bit int.
+        '''
         return self.mpu.WordAt(addr)
 
-    def strAt(self, addr, len):
+    def str(self, addr, len):
         ' Examine a string from memory. '
         #   This currently throws an exception if any of the bytes
         #   in the memory range are >0x7f. It's not clear how we

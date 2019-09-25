@@ -135,6 +135,12 @@ class Machine():
         #   be set/reset individually, particularly because we should
         #   avoid ever changing unused bits 5 and 6.
 
+    def setregisters(self, r):
+        for flag in (r.N, r.V, r.D, r.I, r.Z, r.C):
+            if flag is not None:
+                raise ValueError("Cannot yet supply flags to setregisters()")
+        return self.setregs(r.pc, r.a, r.x, r.y, r.sp)
+
     #   XXX This "examine" interface isn't so nice. Perhaps we can condense
     #   in down to a single examine() function that takes a length and type?
 
@@ -195,10 +201,20 @@ class Machine():
         self.symtab = SymTab(f)
 
     def step(self, count=1):
+        ''' Execute `count` instructions (default 1).
+
+            XXX This should check for stack under/overflow.
+        '''
         for _ in repeat(None, count):
             self.mpu.step()
 
-    def stepto(self, instrs, maxinstrs=100000):
+    #   Default maximum number of instructions to execute when using
+    #   stepto(), call() and related functions. Even on a relatively
+    #   slow modern machine, 100,000 instructions should terminate
+    #   within a few seconds.
+    MAXINSTRS = 100000
+
+    def stepto(self, instrs, maxinstrs=MAXINSTRS):
         if not isinstance(instrs, Container):
             instrs = (instrs,)
         self.step()
@@ -210,7 +226,38 @@ class Machine():
                 raise self.Timeout(
                     'Timeout after {} instructions'.format(maxinstrs))
 
-    #   XXX Should also check for stack overflows in all of the above.
+    def call(self, addr, regs=Registers(), maxinstrs=MAXINSTRS):
+        ''' Simulate a JSR to `addr`, after setting any `registers`
+            specified, returning when its corresponding RTS is
+            reached.
+
+            The PC will be left at the final unexecuted RTS
+            instruction. Thus, unlike `step()`, this may execute no
+            instructions if the PC is initially pointing to an RTS.
+
+            JSR and RTS instructions will be tracked to allow the
+            routine to call subroutines, but tricks with the stack
+            (such as pushing an address and executing RTS, with no
+            corresponding JSR) will confuse this routine and may
+            cause it to terminate early or not at all.
+        '''
+        self.setregisters(regs)
+        if addr is not None:
+            self.setregs(pc=addr)       # Overrides regs
+        I = Instructions
+        depth = 0
+        while True:
+            instr = self.byte(self.mpu.pc)
+            if instr == I.RTS and depth <= 0:
+                #   We don't execute the RTS because no JSR was called
+                #   to come in, so we may have nothing on the stack.
+                return
+            elif instr == I.JSR:
+                #   Enter the new level with the next execution
+                depth += 1
+            else:   # RTS
+                depth -=1
+            self.stepto((I.JSR, I.RTS), 20) # XXX MAXINSTRS
 
 class ParseBin(list):
     ''' Parse records in "Tandy CoCo Disk BASIC binary" (.bin) format

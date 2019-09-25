@@ -215,6 +215,26 @@ def test_Machine_stepto_multi(M):
     M.stepto((I.INY, I.INX))
     assert R(0x701) == M.regs
 
+
+def test_Machine_call_rts(M):
+    M.deposit(0x580, [I.RTS])
+    assert R(          a=0,    x=0) == M.regs
+    M.call(   0x580, R(a=0xFE, x=8))
+    assert R( 0x580,   a=0xFE, x=8) == M.regs
+
+def test_Machine_call_shallow(M):
+    M.deposit(0x590, [I.INX, I.RTS])
+    M.call(0x590, R(x=3))
+    assert R(0x591, x=4) == M.regs
+
+def test_Machine_call_deep(M):
+    M.deposit(0x500, [I.JSR, 0x20, 0x05, I.JSR, 0x10, 0x05, I.RTS])
+    M.deposit(0x510, [I.INY, I.JSR, 0x20, 0x05, I.RTS])
+    M.deposit(0x520, [I.INX, I.RTS])
+
+    M.call(  0x500, R(x=0x03, y=0x13))
+    assert R(0x506,   x=0x05, y=0x14) == M.regs
+
 ####################################################################
 #   ParseBin - CoCo Disk BASIC binary file loader
 

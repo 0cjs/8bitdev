@@ -2,6 +2,14 @@
 
             .radix h
 
+            ;   This is one way of specifying the location of the code,
+            ;   but experimentation has shown that it's probably better
+            ;   to leave all code and data in the default _CODE area
+            ;   and specify `-b _CODE=0xNNNN` to the linker to do this.
+            ;
+            ;   XXX But the test framework must be fixed to properly
+            ;   find the locations of reloaded symbols, first.
+            ;
             .area   code (abs)
             .org    400
             .end    400         ; entry point

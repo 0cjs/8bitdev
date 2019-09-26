@@ -62,7 +62,7 @@ mkdir -p "$builddir/obj"
 as6500 -x -p -l -o "$builddir/obj/simple.rel" src/simple.a65
 aslink -n -u -m -t "$builddir/obj/simple.rel"
 as6500 -x -p -l -o "$builddir/obj/reloctest.rel" src/reloctest.a65
-aslink -n -u -m -t "$builddir/obj/reloctest.rel" -b 'code=0x400'
+aslink -n -u -m -t "$builddir/obj/reloctest.rel" -b '_code=0x400'
 
 #   Replace form feeds since we view listing only on screen. This must
 #   be done *after* the .rst file is created by the linker because

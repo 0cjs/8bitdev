@@ -319,8 +319,14 @@ class SymTab(dict):
 
             Per §1.8, the entry in the listing file is:
             1. Program  area  number (none if absolute value or external).
+               XXX The value below is relative to the start of this area,
+               which needs to be taken from the ``.map`` file. Currently
+               we ignore this and produce the wrong symbol value.
+               (The symbol values in the ``.map`` file are correct, but
+               only global symbols are in that file, and only the first 8
+               chars of the symbol name.)
             2. The symbol or label
-            3. Optional ``=`` if symbol is diretly assigned.
+            3. Optional ``=`` if symbol is directly assigned.
             4. Value in base of the listing or ``****`` if undefined.
             5. Zero or more of ``GLRX`` for global, local, relocatable
                and external symbols.

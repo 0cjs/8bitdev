@@ -1,8 +1,6 @@
-;   Test test framework's handling of relocatable objects.
+;   Test testmc framework's handling of relocatable objects.
 
             .radix h
-
-            .area   code (rel)
 
             .globl  reloctest
 reloctest:  .str    "@[reloctest]@"

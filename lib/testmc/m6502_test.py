@@ -1,8 +1,6 @@
 from    testmc.m6502 import  Machine, Registers as R, Instructions as I
-from    testmc.m6502 import  SymTab
 from    testmc.asxxxx import ParseBin
 
-from    io  import StringIO
 import  pytest
 
 ####################################################################
@@ -249,78 +247,3 @@ def test_Machine_load_bin(M):
     assert R(pc=0x0403)    == M.regs
     assert expected_mem    == M.mpu.memory
 
-####################################################################
-#   ParseSym - Parse symbol table from ASxxxx listing file
-
-def test_SymTab_getattr():
-    s = SymTab(None)
-    assert 0 == len(s)
-    assert callable(s.__len__)
-
-    with pytest.raises(AttributeError):
-        s.foo
-    s['foo'] = 0
-    assert 0 is s['foo']
-    assert 0 is s.foo
-
-    #   Confirm that we do not override existing methods.
-    s['__len__'] = 0
-    assert 0 is s['__len__']
-    assert not callable(s['__len__'])
-    assert callable(s.__len__)
-    assert 2 == len(s)
-
-def test_SymTab_splitentries_0():
-    assert [] == SymTab.splitentries('\n')
-
-def test_SymTab_splitentries_1():
-    assert ['2 xybuf              0416 GR'] \
-        == SymTab.splitentries('  2 xybuf              0416 GR')
-
-def test_SymTab_splitentries_2():
-    e0 = '.__.H$L.       =   0000 L'
-    e1 = '2 addxy              040A GR'
-    assert [e0, e1] == SymTab.splitentries('  {}   |  {}'.format(e0, e1))
-
-def test_SymTab_parseent():
-    p = SymTab.parseent
-    assert ('.__.$$$.', 0x2710) == p(  '.__.$$$.       =   2710 L')
-    assert ('addxy',    0x040a) == p('2 addxy              040A GR')
-    assert ('jmpptr',   0x0010) == p(  'jmpptr         =   0010')
-
-def test_SymTab_parse():
-    p = SymTab(StringIO(LST_SYM))
-    assert 0x0400 == p.ident
-    assert 0x042f == p.jmprtslist
-    assert 0x2710 == p['.__.$$$.']
-
-LST_SYM = '''
-Everything before the symbol table should be ignored.
-
-\fASxxxx Assembler V05.31  (Rockwell 6502/6510/65C02)                     Page 1
-Hexadecimal [16-Bits]                                 Sun Sep 15 17:26:48 2019
-
-Symbol Table
-
-    .__.$$$.       =   2710 L   |     .__.ABS.       =   0000 G
-
-\fASxxxx Assembler V05.31  (Rockwell 6502/6510/65C02)                     Page 1
-Hexadecimal [16-Bits]                                 Sun Sep 15 17:26:48 2019
-
-    .__.CPU.       =   0000 L   |     .__.END.       =   0400 G
-
-ASxxxx Assembler V05.31  (Rockwell 6502/6510/65C02)                     Page 1
-Hexadecimal [16-Bits]                                 Sun Sep 15 17:26:48 2019
-
-    .__.H$L.       =   0000 L   |   2 addxy              040A GR
-  2 ident              0400 R   |   2 jmpabs             0417 R
-  2 jmpabsrts          0437 R   |   2 jmplist            0427 R
-    jmpptr         =   0010     |   2 jmprtslist         042F R
-  2 xybuf              0416 GR
-
-
-\fASxxxx Assembler V05.31  (Rockwell 6502/6510/65C02)                     Page 2
-Hexadecimal [16-Bits]                                 Sun Sep 15 17:26:48 2019
-
-Area Table
-'''

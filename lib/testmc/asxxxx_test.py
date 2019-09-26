@@ -1,6 +1,6 @@
-from    testmc.asxxxx import ParseBin, SymTab
+from    testmc.asxxxx import MemImage, SymTab
 
-from    io  import StringIO
+from    io  import BytesIO, StringIO
 import  pytest
 
 #   Records in "Tandy CoCo Disk BASIC binary" (.bin) format as
@@ -12,15 +12,15 @@ BINDATA = bytes.fromhex(''
     + 'ff 0000 0403'    # final record has entry point
     )
 
-def test_ParseBin():
-    p = ParseBin(BINDATA)
-    rec0data = [0xee]
-    rec1data = [0x8a, 0x8c, 0x09, 0x04, 0x18, 0x6d, 0x09, 0x04, 0x60]
-    assert (0x0123, rec0data) == p[0]
-    assert (0x0400, rec1data) == p[1]
+def test_MemImage_parse_cocobin():
+    mi = MemImage.parse_cocobin(BytesIO(BINDATA))
+    rec0data = (0xee,)
+    rec1data = (0x8a, 0x8c, 0x09, 0x04, 0x18, 0x6d, 0x09, 0x04, 0x60)
+    assert (0x0123, rec0data) == mi[0]
+    assert (0x0400, rec1data) == mi[1]
     #   Entries only for data records, not the entrypoint record
-    assert 2 == len(p)
-    assert 0x0403 == p.entrypoint
+    assert 2 == len(mi)
+    assert 0x0403 == mi.entrypoint
 
 
 ####################################################################

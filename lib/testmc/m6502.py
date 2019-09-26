@@ -8,7 +8,7 @@ from    collections.abc   import Container
 from    itertools  import repeat
 from    py65.devices.mpu6502  import MPU
 
-from    testmc.asxxxx import ParseBin, SymTab
+from    testmc.asxxxx import MemImage, SymTab
 
 __all__ = ['Registers', 'Machine']
 
@@ -184,18 +184,17 @@ class Machine():
             in the same directory.
         '''
         with open(path + '.bin', 'rb') as f:
-            self.load_bin(f.read())
+            self.load_memimage(MemImage.parse_cocobin(f))
         try:
             with open(path + '.rst', 'r') as f:
                 self.load_sym(f)
         except FileNotFoundError:
             pass
 
-    def load_bin(self, buf):
-        recs = ParseBin(buf)
-        for addr, data in recs:
+    def load_memimage(self, memimage):
+        for addr, data in memimage:
             self.deposit(addr, data)
-        self.mpu.pc = recs.entrypoint
+        self.mpu.pc = memimage.entrypoint
 
     def load_sym(self, f):
         self.symtab = SymTab(f)

@@ -4,4 +4,7 @@
 
             .area   code (rel)
 
-ident:      .str    "objects.a65"
+            .globl  reloctest
+reloctest:  .str    "@[reloctest]@"
+
+ident:      .str    "reloctest.a65"

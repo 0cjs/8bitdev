@@ -59,10 +59,28 @@ mkdir -p "$builddir/obj"
 #   no dependency graph so it rebuilds everything each time.
 #   (Fortunately this is quite fast.)
 
-as6500 -x -p -l -o "$builddir/obj/simple.rel" src/simple.a65
-aslink -n -u -m -t "$builddir/obj/simple.rel"
-as6500 -x -p -l -o "$builddir/obj/reloctest.rel" src/reloctest.a65
-aslink -n -u -m -t "$builddir/obj/reloctest.rel" -b '_code=0x400'
+#   -x  Output in hexadecimal
+#   -p  Disable listing pagination
+#   -w  Wide listing format for symbol table (55 char of symname instead of 14)
+#   -l  Create listing file (`.lst`)
+#   -o  Create object file (`.rel`)
+#   -s  Create symbol file (`.sym`) (removes symtab from listing file)
+#   -r  Inlcude assembler line numbers in the `.hlr` hint file
+#   -rw Inlcude non-list assembler line numbers in the `.hlr` hint file
+asmopts="-x -p -l -o"
+
+#   -n  No echo of commands to stdout
+#   -u  Update listing file (`.lst`) with relocated addresses info (`.rst`)
+#       (This does not update the addresses in the symbol table.)
+#   -m  Generate map output file (`.map`)
+#   -w  "Wide" mode for map file (show 32 chars, not 8, of symbol names)
+#   -t  Output format: Tandy Color Computer BASIC binary file (`.bin`)
+linkopts="-n -u -m -w -t"
+
+as6500 $asmopts "$builddir/obj/simple.rel" src/simple.a65
+aslink $linkopts "$builddir/obj/simple.rel"
+as6500 $asmopts "$builddir/obj/reloctest.rel" src/reloctest.a65
+aslink $linkopts "$builddir/obj/reloctest.rel" -b '_code=0x400'
 
 #   Replace form feeds since we view listing only on screen. This must
 #   be done *after* the .rst file is created by the linker because

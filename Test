@@ -66,8 +66,8 @@ mkdir -p "$builddir/obj"
 #   -o  Create object file (`.rel`)
 #   -s  Create symbol file (`.sym`) (removes symtab from listing file)
 #   -r  Inlcude assembler line numbers in the `.hlr` hint file
-#   -rw Inlcude non-list assembler line numbers in the `.hlr` hint file
-asmopts="-x -p -l -o"
+#   -rr Inlcude non-list assembler line numbers in the `.hlr` hint file
+asmopts="-xplo"
 
 #   -n  No echo of commands to stdout
 #   -u  Update listing file (`.lst`) with relocated addresses info (`.rst`)
@@ -75,7 +75,7 @@ asmopts="-x -p -l -o"
 #   -m  Generate map output file (`.map`)
 #   -w  "Wide" mode for map file (show 32 chars, not 8, of symbol names)
 #   -t  Output format: Tandy Color Computer BASIC binary file (`.bin`)
-linkopts="-n -u -m -w -t"
+linkopts="-numwt"
 
 asm() {
     local srcfile="$1"; shift

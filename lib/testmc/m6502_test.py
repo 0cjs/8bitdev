@@ -205,10 +205,10 @@ def test_Machine_stepto(M):
 
     M.setregs(pc=0x300)
     with pytest.raises(M.Timeout):
-        #   0x02 is an illegal instruciton that we should never encounter.
+        #   0x02 is an illegal opcode that we should never encounter.
         #   We use about 1/10 the default timeout to speed up this test,
         #   but it's still >100 ms.
-        M.stepto(0x02, 10000)
+        M.stepto(0x02, maxops=10000)
 
 def test_Machine_stepto_multi(M):
     M.deposit(0x700, [I.NOP, I.INX, I.NOP, I.INY, I.RTS, I.BRK])

@@ -212,45 +212,55 @@ class Machine():
     def load_sym(self, f):
         self.symtab = SymTab(f)
 
-    def step(self, count=1):
+    def step(self, count=1, *, trace=False):
         ''' Execute `count` instructions (default 1).
+
+            If `trace` is `True`, the current machine state and
+            instruction about to be executed will be printed
+            before executing the step.
 
             XXX This should check for stack under/overflow.
         '''
         for _ in repeat(None, count):
+            if trace:
+                print('{} opcode={:02X}' \
+                    .format(self.regs, self.byte(self.regs.pc)))
             self.mpu.step()
 
     #   Default maximum number of instructions to execute when using
     #   stepto(), call() and related functions. Even on a relatively
     #   slow modern machine, 100,000 instructions should terminate
     #   within a few seconds.
-    MAXINSTRS = 100000
+    MAXOPS = 100000
 
-    def stepto(self, instrs, maxinstrs=MAXINSTRS):
+    def stepto(self, instrs, *, maxops=MAXOPS, trace=False):
         ''' Step an instruction and then continue stepping until an
             instruction in `instrs` is reached. Raise a `Timeout`
-            after `maxinstrs`.
+            after `maxops`.
         '''
         if not isinstance(instrs, Container):
             instrs = (instrs,)
-        self.step()
-        count = maxinstrs - 1
+        self.step(trace=trace)
+        count = maxops - 1
         while self.byte(self.mpu.pc) not in instrs:
-            self.step()
+            self.step(trace=trace)
             count -= 1
             if count <= 0:
                 raise self.Timeout(
-                    'Timeout after {} instructions: {} instr={}' \
-                    .format(maxinstrs, self.regs, self.byte(self.regs.pc)))
+                    'Timeout after {} instructions: {} opcode={}' \
+                    .format(maxops, self.regs, self.byte(self.regs.pc)))
 
     def call(self, addr, regs=Registers(), *,
-            maxinstrs=MAXINSTRS, aborts=(0x00,)):
+            maxops=MAXOPS, aborts=(0x00,), trace=False):
         ''' Simulate a JSR to `addr`, after setting any `registers`
             specified, returning when its corresponding RTS is
-            reached. A `Timeout` will be raised if `maxinstrs`
-            instructions are executed or any instructions in the
-            `aborts` collection are about to be executed. (By default
-            this list contains ``BRK``.)
+            reached.
+
+            A `Timeout` will be raised if `maxops` instructions are
+            executed. An `Abort` will be raised if any instructions in
+            the `aborts` collection are about to be executed. (By
+            default this list contains ``BRK``.) `step()` tracing will
+            be enabled if `trace` is `True`.
 
             The PC will be left at the final (unexecuted) RTS
             instruction. Thus, unlike `step()`, this may execute no
@@ -269,21 +279,21 @@ class Machine():
         stopon = (I.JSR, I.RTS) + tuple(aborts)
         depth = 0
         while True:
-            instr = self.byte(self.mpu.pc)
-            if instr == I.RTS:
+            opcode = self.byte(self.mpu.pc)
+            if opcode == I.RTS:
                 if depth > 0:
                     depth -=1
                 else:
                     #   We don't execute the RTS because no JSR was called
                     #   to come in, so we may have nothing on the stack.
                     return
-            elif instr == I.JSR:
+            elif opcode == I.JSR:
                 #   Enter the new level with the next execution
                 depth += 1
-            elif instr in stopon:   # Abort
-                raise self.Abort('Abort on instr={}: {}' \
+            elif opcode in stopon:   # Abort
+                raise self.Abort('Abort on opcode={}: {}' \
                     .format(self.byte(self.regs.pc), self.regs))
-            self.stepto(stopon, Machine.MAXINSTRS)
+            self.stepto(stopon, maxops=maxops, trace=trace)
 
 class Instructions():
     ''' Opcode constants for the 6502, named after the assembly

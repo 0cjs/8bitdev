@@ -150,7 +150,7 @@ class Machine():
 
     def word(self, addr):
         ''' Examine a word from memory.
-            Native endianness NESS is decoded to give a 16-bit int.
+            Native endianness is decoded to give a 16-bit int.
         '''
         return self.mpu.WordAt(addr)
 
@@ -177,6 +177,16 @@ class Machine():
 
     def deposit(self, addr, values):
         self.mpu.memory[addr:addr+len(values)] = values
+
+    def depwords(self, addr, values):
+        ''' Deposit each int from the list as a 16-bit word, starting
+            at `addr`. The values are converted to native endianness.
+        '''
+        bytes = []
+        for i in values:
+            bytes.append(i  % 256)
+            bytes.append(i // 256)
+        self.deposit(addr, bytes)
 
     def load(self, path):
         ''' Load the given ``.bin`` file and, if available, the

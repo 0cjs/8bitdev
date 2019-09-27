@@ -113,6 +113,14 @@ def test_Machine_deposit_bytestr(M):
     expected = [0, 0, 0x40, 0x41, 0x42, 0x43, 0, 0xff, 0, 0]
     assert expected == M.mpu.memory[addr-2:addr-2+len(expected)]
 
+def test_Machine_depwords(M):
+    addr = 0x1111   # Odd, just to be weird
+    M.depwords(addr, [0x1234, 0xfedc])
+    assert      0 == M.word(addr-2)
+    assert 0x1234 == M.word(addr+0)
+    assert 0xfedc == M.word(addr+2)
+    assert      0 == M.word(addr+4)
+
 def test_Machine_examine(M):
     M.mpu.memory[0x180:0x190] = range(0xE0, 0xF0)
     assert   0xE0 == M.byte(0x180)

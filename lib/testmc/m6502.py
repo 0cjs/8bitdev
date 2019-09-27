@@ -265,7 +265,7 @@ class Machine():
                 depth += 1
             else:   # RTS
                 depth -=1
-            self.stepto((I.JSR, I.RTS), 20) # XXX MAXINSTRS
+            self.stepto((I.JSR, I.RTS), Machine.MAXINSTRS)
 
 class Instructions():
     ''' Opcode constants for the 6502, named after the assembly

@@ -115,6 +115,10 @@ class Machine():
         ' The emulator ran longer than requested. '
         pass
 
+    class Abort(RuntimeError):
+        ' The emulator encoutered an instruction on which to abort.'
+        pass
+
     def __init__(self):
         self.mpu = MPU()
         self.symtab = dict()
@@ -223,6 +227,10 @@ class Machine():
     MAXINSTRS = 100000
 
     def stepto(self, instrs, maxinstrs=MAXINSTRS):
+        ''' Step an instruction and then continue stepping until an
+            instruction in `instrs` is reached. Raise a `Timeout`
+            after `maxinstrs`.
+        '''
         if not isinstance(instrs, Container):
             instrs = (instrs,)
         self.step()
@@ -232,14 +240,19 @@ class Machine():
             count -= 1
             if count <= 0:
                 raise self.Timeout(
-                    'Timeout after {} instructions'.format(maxinstrs))
+                    'Timeout after {} instructions: {} instr={}' \
+                    .format(maxinstrs, self.regs, self.byte(self.regs.pc)))
 
-    def call(self, addr, regs=Registers(), maxinstrs=MAXINSTRS):
+    def call(self, addr, regs=Registers(), *,
+            maxinstrs=MAXINSTRS, aborts=(0x00,)):
         ''' Simulate a JSR to `addr`, after setting any `registers`
             specified, returning when its corresponding RTS is
-            reached.
+            reached. A `Timeout` will be raised if `maxinstrs`
+            instructions are executed or any instructions in the
+            `aborts` collection are about to be executed. (By default
+            this list contains ``BRK``.)
 
-            The PC will be left at the final unexecuted RTS
+            The PC will be left at the final (unexecuted) RTS
             instruction. Thus, unlike `step()`, this may execute no
             instructions if the PC is initially pointing to an RTS.
 
@@ -253,19 +266,24 @@ class Machine():
         if addr is not None:
             self.setregs(pc=addr)       # Overrides regs
         I = Instructions
+        stopon = (I.JSR, I.RTS) + tuple(aborts)
         depth = 0
         while True:
             instr = self.byte(self.mpu.pc)
-            if instr == I.RTS and depth <= 0:
-                #   We don't execute the RTS because no JSR was called
-                #   to come in, so we may have nothing on the stack.
-                return
+            if instr == I.RTS:
+                if depth > 0:
+                    depth -=1
+                else:
+                    #   We don't execute the RTS because no JSR was called
+                    #   to come in, so we may have nothing on the stack.
+                    return
             elif instr == I.JSR:
                 #   Enter the new level with the next execution
                 depth += 1
-            else:   # RTS
-                depth -=1
-            self.stepto((I.JSR, I.RTS), Machine.MAXINSTRS)
+            elif instr in stopon:   # Abort
+                raise self.Abort('Abort on instr={}: {}' \
+                    .format(self.byte(self.regs.pc), self.regs))
+            self.stepto(stopon, Machine.MAXINSTRS)
 
 class Instructions():
     ''' Opcode constants for the 6502, named after the assembly

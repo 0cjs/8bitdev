@@ -221,6 +221,11 @@ def test_Machine_stepto_multi(M):
     M.stepto((I.INY, I.INX))
     assert R(0x701) == M.regs
 
+def test_machine_stepto_brk(M):
+    M.deposit(0x710, [I.NOP, I.INX, I.BRK])
+    M.setregs(pc=0x710)
+    M.stepto((I.BRK,))
+    assert R(0x712) == M.regs
 
 def test_Machine_call_rts(M):
     M.deposit(0x580, [I.RTS])
@@ -240,6 +245,12 @@ def test_Machine_call_deep(M):
 
     M.call(  0x500, R(x=0x03, y=0x13))
     assert R(0x506,   x=0x05, y=0x14) == M.regs
+
+def test_Machine_call_aborts(M):
+    M.deposit(0x570, [I.NOP, I.NOP, I.BRK, I.NOP, I.RTS])
+    with pytest.raises(M.Abort):
+        M.call(0x570)
+    assert R(0x572) == M.regs
 
 def test_Machine_load_memimage(M):
     mi = MemImage()

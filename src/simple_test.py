@@ -69,3 +69,21 @@ def test_bytesource(M):
         M.call(S.bsread, R(x=n, y=n+0x40))
         assert R(a=i, x=n, y=n+0x40) == M.regs
         n += 5
+
+def test_rab_decode(M):
+    decode = M.symtab.rab_decode
+    for inp, exp in [ ('0',0), ('5', 5), ('9',9), ('A',0xA), ('F',0xF), ]:
+        print("inp='{}' exp={:02X}".format(inp, exp))
+        M.call(decode, R(a=ord(inp)))
+        assert R(a=exp) == M.regs
+
+def test_read_ascii_byte(M):
+    S = M.symtab
+
+    input = 0x8000
+    M.deposit(input, b'FF0012ED')
+    M.depwords(S.bytesource, [input])
+
+    for i in (0xFF, 0x00, 0x12, 0xED):
+        M.call(S.rd_ascii_byte)
+        assert R(a=i) == M.regs

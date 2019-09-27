@@ -96,3 +96,47 @@ bsread:     sty     bs_ysave
 bytesource: .ds     2       ; pointer to bytes to read
 bs_ysave:   .ds     1       ; temp storage for Y register
             .area   CODE
+
+;---------------------------------------------------------------------
+;   Read (using bsread) a pair of ASCII chars representing a printable
+;   byte value, and convert it to that byte value, returning it in A.
+
+asc_0       .equ    30
+asc_9       .equ    39
+asc_A       .equ    41
+asc_F       .equ    46
+
+            .area   ZP
+rab_temp:   .ds     1
+            .area   CODE
+
+rd_ascii_byte:                  ; XXX test framework has 14 char limit
+            jsr     bsread
+            jsr     rab_decode
+            asl                 ; store top nybble
+            asl
+            asl
+            asl
+            sta     rab_temp
+            jsr     bsread
+            jsr     rab_decode
+            ora     rab_temp
+            rts
+
+;   Decode an ASCII char to a binary digit
+rab_decode: cmp     #asc_0
+            bmi     rab_error
+            cmp     #asc_9+1
+            bpl     rab_hex
+            sec
+            sbc     #asc_0      ; to numeric value
+            rts
+rab_hex:    cmp     #asc_A
+            bmi     rab_error
+            cmp     #asc_F+1
+            bpl     rab_error
+            sec
+            sbc     #asc_A-0A   ; to numeric value
+            rts
+
+rab_error:  brk                 ; let the test framework catch this

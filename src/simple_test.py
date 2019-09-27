@@ -57,3 +57,15 @@ def test_jmpabsrts(M):
     assert 0x5678-1 == M.spword()
     M.step()                 # rts
     assert R(pc=0x5678) == M.regs
+
+def test_bytesource(M):
+    S = M.symtab
+    addr  = 0x1ffe          # Set so we cross a page boundary
+    bytes = b'A\0B\xffC'
+    M.deposit(addr, bytes)
+    M.depwords(S.bytesource, [addr])
+    n = 0x79                # Various values to check register preservation
+    for i in bytes:
+        M.call(S.bsread, R(x=n, y=n+0x40))
+        assert R(a=i, x=n, y=n+0x40) == M.regs
+        n += 5

@@ -1,7 +1,11 @@
 ;   Simple 6502 routines to test
 
+            ;   All numbers are in hex unless specified otherwise.
+            ;   However, we still need to prefix numbers starting with
+            ;   A-F with `0` or `$$` so they're not confused with symbols.
             .radix h
 
+;---------------------------------------------------------------------
             ;   This is one way of specifying the location of the code,
             ;   but experimentation has shown that it's probably better
             ;   to leave all code and data in the default _CODE area
@@ -10,9 +14,17 @@
             ;   XXX But the test framework must be fixed to properly
             ;   find the locations of reloaded symbols, first.
             ;
-            .area   code (abs)
+            .area   CODE (abs)
             .org    400
             .end    400         ; entry point
+
+            ;   Zero page area, allowing us to interleave allocations
+            ;   in this with the code.
+            .area   ZP  (abs,pag)
+            .org    80               ; allocated area starts 80 bytes in
+
+;---------------------------------------------------------------------
+            .area   CODE
 
 ident:      .str    "simple.a65"
 
@@ -62,3 +74,25 @@ jmpabsrts:  asl                 ; convert index to word offset
             lda     jmprtslist,X   ; dest addr LSB
             pha
             rts
+
+;---------------------------------------------------------------------
+;   A source of bytes: each call returns in A the next byte from
+;   [bytesource], incrementing bytesource after. Preserves X and Y.
+;   This is a bit awkward; if we were worried about efficiency we'd
+;   read from [bytesource+1], among other things.
+
+bsread:     sty     bs_ysave
+            ldy     #0
+            lda     [bytesource],y
+            pha
+            ldy     bs_ysave
+            inc     bytesource
+            bne     1$
+            inc     bytesource+1
+1$:         pla
+            rts
+
+            .area   ZP
+bytesource: .ds     2       ; pointer to bytes to read
+bs_ysave:   .ds     1       ; temp storage for Y register
+            .area   CODE

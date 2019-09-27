@@ -3,19 +3,22 @@ import  pytest
 
 @pytest.fixture
 def M():
-    return Machine()
+    M = Machine()
 
-def test_addxy(M):
     #   XXX Not the best way to find this file: duplicates definition
     #   of $buildir in Test and dependent on CWD.
     M.load('.build/obj/simple')
+    ident = M.symtab.ident
+
+    #   Confirm correct file is loaded
+    assert 0x400 == ident
+    ident_str = "simple.a65"
+    assert ident_str == M.str(ident, len(ident_str))
+
+    return M
+
+def test_addxy(M):
     S = M.symtab
-
-    #   Confirm we've loaded the correct file.
-    assert S.ident == 0x400
-    ident_str = 'simple.a65'
-    assert ident_str == M.str(S.ident, len(ident_str))
-
     M.deposit(0x8000, [
         I.JSR, S.addxy & 0xff, (S.addxy & 0xff00) >> 8,
         I.NOP, I.NOP, I.NOP, I.NOP ])
@@ -30,13 +33,8 @@ def test_addxy(M):
 def test_jmpptr(M):
     M.load('.build/obj/simple')
     S = M.symtab
-
-    ident_str = "simple.a65"
-    assert ident_str == M.str(S.ident, len(ident_str))
-
     #   Step by step testing, to make _really_ sure the instructions
     #   are doing what I intend. Maybe overkill?
-
     M.setregs(pc=S.jmpabs, a=2)
     M.step()                 # asl
     assert R(a=4) == M.regs
@@ -50,16 +48,10 @@ def test_jmpptr(M):
     assert 0x9abc == M.word(S.jmpptr)
     M.step()                 # jmp [jmpptr]
     assert R(pc=0x9ABC) == M.regs
-
     #print(hex(M.mpu.pc), hex(M.mpu.a), hex(M.mpu.x))
 
 def test_jmpabsrts(M):
-    M.load('.build/obj/simple')
     S = M.symtab
-
-    ident_str = "simple.a65"
-    assert ident_str == M.str(S.ident, len(ident_str))
-
     M.setregs(pc=S.jmpabsrts, a=1)
     M.stepto(I.RTS)
     assert 0x5678-1 == M.spword()

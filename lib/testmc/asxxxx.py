@@ -11,15 +11,24 @@ import  re
 
 class MemImage(list):
     ''' A memory image, usually loaded from a linker output file,
-        consisting of an entrypoint and a list of data records, each
-        with a memory address at which it starts.
+        consisting of an entrypoint and a list of `MemRecord` data
+        records, each with the memory address at which it starts.
+
+        This is a mutable ordered collection. The records are
+        not necessarily in order of address, but `sorted()` will
+        return the records ordered by address.
     '''
 
     MemRecord = ntup('MemRecord', 'addr data')
     MemRecord.__docs__ = \
         ''' A memory record, with an int starting address and list of
-            int data to be loaded at that address as.
+            int data present at that address.
         '''
+
+    @staticmethod
+    def parse_cocobin_fromfile(path):
+        with open(path, 'rb') as stream:
+            return MemImage.parse_cocobin(stream)
 
     @staticmethod
     def parse_cocobin(bytestream):

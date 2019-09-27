@@ -183,8 +183,7 @@ class Machine():
             symbols from a ``.rst`` (ASxxxx linker listing file)
             in the same directory.
         '''
-        with open(path + '.bin', 'rb') as f:
-            self.load_memimage(MemImage.parse_cocobin(f))
+        self.load_memimage(MemImage.parse_cocobin_fromfile(path + '.bin'))
         try:
             with open(path + '.rst', 'r') as f:
                 self.load_sym(f)

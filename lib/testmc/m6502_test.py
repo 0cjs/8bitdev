@@ -106,6 +106,13 @@ def test_Machine_deposit(M):
     M.deposit(6, [9, 2, 3, 8])
     assert [0]*6 + [9, 2, 3, 8] + [0]*(0x10000 - 6 - 4) == M.mpu.memory
 
+def test_Machine_deposit_bytestr(M):
+    addr = 0x1234
+    M.deposit(addr, b'@ABC\00\xff')
+    #   Also check the two guard bytes on either side.
+    expected = [0, 0, 0x40, 0x41, 0x42, 0x43, 0, 0xff, 0, 0]
+    assert expected == M.mpu.memory[addr-2:addr-2+len(expected)]
+
 def test_Machine_examine(M):
     M.mpu.memory[0x180:0x190] = range(0xE0, 0xF0)
     assert   0xE0 == M.byte(0x180)

@@ -91,8 +91,8 @@ link() {
     (cd $builddir/obj/ && aslink $linkopts "$@")
 }
 
-asm src/simple.a65
-link simple
+asm src/simple.a65      ; link simple
+asm src/c64.a65         ; link c64
 asm src/reloctest.a65
 link reloctest -b '_code=0x400' reloctest
 

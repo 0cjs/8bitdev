@@ -34,16 +34,15 @@ download_asxxxx() {
 }
 
 ####################################################################
-#   Command-line options/arguments
-
-quiet=-q
-for arg in "$@"; do [[ $arg = -v* ]] && quiet=; done
-
-####################################################################
 #   Main
 
 basedir=$(cd "$(dirname "$0")" && pwd -P)
 builddir="$basedir/.build"
+
+#   Command line args
+#       -C as first argument does clean rebuild.
+#       All other args are passed on to pytest.
+[[ ${#@} -gt 0 && $1 == -C ]] && { shift; rm -rf "$builddir"; }
 
 download_asxxxx
 . ./activate -q

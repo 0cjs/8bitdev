@@ -318,7 +318,7 @@ and what some popular keyboards have.
 
      [ ]  `{ }~     SWTPC CT-1024 (TV Typewriter)
     @[\]↑←`         PET 2001 (calculator and typewriter)
-    @   ^           Apple II ( ] is on international kbd?)
+    @  ]^           Apple II (]  on Shift-M is unmarked)
     @               TRS-80 Model I
 
 #### Types and Literals

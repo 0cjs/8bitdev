@@ -74,7 +74,7 @@ A heapdata object starts with a two-byte header.
 
 The LSB describes the format and always has its least significant two
 bits set to `01`. The upper six bits are the format identifier
-(ranging from 1-63); when shifted left two bits iwth the lowest two
+(ranging from 1-63); when shifted left two bits with the lowest two
 bits set to the required `01` this whole byte is referred to as the
 _format number_. (Format number `$01` is a `byte` with value in the
 MSB and no additional data; in the heap this is recognized as the car

@@ -1,0 +1,27 @@
+;   narrow.a65: Generate test output for use with testmc.asxxxx
+;
+;   This produces "narrow" symbol tables with symbol names truncated
+;   to 14 (.lst, .sym) or 8 (.map) chars.
+
+            .radix h
+
+local0:     .strz   'narrow local 0'
+            .db     01,02, 0FE, 0FF
+
+            .globl  g_narrow
+g_narrow:   .strz   'narrow global 0'
+
+local1:     .strz   'narrow local 1'
+
+            .globl  c_narrow
+c_narrow:   lda     0FFFE
+            sta     c_vec
+            lda     0FFFF
+            sta     c_vec+1
+            rts
+c_vec:      .blkw   1
+
+; note double-colon here so we don't need to write name again in .globl
+n_longsym_123456789_123456789_123456789_123456789_123456789_123456789_123456789:: .blkw   1
+
+oddsym:     .str    'this makes total number of symbols odd'

@@ -7,6 +7,7 @@ from    collections  import namedtuple
 from    collections.abc   import Container
 from    itertools  import repeat
 from    py65.devices.mpu6502  import MPU
+from    sys import stderr
 
 from    testmc.asxxxx import MemImage, SymTab
 
@@ -121,7 +122,7 @@ class Machine():
 
     def __init__(self):
         self.mpu = MPU()
-        self.symtab = dict()
+        self.symtab = SymTab([], [])
 
     @property
     def regs(self):
@@ -199,18 +200,16 @@ class Machine():
         '''
         self.load_memimage(MemImage.parse_cocobin_fromfile(path + '.bin'))
         try:
-            with open(path + '.rst', 'r') as f:
-                self.load_sym(f)
-        except FileNotFoundError:
-            pass
+            self.symtab = SymTab.readsymtabpath(path)
+        except FileNotFoundError as err:
+            print('WARNING: could not read symbol table file from path ' \
+                + path, file=stderr)
+            print('FileNotFoundError: ' + str(err), file=stderr)
 
     def load_memimage(self, memimage):
         for addr, data in memimage:
             self.deposit(addr, data)
         self.mpu.pc = memimage.entrypoint
-
-    def load_sym(self, f):
-        self.symtab = SymTab(f)
 
     def step(self, count=1, *, trace=False):
         ''' Execute `count` instructions (default 1).

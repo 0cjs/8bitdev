@@ -1,0 +1,32 @@
+ASxxxx Assembler V05.31  (Rockwell 6502/6510/65C02)                     Page 1
+Hexadecimal [16-Bits]                                 Fri Oct 11 14:55:12 2019
+
+Symbol Table
+
+    .__.$$$.                                                =   2710 L
+    .__.ABS.                                                =   0000 G
+    .__.CPU.                                                =   0000 L
+    .__.H$L.                                                =   0000 L
+  2 aa_local0                                                   8000 R
+  3 ar_local0                                                   0000 R
+  0 c_vec                                                       0039 R
+  0 c_wide                                                      002C GR
+  0 g_wide                                                      0011 GR
+  0 local0                                                      0000 R
+  0 local1                                                      001F R
+    valF123                                                 =   F123 
+  0 w_longsym_123456789_123456789_123456789_123456789_12345     003B GR
+
+
+ASxxxx Assembler V05.31  (Rockwell 6502/6510/65C02)                     Page 2
+Hexadecimal [16-Bits]                                 Fri Oct 11 14:55:12 2019
+
+Area Table
+
+[_CSEG]
+   0 _CODE                                 size   3D   flags C180
+   2 area_abs                              size 8012   flags  908
+   3 area_rel                              size   11   flags  D00
+[_DSEG]
+   1 _DATA                                 size    0   flags C0C0
+

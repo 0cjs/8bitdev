@@ -1,0 +1,30 @@
+ASxxxx Linker V05.20                                                    Page 1
+Hexadecimal [16-Bits]                                 Thu Oct 10 19:14:09 2019
+
+Area                       Addr        Size        Decimal Bytes (Attributes)
+--------------------       ----        ----        ------- ----- ------------
+.  .ABS.                   0000        0000 =           0. bytes (ABS,OVR,CSEG)
+
+   Value  Global      Value  Global      Value  Global      Value  Global   
+   -----  ------      -----  ------      -----  ------      -----  ------   
+    0000  .__.ABS.
+ASxxxx Linker V05.20                                                    Page 2
+Hexadecimal [16-Bits]                                 Thu Oct 10 19:14:09 2019
+[ Bank == _CSEG ]
+
+Area                       Addr        Size        Decimal Bytes (Attributes)
+--------------------       ----        ----        ------- ----- ------------
+_CODE                      0000        0069 =         105. bytes (REL,CON,CSEG)
+
+   Value  Global      Value  Global      Value  Global      Value  Global   
+   -----  ------      -----  ------      -----  ------      -----  ------   
+    0013  g_narrow |   0032  c_narrow |   0041  n_longsy
+ASxxxx Linker V05.20                                                    Page 3
+Hexadecimal [16-Bits]                                 Thu Oct 10 19:14:09 2019
+
+Files Linked                              [ module(s) ]
+
+narrow.rel                                [  ]
+
+
+

@@ -44,11 +44,12 @@ builddir="$basedir/.build"
 #       All other args are passed on to pytest.
 [[ ${#@} -gt 0 && $1 == -C ]] && { shift; rm -rf "$builddir"; }
 
+cd "$basedir"
+
 download_asxxxx
 . ./activate -q
 
 export PATH="$builddir/bin:$PATH"
-cd "$basedir"
 mkdir -p "$builddir/obj"
 
 ####################################################################

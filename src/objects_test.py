@@ -12,7 +12,7 @@ def M():
     return M
 
 ####################################################################
-#   Tests
+#   Tests: readascdigit
 
 @pytest.mark.parametrize('char, num', [
     ('0', 0),  ('1', 1),    ('8', 8),  ('9', 9),
@@ -65,3 +65,53 @@ def test_readascdigit_error_exhaustive(M):
     for char in badchars:
         M.call(M.symtab.readascdigit, R(a=char, N=0))
         assert R(N=1) == M.regs, 'char {} should be bad'.format(char)
+
+####################################################################
+#   Tests: readhex
+
+@pytest.mark.parametrize('input', [
+    (b"/"),
+    (b":"),
+    (b"@"),
+])
+def test_bi_readhex_error(M, input):
+    print('readhex_error:', input)
+    S = M.symtab
+    inbuf = 0x7000; outbuf = 0x7200
+
+    M.deposit(inbuf, input)
+    M.depword(S.inbuf, inbuf)
+    M.depword(S.outbuf, outbuf)
+    M.deposit(outbuf, [222]*5)      # sentinel
+
+    with pytest.raises(M.Abort):
+        M.call(S.bi_readhex, R(a=len(input)))
+    #   Length is invalid, whatever it is.
+    assert 222 == M.byte(outbuf+1)  # nothing further written
+
+@pytest.mark.parametrize('input, bytes', [
+    (b"0",               [0x00]),
+    (b"5",               [0x05]),
+    (b'67',              [0x067]),
+    (b'89A',             [0x08, 0x9A]),
+    (b'fedc',            [0xFE, 0xDC]),
+    (b'fedcb',           [0x0F, 0xED, 0xCB]),
+    (b"80000",           [0x08, 0x00, 0x00]),
+    (b"0",               [0x00]),
+    #(b"00000",           [0x00]),
+])
+def test_bi_readhex(M, input, bytes):
+    print('bi_readhex:', input, type(input), bytes)
+    S = M.symtab
+    inbuf = 0x6FFE; outbuf = 0x71FE     # buffers cross page boundaries
+
+    M.deposit(inbuf, input)
+    M.depword(S.inbuf, inbuf)
+    M.depword(S.outbuf, outbuf)
+    size = len(bytes) + 2               # length byte + value + guard byte
+    M.deposit(outbuf, [222] * size)     # 222 ensures any 0s really were written
+
+    M.call(S.bi_readhex, R(a=len(input)))
+    bvalue = M.bytes(outbuf+1, len(bytes))
+    assert (len(bytes),     bytes,  222) \
+        == (M.byte(outbuf), bvalue, M.byte(outbuf+size-1))

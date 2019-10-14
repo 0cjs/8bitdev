@@ -3,10 +3,10 @@
             .radix h
 
             .globl readascdigit
+            .globl bi_readhex
 
             .area ZP  (abs,pag)
             .org 0
-
             .area   _CODE
 
 ;   Convert ASCII character in A to binary digit.
@@ -58,3 +58,71 @@ readascdigit:
             ;   by the SBC is -$28 = $D8, so we can check the N flag instead.
             ;   Since the N flag is our error code, we need not even BMI.
 9$:         rts
+
+
+;   Bigints are stored in big-endian format on 6502: a length byte
+;   followed by the integer in two's complement format.
+;
+;   We use big-endian format, despite being the opposite of native
+;   6502 order, because we generally want to loop from the LSB to the
+;   MSB and looping towards zero saves means we can start with the
+;   length and decrement and compare with zero, saving the CMP we'd
+;   need to do if counting up to the length.
+
+            .area ZP  (abs,pag)
+inbuf:      .ds 2               ; pointer to text input buffer
+outbuf:     .ds 2               ; pointer to len byte followed by data
+            .area   _CODE
+
+;   Read the ASCII hex two's complement representation of an integer
+;   and convert it to a bigint. The first bit is the sign, i.e.,
+;   `FF00` will be read as -256 decimal; a minus prefix is not
+;   allowed.
+;
+;   A register: inbuf length; 1 <= A <= 255
+;        inbuf: input chars
+;       outbuf: output buffer, must be length (A+1)/2.
+;   All inputs and registers are destroyed.
+;
+bi_readhex: ldx #0              ; constant used for outbuf addressing
+            tay                 ; input index
+            dey                 ; point to last byte of input buffer
+            clc
+            ror                 ; output length is 1/2 input length
+            adc #0              ; plus 1 if input length is odd
+            sta [outbuf,x]      ; store output length
+            adc outbuf          ; set outbuf to end of buffer
+            sta outbuf
+            bcc 2$
+            inc outbuf+1
+2$:         lda [inbuf],y       ; first char for this byte of output buffer
+            jsr readascdigit    ; convert ASCII digit to binary
+            bmi 9$              ; bad digit, error
+            cmp #10
+            bcs 9$              ; >=16, error
+            sta [outbuf,x]
+            dey                 ; second char for this byte of output buffer
+            bmi 8$              ; if input done, return success
+            lda [inbuf],y
+            jsr readascdigit    ; convert ASCII digit to binary
+            bmi 9$              ; bad digit, error
+            cmp #10
+            bcs 9$              ; >=16, error
+            asl                 ; shift up to high nybble
+            asl
+            asl
+            asl
+            clc
+            adc [outbuf,x]
+            sta [outbuf,x]
+            dec outbuf
+            ;   XXX must decrement outbuf+1 on outbuf underflow
+            lda outbuf
+            cmp #0FF
+            bne 3$
+            dec outbuf+1
+3$:         dey
+            cpy #0FF
+            bne 2$              ; next chars
+8$:         rts                 ; success; return
+9$:         brk                 ; readhex error

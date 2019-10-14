@@ -139,3 +139,53 @@ rab_hex:    cmp     #asc_A
             rts
 
 rab_error:  brk                 ; let the test framework catch this
+
+;--------------------------------------------------------------------------
+;   Stack addressing
+
+stk_main:   lda #1F         ; starting with $20, $21, ...
+1$:         clc
+            adc #1
+            pha
+            cmp #24         ; pushed fifth byte?
+            bne 1$
+            jsr stk_extract
+            ldx #5
+2$:         pla
+            dex
+            bne 2$
+            rts
+
+stkpage     .equ 0100       ; start of stack page
+            .area ZP
+stkframe:   .ds 2           ; stack frame pointer
+
+            .area CODE
+stk_extract:
+            ;   Fixed offset from head of stack calculated via X
+            tsx
+            ;   stkpage,X is pointer to byte below head of stack. Therefore add
+            ;   1 - for head of stack
+            ;   2 - to skip caller's return address
+            ;   1 - for second value from end in stack
+            lda stkpage+3+1,X
+            sta stkval_i1
+
+            ;   Variable offset using Y
+            ldx #01         ; high byte of stack frame pointer is always
+            stx stkframe+1  ; stack page, so need be stored only on init
+
+            tsx             ; points to byte below head of stack
+            inx             ; head of stack
+            inx             ; skip past caller's return address lobyte
+            inx             ;                           ... and hibyte
+            stx stkframe    ; now points at data
+            ldy #03         ; fourth byte backwards on stack (0-based indexing)
+            lda [stkframe],Y
+            sta stkval_i3
+
+            rts
+
+stkval_i1:  .ds 1           ; stack value at index 1 (0-based)
+stkval_i3:  .ds 1           ; stack value at index 3 (0-based)
+

@@ -99,3 +99,31 @@ def test_read_ascii_byte(M):
     for i in (0xFF, 0x00, 0x12, 0xED):
         M.call(S.read_ascii_byte)
         assert R(a=i) == M.regs
+
+####################################################################
+#   Stack addressing
+
+def test_stk(M):
+    S = M.symtab
+
+    M.deposit(S.stkval_i1, [0xDE])  # sentinal: 222
+    M.deposit(S.stkval_i3, [0xDE])
+    M.call(S.stk_main, R(a=0xFF, sp=0xFF), maxops=100, trace=0)
+
+    #   Verify correct test data was pushed on the stack.
+    #   No return address was pushed or popped by our call() above
+    #   because it executes up to, but not including the final RTS.
+    #            $1FB  $1FC  $1FD  $1FE  $1FF  guard
+    expected = [ 0x24, 0x23, 0x22, 0x21, 0x20, 0x00 ]
+    assert expected == M.bytes(0x1FB, len(expected))
+    assert 0x25 != M.byte(0x1FA)    # Didn't stack too much
+
+    #   Ensure the stack pointer was left where it started
+    assert R(sp=0xFF) == M.regs
+
+    #   Fixed offset using X
+    assert 0x23 == M.byte(S.stkval_i1)
+
+    #   Variable offset using Y
+    assert 0x1FB == M.word(S.stkframe)
+    assert 0x21 == M.byte(S.stkval_i3)

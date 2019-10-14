@@ -1,33 +1,31 @@
 ;   Simple 6502 routines to test
 
-            ;   All numbers are in hex unless specified otherwise.
-            ;   However, we still need to prefix numbers starting with
-            ;   A-F with `0` or `$$` so they're not confused with symbols.
+            ;   All numbers are in hex unless specified otherwise. However, we
+            ;   still need to prefix numbers starting with A-F with `0` or `$$`
+            ;   so they're not confused with symbols.
             .radix h
 
-;---------------------------------------------------------------------
-            ;   This is one way of specifying the location of the code,
-            ;   but experimentation has shown that it's probably better
-            ;   to leave all code and data in the default _CODE area
-            ;   and specify `-b _CODE=0xNNNN` to the linker to do this.
-            ;
-            ;   XXX But the test framework must be fixed to properly
-            ;   find the locations of reloaded symbols, first.
-            ;
+;--------------------------------------------------------------------------
+           ;   This is one way of specifying the location of the code, but
+            ;   experimentation has shown that it's probably better to leave
+            ;   all code and data in the default _CODE area and specify
+            ;   `-b _CODE=0xNNNN` to the linker to do this.
             .area   CODE (abs)
             .org    400
-            .end    400         ; entry point
+            .end    400             ; entry point
 
-            ;   Zero page area, allowing us to interleave allocations
-            ;   in this with the code.
+            ;   Zero page area, allowing us to interleave zero-page and
+            ;   code segment allocations.
             .area   ZP  (abs,pag)
             .org    80               ; allocated area starts 80 bytes in
 
-;---------------------------------------------------------------------
+;--------------------------------------------------------------------------
             .area   CODE
 
-ident:      .str    "simple.a65"
+ident:      .str    "simple.a65"    ; we use this to check that we've loaded
+                                    ; the correct binary data and symbol table
 
+;--------------------------------------------------------------------------
 ;   Add X and Y, storing the result in xybuf and returning it in A
             .globl addxy,xybuf
 addxy:      txa
@@ -38,7 +36,7 @@ addxy:      txa
             rts
 xybuf:      .ds     1
 
-;----------------------------------------------------------------------
+;--------------------------------------------------------------------------
 ;   JMP [addr] vs PHA/RTS
 ;   See Woz's Sweet 16 article for details.
 ;   Enter with the index (0-3) of the jmplist routine in A.
@@ -75,11 +73,11 @@ jmpabsrts:  asl                 ; convert index to word offset
             pha
             rts
 
-;---------------------------------------------------------------------
-;   A source of bytes: each call returns in A the next byte from
-;   [bytesource], incrementing bytesource after. Preserves X and Y.
-;   This is a bit awkward; if we were worried about efficiency we'd
-;   read from [bytesource+1], among other things.
+;--------------------------------------------------------------------------
+;   bsread: A source stream of bytes
+;   Preserves X and Y. Each call returns in A the next byte from [bytesource],
+;   incrementing bytesource after.  This is a bit awkward; if we were worried
+;   about efficiency we'd read from [bytesource+1], among other things.
 
 bsread:     sty     bs_ysave
             ldy     #0
@@ -97,7 +95,7 @@ bytesource: .ds     2       ; pointer to bytes to read
 bs_ysave:   .ds     1       ; temp storage for Y register
             .area   CODE
 
-;---------------------------------------------------------------------
+;--------------------------------------------------------------------------
 ;   Read (using bsread) a pair of ASCII chars representing a printable
 ;   byte value, and convert it to that byte value, returning it in A.
 

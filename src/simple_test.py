@@ -17,6 +17,9 @@ def M():
 
     return M
 
+####################################################################
+#   Add X and Y, storing the result in xybuf and returning it in A
+
 def test_addxy(M):
     S = M.symtab
     M.deposit(0x8000, [
@@ -29,6 +32,9 @@ def test_addxy(M):
     M.step(7+2)      # Execute a couple NOPs for safety
     assert R(a=0x12+0x34) == M.regs
     assert 0x12+0x34 == M.byte(S.xybuf)
+
+####################################################################
+#   JMP [addr] vs PHA/RTS
 
 def test_jmpptr(M):
     M.load('.build/obj/simple')
@@ -58,6 +64,9 @@ def test_jmpabsrts(M):
     M.step()                 # rts
     assert R(pc=0x5678) == M.regs
 
+####################################################################
+#   bsread: A source stream of bytes
+
 def test_bytesource(M):
     S = M.symtab
     addr  = 0x1ffe          # Set so we cross a page boundary
@@ -69,6 +78,9 @@ def test_bytesource(M):
         M.call(S.bsread, R(x=n, y=n+0x40))
         assert R(a=i, x=n, y=n+0x40) == M.regs
         n += 5
+
+####################################################################
+#   Read (using bsread) a pair of ASCII chars representing a printable...
 
 def test_rab_decode(M):
     decode = M.symtab.rab_decode

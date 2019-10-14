@@ -216,15 +216,26 @@ class Machine():
                     ' to deposit at addr ${:04X}'.format(value, addr))
             self.mpu.memory[addr] = value
 
-    def depwords(self, addr, values):
-        ''' Deposit each int from the list as a 16-bit word, starting
-            at `addr`. The values are converted to native endianness.
+    def depword(self, addr, value):
+        ''' Deposit 16-bit word `value` to memory at `addr` in native
+            endian format. `value` must be a `numbers.Integral`
+            between 0x0000 and 0xFFFF, or a `Sequence` of such numbers
+            in which case the elements will be deposited at contiguous
+            words starting at `addr`.
         '''
-        bytes = []
-        for i in values:
-            bytes.append(i  % 256)
-            bytes.append(i // 256)
-        self.deposit(addr, bytes)
+        if isinstance(value, Sequence):
+            for i, v in enumerate(value):
+                self.depword(addr+i*2, v)
+        else:
+            #   Address checking is taken care of by deposit()
+            if not isinstance(value, Integral):
+                raise ValueError('Bad (non-integral) word value {} ' \
+                    'to deposit at addr ${:04X}'.format(value, addr))
+            if value < 0x0000 or value > 0xFFFF:
+                raise ValueError('Bad word value ${:04X} ' \
+                    'to deposit at addr ${:04X}'.format(value, addr))
+            self.deposit(addr,   value  % 256)
+            self.deposit(addr+1, value // 256)
 
     def load(self, path):
         ''' Load the given ``.bin`` file and, if available, the

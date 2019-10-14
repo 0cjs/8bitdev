@@ -142,13 +142,44 @@ def test_Machine_deposit_bytestr(M):
     expected = [0, 0, 0x40, 0x41, 0x42, 0x43, 0, 0xff, 0, 0]
     assert expected == M.mpu.memory[addr-2:addr-2+len(expected)]
 
-def test_Machine_depwords(M):
+def test_Machine_depword(M):
+    M.depword(0x152, 0x1234)
+    assert 0x0000 == M.word(0x150)
+    assert 0x1234 == M.word(0x152)
+    assert 0x0000 == M.word(0x154)
+
+def test_Machine_depword_oddaddr(M):
+    M.depword(0x163, 0x1234)
+    assert 0x0000 == M.word(0x161)
+    assert 0x1234 == M.word(0x163)
+    assert 0x0000 == M.word(0x165)
+
+def test_Machine_depword_badvalue(M):
+    with pytest.raises(ValueError) as e:
+        M.depword(0x3, -1)
+    assert e.match(r'Bad word value \$-001 to deposit at addr \$0003')
+
+    with pytest.raises(ValueError) as e:
+        M.depword(0xF0F0, 0x10000)
+    assert e.match(r'Bad word value \$10000 to deposit at addr \$F0F0')
+
+    with pytest.raises(ValueError) as e:
+        M.depword(0xA0, 3.321)
+    assert e.match(
+        r'Bad \(non-integral\) word value 3.321 to deposit at addr \$00A0')
+
+    with pytest.raises(ValueError) as e:
+        M.depword(0xFFFF, 0x1234)
+    assert e.match(r'Bad address \$10000 to deposit byte value \$12')
+
+def test_Machine_depword_sequence(M):
     addr = 0x1111   # Odd, just to be weird
-    M.depwords(addr, [0x1234, 0xfedc])
+    M.depword(addr, [0x1234, 0xFEDC, 0x1001])
     assert      0 == M.word(addr-2)
     assert 0x1234 == M.word(addr+0)
-    assert 0xfedc == M.word(addr+2)
-    assert      0 == M.word(addr+4)
+    assert 0xFEDC == M.word(addr+2)
+    assert 0x1001 == M.word(addr+4)
+    assert      0 == M.word(addr+6)
 
 def test_Machine_examine(M):
     M.mpu.memory[0x180:0x190] = range(0xE0, 0xF0)

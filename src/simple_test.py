@@ -72,7 +72,7 @@ def test_bytesource(M):
     addr  = 0x1ffe          # Set so we cross a page boundary
     bytes = b'A\0B\xffC'
     M.deposit(addr, bytes)
-    M.depwords(S.bytesource, [addr])
+    M.depword(S.bytesource, addr)
     n = 0x79                # Various values to check register preservation
     for i in bytes:
         M.call(S.bsread, R(x=n, y=n+0x40))
@@ -94,7 +94,7 @@ def test_read_ascii_byte(M):
 
     input = 0x8000
     M.deposit(input, b'FF0012ED')
-    M.depwords(S.bytesource, [input])
+    M.depword(S.bytesource, input)
 
     for i in (0xFF, 0x00, 0x12, 0xED):
         M.call(S.read_ascii_byte)

@@ -108,7 +108,8 @@ asc_F       .equ    46
 rab_temp:   .ds     1
             .area   CODE
 
-rd_ascii_byte:                  ; XXX test framework has 14 char limit
+            .globl  read_ascii_byte
+read_ascii_byte:
             jsr     bsread
             jsr     rab_decode
             asl                 ; store top nybble

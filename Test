@@ -60,14 +60,14 @@ mkdir -p "$builddir/obj"
 #   (Fortunately this is quite fast.)
 
 #   -x  Output in hexadecimal
-#   -p  Disable listing pagination
 #   -w  Wide listing format for symbol table (55 char of symname instead of 14)
+#   -p  Disable listing pagination
 #   -l  Create listing file (`.lst`)
 #   -o  Create object file (`.rel`)
 #   -s  Create symbol file (`.sym`) (removes symtab from listing file)
 #   -r  Inlcude assembler line numbers in the `.hlr` hint file
 #   -rr Inlcude non-list assembler line numbers in the `.hlr` hint file
-asmopts="-xplo"
+asmopts="-xwplo"
 
 #   -n  No echo of commands to stdout
 #   -u  Update listing file (`.lst`) with relocated addresses info (`.rst`)

@@ -97,5 +97,5 @@ def test_read_ascii_byte(M):
     M.depwords(S.bytesource, [input])
 
     for i in (0xFF, 0x00, 0x12, 0xED):
-        M.call(S.rd_ascii_byte)
+        M.call(S.read_ascii_byte)
         assert R(a=i) == M.regs

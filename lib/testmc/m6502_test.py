@@ -123,10 +123,16 @@ def test_Machine_depwords(M):
 
 def test_Machine_examine(M):
     M.mpu.memory[0x180:0x190] = range(0xE0, 0xF0)
+
     assert   0xE0 == M.byte(0x180)
     assert 0xE1E0 == M.word(0x180)
     assert   0xE8 == M.byte(0x188)
     assert 0xE9E8 == M.word(0x188)
+
+    assert []                           == M.bytes(0x181, 0)
+    assert [0xE1, 0xE2, 0xE3]           == M.bytes(0x181, 3)
+    assert []                           == M.words(0x181, 0)
+    assert [0xE2E1, 0xE4E3, 0xE6E5 ]    == M.words(0x181, 3)
 
 def test_Machine_examine_stack(M):
     #   Confirm the emulator's internal format is the bottom 8 bits of the SP.

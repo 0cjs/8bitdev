@@ -153,11 +153,25 @@ class Machine():
         ' Examine a byte from memory. '
         return self.mpu.ByteAt(addr)
 
+    def bytes(self, addr, len):
+        ' Examine a list of bytes from memory. '
+        vals = []
+        for i in range(addr, addr+len):
+            vals.append(self.byte(i))
+        return vals
+
     def word(self, addr):
         ''' Examine a word from memory.
             Native endianness is decoded to give a 16-bit int.
         '''
         return self.mpu.WordAt(addr)
+
+    def words(self, addr, len):
+        ' Examine a list of words from memory. '
+        vals = []
+        for i in range(addr, addr+len*2, 2):
+            vals.append(self.word(i))
+        return vals
 
     def _stackaddr(self, depth, size):
         addr = 0x100 + self.mpu.sp + 1 + depth

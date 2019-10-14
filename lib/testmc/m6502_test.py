@@ -102,7 +102,36 @@ def M():
 def test_Machine_memory_zeroed(M):
     assert [0]*0x10000 == M.mpu.memory
 
-def test_Machine_deposit(M):
+def test_Machine_deposit_byte(M):
+    for i in (0xEE, 0x17, 0, 0xFF, 0x10):
+        M.deposit(6, i)
+        assert [0, i, 0] == M.mpu.memory[5:8]
+        assert 0x10000 == len(M.mpu.memory)
+
+def test_Machine_deposit_byte_badaddr(M):
+    with pytest.raises(ValueError) as e:
+        M.deposit(-1, 0)
+    assert e.match(r'Bad address \$-001 to deposit byte value \$00')
+
+    with pytest.raises(ValueError) as e:
+        M.deposit(0x10000, 0)
+    assert e.match(r'Bad address \$10000 to deposit byte value \$00')
+
+def test_Machine_deposit_byte_badvalue(M):
+    with pytest.raises(ValueError) as e:
+        M.deposit(6, -1)
+    assert e.match(r'Bad byte value \$-1 to deposit at addr \$0006')
+
+    with pytest.raises(ValueError) as e:
+        M.deposit(0xFEDC, 0x100)
+    assert e.match(r'Bad byte value \$100 to deposit at addr \$FEDC')
+
+    with pytest.raises(ValueError) as e:
+        M.deposit(0xA0, 1.5)
+    assert e.match(
+        r'Bad \(non-integral\) byte value 1.5 to deposit at addr \$00A0')
+
+def test_Machine_deposit_sequence(M):
     M.deposit(6, [9, 2, 3, 8])
     assert [0]*6 + [9, 2, 3, 8] + [0]*(0x10000 - 6 - 4) == M.mpu.memory
 

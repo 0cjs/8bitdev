@@ -4,8 +4,9 @@
 '''
 
 from    collections  import namedtuple
-from    collections.abc   import Container
+from    collections.abc   import Container, Sequence
 from    itertools  import repeat
+from    numbers  import Integral
 from    py65.devices.mpu6502  import MPU
 from    sys import stderr
 
@@ -194,8 +195,26 @@ class Machine():
         #   clear the high bit on all chars before decoding.
         return bytes(self.mpu.memory[addr:addr+len]).decode('ASCII')
 
-    def deposit(self, addr, values):
-        self.mpu.memory[addr:addr+len(values)] = values
+    def deposit(self, addr, value):
+        ''' Deposit `value` to memory at `addr`. `value` must be a
+            `numbers.Integral` between 0x00 and 0xFF, or a `Sequence`
+            of such numbers in which case the elements will be
+            deposited at contiguous addresses starting at `addr`.
+        '''
+        if isinstance(value, Sequence):
+            for i, v in enumerate(value):
+                self.deposit(addr+i, v)
+        else:
+            if addr < 0x0000 or addr > 0xFFFF:
+                raise ValueError('Bad address ${:04X}' \
+                    ' to deposit byte value ${:02X}'.format(addr, value))
+            if not isinstance(value, Integral):
+                raise ValueError('Bad (non-integral) byte value {} ' \
+                    'to deposit at addr ${:04X}'.format(value, addr))
+            if value < 0x00 or value > 0xFF:
+                raise ValueError('Bad byte value ${:02X}'
+                    ' to deposit at addr ${:04X}'.format(value, addr))
+            self.mpu.memory[addr] = value
 
     def depwords(self, addr, values):
         ''' Deposit each int from the list as a 16-bit word, starting

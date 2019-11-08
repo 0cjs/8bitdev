@@ -103,6 +103,7 @@ class Registers(RegistersTuple):
         if comp(a.x , b.x ) and a.x  != b.x : return False
         if comp(a.y , b.y ) and a.y  != b.y : return False
         if comp(a.sp, b.sp) and a.sp != b.sp: return False
+        if comp(a.N , b.N ) and a.N  != b.N : return False
         if comp(a.V , b.V ) and a.V  != b.V : return False
         if comp(a.D , b.D ) and a.D  != b.D : return False
         if comp(a.I , b.I ) and a.I  != b.I : return False

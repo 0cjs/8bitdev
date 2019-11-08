@@ -104,6 +104,14 @@ def test_Regs_eq():
     assert all == R(C=1)
     assert all == R(y=0x9a, sp=0xbc, N=0, V=1, D=0, I=1, Z=0)
 
+def test_Regs_eq_flags():
+    r = R(psr=0xFF)
+    assert R(N=1) == r;  assert R(N=0) != r
+    assert R(V=1) == r;  assert R(V=0) != r
+    assert R(D=1) == r;  assert R(D=0) != r
+    assert R(I=1) == r;  assert R(I=0) != r
+    assert R(Z=1) == r;  assert R(Z=0) != r
+    assert R(C=1) == r;  assert R(C=0) != r
 
 ####################################################################
 #   Machine state

@@ -4,8 +4,12 @@ from    testmc.asxxxx import  MemImage
 from    io import  BytesIO
 import  pytest
 
+@pytest.fixture
+def M():
+    return Machine()
+
 ####################################################################
-#   Registers
+#   Register object
 
 def test_Regs_cons():
     r = R(0x1234, x=0x56, C=1, I=0)
@@ -93,11 +97,7 @@ def test_Regs_eq():
 
 
 ####################################################################
-#   Machine and loader
-
-@pytest.fixture
-def M():
-    return Machine()
+#   Machine state
 
 def test_Machine_memory_zeroed(M):
     assert [0]*0x10000 == M.mpu.memory
@@ -194,6 +194,26 @@ def test_Machine_examine(M):
     assert []                           == M.words(0x181, 0)
     assert [0xE2E1, 0xE4E3, 0xE6E5 ]    == M.words(0x181, 3)
 
+def test_Machine_str(M):
+    M.deposit(0x100, [0x40, 0x41, 0x42, 0x63, 0x64])
+    assert '@ABcd' == M.str(0x100, 5)
+    #   Test chars with high bit set here,
+    #   once we figure out how to handle them.
+
+def test_Machine_setregs(M):
+    M.setregs(R(y=4, a=2))
+    assert  R(y=4, a=2) == M.regs
+
+    M.mpu.p = 0b01010101
+    M.setregs(R(0x1234, 0x56, 0x78, 0x9a, 0xbc))
+    r     = R(0x1234, 0x56, 0x78, 0x9a, 0xbc, psr=0b01010101)
+    assert r == M.regs
+
+def test_Machine_setregs_flags_notimplemented(M):
+    r101010 = R(N=1, V=0, D=1, I=0, Z=1, C=0)
+    with pytest.raises(ValueError):
+        M.setregs(r101010)
+
 def test_Machine_examine_stack(M):
     #   Confirm the emulator's internal format is the bottom 8 bits of the SP.
     assert 0xff == M.mpu.sp
@@ -221,25 +241,26 @@ def test_Machine_examine_stack(M):
     with pytest.raises(IndexError): M.spbyte(0xFFFF)
     with pytest.raises(IndexError): M.spword(0xFFFF)
 
-def test_Machine_str(M):
-    M.deposit(0x100, [0x40, 0x41, 0x42, 0x63, 0x64])
-    assert '@ABcd' == M.str(0x100, 5)
-    #   Test chars with high bit set here,
-    #   once we figure out how to handle them.
+def test_Machine_load_memimage(M):
+    mi = MemImage()
+    rec1data = (0x8a, 0x8c, 0x09, 0x04, 0x18, 0x6d, 0x09, 0x04, 0x60)
+    mi.append((0x400, rec1data))
+    mi.append((0x123, (0xee,)))
+    mi.entrypoint = 0x0403
 
-def test_Machine_setregs(M):
-    M.setregs(R(y=4, a=2))
-    assert  R(y=4, a=2) == M.regs
+    expected_mem \
+        = [0] * 0x123 \
+        + [0xEE] \
+        + [0] * (0x400 - 0x124) \
+        + list(rec1data) \
+        + [0] * (0x10000 - 0x400 - 9)
 
-    M.mpu.p = 0b01010101
-    M.setregs(R(0x1234, 0x56, 0x78, 0x9a, 0xbc))
-    r     = R(0x1234, 0x56, 0x78, 0x9a, 0xbc, psr=0b01010101)
-    assert r == M.regs
+    M.load_memimage(mi)
+    assert R(pc=0x0403)    == M.regs
+    assert expected_mem    == M.mpu.memory
 
-def test_Machine_setregs_flags_notimplemented(M):
-    r101010 = R(N=1, V=0, D=1, I=0, Z=1, C=0)
-    with pytest.raises(ValueError):
-        M.setregs(r101010)
+####################################################################
+#   Machine execution
 
 def test_Machine_step(M):
     ''' Test a little program we've hand assembled here to show
@@ -322,22 +343,3 @@ def test_Machine_call_aborts(M):
     with pytest.raises(M.Abort):
         M.call(0x570)
     assert R(0x572) == M.regs
-
-def test_Machine_load_memimage(M):
-    mi = MemImage()
-    rec1data = (0x8a, 0x8c, 0x09, 0x04, 0x18, 0x6d, 0x09, 0x04, 0x60)
-    mi.append((0x400, rec1data))
-    mi.append((0x123, (0xee,)))
-    mi.entrypoint = 0x0403
-
-    expected_mem \
-        = [0] * 0x123 \
-        + [0xEE] \
-        + [0] * (0x400 - 0x124) \
-        + list(rec1data) \
-        + [0] * (0x10000 - 0x400 - 9)
-
-    M.load_memimage(mi)
-    assert R(pc=0x0403)    == M.regs
-    assert expected_mem    == M.mpu.memory
-

@@ -131,15 +131,31 @@ class Machine():
         return Registers(m.pc, m.a, m.x, m.y, m.sp, psr=m.p)
 
     def setregs(self, r):
-        for flag in (r.N, r.V, r.D, r.I, r.Z, r.C):
-            if flag is not None:
-                raise ValueError("Cannot yet supply flags to setregs()")
         m = self.mpu
         if r.pc is not None:  m.pc = r.pc
         if r.a  is not None:  m.a  = r.a
         if r.x  is not None:  m.x  = r.x
         if r.y  is not None:  m.y  = r.y
         if r.sp is not None:  m.sp = r.sp
+
+        flags_masks = (
+            ('N', 0b10000000),
+            ('V', 0b01000000),
+            ('D', 0b00001000),
+            ('I', 0b00000100),
+            ('Z', 0b00000010),
+            ('C', 0b00000001),
+            )
+        for (flagname, mask) in flags_masks:
+            flag = getattr(r, flagname)
+            if flag is None:
+                continue
+            elif flag == 0:
+                m.p &= ~mask
+            elif flag == 1:
+                m.p |= mask
+            else:
+                raise ValueError('Bad {} flag value: {}'.format(flagname, flag))
 
     #   XXX This "examine" interface isn't so nice. Perhaps we can condense
     #   in down to a single examine() function that takes a length and type?

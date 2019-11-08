@@ -209,10 +209,29 @@ def test_Machine_setregs(M):
     r     = R(0x1234, 0x56, 0x78, 0x9a, 0xbc, psr=0b01010101)
     assert r == M.regs
 
-def test_Machine_setregs_flags_notimplemented(M):
-    r101010 = R(N=1, V=0, D=1, I=0, Z=1, C=0)
-    with pytest.raises(ValueError):
-        M.setregs(r101010)
+def test_Machine_setregs_flags(M):
+    initflags = 0b00110000  # Emulator has unused/how stacked flags set to 1.
+    assert       initflags  == M.mpu.p     # emulator internal status register
+    assert R(psr=initflags) == M.regs      # make sure we read the same
+
+    M.setregs(R(N=1, V=0, D=1, I=0, Z=1, C=0))
+    assert R(N=1, V=0, D=1, I=0, Z=1, C=0) == M.regs
+
+    M.setregs(R(C=1))
+    assert R(N=1, V=0, D=1, I=0, Z=1, C=1) == M.regs
+
+    M.setregs(R(D=0))
+    assert R(N=1, V=0, D=0, I=0, Z=1, C=1) == M.regs
+
+    M.setregs(R(psr=0b11111111))
+    assert R(N=1, V=1, D=1, I=1, Z=1, C=1) == M.regs
+
+    M.setregs(R(psr=0))
+    assert R(N=0, V=0, D=0, I=0, Z=0, C=0) == M.regs
+
+    with pytest.raises(ValueError) as ex:
+        M.setregs(R(C=2))
+    assert ex.match('Bad C flag value: 2')
 
 def test_Machine_examine_stack(M):
     #   Confirm the emulator's internal format is the bottom 8 bits of the SP.

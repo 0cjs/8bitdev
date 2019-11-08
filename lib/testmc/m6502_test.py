@@ -11,17 +11,26 @@ def M():
 ####################################################################
 #   Register object
 
-def test_Regs_cons():
-    r = R(0x1234, x=0x56, C=1, I=0)
-    assert r.pc == 0x1234
-    assert r.a  is None
-    assert r.x  == 0x56
-    assert r.y  is None
-    assert r.Z  == None
-    assert r.C  == 1
-    assert r.I  == 0
+def test_Regs_cons_default():
+    r = R()
+    for attrname in ('pc', 'a', 'x', 'y', 'N', 'V', 'D', 'I', 'Z', 'C'):
+        assert None is getattr(r, attrname)
 
-    #   Immutable
+def test_Regs_cons():
+    r = R(pc=0x1234, a=0x56, x=0x78, y=0x9A, N=1, V=0, D=1, I=0, Z=1, C=0)
+    assert 0x1234 == r.pc
+    assert   0x56 == r.a
+    assert   0x78 == r.x
+    assert   0x9A == r.y
+    assert      1 == r.N
+    assert      0 == r.V
+    assert      1 == r.D
+    assert      0 == r.I
+    assert      1 == r.Z
+    assert      0 == r.C
+
+def test_Regs_immutable():
+    r = R()
     with pytest.raises(AttributeError) as e:
         r.I = 1
     assert e.match("can't set attribute")
@@ -93,7 +102,7 @@ def test_Regs_eq():
 
     assert all != R(C=0)
     assert all == R(C=1)
-    assert all == R(y=0x9a, sp=0xbc, V=1, D=0, I=1, Z=0)
+    assert all == R(y=0x9a, sp=0xbc, N=0, V=1, D=0, I=1, Z=0)
 
 
 ####################################################################

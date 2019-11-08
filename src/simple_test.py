@@ -26,7 +26,7 @@ def test_addxy(M):
         I.JSR, S.addxy & 0xff, (S.addxy & 0xff00) >> 8,
         I.NOP, I.NOP, I.NOP, I.NOP ])
     assert S.addxy == M.word(0x8001)     # Did we set it up right?
-    M.setregs(pc=S.addxy, x=0x12, y=0x34)
+    M.setregs(R(pc=S.addxy, x=0x12, y=0x34))
     #   XXX Test entry with carry flag set.
     M.deposit(S.xybuf, [0xff])
     M.step(7+2)      # Execute a couple NOPs for safety
@@ -41,7 +41,7 @@ def test_jmpptr(M):
     S = M.symtab
     #   Step by step testing, to make _really_ sure the instructions
     #   are doing what I intend. Maybe overkill?
-    M.setregs(pc=S.jmpabs, a=2)
+    M.setregs(R(pc=S.jmpabs, a=2))
     M.step()                 # asl
     assert R(a=4) == M.regs
     M.step()                 # tax
@@ -58,7 +58,7 @@ def test_jmpptr(M):
 
 def test_jmpabsrts(M):
     S = M.symtab
-    M.setregs(pc=S.jmpabsrts, a=1)
+    M.setregs(R(pc=S.jmpabsrts, a=1))
     M.stepto(I.RTS)
     assert 0x5678-1 == M.spword()
     M.step()                 # rts

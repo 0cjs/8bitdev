@@ -200,17 +200,17 @@ def test_Machine_examine_stack(M):
 
     M.mpu.memory[0x180:0x190] = range(0xE0, 0xF0)
 
-    M.setregs(sp=0x87)
+    M.setregs(R(sp=0x87))
     assert   0xE8 == M.spbyte()
     assert 0xE9E8 == M.spword()
     assert   0xEB == M.spbyte(3)
     assert 0xECEB == M.spword(3)
 
-    M.setregs(sp=0x7F)
+    M.setregs(R(sp=0x7F))
     assert   0xE0 == M.spbyte()
     assert 0xE1E0 == M.spword()
 
-    M.setregs(sp=0xFE)
+    M.setregs(R(sp=0xFE))
     assert 0 == M.spbyte()
     with pytest.raises(IndexError) as e:
         M.spword()
@@ -228,13 +228,18 @@ def test_Machine_str(M):
     #   once we figure out how to handle them.
 
 def test_Machine_setregs(M):
-    M.setregs(y=4, a=2)
+    M.setregs(R(y=4, a=2))
     assert  R(y=4, a=2) == M.regs
 
     M.mpu.p = 0b01010101
-    M.setregs(0x1234, 0x56, 0x78, 0x9a, 0xbc)
+    M.setregs(R(0x1234, 0x56, 0x78, 0x9a, 0xbc))
     r     = R(0x1234, 0x56, 0x78, 0x9a, 0xbc, psr=0b01010101)
     assert r == M.regs
+
+def test_Machine_setregs_flags_notimplemented(M):
+    r101010 = R(N=1, V=0, D=1, I=0, Z=1, C=0)
+    with pytest.raises(ValueError):
+        M.setregs(r101010)
 
 def test_Machine_step(M):
     ''' Test a little program we've hand assembled here to show
@@ -251,7 +256,7 @@ def test_Machine_step(M):
     assert 0xEEA9 == M.word(0x400)  # LSB, MSB
 
     assert R(0, 0, 0, 0) == M.regs
-    M.setregs(pc=0x400)
+    M.setregs(R(pc=0x400))
 
     M.step(); assert R(0x402, a=0xEE) == M.regs
     M.step(); assert R(0x404, x=0x7E) == M.regs
@@ -260,16 +265,16 @@ def test_Machine_step(M):
 def test_Machine_stepto(M):
     M.deposit(0x300, [I.NOP, I.LDA, 2, I.NOP, I.RTS, I.BRK])
 
-    M.setregs(pc=0x300)
+    M.setregs(R(pc=0x300))
     M.stepto(I.NOP)                 # Always executes at least one instruction
     assert R(0x303) == M.regs
     assert M.mpu.processorCycles == 4
 
-    M.setregs(pc=0x300)
+    M.setregs(R(pc=0x300))
     M.stepto(I.RTS)
     assert R(0x304) == M.regs
 
-    M.setregs(pc=0x300)
+    M.setregs(R(pc=0x300))
     with pytest.raises(M.Timeout):
         #   0x02 is an illegal opcode that we should never encounter.
         #   We use about 1/10 the default timeout to speed up this test,
@@ -279,17 +284,17 @@ def test_Machine_stepto(M):
 def test_Machine_stepto_multi(M):
     M.deposit(0x700, [I.NOP, I.INX, I.NOP, I.INY, I.RTS, I.BRK])
 
-    M.setregs(pc=0x700)
+    M.setregs(R(pc=0x700))
     M.stepto([I.INY])
     assert R(0x703) == M.regs
 
-    M.setregs(pc=0x700)
+    M.setregs(R(pc=0x700))
     M.stepto((I.INY, I.INX))
     assert R(0x701) == M.regs
 
 def test_machine_stepto_brk(M):
     M.deposit(0x710, [I.NOP, I.INX, I.BRK])
-    M.setregs(pc=0x710)
+    M.setregs(R(pc=0x710))
     M.stepto((I.BRK,))
     assert R(0x712) == M.regs
 

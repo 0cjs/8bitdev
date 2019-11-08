@@ -130,22 +130,16 @@ class Machine():
         m = self.mpu
         return Registers(m.pc, m.a, m.x, m.y, m.sp, psr=m.p)
 
-    def setregs(self, pc=None, a=None, x=None, y=None, sp=None):
-        m = self.mpu
-        if pc is not None:  m.pc = pc
-        if  a is not None:   m.a =  a
-        if  x is not None:   m.x =  x
-        if  y is not None:   m.y =  y
-        if sp is not None:  m.sp = sp
-        #   We don't do processor status register here as flags should
-        #   be set/reset individually, particularly because we should
-        #   avoid ever changing unused bits 5 and 6.
-
-    def setregisters(self, r):
+    def setregs(self, r):
         for flag in (r.N, r.V, r.D, r.I, r.Z, r.C):
             if flag is not None:
-                raise ValueError("Cannot yet supply flags to setregisters()")
-        return self.setregs(r.pc, r.a, r.x, r.y, r.sp)
+                raise ValueError("Cannot yet supply flags to setregs()")
+        m = self.mpu
+        if r.pc is not None:  m.pc = r.pc
+        if r.a  is not None:  m.a  = r.a
+        if r.x  is not None:  m.x  = r.x
+        if r.y  is not None:  m.y  = r.y
+        if r.sp is not None:  m.sp = r.sp
 
     #   XXX This "examine" interface isn't so nice. Perhaps we can condense
     #   in down to a single examine() function that takes a length and type?
@@ -315,9 +309,9 @@ class Machine():
             corresponding JSR) will confuse this routine and may
             cause it to terminate early or not at all.
         '''
-        self.setregisters(regs)
+        self.setregs(regs)
         if addr is not None:
-            self.setregs(pc=addr)       # Overrides regs
+            self.setregs(Registers(pc=addr))    # Overrides regs
         I = Instructions
         stopon = (I.JSR, I.RTS) + tuple(aborts)
         depth = 0

@@ -106,3 +106,20 @@ def test_sbc_unsigned(M):
     #   We could generate a signed result by sign-extending with $FF.
     sub(M, 0x00, 0x01); assert R(a=0xFF, C=0) == M.regs     # $FFFF = -1
     sub(M, 0x00, 0xFF); assert R(a=0x01, C=0) == M.regs     # $FF01 = -255
+
+def test_sbc_signed(M):
+    ''' Signed SBC (subtract with carry).
+    '''
+
+    #   +minuend, +subtrahend, +difference.
+    sub(M, 0x00, 0x00); assert R(a=0x00, N=0, V=0) == M.regs
+    sub(M, 0x7F, 0x00); assert R(a=0x7F, N=0, V=0) == M.regs
+    sub(M, 0x7F, 0x7F); assert R(a=0x00, N=0, V=0) == M.regs
+
+    #   +minuend, +subtrahend, -difference.
+    #       +00 - +01            = -001
+    sub(M, 0x00, 0x01); assert R(a=0xFF, N=1, V=0) == M.regs
+    #       +00 - +7F            = -07F
+    sub(M, 0x00, 0x7F); assert R(a=0x81, N=1, V=0) == M.regs
+    #       +7E - +7F            = -001
+    sub(M, 0x7E, 0x7F); assert R(a=0xFF, N=1, V=0) == M.regs

@@ -379,10 +379,12 @@ class Instructions():
     BRK     = 0x00
     CLC     = 0x18
     JSR     = 0x20
+    SEC     = 0x38
     RTS     = 0x60
     ADC     = 0x69
     LDXz    = 0xA6
     LDA     = 0xA9
     INY     = 0xC8
     INX     = 0xE8
+    SBC     = 0xE9
     NOP     = 0xEA

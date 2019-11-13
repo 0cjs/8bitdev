@@ -87,3 +87,22 @@ def test_adc_signed(M):
     add(M, 0x80, 0x81); assert R(a=0x01, N=0, V=1) == M.regs
     #       -80 + -80            = -100 = $FF00
     add(M, 0x80, 0x80); assert R(a=0x00, N=0, V=1) == M.regs
+
+
+def sub(M, a, b):
+    M.deposit(0x200, [ I.LDA, a, I.SEC, I.SBC, b, I.RTS, ])
+    M.call(0x200)
+
+def test_sbc_unsigned(M):
+    ''' Unsigned SBC (subtract with carry).
+        We always ignore the N and V flags.
+        C flag clear indicates underflow (borrow used).
+    '''
+    sub(M, 0x00, 0x00); assert R(a=0x00, C=1) == M.regs
+    sub(M, 0xFF, 0x00); assert R(a=0xFF, C=1) == M.regs
+    sub(M, 0xFF, 0xFD); assert R(a=0x02, C=1) == M.regs
+
+    #   In these cases, C=0 (borrow used) → result < 0.
+    #   We could generate a signed result by sign-extending with $FF.
+    sub(M, 0x00, 0x01); assert R(a=0xFF, C=0) == M.regs     # $FFFF = -1
+    sub(M, 0x00, 0xFF); assert R(a=0x01, C=0) == M.regs     # $FF01 = -255

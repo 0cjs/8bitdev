@@ -387,6 +387,7 @@ class Instructions():
     LDXz    = 0xA6
     LDA     = 0xA9
     INY     = 0xC8
+    CMP     = 0xC9
     INX     = 0xE8
     SBC     = 0xE9
     NOP     = 0xEA

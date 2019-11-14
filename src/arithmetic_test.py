@@ -288,22 +288,34 @@ def cmp(M, a, b):
     M.deposit(0x200, [ I.LDA, a, I.CMP, b, I.RTS, ])
     M.call(0x200)
 
-def test_cmp_unsigned(M):
-    ''' CMP nn is a subtract without carry (SEC; SBC nn) but the
-        result is thrown away and only the flags are kept.
+#   CMP nn is a subtract without carry (SEC; SBC nn) but the result is
+#   thrown away and only the flags are kept. Further, the V flag is
+#   never changed; only the N, Z and C flags are set.
+#
+#   For a lot more, see "Beyond 8-bit Unsigned Comparisons" by Bruce Clark:
+#       http://www.6502.org/tutorials/compare_beyond.html
 
+def test_cmp_equality(M):
+    ''' For equality, signed and unsigned are the same:
         Z set → a = b (BEQ).     Z clear → a ≠ b (BNE).
-        C set → a ≥ b (BCS/BGE). C clear → a < b (BCC/BLT).
-
-        V flag is always ignored.
     '''
     def cmp(a, b): global cmp; return cmp(M, a, b)
 
-    cmp(0xFE, 0xFE); assert R(a=0xFE, Z=1, C=1) == M.regs   # =
-    cmp(0xFE, 0xFD); assert R(a=0xFE, Z=0, C=1) == M.regs   # ≠, ≥, >
-    cmp(0xFE, 0x00); assert R(a=0xFE, Z=0, C=1) == M.regs   # ≠, ≥, >
-    cmp(0xFE, 0xFF); assert R(a=0xFE, Z=0, C=0) == M.regs   # ≠, <
+    cmp(0x00, 0x00); assert R(a=0x00, Z=1) == M.regs   # a = b
+    cmp(0x00, 0x01); assert R(a=0x00, Z=0) == M.regs   # a ≠ b
+    cmp(0x00, 0xFF); assert R(a=0x00, Z=0) == M.regs   # a ≠ b
 
-    cmp(0x00, 0x00); assert R(a=0x00, Z=1, C=1) == M.regs   # =
-    cmp(0x00, 0x01); assert R(a=0x00, Z=0, C=0) == M.regs   # ≠, <
-    cmp(0x00, 0xFF); assert R(a=0x00, Z=0, C=0) == M.regs   # ≠, <
+def test_cmp_unsigned(M):
+    ''' For unsigned comparisons, we use only the carry:
+        C set → a ≥ b (BCS/BGE). C clear → a < b (BCC/BLT).
+    '''
+    def cmp(a, b): global cmp; return cmp(M, a, b)
+
+    cmp(0xFE, 0xFE); assert R(a=0xFE, C=1) == M.regs   # a ≥ b
+    cmp(0xFE, 0xFD); assert R(a=0xFE, C=1) == M.regs   # a ≥ b
+    cmp(0xFE, 0x00); assert R(a=0xFE, C=1) == M.regs   # a ≥ b
+    cmp(0xFE, 0xFF); assert R(a=0xFE, C=0) == M.regs   # a < b
+
+    cmp(0x00, 0x00); assert R(a=0x00, C=1) == M.regs   # a ≥ b
+    cmp(0x00, 0x01); assert R(a=0x00, C=0) == M.regs   # a < b
+    cmp(0x00, 0xFF); assert R(a=0x00, C=0) == M.regs   # a < b

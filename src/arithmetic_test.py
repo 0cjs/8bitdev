@@ -281,3 +281,29 @@ def test_sbc_signed(M):
     sub(M, 0x00,  0x80); assert R(a=0x80, N=1, V=1) == M.regs
     #      +$7F - -$80     = +$FF ($00FF)   x    overflow
     sub(M, 0x7F,  0x80); assert R(a=0xFF, N=1, V=1) == M.regs
+
+####################################################################
+
+def cmp(M, a, b):
+    M.deposit(0x200, [ I.LDA, a, I.CMP, b, I.RTS, ])
+    M.call(0x200)
+
+def test_cmp_unsigned(M):
+    ''' CMP nn is a subtract without carry (SEC; SBC nn) but the
+        result is thrown away and only the flags are kept.
+
+        Z set → a = b (BEQ).     Z clear → a ≠ b (BNE).
+        C set → a ≥ b (BCS/BGE). C clear → a < b (BCC/BLT).
+
+        V flag is always ignored.
+    '''
+    def cmp(a, b): global cmp; return cmp(M, a, b)
+
+    cmp(0xFE, 0xFE); assert R(a=0xFE, Z=1, C=1) == M.regs   # =
+    cmp(0xFE, 0xFD); assert R(a=0xFE, Z=0, C=1) == M.regs   # ≠, ≥, >
+    cmp(0xFE, 0x00); assert R(a=0xFE, Z=0, C=1) == M.regs   # ≠, ≥, >
+    cmp(0xFE, 0xFF); assert R(a=0xFE, Z=0, C=0) == M.regs   # ≠, <
+
+    cmp(0x00, 0x00); assert R(a=0x00, Z=1, C=1) == M.regs   # =
+    cmp(0x00, 0x01); assert R(a=0x00, Z=0, C=0) == M.regs   # ≠, <
+    cmp(0x00, 0xFF); assert R(a=0x00, Z=0, C=0) == M.regs   # ≠, <

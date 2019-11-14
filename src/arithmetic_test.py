@@ -26,6 +26,71 @@ def add(M, a, b):
     M.deposit(0x200, [ I.LDA, a, I.CLC, I.ADC, b, I.RTS, ])
     M.call(0x200)
 
+def sub(M, a, b):
+    M.deposit(0x200, [ I.LDA, a, I.SEC, I.SBC, b, I.RTS, ])
+    M.call(0x200)
+
+####################################################################
+
+def test_2s_complement(M):
+    ''' In 2s complement, the positive integers (sign bit clear) are
+        the same as in unsigned arithmetic, though of course the
+        maximum number expressable is trucated (2^(n-1)-1) as compared
+        to an unsigned integer of the same size (2^n-1).
+    '''
+
+    #   Negative numbers can be viewed as (0 - n) where n is the
+    #   (positive) absolute value.
+    sub(M, 0x00, 0x01); assert R(a=0xFF) == M.regs  # -01 == $FF
+    sub(M, 0x00, 0x02); assert R(a=0xFE) == M.regs  # -02 == $FE
+                                                    # ...
+    sub(M, 0x00, 0x7F); assert R(a=0x81) == M.regs  # -7F == $81
+    sub(M, 0xFF, 0x7F); assert R(a=0x80) == M.regs  # -80 == $80
+
+    #   They can also be viewed as the inversion of the numeric
+    #   bits (i.e., XOR with $7F then add 1) with the sign set. Thus, abs()
+    #   for values of -1 to -(2^(n-1)-1) is the just the XOR with $FF.
+    def absofneg(a):
+        M.deposit(0x200, [
+            I.LDA, a, I.EOR, 0xFF,  # XOR with $FF
+            I.CLC, I.ADC, 0x01,     # Add 1
+            I.RTS, ])
+        M.call(0x200)
+    absofneg(0xFF); assert R(a=0x01) == M.regs  # -$01 → $01
+    absofneg(0xFE); assert R(a=0x02) == M.regs  # -$02 → $02
+                                                # ...
+    absofneg(0x81); assert R(a=0x7F) == M.regs  # -$7F → $7F
+
+def test_2s_complement_abs(M):
+    ''' We can calculate the absolute value using the inversion/XOR
+        technique above, checking first to see that the number isn't
+        already positive, and also checking for overflow because we
+        can represent -$80 but not +$80.
+    '''
+    def abs(a):
+        #   Returns the absolute value of the 8-bit signed input.
+        #   N flag set indicates overflow, i.e., input was -$80
+        #       and we can't represent $80 in a signed 8-bit value
+        M.deposit(0x200, [
+            I.LDA, a,
+            I.BPL, 5,               # Not negative; we're done (jump to RTS)
+            I.EOR, 0xFF,            # XOR with $FF
+            I.CLC, I.ADC, 0x01,     # Add 1, setting N if we overflowed
+            I.RTS, ])
+        M.call(0x200)
+
+    abs(0x00); assert R(a=0x00, N=0) == M.regs
+    abs(0x01); assert R(a=0x01, N=0) == M.regs
+    abs(0x7F); assert R(a=0x7F, N=0) == M.regs
+
+    abs(0xFF); assert R(a=0x01, N=0) == M.regs
+    abs(0xFE); assert R(a=0x02, N=0) == M.regs
+    abs(0x81); assert R(a=0x7F, N=0) == M.regs
+
+    abs(0x80); assert R(a=0x80, N=1) == M.regs  # overflow
+
+####################################################################
+
 def test_adc_unsigned(M):
     ''' Unsigned ADC (add with carry).
         We always ignore the N and V flags.
@@ -41,9 +106,6 @@ def test_adc_signed(M):
         We always ignore the C flag.
         Overflow clear: extend with N.
         Overflow set: extend with inverted N.
-
-        (To read 2's complement value when sign=1,
-        drop sign, invert remaining bits, add 1 to get the absolute value.)
     '''
 
     ##########################################################
@@ -88,10 +150,7 @@ def test_adc_signed(M):
     #       -80 + -80            = -100 = $FF00
     add(M, 0x80, 0x80); assert R(a=0x00, N=0, V=1) == M.regs
 
-
-def sub(M, a, b):
-    M.deposit(0x200, [ I.LDA, a, I.SEC, I.SBC, b, I.RTS, ])
-    M.call(0x200)
+####################################################################
 
 def test_sbc_unsigned(M):
     ''' Unsigned SBC (subtract with carry).

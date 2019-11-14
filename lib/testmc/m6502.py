@@ -377,9 +377,11 @@ class Instructions():
     '''
 
     BRK     = 0x00
+    BPL     = 0x10
     CLC     = 0x18
     JSR     = 0x20
     SEC     = 0x38
+    EOR     = 0x49
     RTS     = 0x60
     ADC     = 0x69
     LDXz    = 0xA6

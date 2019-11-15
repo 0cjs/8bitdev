@@ -1,0 +1,34 @@
+;   Some "objects" as described in objects.md
+
+            .radix h
+
+            .globl readascdigit
+
+            .area ZP  (abs,pag)
+            .org 0
+
+            .area   _CODE
+
+;   Convert ASCII character in A to binary digit.
+;   Carry clear on success, set on error.
+;   This reads A-Z/a-z as 10, 11, etc. The caller should check the
+;   result if using a base less than 36.
+readascdigit:
+            cmp #'9+1
+            bpl 5$              ; >'9', convert letter
+            sec
+            sbc #'0
+            bmi 8$              ; <'0', error
+            clc
+            rts
+5$:         and #$%11011111     ; clear bit 5 to convert to upper-case
+            sec
+            sbc #'A-0A
+            cmp #0A
+            bmi 8$              ; <'A', error
+            cmp #0d26+0d10
+            bpl 8$              ; >'Z', error
+            clc
+            rts
+8$:         sec                 ; set error return
+9$:         rts

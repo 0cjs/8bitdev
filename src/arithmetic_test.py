@@ -319,3 +319,41 @@ def test_cmp_unsigned(M):
     cmp(0x00, 0x00); assert R(a=0x00, C=1) == M.regs   # a ≥ b
     cmp(0x00, 0x01); assert R(a=0x00, C=0) == M.regs   # a < b
     cmp(0x00, 0xFF); assert R(a=0x00, C=0) == M.regs   # a < b
+
+def test_signed_comparison(M):
+    ''' CMP does only unsigned comparisons because it does not affect
+        the V flag. Thus we must use SBC to do signed comparisons.
+
+        Signed comparisons use a comparison of the N and V flags:
+            N = V → a ≥ b.    N ≠ V → a < b
+
+        (The result and the carry can be ignored, but I have them here
+        to make sure I understand everything that's going on.)
+    '''
+    def sub(a, b): global sub; return sub(M, a, b)
+
+    #   N = V → a ≥ b
+
+    '+$7E ≥ +$7E'; sub(0x7E, 0x7E); assert R(N=0, V=0, a=0x00, C=1) == M.regs
+    '+$7E ≥ +$00'; sub(0x7E, 0x00); assert R(N=0, V=0, a=0x7E, C=1) == M.regs
+    '+$7E ≥ -$01'; sub(0x7E, 0xFF); assert R(N=0, V=0, a=0x7F, C=0) == M.regs
+    '+$7E ≥ -$7F'; sub(0x7E, 0x81); assert R(N=1, V=1, a=0xFD, C=0) == M.regs
+    '+$7E ≥ -$80'; sub(0x7E, 0x80); assert R(N=1, V=1, a=0xFE, C=0) == M.regs
+
+    '+$00 ≥ +$00'; sub(0x00, 0x00); assert R(N=0, V=0, a=0x00, C=1) == M.regs
+    '+$00 ≥ -$01'; sub(0x00, 0xFF); assert R(N=0, V=0, a=0x01, C=0) == M.regs
+    '+$00 ≥ -$7F'; sub(0x00, 0x81); assert R(N=0, V=0, a=0x7F, C=0) == M.regs
+    '+$00 ≥ -$80'; sub(0x00, 0x80); assert R(N=1, V=1, a=0x80, C=0) == M.regs
+
+    '-$7E ≥ -$7E'; sub(0x81, 0x81); assert R(N=0, V=0, a=0x00, C=1) == M.regs
+    '-$7E ≥ -$7F'; sub(0x81, 0x80); assert R(N=0, V=0, a=0x01, C=1) == M.regs
+
+    #   N ≠ V → a < b
+
+    '+$7E < +$7F'; sub(0x7E, 0x7F); assert R(N=1, V=0, a=0xFF, C=0) == M.regs
+    '+$00 < +$7F'; sub(0x00, 0x7F); assert R(N=1, V=0, a=0x81, C=0) == M.regs
+    '+$00 < +$01'; sub(0x00, 0x01); assert R(N=1, V=0, a=0xFF, C=0) == M.regs
+    '-$7F < +$7F'; sub(0x81, 0x7F); assert R(N=0, V=1, a=0x02, C=1) == M.regs
+    '-$7F < +$00'; sub(0x81, 0x00); assert R(N=1, V=0, a=0x81, C=1) == M.regs
+    '-$7F < -$01'; sub(0x81, 0xFF); assert R(N=1, V=0, a=0x82, C=0) == M.regs
+    '-$7F < -$7E'; sub(0x81, 0x82); assert R(N=1, V=0, a=0xFF, C=0) == M.regs

@@ -38,14 +38,15 @@ def test_2s_complement(M):
         maximum number expressable is trucated (2^(n-1)-1) as compared
         to an unsigned integer of the same size (2^n-1).
     '''
+    def sub(a, b): global sub; return sub(M, a, b)
 
     #   Negative numbers can be viewed as (0 - n) where n is the
     #   (positive) absolute value.
-    sub(M, 0x00, 0x01); assert R(a=0xFF) == M.regs  # -01 == $FF
-    sub(M, 0x00, 0x02); assert R(a=0xFE) == M.regs  # -02 == $FE
-                                                    # ...
-    sub(M, 0x00, 0x7F); assert R(a=0x81) == M.regs  # -7F == $81
-    sub(M, 0xFF, 0x7F); assert R(a=0x80) == M.regs  # -80 == $80
+    sub(0x00, 0x01); assert R(a=0xFF) == M.regs  # -01 == $FF
+    sub(0x00, 0x02); assert R(a=0xFE) == M.regs  # -02 == $FE
+                                                 # ...
+    sub(0x00, 0x7F); assert R(a=0x81) == M.regs  # -7F == $81
+    sub(0xFF, 0x7F); assert R(a=0x80) == M.regs  # -80 == $80
 
     #   They can also be viewed as the inversion of the numeric
     #   bits (i.e., XOR with $7F then add 1) with the sign set. Thus, abs()
@@ -56,6 +57,7 @@ def test_2s_complement(M):
             I.CLC, I.ADC, 0x01,     # Add 1
             I.RTS, ])
         M.call(0x200)
+
     absofneg(0xFF); assert R(a=0x01) == M.regs  # -$01 → $01
     absofneg(0xFE); assert R(a=0x02) == M.regs  # -$02 → $02
                                                 # ...
@@ -101,10 +103,12 @@ def test_adc_unsigned(M):
         We always ignore the N and V flags; an unsigned number can
         never be negative and V is used only with signed operations.
     '''
-    add(M, 0x00, 0x00); assert R(a=0x00, C=0) == M.regs    # 00 + 00 = 000
-    add(M, 0xFE, 0x01); assert R(a=0xFF, C=0) == M.regs    # FE + 01 = 0FF
-    add(M, 0xFF, 0x01); assert R(a=0x00, C=1) == M.regs    # FF + 01 = 100
-    add(M, 0xFF, 0xFF); assert R(a=0xFE, C=1) == M.regs    # FF + FF = 1FE
+    def add(a, b): global add; return add(M, a, b)
+
+    add(0x00, 0x00); assert R(a=0x00, C=0) == M.regs    # 00 + 00 = 000
+    add(0xFE, 0x01); assert R(a=0xFF, C=0) == M.regs    # FE + 01 = 0FF
+    add(0xFF, 0x01); assert R(a=0x00, C=1) == M.regs    # FF + 01 = 100
+    add(0xFF, 0xFF); assert R(a=0xFE, C=1) == M.regs    # FF + FF = 1FE
 
 def test_adc_signed(M):
     ''' Signed ADC (add with carry).
@@ -133,6 +137,7 @@ def test_adc_signed(M):
 
         We always ignore the C flag.
     '''
+    def add(a, b): global add; return add(M, a, b)
 
     ##########################################################
     #   Overflow clear means that sign bit is valid.
@@ -140,42 +145,42 @@ def test_adc_signed(M):
     #   No need to extend, but if we did, we'd extend with byte
     #   filled with the sign bit: $00 or $FF.
 
-    #       +00 + +00            = +000
-    add(M, 0x00, 0x00); assert R(a=0x00, N=0, V=0) == M.regs
-    #       +7E + +01            = +07F
-    add(M, 0x7E, 0x01); assert R(a=0x7F, N=0, V=0) == M.regs
+    #    +00 + +00            = +000
+    add(0x00, 0x00); assert R(a=0x00, N=0, V=0) == M.regs
+    #    +7E + +01            = +07F
+    add(0x7E, 0x01); assert R(a=0x7F, N=0, V=0) == M.regs
 
-    #       +00 + -01            = -001
-    add(M, 0x00, 0xFF); assert R(a=0xFF, N=1, V=0)
-    #       +00 + -7F            = -07F
-    add(M, 0x00, 0x81); assert R(a=0x81, N=1, V=0)
-    #       +01 + -7F            = -07E
-    add(M, 0x01, 0x81); assert R(a=0x82, N=1, V=0)
+    #    +00 + -01            = -001
+    add(0x00, 0xFF); assert R(a=0xFF, N=1, V=0)
+    #    +00 + -7F            = -07F
+    add(0x00, 0x81); assert R(a=0x81, N=1, V=0)
+    #    +01 + -7F            = -07E
+    add(0x01, 0x81); assert R(a=0x82, N=1, V=0)
 
-    #       +00 + -80            = -080
-    add(M, 0x00, 0x80); assert R(a=0x80, N=1, V=0)
-    #       +01 + -80            = -07F
-    add(M, 0x01, 0x80); assert R(a=0x81, N=1, V=0)
+    #    +00 + -80            = -080
+    add(0x00, 0x80); assert R(a=0x80, N=1, V=0)
+    #    +01 + -80            = -07F
+    add(0x01, 0x80); assert R(a=0x81, N=1, V=0)
 
     ##########################################################
     #   Overflow set means that sign bit is inverted.
     #   N=1 → result > 127 → extend with $00.
 
-    #       +7F + +01            = +080 = $0080.
-    add(M, 0x7F, 0x01); assert R(a=0x80, N=1, V=1) == M.regs
-    #       +7F + +7F            = +0FE = $00FE.
-    add(M, 0x7F, 0x7F); assert R(a=0xFE, N=1, V=1) == M.regs
+    #    +7F + +01            = +080 = $0080.
+    add(0x7F, 0x01); assert R(a=0x80, N=1, V=1) == M.regs
+    #    +7F + +7F            = +0FE = $00FE.
+    add(0x7F, 0x7F); assert R(a=0xFE, N=1, V=1) == M.regs
 
     ##########################################################
     #   Overflow set means that sign bit is inverted.
     #   N=0 → result < -128 → extend with $FF.
 
-    #       -80 + -01            = -081 = $FF7F
-    add(M, 0x80, 0xFF); assert R(a=0x7F, N=0, V=1) == M.regs
-    #       -80 + -7F            = -0FF = $FF01
-    add(M, 0x80, 0x81); assert R(a=0x01, N=0, V=1) == M.regs
-    #       -80 + -80            = -100 = $FF00
-    add(M, 0x80, 0x80); assert R(a=0x00, N=0, V=1) == M.regs
+    #    -80 + -01            = -081 = $FF7F
+    add(0x80, 0xFF); assert R(a=0x7F, N=0, V=1) == M.regs
+    #    -80 + -7F            = -0FF = $FF01
+    add(0x80, 0x81); assert R(a=0x01, N=0, V=1) == M.regs
+    #    -80 + -80            = -100 = $FF00
+    add(0x80, 0x80); assert R(a=0x00, N=0, V=1) == M.regs
 
 ####################################################################
 
@@ -192,23 +197,25 @@ def test_sbc_unsigned(M):
 
         We always ignore the V flag.
     '''
-    sub(M, 0x00, 0x00); assert R(a=0x00, C=1) == M.regs
-    sub(M, 0xFF, 0x00); assert R(a=0xFF, C=1) == M.regs
-    sub(M, 0xFF, 0xFD); assert R(a=0x02, C=1) == M.regs
+    def sub(a, b): global sub; return sub(M, a, b)
+
+    sub(0x00, 0x00); assert R(a=0x00, C=1) == M.regs
+    sub(0xFF, 0x00); assert R(a=0xFF, C=1) == M.regs
+    sub(0xFF, 0xFD); assert R(a=0x02, C=1) == M.regs
 
     #   In these cases, C=0 (borrow used) → result < 0.
     #   But because the result is ≥ -$80, as we can tell from the N
     #   flag being set, we could generate a signed result by setting
     #   bit 7 (`OR $80`).
-    sub(M, 0x00, 0x01); assert R(a=0xFF, C=0, N=1) == M.regs  # $FF = -$01
-    sub(M, 0x00, 0x80); assert R(a=0x80, C=0, N=1) == M.regs  # $80 = -$80
+    sub(0x00, 0x01); assert R(a=0xFF, C=0, N=1) == M.regs  # $FF = -$01
+    sub(0x00, 0x80); assert R(a=0x80, C=0, N=1) == M.regs  # $80 = -$80
 
     #   In these cases, C=0 (borrow used) → result < 0.
     #   The result is also < $80 as we can tell by the N flag being
     #   clear, so if we want to generate a signed result we would need
     #   to sign-extend with an additional byte, a new MSB of $FF.
-    sub(M, 0x00, 0x81); assert R(a=0x7F, C=0, N=0) == M.regs  # $FF7F = -$81
-    sub(M, 0x00, 0xFF); assert R(a=0x01, C=0, N=0) == M.regs  # $FF01 = -$FF
+    sub(0x00, 0x81); assert R(a=0x7F, C=0, N=0) == M.regs  # $FF7F = -$81
+    sub(0x00, 0xFF); assert R(a=0x01, C=0, N=0) == M.regs  # $FF01 = -$FF
 
 def test_sbc_signed(M):
     ''' Signed SBC (subtract with carry).
@@ -224,63 +231,64 @@ def test_sbc_signed(M):
 
         We always ignore the C flag.
     '''
+    def sub(a, b): global sub; return sub(M, a, b)
 
     #   Positive minuend and subtrahend.
     #   Result will always fit in a signed 8-bit value.
     #
-    sub(M, 0x00,  0x00); assert R(a=0x00, N=0, V=0) == M.regs
-    sub(M, 0x7F,  0x00); assert R(a=0x7F, N=0, V=0) == M.regs
-    sub(M, 0x7F,  0x7F); assert R(a=0x00, N=0, V=0) == M.regs
-    #       +00  - +01            = -$01
-    sub(M, 0x00,  0x01); assert R(a=0xFF, N=1, V=0) == M.regs
-    #      +$7E - +$7F            = -$01
-    sub(M, 0x7E,  0x7F); assert R(a=0xFF, N=1, V=0) == M.regs
-    #      +$00 - +$7F            = -$7F
-    sub(M, 0x00,  0x7F); assert R(a=0x81, N=1, V=0) == M.regs
+    sub(0x00,  0x00); assert R(a=0x00, N=0, V=0) == M.regs
+    sub(0x7F,  0x00); assert R(a=0x7F, N=0, V=0) == M.regs
+    sub(0x7F,  0x7F); assert R(a=0x00, N=0, V=0) == M.regs
+    #    +00  - +01            = -$01
+    sub(0x00,  0x01); assert R(a=0xFF, N=1, V=0) == M.regs
+    #   +$7E - +$7F            = -$01
+    sub(0x7E,  0x7F); assert R(a=0xFF, N=1, V=0) == M.regs
+    #   +$00 - +$7F            = -$7F
+    sub(0x00,  0x7F); assert R(a=0x81, N=1, V=0) == M.regs
 
     #   Negative minuend and negative subtrahend.
     #   Result will always fit in a signed 8-bit value.
     #
-    #      -$01 - -$01            = +$00
-    sub(M, 0xFF,  0xFF); assert R(a=0x00, N=0, V=0) == M.regs
-    #      -$80 - -$80            = +$00
-    sub(M, 0x80,  0x80); assert R(a=0x00, N=0, V=0) == M.regs
-    #      -$01 - -$80            = +$7F
-    sub(M, 0xFF,  0x80); assert R(a=0x7F, N=0, V=0) == M.regs
-    #      -$80 - -$01            = -$7F
-    sub(M, 0x80,  0xFF); assert R(a=0x81, N=1, V=0) == M.regs
-    #      -$80 - -$7F            = -$01
-    sub(M, 0x80,  0x81); assert R(a=0xFF, N=1, V=0) == M.regs
-    #      -$7F - -$80            = +$01
-    sub(M, 0x81,  0x80); assert R(a=0x01, N=0, V=0) == M.regs
+    #   -$01 - -$01            = +$00
+    sub(0xFF,  0xFF); assert R(a=0x00, N=0, V=0) == M.regs
+    #   -$80 - -$80            = +$00
+    sub(0x80,  0x80); assert R(a=0x00, N=0, V=0) == M.regs
+    #   -$01 - -$80            = +$7F
+    sub(0xFF,  0x80); assert R(a=0x7F, N=0, V=0) == M.regs
+    #   -$80 - -$01            = -$7F
+    sub(0x80,  0xFF); assert R(a=0x81, N=1, V=0) == M.regs
+    #   -$80 - -$7F            = -$01
+    sub(0x80,  0x81); assert R(a=0xFF, N=1, V=0) == M.regs
+    #   -$7F - -$80            = +$01
+    sub(0x81,  0x80); assert R(a=0x01, N=0, V=0) == M.regs
 
     #   Negative minuend and positive subtrahend.
     #   May overflow, result < -$80
     #   We show the extended version, extended with the inverse of N.
     #   `x` above the N flag indicates it's incorrect.
     #
-    #      -$7F - +$01            = -$80         no overflow
-    sub(M, 0x81,  0x01); assert R(a=0x80, N=1, V=0) == M.regs
-    #      -$7F - +$02     = -$81 ($FF7F)   x    overflow
-    sub(M, 0x81,  0x02); assert R(a=0x7F, N=0, V=1) == M.regs
-    #      -$7F - +$7F     = -$FE ($FF02)   x    overflow
-    sub(M, 0x81,  0x7F); assert R(a=0x02, N=0, V=1) == M.regs
-    #      -$80 - +$7F     = -$FF ($FF01)   x    overflow
-    sub(M, 0x80,  0x7F); assert R(a=0x01, N=0, V=1) == M.regs
+    #   -$7F - +$01            = -$80         no overflow
+    sub(0x81,  0x01); assert R(a=0x80, N=1, V=0) == M.regs
+    #   -$7F - +$02     = -$81 ($FF7F)   x    overflow
+    sub(0x81,  0x02); assert R(a=0x7F, N=0, V=1) == M.regs
+    #   -$7F - +$7F     = -$FE ($FF02)   x    overflow
+    sub(0x81,  0x7F); assert R(a=0x02, N=0, V=1) == M.regs
+    #   -$80 - +$7F     = -$FF ($FF01)   x    overflow
+    sub(0x80,  0x7F); assert R(a=0x01, N=0, V=1) == M.regs
 
     #   Positive minuend and negative subtrahend.
     #   May overflow, result > +$7F.
     #   We show the extended version, extended with the inverse of N.
     #   `x` above the N flag indicates it's incorrect.
     #
-    #      +$7E - -$01            = +$7F         no overflow
-    sub(M, 0x7E,  0xFF); assert R(a=0x7F, N=0, V=0) == M.regs
-    #      +$7E - -$02     = +$80 ($0080)   x    overflow
-    sub(M, 0x7E,  0xFE); assert R(a=0x80, N=1, V=1) == M.regs
-    #      +$00 - -$80     = +$80 ($0080)   x    overflow
-    sub(M, 0x00,  0x80); assert R(a=0x80, N=1, V=1) == M.regs
-    #      +$7F - -$80     = +$FF ($00FF)   x    overflow
-    sub(M, 0x7F,  0x80); assert R(a=0xFF, N=1, V=1) == M.regs
+    #   +$7E - -$01            = +$7F         no overflow
+    sub(0x7E,  0xFF); assert R(a=0x7F, N=0, V=0) == M.regs
+    #   +$7E - -$02     = +$80 ($0080)   x    overflow
+    sub(0x7E,  0xFE); assert R(a=0x80, N=1, V=1) == M.regs
+    #   +$00 - -$80     = +$80 ($0080)   x    overflow
+    sub(0x00,  0x80); assert R(a=0x80, N=1, V=1) == M.regs
+    #   +$7F - -$80     = +$FF ($00FF)   x    overflow
+    sub(0x7F,  0x80); assert R(a=0xFF, N=1, V=1) == M.regs
 
 ####################################################################
 

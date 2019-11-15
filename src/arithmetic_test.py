@@ -328,6 +328,21 @@ def test_cmp_unsigned(M):
     cmp(0x00, 0x01); assert R(a=0x00, C=0) == M.regs   # a < b
     cmp(0x00, 0xFF); assert R(a=0x00, C=0) == M.regs   # a < b
 
+def test_cmp_N_flag(M):
+    ''' Confirm N flag behaviour:
+        it's the sign of the result that's thrown away.
+    '''
+    def cmp(a, b): global cmp; return cmp(M, a, b)
+
+    cmp(0x7F, 0x40); '= $3F'; assert R(N=0) == M.regs
+    cmp(0x80, 0x40); '= $40'; assert R(N=0) == M.regs
+    cmp(0x80, 0x01); '= $7F'; assert R(N=0) == M.regs
+    cmp(0xFF, 0x80); '= $7F'; assert R(N=0) == M.regs
+
+    cmp(0x80, 0x00); '= $80'; assert R(N=1) == M.regs
+    cmp(0x81, 0x01); '= $80'; assert R(N=1) == M.regs
+    cmp(0xFF, 0x7F); '= $80'; assert R(N=1) == M.regs
+
 def test_signed_comparison(M):
     ''' CMP does only unsigned comparisons because it does not affect
         the V flag. Thus we must use SBC to do signed comparisons.

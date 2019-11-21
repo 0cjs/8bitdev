@@ -1,0 +1,142 @@
+;   "bigint": variable precision integers
+
+            .radix h
+
+            .globl readascdigit
+            .globl bi_readhex
+
+            .area ZP  (abs,pag)
+            .org 0
+            .area   _CODE
+
+;   Convert ASCII character in A to binary digit.
+;   N flag clear on success, set on error.
+;   This reads A-Z[\]^_ and a-z{|}~DEL as 10, 11...40
+;   The caller must check the result if using a base less than 41.
+readascdigit:
+            ;   This routine has extra explanation for 6502 beginners.
+            cmp #'9+1
+            bcs 5$              ; >'9', convert letter
+            ;   At this point we know that the carry is clear, better thought
+            ;   of as the borrow being set. Rather than use an extra instr
+            ;   to set the carry, we instead subtract 1 from the subtrahend
+            ;   because the set borrow will also be subtracted from the result.
+            sbc #'0-1           ; convert digit; if <'0', N flag set for error
+            ;   Normally for an unsigned comparison we'd check to see if the
+            ;   carry is clear, i.e., the borrow was used, to determine
+            ;   whether our result was negative. We can't do this here to see
+            ;   if our char was < '0' because of the optimization above. But
+            ;   it's safe to check the N flag because we know from the check at
+            ;   the start that the char was ≤ $39 ('9') and so this will
+            ;   always produce a result between $39-$30=$09 and $00-$30=-$30
+            ;   ($D0 in two's complement), all values of which are negative.
+            ;   Since the N flag is our error code, we need not even BMI;
+            ;   just let the N flag pass through.
+            rts                 ; N clear, no error
+5$:
+            and #$%11011111     ; clear bit 5 to convert to upper-case
+            ;   Now the char is in one of two ranges:
+            ;     $3A-$40  chars between '9' and 'A'
+            ;     $40-$5F  A-Z and punctuation after ([\]^_)
+            ;     $80-$FF  chars above DEL
+            ;   We check the N flag here to see if the high bit is set, which
+            ;   means the character is invalid. We have to do the AND first
+            ;   because the N bit from the CMP test is based on the result
+            ;   of the CMP subtraction.
+            bmi 9$              ; high bit set, error
+            ;   We subtract 'A'-$0A to bring it down to the $00-$28 range,
+            ;   No SEC is needed before this SBC; we branched here because the
+            ;   carry was already set and AND does not affect the carry.
+            sbc #'A-0A
+            ;   Values less than $0A are invalid, so error out on those.
+            cmp #0A             ; if <$0A, set N flag to indicate error
+            ;   The result of SBC is signed, so it may be, e.g., -$01 = $FF.
+            ;   However, CMP does only unsigned comparisons so the carry flag
+            ;   would be set (indicating ≥) rather than clear (indicating <)
+            ;   for those "negative" results. But since we know our value in A
+            ;   is in range $00-$28, the most negative possible result produced
+            ;   by the SBC is -$28 = $D8, so we can check the N flag instead.
+            ;   Since the N flag is our error code, we need not even BMI.
+9$:         rts
+
+
+;   Bigints are stored in big-endian format on 6502: a length byte
+;   followed by the integer in two's complement format.
+;
+;   We use big-endian format, despite being the opposite of native
+;   6502 order, because we generally want to loop from the LSB to the
+;   MSB and looping towards zero saves means we can start with the
+;   length and decrement and compare with zero, saving the CMP we'd
+;   need to do if counting up to the length.
+
+            .area ZP  (abs,pag)
+inbuf:      .ds 2               ; pointer to text input buffer
+outbuf:     .ds 2               ; pointer to len byte followed by data
+            .area   _CODE
+
+;   Read the ASCII hex two's complement representation of an integer
+;   and convert it to a bigint. The first bit is the sign, i.e.,
+;   `FF00` will be read as -256 decimal; a minus prefix is not
+;   allowed.
+;
+;   A register: inbuf length; 1 <= A <= 255
+;        inbuf: input chars
+;       outbuf: output buffer, must be length (A+1)/2.
+;   All inputs and registers are destroyed.
+;
+bi_readhex: ldx #0              ; constant for indirect addressing
+            ;   Start by skipping past any leading '0's.
+            tay                 ; save length
+0$:         lda [inbuf,x]
+            cmp #'0
+            bne 3$              ; no (more) leading zeros; start conversion
+            dey                 ; reduce length
+            beq 2$              ; but if it's last digit, convert the 0 anyway
+            inc inbuf           ; move past leading 0
+            bne 1$
+            inc inbuf+1
+1$:         clc
+            bcc 0$
+            ;   Conversion, two input digits at a time
+2$:         iny
+3$:         tya                 ; copy input length to A
+            dey                 ; length -1 = last byte of input buffer
+4$:         clc
+            ror                 ; output length is 1/2 input length
+            adc #0              ; plus 1 if input length is odd
+            sta [outbuf,x]      ; store output length
+            adc outbuf          ; set outbuf to end of buffer
+            sta outbuf
+            bcc 5$
+            inc outbuf+1
+5$:         lda [inbuf],y       ; first char for this byte of output buffer
+            jsr readascdigit    ; convert ASCII digit to binary
+            bmi 9$              ; bad digit, error
+            cmp #10
+            bcs 9$              ; >=16, error
+            sta [outbuf,x]
+            dey                 ; second char for this byte of output buffer
+            bmi 8$              ; if input done, return success
+            lda [inbuf],y
+            jsr readascdigit    ; convert ASCII digit to binary
+            bmi 9$              ; bad digit, error
+            cmp #10
+            bcs 9$              ; >=16, error
+            asl                 ; shift up to high nybble
+            asl
+            asl
+            asl
+            clc
+            adc [outbuf,x]
+            sta [outbuf,x]
+            dec outbuf
+            ;   XXX must decrement outbuf+1 on outbuf underflow
+            lda outbuf
+            cmp #0FF
+            bne 6$
+            dec outbuf+1
+6$:         dey
+            cpy #0FF
+            bne 5$              ; next chars
+8$:         rts                 ; success; return
+9$:         brk                 ; readhex error

@@ -288,7 +288,6 @@ class SymTab():
         for name, addr in areas:
             if addr == 0: continue      # No relocation to be done
             areanum = self.areanamed(name).number
-            print('AREA:', addr, name, areanum)
             for name, sym in self.symbols.items():
                 if areanum == sym.areanum:
                     self.symbols[name] = sym._replace(value=sym.value+addr)

@@ -90,7 +90,6 @@ def test_bi_readhex_error(M, input):
     assert 222 == M.byte(outbuf+1)  # nothing further written
 
 @pytest.mark.parametrize('input, bytes', [
-    (b"0",               [0x00]),
     (b"5",               [0x05]),
     (b'67',              [0x067]),
     (b'89A',             [0x08, 0x9A]),
@@ -98,7 +97,9 @@ def test_bi_readhex_error(M, input):
     (b'fedcb',           [0x0F, 0xED, 0xCB]),
     (b"80000",           [0x08, 0x00, 0x00]),
     (b"0",               [0x00]),
-    #(b"00000",           [0x00]),
+    (b"00000000",        [0x00]),
+    (b"087",             [0x87]),
+    (b"00000087",        [0x87]),
 ])
 def test_bi_readhex(M, input, bytes):
     print('bi_readhex:', input, type(input), bytes)

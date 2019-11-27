@@ -2,24 +2,30 @@
 
 ;   In this file we annotate storage used by each function with the following:
 ;     (p) - preserved: value at exit is the same at entry
-;     (d) - destroyed: value at exit may be different from value at entry
-;           and is no longer useful
 ;     (w) - written: value at exit is an intended output value
+;     (d) - destroyed: value at exit may be different from value at entry
+;           and is not useful
+;   Flags should be considered destroyed unless otherwise specified.
 
             .radix h
 
-            .globl readascdigit
+            .globl convascdigit
             .globl bi_readhex
 
             .area ZP  (abs,pag)
             .org 0
             .area   _CODE
 
-;   Convert ASCII character in A to binary digit.
-;   N flag clear on success, set on error.
-;   This reads A-Z[\]^_ and a-z{|}~DEL as 10, 11...40
-;   The caller must check the result if using a base less than 41.
-readascdigit:
+;   Convert ASCII character to binary number in bases up to 41.
+;   This translates A-Z[\]^_ and a-z{|}~DEL as 10, 11...40.
+;   The caller must check the returned value if the intended base was
+;   less than 41.
+;
+;          A: (w) ASCII character to convert; binary number on return
+;     N flag: (w) clear on success, set on error.
+;       X, Y: (p)
+;
+convascdigit:
             ;   This routine has extra explanation for 6502 beginners.
             cmp #'9+1
             bcs 5$              ; >'9', convert letter
@@ -118,7 +124,7 @@ bi_readhex: ldx #0              ; constant for indirect addressing
             bcc 5$
             inc outbufptr+1
 5$:         lda [inbufptr],y    ; first char for this byte of output buffer
-            jsr readascdigit    ; convert ASCII digit to binary
+            jsr convascdigit    ; convert ASCII digit to binary
             bmi 9$              ; bad digit, error
             cmp #10
             bcs 9$              ; >=16, error
@@ -126,7 +132,7 @@ bi_readhex: ldx #0              ; constant for indirect addressing
             dey                 ; second char for this byte of output buffer
             bmi 8$              ; if input done, return success
             lda [inbufptr],y
-            jsr readascdigit    ; convert ASCII digit to binary
+            jsr convascdigit    ; convert ASCII digit to binary
             bmi 9$              ; bad digit, error
             cmp #10
             bcs 9$              ; >=16, error

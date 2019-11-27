@@ -1,0 +1,91 @@
+;   Test whether as6500 assembler is correct generating zero-page accesses
+;   Bugs or issues are marked with "XXX".
+;   Link with: aslink -numwt -b '_code=0x0300'  zptest
+
+            .radix h
+
+            .globl zptr, hiptr, hiptr3
+
+            .area ZP  (abs,pag)
+            .org 0
+            .setdp              ; this seems to make no difference
+            .area   _CODE
+            .setdp 0,ZP         ; this doesn't seem to help either
+
+            .area ZP
+reserved:   .ds 6
+zptr:       .ds 2
+            .area _CODE
+
+reservedh:  .ds 8
+hiptr:      .ds 2
+
+
+;   LDA:
+;     A9 immediate
+;     AD absolute      A5 zero page
+;     BD absolute,X    B5 zp,X
+;     B9 absolute,Y
+;                      A1 (indirect,X)
+;                      B1 (indirect),Y
+
+;   All disassemblies are from the linker .rst listing when _CODE=0x200
+;   except for nn → nn giving .lst on left and .rst on right.
+immediate:
+            ;   Immediate loads with symbols work fine if you're careful
+            ;   about the order of the # vs. the operator:
+            lda #hiptr          ; A9 08 presumably because CPU is little-endian
+            lda #<hiptr         ; A9 08
+            lda #>hiptr         ; A9 03
+            lda #zptr           ; A9 06
+            lda #<zptr          ; A9 06
+            lda #>zptr          ; A9 00
+
+            ;   XXX They go wrong with no error or warning if you get them in
+            ;   the wrong order, generating an absolute not immediate load and
+            ;   producing bogus listing (and maybe linker?) output. Thus
+            ;   commented out.
+           ;lda <#hiptr         ; bogus AD 08 00 → AD 08 03 (hiptr=$0350)
+           ;lda >#hiptr         ; bogus AD 08 00 → AD 03 A5
+                                ; where the A5 is actually the next instruction
+                                ; and everything's offset by 1 after that.
+
+            ;   But in numeric non-symbol expressions, all forms work fine.
+            lda <01FF           ; A5 FF
+            lda >01FF           ; A5 01
+            lda <#01FF          ; A5 FF
+            lda >#01FF          ; A5 01
+            lda #<01FF          ; A5 FF
+            lda #>01FF          ; A5 01
+
+absolute:
+            lda hiptr           ; AD 08 03  as expected
+            lda zptr            ; AD 04 00  XXX didn't use ZP form!
+            lda *zptr           ; A5 04     but works when forced
+
+            ;   This assembles to A5 27 without problems because this _could_
+            ;   be linked to have that relative address locate to below 0x100,
+            ;   but for our code=0x0300 link the linker gives a Page0
+            ;   relocation warning (though unhelpfully doesn't give the
+            ;   location of the instruction causing the problem).
+           ;lda *hiptr
+
+indexed:
+            lda hiptr,x         ; BD 08 03  as expected
+            lda hiptr,y         ; B9 08 03
+            lda zptr,x          ; BD 06 00  XXX didn't use ZP
+            lda *zptr,x         ; B5 06     but works when forced
+
+            ;   Addressing modes where only the zero page is available
+            ;   work ok, I guess because the assembler has no other choice.
+            lda [zptr,x]        ; A1 06
+            lda [zptr],y        ; B1 06
+
+hiptr2:     .ds 2
+
+;   XXX The address for this symbol isn't properly updated in the listing
+;   because it has no code after it and it's not used within the module (except
+;   to export as global). This seems clearly a bug. (Note that `hiptr2` above
+;   does not have this issue.)
+hiptr3:     .ds 2
+;

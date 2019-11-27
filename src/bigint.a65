@@ -1,5 +1,11 @@
 ;   "bigint": variable precision integers
 
+;   In this file we annotate storage used by each function with the following:
+;     (p) - preserved: value at exit is the same at entry
+;     (d) - destroyed: value at exit may be different from value at entry
+;           and is no longer useful
+;     (w) - written: value at exit is an intended output value
+
             .radix h
 
             .globl readascdigit
@@ -70,8 +76,8 @@ readascdigit:
 ;   need to do if counting up to the length.
 
             .area ZP  (abs,pag)
-inbuf:      .ds 2               ; pointer to text input buffer
-outbuf:     .ds 2               ; pointer to len byte followed by data
+inbufptr:   .ds  2              ; pointer to text input buffer
+outbufptr:  .ds  2              ; pointer to len byte followed by data
             .area   _CODE
 
 ;   Read the ASCII hex two's complement representation of an integer
@@ -79,22 +85,24 @@ outbuf:     .ds 2               ; pointer to len byte followed by data
 ;   `FF00` will be read as -256 decimal; a minus prefix is not
 ;   allowed.
 ;
-;   A register: inbuf length; 1 <= A <= 255
-;        inbuf: input chars
-;       outbuf: output buffer, must be length (A+1)/2.
-;   All inputs and registers are destroyed.
+;            X, Y: (d)
+;               A: (d) inbufptr length; 1 <= A <= 255
+;        inbufptr: (d) pointer to input char buffer
+;      [inbufptr]: (p) input chars
+;       outbufptr: (d) output buffer, must be length (A+1)/2.
+;     [outbufptr]: (w) bigint output
 ;
 bi_readhex: ldx #0              ; constant for indirect addressing
             ;   Start by skipping past any leading '0's.
             tay                 ; save length
-0$:         lda [inbuf,x]
+0$:         lda [inbufptr,x]
             cmp #'0
             bne 3$              ; no (more) leading zeros; start conversion
             dey                 ; reduce length
             beq 2$              ; but if it's last digit, convert the 0 anyway
-            inc inbuf           ; move past leading 0
+            inc inbufptr        ; move past leading 0
             bne 1$
-            inc inbuf+1
+            inc inbufptr+1
 1$:         clc
             bcc 0$
             ;   Conversion, two input digits at a time
@@ -104,20 +112,20 @@ bi_readhex: ldx #0              ; constant for indirect addressing
 4$:         clc
             ror                 ; output length is 1/2 input length
             adc #0              ; plus 1 if input length is odd
-            sta [outbuf,x]      ; store output length
-            adc outbuf          ; set outbuf to end of buffer
-            sta outbuf
+            sta [outbufptr,x]   ; store output length
+            adc outbufptr       ; set outbufptr to end of buffer
+            sta outbufptr
             bcc 5$
-            inc outbuf+1
-5$:         lda [inbuf],y       ; first char for this byte of output buffer
+            inc outbufptr+1
+5$:         lda [inbufptr],y    ; first char for this byte of output buffer
             jsr readascdigit    ; convert ASCII digit to binary
             bmi 9$              ; bad digit, error
             cmp #10
             bcs 9$              ; >=16, error
-            sta [outbuf,x]
+            sta [outbufptr,x]
             dey                 ; second char for this byte of output buffer
             bmi 8$              ; if input done, return success
-            lda [inbuf],y
+            lda [inbufptr],y
             jsr readascdigit    ; convert ASCII digit to binary
             bmi 9$              ; bad digit, error
             cmp #10
@@ -127,14 +135,13 @@ bi_readhex: ldx #0              ; constant for indirect addressing
             asl
             asl
             clc
-            adc [outbuf,x]
-            sta [outbuf,x]
-            dec outbuf
-            ;   XXX must decrement outbuf+1 on outbuf underflow
-            lda outbuf
+            adc [outbufptr,x]
+            sta [outbufptr,x]
+            dec outbufptr
+            lda outbufptr
             cmp #0FF
             bne 6$
-            dec outbuf+1
+            dec outbufptr+1
 6$:         dey
             cpy #0FF
             bne 5$              ; next chars

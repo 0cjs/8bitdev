@@ -69,6 +69,10 @@ def test_readascdigit_error_exhaustive(M):
 ####################################################################
 #   Tests: readhex
 
+#   Buffers used for testing deliberately cross page boundaries.
+INBUF  = 0x6FFE
+OUTBUF = 0x71FE
+
 @pytest.mark.parametrize('input', [
     (b"/"),
     (b":"),
@@ -77,17 +81,16 @@ def test_readascdigit_error_exhaustive(M):
 def test_bi_readhex_error(M, input):
     print('readhex_error:', input)
     S = M.symtab
-    inbuf = 0x7000; outbuf = 0x7200
 
-    M.deposit(inbuf, input)
-    M.depword(S.inbuf, inbuf)
-    M.depword(S.outbuf, outbuf)
-    M.deposit(outbuf, [222]*5)      # sentinel
+    M.deposit(INBUF, input)
+    M.depword(S.inbufptr, INBUF)
+    M.depword(S.outbufptr, OUTBUF)
+    M.deposit(OUTBUF, [222]*5)      # sentinel
 
     with pytest.raises(M.Abort):
         M.call(S.bi_readhex, R(a=len(input)))
     #   Length is invalid, whatever it is.
-    assert 222 == M.byte(outbuf+1)  # nothing further written
+    assert 222 == M.byte(OUTBUF+1)  # nothing further written
 
 @pytest.mark.parametrize('input, bytes', [
     (b"5",               [0x05]),
@@ -104,15 +107,14 @@ def test_bi_readhex_error(M, input):
 def test_bi_readhex(M, input, bytes):
     print('bi_readhex:', input, type(input), bytes)
     S = M.symtab
-    inbuf = 0x6FFE; outbuf = 0x71FE     # buffers cross page boundaries
 
-    M.deposit(inbuf, input)
-    M.depword(S.inbuf, inbuf)
-    M.depword(S.outbuf, outbuf)
+    M.deposit(INBUF, input)
+    M.depword(S.inbufptr, INBUF)
+    M.depword(S.outbufptr, OUTBUF)
     size = len(bytes) + 2               # length byte + value + guard byte
-    M.deposit(outbuf, [222] * size)     # 222 ensures any 0s really were written
+    M.deposit(OUTBUF, [222] * size)     # 222 ensures any 0s really were written
 
     M.call(S.bi_readhex, R(a=len(input)))
-    bvalue = M.bytes(outbuf+1, len(bytes))
-    assert (len(bytes),     bytes,  222) \
-        == (M.byte(outbuf), bvalue, M.byte(outbuf+size-1))
+    bvalue = M.bytes(OUTBUF+1, len(bytes))
+    assert (len(bytes),     bytes,  222,) \
+        == (M.byte(OUTBUF), bvalue, M.byte(OUTBUF+size-1))

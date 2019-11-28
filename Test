@@ -67,7 +67,7 @@ mkdir -p "$builddir/obj"
 #   -s  Create symbol file (`.sym`) (removes symtab from listing file)
 #   -r  Inlcude assembler line numbers in the `.hlr` hint file
 #   -rr Inlcude non-list assembler line numbers in the `.hlr` hint file
-asmopts="-xwplo"
+asmopts="-xwplo -f"
 
 #   -n  No echo of commands to stdout
 #   -u  Update listing file (`.lst`) with relocated addresses info (`.rst`)

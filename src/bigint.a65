@@ -101,14 +101,14 @@ outbufptr:  .ds  2              ; pointer to len byte followed by data
 bi_readhex: ldx #0              ; constant for indirect addressing
             ;   Start by skipping past any leading '0's.
             tay                 ; save length
-0$:         lda [inbufptr,x]
+0$:         lda [*inbufptr,x]
             cmp #'0
             bne 3$              ; no (more) leading zeros; start conversion
             dey                 ; reduce length
             beq 2$              ; but if it's last digit, convert the 0 anyway
-            inc inbufptr        ; move past leading 0
+            inc *inbufptr       ; move past leading 0
             bne 1$
-            inc inbufptr+1
+            inc *inbufptr+1
 1$:         clc
             bcc 0$
             ;   Conversion, two input digits at a time
@@ -118,20 +118,20 @@ bi_readhex: ldx #0              ; constant for indirect addressing
 4$:         clc
             ror                 ; output length is 1/2 input length
             adc #0              ; plus 1 if input length is odd
-            sta [outbufptr,x]   ; store output length
-            adc outbufptr       ; set outbufptr to end of buffer
-            sta outbufptr
+            sta [*outbufptr,x]  ; store output length
+            adc *outbufptr      ; set outbufptr to end of buffer
+            sta *outbufptr
             bcc 5$
-            inc outbufptr+1
-5$:         lda [inbufptr],y    ; first char for this byte of output buffer
+            inc *outbufptr+1
+5$:         lda [*inbufptr],y   ; first char for this byte of output buffer
             jsr convascdigit    ; convert ASCII digit to binary
             bmi 9$              ; bad digit, error
             cmp #10
             bcs 9$              ; >=16, error
-            sta [outbufptr,x]
+            sta [*outbufptr,x]
             dey                 ; second char for this byte of output buffer
             bmi 8$              ; if input done, return success
-            lda [inbufptr],y
+            lda [*inbufptr],y
             jsr convascdigit    ; convert ASCII digit to binary
             bmi 9$              ; bad digit, error
             cmp #10
@@ -141,13 +141,13 @@ bi_readhex: ldx #0              ; constant for indirect addressing
             asl
             asl
             clc
-            adc [outbufptr,x]
-            sta [outbufptr,x]
-            dec outbufptr
-            lda outbufptr
+            adc [*outbufptr,x]
+            sta [*outbufptr,x]
+            dec *outbufptr
+            lda *outbufptr
             cmp #0FF
             bne 6$
-            dec outbufptr+1
+            dec *outbufptr+1
 6$:         dey
             cpy #0FF
             bne 5$              ; next chars

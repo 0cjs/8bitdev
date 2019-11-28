@@ -79,14 +79,14 @@ jmpabsrts:  asl                 ; convert index to word offset
 ;   incrementing bytesource after.  This is a bit awkward; if we were worried
 ;   about efficiency we'd read from [bytesource+1], among other things.
 
-bsread:     sty     bs_ysave
+bsread:     sty     *bs_ysave
             ldy     #0
-            lda     [bytesource],y
+            lda     [*bytesource],y
             pha
-            ldy     bs_ysave
-            inc     bytesource
+            ldy     *bs_ysave
+            inc     *bytesource
             bne     1$
-            inc     bytesource+1
+            inc     *bytesource+1
 1$:         pla
             rts
 
@@ -116,10 +116,10 @@ read_ascii_byte:
             asl
             asl
             asl
-            sta     rab_temp
+            sta     *rab_temp
             jsr     bsread
             jsr     rab_decode
-            ora     rab_temp
+            ora     *rab_temp
             rts
 
 ;   Decode an ASCII char to a binary digit
@@ -173,15 +173,15 @@ stk_extract:
 
             ;   Variable offset using Y
             ldx #01         ; high byte of stack frame pointer is always
-            stx stkframe+1  ; stack page, so need be stored only on init
+            stx *stkframe+1 ; stack page, so need be stored only on init
 
             tsx             ; points to byte below head of stack
             inx             ; head of stack
             inx             ; skip past caller's return address lobyte
             inx             ;                           ... and hibyte
-            stx stkframe    ; now points at data
+            stx *stkframe   ; now points at data
             ldy #03         ; fourth byte backwards on stack (0-based indexing)
-            lda [stkframe],Y
+            lda [*stkframe],Y
             sta stkval_i3
 
             rts

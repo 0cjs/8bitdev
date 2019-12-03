@@ -6,7 +6,7 @@
             .radix h
 
 ;--------------------------------------------------------------------------
-           ;   This is one way of specifying the location of the code, but
+            ;   This is one way of specifying the location of the code, but
             ;   experimentation has shown that it's probably better to leave
             ;   all code and data in the default _CODE area and specify
             ;   `-b _CODE=0xNNNN` to the linker to do this.
@@ -35,6 +35,18 @@ addxy:      txa
             sta xybuf
             rts
 xybuf:      .ds     1
+
+;--------------------------------------------------------------------------
+;   Determine if signs of two bytes match
+
+signeq:     lda signeq_a
+           ;rts
+            eor signeq_b
+            ;    match: N=0
+            ;   differ: N=1
+            rts
+signeq_a:   .ds  1
+signeq_b:   .ds  1
 
 ;--------------------------------------------------------------------------
 ;   JMP [addr] vs PHA/RTS

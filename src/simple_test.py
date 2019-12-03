@@ -34,6 +34,25 @@ def test_addxy(M):
     assert 0x12+0x34 == M.byte(S.xybuf)
 
 ####################################################################
+#   signeq - determine if signs of two bytes are the same
+
+signeq_pos = [0x00, 0x01, 0x7F]
+signeq_neg = [0x80, 0x81, 0xFE, 0xFF]
+@pytest.mark.parametrize('match, a, b', [] \
+    + [ ( True, a, b) for a in signeq_pos for b in signeq_pos ] \
+    + [ ( True, a, b) for a in signeq_neg for b in signeq_neg ] \
+    + [ (False, a, b) for a in signeq_pos for b in signeq_neg ] \
+    + [ (False, a, b) for a in signeq_neg for b in signeq_pos ] \
+)
+def test_signeq(M, match, a, b):
+    S = M.symtab
+    M.deposit(S.signeq_a, [a])
+    M.deposit(S.signeq_b, [b])
+    print('[a,b] = {}'.format(list(map(hex, (M.bytes(S.signeq_a, 2))))))
+    M.call(S.signeq, R(N=int(match)))
+    assert R(N=int(not match)) == M.regs
+
+####################################################################
 #   JMP [addr] vs PHA/RTS
 
 def test_jmpptr(M):

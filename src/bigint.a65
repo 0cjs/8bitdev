@@ -1,20 +1,55 @@
-;   "bigint": variable precision integers
+;   bigint: variable precision integers
 
-;   In this file we annotate storage used by each function with the following:
+;---------------------------------------------------------------------
+
+;   Parameters specified in the documentation for each function are
+;   annotated as follows.
 ;     (p) - preserved: value at exit is the same at entry
 ;     (w) - written: value at exit is an intended output value
 ;     (d) - destroyed: value at exit may be different from value at entry
 ;           and is not useful
 ;   Flags should be considered destroyed unless otherwise specified.
+;   * For pointers (usually in the zero page), two letters are given: the
+;   first for the pointer itself and the second for the contents of the
+;   buffer to which it points.
+;   * Pointers are also given a suffix of subscript 0 or 1 to indicate if
+;   their indexing is 0-based (`ptr₀` points to the beginning of the
+;   buffer) or 1-based (`ptr₁` points to the byte before the beginning of
+;   the buffer). The latter is often used because it's easier and more
+;   efficient to loop through such a buffer on the 6502.
 
+;---------------------------------------------------------------------
+
+;   Bigints are stored as a length byte (≥1) followed by the two's
+;   complement binary integer. On the 6502 the value is big-endian format.
+;   The values are normalized: they take up no more bytes than necessary to
+;   express the number with the high bit of the MSB clear/set for
+;   positive/negative numbers. The MSB is a sign extension byte of $00
+;   (positive) or $FF (negative) only if the high bit of the next byte
+;   indicates the wrong sign.
+;
+;   We use big-endian format, despite being the opposite of native 6502
+;   order, because we generally want to loop from the LSB to the MSB and
+;   looping towards zero lets us use the zero compare inherent in the DEY
+;   instruction rather than having to do a separate CMP against a value
+;   stored elsewhere.
+
+;---------------------------------------------------------------------
             .radix h
 
             .globl convascdigit
-            .globl bi_readhex
+            .globl bi_readhex, bi_read_dec
 
             .area ZP  (abs,pag)
             .org 0
+            ;   Reserve the first 16 bytes of the zero page for system-
+            ;   specific storage such as a BIOS or ROM I/O routines and
+            ;   the PIO registers on 6510 (C64 etc.)
+            .ds  10
             .area   _CODE
+
+;---------------------------------------------------------------------
+;   Routines that do not need memory storage
 
 ;   Convert ASCII character to binary number in bases up to 41.
 ;   This translates A-Z[\]^_ and a-z{|}~DEL as 10, 11...40.
@@ -71,44 +106,78 @@ convascdigit:
             ;   Since the N flag is our error code, we need not even BMI.
 9$:         rts
 
+;---------------------------------------------------------------------
+;   Common zero-page storage.
 
-;   Bigints are stored in big-endian format on 6502: a length byte
-;   followed by the integer in two's complement format.
+            .area ZP
+
+;   Temporary storage bytes that may be destroyed by subroutine calls.
+;   Since subroutines are allowed to destroy these at will, they may
+;   be used freely, but only between subroutine calls.
+temp1:      .ds     1
+temp2:      .ds     1
+
+;   Sign byte for numerical processing; either $00 or $FF. This is shared
+;   amongst multiple routines that co-operate on processing a number; it
+;   should only be set once by one routine during processing and used as a
+;   read-only parameter by all routines called, directly or indirectly, by
+;   that routine.
+sign:       .ds 1               ; saved sign of input
+
+;   Routines that need "buffers," or generic pointers to memory with
+;   an optional length, use a standard set defined here. `buf0` is the
+;   "innermost" pointer/len to be used as a parameter for routines
+;   that do not call other buffer-using routines. Routines that call
+;   that should, where they can't use the higher values (`buf1`, etc.)
+;   as their parameters.
 ;
-;   We use big-endian format, despite being the opposite of native
-;   6502 order, because we generally want to loop from the LSB to the
-;   MSB and looping towards zero saves means we can start with the
-;   length and decrement and compare with zero, saving the CMP we'd
-;   need to do if counting up to the length.
+;   Some routines also need a "scratch" buffer for temporary storage,
+;   generally allocated by the caller based on lengths of other
+;   parameters. This has its own special pointer and length.
+;
+;   Where routines use multiple buffers, typically these are ouput,
+;   input and scratch in order of increasing buffer number.
+;
+;   In all cases it's carefully documented whether the pointer, the
+;   length and the buffer itself are preserved, overwritten or
+;   destroyed, per the coding at the top of this file.
 
-            .area ZP  (abs,pag)
-inbufptr:   .ds  2              ; pointer to text input buffer
-outbufptr:  .ds  2              ; pointer to len byte followed by data
+bufSptr:    .ds  2              ; pointer to a buffer
+bufSlen:    .ds  1              ; length of that buffer
+buf0ptr:    .ds  2
+buf0len:    .ds  1
+buf1ptr:    .ds  2
+buf1len:    .ds  1
+buf2ptr:    .ds  2
+buf2len:    .ds  1
+buf3ptr:    .ds  2
+buf3len:    .ds  1
             .area   _CODE
 
+;---------------------------------------------------------------------
 ;   Read the ASCII hex two's complement representation of an integer
 ;   and convert it to a bigint. The first bit is the sign, i.e.,
 ;   `FF00` will be read as -256 decimal; a minus prefix is not
 ;   allowed.
 ;
 ;            X, Y: (d)
-;               A: (d) inbufptr length; 1 <= A <= 255
-;        inbufptr: (d) pointer to input char buffer
-;      [inbufptr]: (p) input chars
-;       outbufptr: (d) output buffer, must be length (A+1)/2.
-;     [outbufptr]: (w) bigint output
+;               A: (d) buf0ptr length; 1 <= A <= 255
+;         buf0ptr: (d) pointer to input char buffer
+;       [buf0ptr]: (p) input chars
+;         buf1ptr: (d) output buffer, must be length (A+1)/2.
+;       [buf1ptr]: (w) bigint output
 ;
 bi_readhex: ldx #0              ; constant for indirect addressing
             ;   Start by skipping past any leading '0's.
             tay                 ; save length
-0$:         lda [*inbufptr,x]
+0$:         lda [*buf0ptr,x]
             cmp #'0
             bne 3$              ; no (more) leading zeros; start conversion
             dey                 ; reduce length
             beq 2$              ; but if it's last digit, convert the 0 anyway
-            inc *inbufptr       ; move past leading 0
+            inc *buf0ptr       ; move past leading 0
             bne 1$
-            inc *inbufptr+1
+            inc *buf0ptr+1
 1$:         clc
             bcc 0$
             ;   Conversion, two input digits at a time
@@ -118,20 +187,20 @@ bi_readhex: ldx #0              ; constant for indirect addressing
 4$:         clc
             ror                 ; output length is 1/2 input length
             adc #0              ; plus 1 if input length is odd
-            sta [*outbufptr,x]  ; store output length
-            adc *outbufptr      ; set outbufptr to end of buffer
-            sta *outbufptr
+            sta [*buf1ptr,x]  ; store output length
+            adc *buf1ptr      ; set buf1ptr to end of buffer
+            sta *buf1ptr
             bcc 5$
-            inc *outbufptr+1
-5$:         lda [*inbufptr],y   ; first char for this byte of output buffer
+            inc *buf1ptr+1
+5$:         lda [*buf0ptr],y   ; first char for this byte of output buffer
             jsr convascdigit    ; convert ASCII digit to binary
             bmi 9$              ; bad digit, error
             cmp #10
             bcs 9$              ; >=16, error
-            sta [*outbufptr,x]
+            sta [*buf1ptr,x]
             dey                 ; second char for this byte of output buffer
             bmi 8$              ; if input done, return success
-            lda [*inbufptr],y
+            lda [*buf0ptr],y
             jsr convascdigit    ; convert ASCII digit to binary
             bmi 9$              ; bad digit, error
             cmp #10
@@ -141,15 +210,287 @@ bi_readhex: ldx #0              ; constant for indirect addressing
             asl
             asl
             clc
-            adc [*outbufptr,x]
-            sta [*outbufptr,x]
-            dec *outbufptr
-            lda *outbufptr
+            adc [*buf1ptr,x]
+            sta [*buf1ptr,x]
+            dec *buf1ptr
+            lda *buf1ptr
             cmp #0FF
             bne 6$
-            dec *outbufptr+1
+            dec *buf1ptr+1
 6$:         dey
             cpy #0FF
             bne 5$              ; next chars
 8$:         rts                 ; success; return
 9$:         brk                 ; readhex error
+
+;---------------------------------------------------------------------
+
+;   In-place multiply by ten of a big-endian integer. There is no check for
+;   overflow, so the value must be at least ten times smaller than the
+;   maximum value that can fit in the buffer. A good heurstic is that the
+;   most significant five bits (for signed integers, four bits for
+;   unsigned) should be all zero or all one; any such value will be very
+;   close to the maximum/minimum value that will not overflow.
+;
+;   This requires a scratch buffer of the same length as the number to be
+;   multiplied.
+;
+;          A, Y: (d)
+;             X: (p)
+;       buf0len: (p)  [buf0ptr₁] length; 1 <= buf0len <= 255
+;      buf0ptr₁: (pw) pointer to input/output buffer address - 1
+;      bufSptr₁: (pd) pointer to scratch buffer address - 1
+;
+;   XXX This is often called with small numbers with lots of leading
+;   zero bytes. Thus, it might be a significant optimization for
+;   positive numbers to work on only the right-hand portion of the
+;   buffer from the rightmost zero byte to the end. But for negative
+;   numbers to use the same technique they would need to be filled
+;   with $FF sign extension bytes or something like that. It's not
+;   clear if detection and setting of that should be done by this
+;   routine or by the caller.
+;
+;   This takes about 96 cycles per byte, with 6-12 cycles of overhead. A
+;   full 256 byte input takes 24741 cycles. The majority of this, sadly, is
+;   the LDA/STA because ROL has no indirect indexed addressing mode. This
+;   could be worked around with self-modifying code, but currently it's not
+;   worth the effort.
+;
+bi_x10:     ldy *buf0len
+            ;   Multiply the buffer by 2
+            clc
+2$:         lda [buf0ptr],y
+            rol
+            sta [buf0ptr],y
+            dey
+            bne 2$
+            ;   Make a copy of the ×2 value for later addition
+            ldy *buf0len
+3$:         lda [buf0ptr],y
+            sta [bufSptr],y
+            dey
+            bne 3$
+            ;   Multiply buffer by 2 again, for ×4
+            ldy *buf0len
+            clc
+4$:         lda [buf0ptr],y
+            rol
+            sta [buf0ptr],y
+            dey
+            bne 4$
+            ;   Multiply buffer by 2 again, for ×8
+            ldy *buf0len
+            clc
+8$:         lda [buf0ptr],y
+            rol
+            sta [buf0ptr],y
+            dey
+            bne 8$
+            ;   Add the ×2 value, for ×10
+            ldy *buf0len
+            clc
+10$:        lda [bufSptr],y
+            adc [buf0ptr],y
+            sta [buf0ptr],y
+            dey
+            bne 10$
+            rts
+
+;   Read the ASCII decimal representation of a positive or negative integer
+;   and convert it to a non-normalized (i.e., may have leading sign bytes
+;   as the MSBs) bigint. Leading zeros are processed (though obviously with
+;   no effect other than slowing the conversion).
+;
+;   No error checking is done; ouput/beahviour is undefined unless the
+;   following requirements are met.
+;   • 1 <= length(input) <= 255
+;   • All input characters are ASCII digits
+;   • sign = $00 or $FF
+;   • Output and scratch buffers are large enough to hold the output.
+;
+;   (The output/scratch buffers need not be large enough to hold a valid
+;   sign; the sign is always what is specified as the sign input,
+;   regardless of the value of the most significant bit. If the MSB differs
+;   from the sign you will need to sign-extend the output with a sign byte
+;   to have a valid number with the sign in it.)
+;
+;   A reasonable heuristic for the scratch/output buffer sizes is half the
+;   number of digits in the input, rounded up. In the worst case this will
+;   be about 20% larger than necessary, but for up to 22 digit inputs the
+;   worst case is only two bytes larger.
+;
+;     buf1ptr₀: (pp) input chars buffer address
+;     buf1len : (p)  input buffer length: 1 <= buf1len <= 255
+;         sign: (p)
+;     buf0ptr₁: (pw) pointer to output buffer address - 1; length as above
+;     buf0len : (p)  output buffer length; see conditions above
+;     bufSptr₁: (pd) scratch buffer address - 1; length same as buf0ptr₀
+;    curdigit : (d)  temporary storage
+;         A, Y: (d)
+;            X: (p)
+;
+;   XXX Check the carry to see if there's anything to propagate,
+;   and shortcut if there isn't?
+;
+bi_read_decdigits:
+            ;   Set output buffer to starting value of zero.
+            lda #0
+            ldy *buf0len
+10$:        sta [*buf0ptr],y
+            dey
+            bne 10$
+            sta *curdigit       ; start with most signficant digit (at pos. 0)
+            beq 33$             ; BRA; skip initial multiply of zeroed buffer
+
+30$:        ;   Multiply current intermediate value (buf0ptr) by ten.
+            jsr bi_x10
+33$:        ;   Add in or subtract the current digit.
+            ldy *curdigit
+            inc *curdigit       ; for next loop iteration
+            lda [buf1ptr],y     ; load this digit
+            eor #30             ; convert ASCII to binary
+            ldy *buf0len        ; output LSB index for following add/sub code
+            bit *sign           ; load high bit of sign into N flag
+            bmi 60$             ; if negative, go subtract
+
+50$:        ;   Add binary value of digit in A into output
+            clc
+            adc [buf0ptr],y     ; add LSB to new digit
+            sta [buf0ptr],y     ;   and store new LSB
+52$:        dey                 ; another byte?
+            beq 70$             ; no, carry propagation complete
+            lda [buf0ptr],y
+            adc #0              ; propagate carry
+            sta [buf0ptr],y
+            clv
+            bvc 52$             ; BRA
+
+60$:        ;   Subtract binary value of digit from output
+            sta *temp1          ; subtrahend must be in memory
+            lda [buf0ptr],y     ; load current LSB
+            sec
+            sbc *temp1          ; calculate new LSB
+            sta [buf0ptr],y     ;   and store it
+62$:        dey                 ; propagation done?
+            beq 70$             ; yes, move on to next digit
+            lda [buf0ptr],y     ; propagate carry
+            sbc #0
+            sta [buf0ptr],y
+            clv
+            bvc 62$             ; BRA; continue propagation
+
+70$:        ;   Propagation complete; on to next digit
+            lda *curdigit       ; digits remaining
+            cmp *buf1len
+            beq 79$             ; none, we're done
+            clv
+            bvc 30$             ; BRA; continue with next digit
+79$:        rts
+
+            .area ZP
+curdigit:   .ds 1               ; temporary storage
+            .area _CODE
+
+;   Read the ASCII signed decimal representation of an integer and convert
+;   it to a bigint. The first character may be a optional `+` or `-` sign;
+;   all other characters must be ASCII decimal digits. No error checking of
+;   input characters is done; bad input produces an undefined result.
+;
+;   The temporary buffers pointed to by buf0ptr and bufSptr should be half
+;   the length of the input rounded up plus one byte , with a minimum
+;   length of 2. (XXX These should probably be allocated and freed by this
+;   routine.)
+;
+;   The ouput buffer will be a 1-byte count of the length followed by that
+;   many bytes. XXX figure out how to handle length allocation of this.
+;   Probably also allocated by the routine.
+;
+;              Y: (d)  [buf1ptr] (input) length; 1 <= A <= 255
+;       bufSptr₁: (pd) scratch buffer addr - 1; for length see above
+;       buf0ptr₁: (dd) temp buffer addr - 1; for length see above
+;       buf1ptr₀: (dp) pointer to start of input chars
+;       buf2ptr₀: (dw) pointer to output buffer for len+value
+;
+;            A,X: (d)
+;       buf1len : (d)
+;
+bi_read_dec:
+            ldx #0              ; constant for indirect addressing, etc.
+            ;   Check for and process a `+` or `-` prefix
+            stx *sign           ; assume positive
+            lda [buf1ptr,x]
+            cmp #'-             ; starts with '-' sign?
+            bne 110$            ; no, check for other things
+            dec *sign           ; change sign to negative
+            bmi 150$            ; BRA; remove sign char
+110$:       cmp #'+             ; starts with a '+' sign?
+            bne 200$            ; no, skip sign char removal
+150$:       ;   Remove the sign char from the input
+            dey                 ; dec [buf1ptr₀] (input) length
+            inc buf1ptr         ; move input start forward one char
+            bne 200$
+            inc buf1ptr+1
+200$:       ;   Skip past leading zeros (except last char, of course)
+            clv                 ; for later BRA
+210$:       cpy #1              ; on last char of input?
+            beq 300$            ; yes, special case for single-digit conversion
+            lda [*buf1ptr,x]
+            cmp #'0             ; leading zero?
+            bne 500$            ; no, start conversion
+            dey                 ; otherwise dec length
+            inc *buf1ptr        ;   and move input ptr forward past the '0'
+            bne 210$
+            inc *buf1ptr+1
+            bvc 210$            ; BRA
+
+300$:       ;   We have only one char of input left. We special-case 0 because
+            ;   it breaks our leading-zero-digit removal during later
+            ;   normalization. Also, it may be a common case so fast is nice.
+            lda [*buf1ptr,x]
+            cmp #'0
+            bne 500$            ; not zero, continue with standard conversion
+            ldy #0              ; output length byte location
+            lda #1              ; output length byte value
+            sta [*buf2ptr],y
+            tya                 ; output value (0) to A
+            iny                 ; output value location = 1
+            sta [*buf2ptr],y
+            rts
+
+500$:       ;   ASCII to binary conversion by bi_read_decdigits.
+                                ; buf1ptr₁ already points to start of input
+            sty *buf1len        ; set remaining input length
+            tya                 ; calculate the temp/scratch buffer length
+            clc                 ;   ...
+            ror a               ;   divide by two, leaving old LSbit in carry
+            adc #0              ;   round up
+            sta *buf0len        ;   set output buf size
+            jsr bi_read_decdigits
+800$:       ;   Normalize by dropping redundant leading sign bytes
+            clv                 ; for later BRA
+            ldy #1              ; [buf0ptr₁] uses 1-based indexing
+810$:       lda [*buf0ptr],y
+            cmp *sign
+            bne 900$            ; not a sign extension byte, we're normalized
+            iny                 ; check following byte
+            lda [*buf0ptr],y
+            eor *sign           ; next char's sign bit same as sign?
+            bmi 900$            ; no, we're done with normalization, we must
+                                ;   keep sign extension byte to preserve sign
+            dey                 ; set Y back to start of buf for next iteration
+            dec *buf0len        ; drop this byte by reducing length by one
+            inc *buf0ptr        ;   and moving start point up
+            bne 810$
+            inc *buf0ptr+1
+            bvc 810$            ; BRA
+900$:       ;   Produce final result in [buf2ptr₁] with 1-based indexing.
+            lda *buf0len        ; Store length as
+            ldy #0              ;   first byte of
+            sta [*buf2ptr],y    ;   [buf2ptr₀]
+            ;   Copy normalized value to output buffer
+            ldy *buf0len
+910$:       lda [*buf0ptr],y
+            sta [*buf2ptr],y    ; assume output len is that of bi_read_udec
+            dey
+            bne 910$
+            rts

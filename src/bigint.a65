@@ -232,6 +232,18 @@ bi_readhex: ldx #0              ; constant for indirect addressing
 ;   unsigned) should be all zero or all one; any such value will be very
 ;   close to the maximum/minimum value that will not overflow.
 ;
+;   Like the 6502 ADC/SBC instructions, this does not care whether you are
+;   multiplying a signed or unsigned value; you decide which way you want
+;   to treat it. This allows you an extra bit of precision if you have
+;   separately kept track of the sign of the input; you can safely overflow
+;   the sign bit out of the MSB and sign-extend afterwards. For example,
+;   input [$FF, $00] results in [$30, $30]. If you were considering your
+;   input to be unsigned (65280₁₀) it overflowed and the result is
+;   incorrect. But if you were considering your input to be signed
+;   (-5320₁₀) only the sign bit "overflowed"; you know the output is
+;   negative and can simply sign-extend extend to $FF3030 to have the
+;   correct result.
+;
 ;   This requires a scratch buffer of the same length as the number to be
 ;   multiplied.
 ;

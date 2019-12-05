@@ -67,7 +67,7 @@ setup_asl
 mkdir -p "$builddir/obj"
 
 ####################################################################
-#   Build code
+#   ASxxxx builds
 #
 #   The files to build are currently hardcoded with
 #   no dependency graph so it rebuilds everything each time.
@@ -105,7 +105,7 @@ link() {
     (cd $builddir/obj/ && aslink $linkopts "$@")
 }
 
-asm src/simple.a65      ; link simple
+asm src/simple-asx.a65  ; link simple-asx
 asm src/c64.a65         ; link c64
 asm src/reloctest.a65   ; link reloctest -b '_code=0x400' reloctest
 asm src/bigint.a65      ; link bigint    -b '_code=0x1000' bigint
@@ -117,6 +117,19 @@ asm src/zptest.a65      ; link zptest    -b '_code=0x0300'
 #   otherwise the extra newlines make the linker edit the wrong lines
 #   in the .lst file.
 sed -i -e 's/\f/\n/' "$builddir"/obj/*.{lst,rst,map}
+
+####################################################################
+#   AS builds
+
+asl -qxx -U \
+    -L -olist .build/obj/simple-asl.lst \
+    -g \
+    -o .build/obj/simple-asl.p \
+    src/simple-asl.a65
+mv src/simple-asl.map .build/obj/simple-asl.map
+
+####################################################################
+#   Tests
 
 export PYTHONPATH="$basedir/lib"
 #   XXX This probably relies on the cwd to find the pytest.ini.

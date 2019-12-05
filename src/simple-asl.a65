@@ -1,0 +1,16 @@
+;   Simple 6502 routines to test with Macro Assembler AS
+
+            cpu 6502
+            org $240
+ident       byt "simple-asl.a65"    ; we use this to check that we've loaded
+                                    ; the correct binary data and symbol table.
+
+;--------------------------------------------------------------------------
+;   Add X and Y, storing the result in xybuf and returning it in A
+addxy       txa
+            sty xybuf
+            clc
+            adc xybuf
+            sta xybuf
+            rts
+xybuf       byt ?

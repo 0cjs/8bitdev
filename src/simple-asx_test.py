@@ -7,12 +7,12 @@ def M():
 
     #   XXX Not the best way to find this file: duplicates definition
     #   of $buildir in Test and dependent on CWD.
-    M.load('.build/obj/simple')
+    M.load('.build/obj/simple-asx')
     ident = M.symtab.ident
 
     #   Confirm correct file is loaded
     assert 0x400 == ident
-    ident_str = "simple.a65"
+    ident_str = "simple-asx.a65"
     assert ident_str == M.str(ident, len(ident_str))
 
     return M

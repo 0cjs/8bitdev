@@ -56,7 +56,6 @@ def test_signeq(M, match, a, b):
 #   JMP [addr] vs PHA/RTS
 
 def test_jmpptr(M):
-    M.load('.build/obj/simple')
     S = M.symtab
     #   Step by step testing, to make _really_ sure the instructions
     #   are doing what I intend. Maybe overkill?

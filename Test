@@ -7,12 +7,14 @@ die() {
     exit $exitcode
 }
 
-download_asxxxx() {
+setup_asxxxx() {
     local archive=5p31_exe_linux.zip
     local dldir="$basedir/.download"
     local instdir="$builddir/bin"
     local url='http://shop-pdp.net/_ftp/asxxxx'
     local sha=648a11d48daab3b67e97d82221315b074e874ea30b3f0ead2836baec211940c7
+
+    PATH="$builddir/bin:$PATH"
 
     [[ -x $instdir/aslink && -x $instdir/as6500 ]] && return
 
@@ -33,6 +35,13 @@ download_asxxxx() {
     #   help message returns an error exit code.
 }
 
+setup_asl() {
+    . tools/asl/Build
+    PATH="$builddir/asl:$PATH"
+    asl_installed && return 0
+    install_asl "$builddir/asl"
+}
+
 ####################################################################
 #   Main
 
@@ -51,10 +60,10 @@ esac; done
 
 cd "$basedir"
 
-download_asxxxx
+setup_asxxxx
+setup_asl
 . ./activate -q
 
-export PATH="$builddir/bin:$PATH"
 mkdir -p "$builddir/obj"
 
 ####################################################################

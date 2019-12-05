@@ -1,0 +1,105 @@
+#!/usr/bin/env bash
+#
+#   Installer for The Macroassembler AS
+#
+#   This file is normally sourced by the master build script to get
+#   the asl_installed etc. functions; the caller can use these to
+#   determine if it should use an existing AS already in the path,
+#   build a new one, or what.
+#
+#   It can also be run directly, in which case it will always do an
+#   ASL build into ./.build/asl/ (or fail if .build/ doesn't exist).
+#
+
+#   Whence to clone ASL. It looks like this repo is kept up to date.
+asl_repo=https://github.com/KubaO/asl.git
+
+#   Ref to checkout to after cloning, if not empty.
+#   (The checkout is not done if the source is already there.)
+asl_repo_ref=
+
+#   Be careful here not to set variables, shell options, etc. that
+#   could affect scripts sourcing this file (e.g., don't `set -e`).
+
+####################################################################
+#   Functions for use by scripts sourcing this
+
+#   Return success if `asl` is in the path and appears to be
+#   the AS Macro Assembler.
+asl_installed() {
+    local exitcode=0
+    asl -this-is-not-an-option >/dev/null 2>&1 || exitcode=$?
+    #   Exit code 4 is returned by AS to indicate a bad option.
+    #   Other codes (particularly 126, 127) are returned by Bash
+    #   to indicate it couldn't find the command.
+    [[ $exitcode -eq 4 ]] && return 0 || return 1
+}
+
+#   Given a parameter $target_dir, clone, configure and and build the AS
+#   Macro Assembler into that target directory. If that directory already
+#   exists it will not be reconfigured so that developers can tweak
+#   that version as they wish.
+install_asl() {
+    [[ ${#@} -eq 1 ]] \
+        || { echo 1>&2 'install_asl(): target_dir param required'; return 2; }
+    local target_dir="$1"; shift
+
+    echo "----- Installing asl"
+    if [[ -d $target_dir ]]
+        then echo "Using existing asl source in $target_dir"
+        else fetch_asl "$target_dir" || return $?
+        fi
+    if [[ -r $target_dir/Makefile.def ]]
+        then echo "Using existing asl build configuration in $target_dir"
+        else configure_asl_build "$target_dir" || return $?
+        fi
+
+    echo '----- Building asl'
+    (cd "$target_dir" && make -j 8) || return $?
+}
+
+####################################################################
+#   Functions used by the above
+
+fetch_asl() {
+    [[ ${#@} -eq 1 ]] \
+        || { echo 1>&2 'fetch_asl(): target_dir param required'; return 2; }
+    local target_dir="$1"; shift
+
+    echo "Cloning asl from $asl_repo"
+    git clone "$asl_repo" "$target_dir" || return $?
+    [[ -z $asl_repo_ref ]] || {
+        echo "Switching to ref $asl_repo_ref"
+        git -C "$target_dir" checkout "$asl_repo_ref" || return $?
+    }
+}
+
+configure_asl_build() {
+    [[ ${#@} -eq 1 ]] \
+        || { echo 1>&2 'configure_asl_build(): target_dir param required'
+             return 2; }
+    local target_dir="$1"; shift
+
+    echo "----- Configuring asl build"
+    [[ -r $ASL_BUILD_DIR/.gitignore ]] \
+        || cp -v "$ASL_BUILD_DIR/gitignore" "$target_dir/.gitignore" \
+        || return 1
+    cp -v "$ASL_BUILD_DIR/Makefile.def-native-unknown-linux" \
+        "$target_dir/Makefile.def-samples/" || return 1
+    cp -v "$ASL_BUILD_DIR/Makefile.def-native-unknown-linux" \
+        "$target_dir/Makefile.def" || return 1
+}
+
+####################################################################
+#   Main
+
+#   Save this so functions above can find other files in this dir.
+ASL_BUILD_DIR=$(dirname "$BASH_SOURCE")
+
+(return 0 2>/dev/null) && return    # Exit here if we were sourced
+
+set -eu -o pipefail
+asl_installed && echo "Warning: asl binary present; building anyway"
+
+[[ -d .build/ ]] || { echo 1>&2 "No .build/ directory here; aborting"; exit 1; }
+install_asl .build/asl

@@ -1,0 +1,15 @@
+#   .o and .obj are the only two TARG_OBJEXTENSION in Makefile.def-samples/
+/*.o
+/*.obj
+#   These are generated for most executables; wildcard them to save typing.
+/*.msg
+/*.rsc
+#   Generated binaries.
+/alink
+/asl
+/mkdepend
+/p2bin
+/p2hex
+/pbind
+/plist
+/rescomp

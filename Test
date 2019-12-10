@@ -121,12 +121,33 @@ sed -i -e 's/\f/\n/' "$builddir"/obj/*.{lst,rst,map}
 ####################################################################
 #   AS builds
 
-asl -qxx -U \
-    -L -olist .build/obj/simple-asl.lst \
-    -g \
-    -o .build/obj/simple-asl.p \
-    src/simple-asl.a65
-mv src/simple-asl.map .build/obj/simple-asl.map
+asbuild() {
+    local srcpath="$1"; shift
+    local objsubdir=$(dirname "$srcpath")
+          objsubdir=${objsubdir#$basedir/}  # Remove $basedir prefix if present
+    local objdir="$basedir/.build/obj/$objsubdir"
+    local src=$(basename "$srcpath")
+    #   AS has some poor behaviour we need to work around here.
+    #   • We set CWD to output dir because AS can't specify other output
+    #     locations for some files, such as the debug symbols.
+    #   • If given an absolute path to a source file in another dir, AS
+    #     doesn't generate output files. (!) So we set up the top-level
+    #     source file here that `include`s the real top-level source file.
+    #   • </dev/null prevents interactive prompt if no input file given.
+    #   • Full path to source file must be given. It will be found from
+    #     path relative to include dir, but then AS will crash.
+    #   Also, We make symbols case sensitive here; this can be done only
+    #   with a command-line option.
+    mkdir -p "$objdir"
+    (cd "$objdir" \
+        && echo -e >"$src" '' \
+            '   page 0\n' \
+            "   include $srcpath\n" \
+        && asl </dev/null -qxx -U \
+            -i "$basedir" "$src" -L -s -g
+    )
+}
+asbuild src/simple-asl.a65
 
 ####################################################################
 #   Tests

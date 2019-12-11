@@ -75,7 +75,7 @@ def tdatafile(filename):
     ''' Return a ByteStream reading from the given test file.
         This returns a context manager and so can be used with ``with``.
     '''
-    dir = 'lib/testmc/testfiles'    # XXX works only from repo top level dir
+    dir = 'lib/testmc/testfiles/asxxxx' # XXX works only from repo top level dir
     path = Path(dir, filename)
     return open(str(path), 'r')
 
@@ -133,8 +133,8 @@ def test_SymTab_readsymtabpath_nonexistent_file():
 
 def test_SymTab_readsymtabpath():
     #   XXX This depends on CWD.
-    assert SymTab.readsymtabpath('lib/testmc/testfiles/wide.rst')
-    assert SymTab.readsymtabpath('lib/testmc/testfiles/wide')
+    assert SymTab.readsymtabpath('lib/testmc/testfiles/asxxxx/wide.rst')
+    assert SymTab.readsymtabpath('lib/testmc/testfiles/asxxxx/wide')
 
 def test_SymTab_readsymtabstream():
     #   Here we deliberately use a file that does not list the areas

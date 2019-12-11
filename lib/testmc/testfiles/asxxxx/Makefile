@@ -11,7 +11,7 @@
 #   get the correct versions of ones that get generated multiple
 #   times, such as `.lst` files.
 
-PATH := ../../../.build/bin:${PATH}
+PATH := ../../../../.build/bin:${PATH}
 SHELL := bash
 export PATH SHELL
 

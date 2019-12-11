@@ -17,6 +17,27 @@ $$named     nop     ; named5
             rts
 tempsyms_end
 
+;       Section demonstrations
+foo         nop                 ; global    foo
+    section sec1                ; level 1   :sec1:
+foo         nop                 ;           :sec1:foo
+bar         nop                 ;           :sec1:bar
+      section sec2              ; level 2   :sec1:sec2:
+foo         nop                 ;           :sec1:sec2:foo
+            public bar          ;           bar         (not bar[2], bar[sec2])
+bar         nop
+            public baz:parent   ;           :sec1:baz   (not baz[sec2])
+baz         nop
+        section sec2            ; level 3   :sec1:sec2:sec2:
+foo         nop                 ;           :sec1:sec2:sec2:foo
+        endsection sec2
+      endsection sec2
+quux        nop                 ;           :sec1:quux
+    endsection sec1
+    section sec2                ; level 1   :sec2
+foo         nop                 ;           :sec2:foo
+    endsection sec2
+
 ;--------------------------------------------------------------------------
 ;   Add X and Y, storing the result in xybuf and returning it in A
 addxy       txa

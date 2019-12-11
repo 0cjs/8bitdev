@@ -1,0 +1,97 @@
+;   Generates test .map input for testmc.asl
+
+            cpu 6502
+            org $280
+
+;--------------------------------------------------------------------------
+;   When testing we need a string terminator not used in any strings to
+;   ensure we're not matching an identical prefix of a different string.
+strz        macro
+            byt ALLARGS,$00
+            endm
+
+;--------------------------------------------------------------------------
+;   Simple symbols.
+
+eq0int      equ     12345678        ; integer
+eq1float    equ     1.2345          ; float in non-expnential notation
+eq2floatE   equ     6.78e-90        ; float sized to force exp. notation
+eq3strN     equ     "nospace"
+eq4strT     equ     " lead/trail space "
+;   "Odd" chars. \127 is the largest char we can insert w/backlash notation.
+eq5strW     equ     "\0\t\n\r\"\'\\\127"
+eq6strL     equ     "This is a very long string, with a trailing space: "
+
+global0     strz    "global0"
+
+            include "program.inc"
+
+;--------------------------------------------------------------------------
+;   "Temporary" symbols
+
+tempsyms    strz    "tempsysms"
+.composed   strz    "tempsyms.composed"
+$$named     strz    "named5"
+.composed   strz    "named5.composed"
+-           strz    "__back0"
+/           strz    "__forw0"
++           strz    "__forw1"
+.composed   strz    "__forw1.composed"
+tempsyms_end
+            strz    "tmpsyms_end"
+
+;--------------------------------------------------------------------------
+;   Section symbols
+
+foo         strz    "global foo"            ; global
+
+    section sec1                            ; level 1   :sec1:
+foo         strz    ":sec1 foo"
+bar         strz    ":sec1 bar"
+
+      section sec2                          ; level 2   :sec1:sec2:
+foo         strz    ":sec1:sec2 foo"
+
+  public bar
+bar         strz    "global bar"
+            ;   there should be no ":sec1 bar" or ":sec1:sec2 bar"
+
+    public baz:parent
+baz         strz    ":sec1 baz"
+            ;   there should be no "global baz" or ":sec1:sec2 baz"
+
+        section sec2                        ; level 3   :sec1:sec2:sec2:
+foo         strz    ":sec1:sec2:sec2 foo"
+        endsection sec2                     ; level 2
+
+      endsection sec2                       ; level 1
+
+quux        strz    ":sec1 quux"
+    endsection sec1                         ; global
+    section sec2                            ; level 1   :sec2
+foo         strz    ":sec2 foo"
+    endsection sec2                         ; global
+
+;--------------------------------------------------------------------------
+;   Something we can call.
+
+;   Add X and Y, storing the result in xybuf and returning it in A
+addxy       txa
+            sty xybuf
+            clc
+            adc xybuf
+            sta xybuf
+            rts
+xybuf       byt ?
+
+;--------------------------------------------------------------------------
+;   Some data far away from the above, to generate another CODE record.
+
+            org $F480
+data0       strz "Hello."
+data1       strz "Goodbye."
+
+;--------------------------------------------------------------------------
+;   Define an entry point so we get a record for that we can test.
+
+            end addxy

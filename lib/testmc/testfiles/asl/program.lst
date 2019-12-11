@@ -1,0 +1,239 @@
+ AS V1.42 Beta [Bld 151] - Source File program.a65 - Page 1 - 12/30/2019 12:21:19 PM
+
+
+       1/       0 :                     ;   Generates test .map input for testmc.asl
+       2/       0 :                     
+       3/       0 :                                 cpu 6502
+       4/     280 :                                 org $280
+       5/     280 :                     
+       6/     280 :                     ;--------------------------------------------------------------------------
+       7/     280 :                     ;   When testing we need a string terminator not used in any strings to
+       8/     280 :                     ;   ensure we're not matching an identical prefix of a different string.
+       9/     280 :                     strz        macro
+      10/     280 :                                 byt ALLARGS,$00
+      11/     280 :                                 endm
+      12/     280 :                     
+      13/     280 :                     ;--------------------------------------------------------------------------
+      14/     280 :                     ;   Simple symbols.
+      15/     280 :                     
+      16/     280 : =$BC614E            eq0int      equ     12345678        ; integer
+      17/     280 : =1.2345             eq1float    equ     1.2345          ; float in non-expnential notation
+      18/     280 : =6.78E-90           eq2floatE   equ     6.78e-90        ; float sized to force exp. notation
+      19/     280 : =nospace            eq3strN     equ     "nospace"
+      20/     280 : = lead/trail space  eq4strT     equ     " lead/trail space "
+      21/     280 :                     ;   "Odd" chars. \127 is the largest char we can insert w/backlash notation.
+      22/     280 : =\000\009\010\01..  eq5strW     equ     "\0\t\n\r\"\'\\\127"
+      23/     280 : =This is a very ..  eq6strL     equ     "This is a very long string, with a trailing space: "
+      24/     280 :                     
+      25/     280 : (MACRO)             global0     strz    "global0"
+      25/     280 : 67 6C 6F 62 61 6C               byt "global0",$00
+                    30 00             
+      26/     288 :                     
+      27/     288 :                                 include "program.inc"
+(1)    1/     288 :                     ;   This file is included in `program.a65`; it ensures that the MAP file
+(1)    2/     288 :                     ;   demonstrates locations and symbols from multiple source files.
+(1)    3/     288 :                     
+(1)    4/     288 : (MACRO)             globalinc   strz     "globalinc"
+(1)    4/     288 : 67 6C 6F 62 61 6C               byt "globalinc",$00
+                    69 6E 63 00       
+(1)    5/     292 :                     
+      28/     292 :                     
+      29/     292 :                     ;--------------------------------------------------------------------------
+      30/     292 :                     ;   "Temporary" symbols
+      31/     292 :                     
+      32/     292 : (MACRO)             tempsyms    strz    "tempsysms"
+      32/     292 : 74 65 6D 70 73 79               byt "tempsysms",$00
+                    73 6D 73 00       
+      33/     29C : (MACRO)             .composed   strz    "tempsyms.composed"
+      33/     29C : 74 65 6D 70 73 79               byt "tempsyms.composed",$00
+                    6D 73 2E 63 6F 6D 
+                    70 6F 73 65 64 00 
+      34/     2AE : (MACRO)             $$named     strz    "named5"
+      34/     2AE : 6E 61 6D 65 64 35               byt "named5",$00
+                    00                
+      35/     2B5 : (MACRO)             .composed   strz    "named5.composed"
+      35/     2B5 : 6E 61 6D 65 64 35               byt "named5.composed",$00
+                    2E 63 6F 6D 70 6F 
+                    73 65 64 00       
+      36/     2C5 : (MACRO)             -           strz    "__back0"
+      36/     2C5 : 5F 5F 62 61 63 6B               byt "__back0",$00
+                    30 00             
+      37/     2CD : (MACRO)             /           strz    "__forw0"
+      37/     2CD : 5F 5F 66 6F 72 77               byt "__forw0",$00
+                    30 00             
+ AS V1.42 Beta [Bld 151] - Source File program.a65 - Page 2 - 12/30/2019 12:21:19 PM
+
+
+      38/     2D5 : (MACRO)             +           strz    "__forw1"
+      38/     2D5 : 5F 5F 66 6F 72 77               byt "__forw1",$00
+                    31 00             
+      39/     2DD : (MACRO)             .composed   strz    "__forw1.composed"
+      39/     2DD : 5F 5F 66 6F 72 77               byt "__forw1.composed",$00
+                    31 2E 63 6F 6D 70 
+                    6F 73 65 64 00    
+      40/     2EE :                     tempsyms_end
+      41/     2EE : (MACRO)                         strz    "tmpsyms_end"
+      41/     2EE : 74 6D 70 73 79 6D               byt "tmpsyms_end",$00
+                    73 5F 65 6E 64 00 
+      42/     2FA :                     
+      43/     2FA :                     ;--------------------------------------------------------------------------
+      44/     2FA :                     ;   Section symbols
+      45/     2FA :                     
+      46/     2FA : (MACRO)             foo         strz    "global foo"            ; global
+      46/     2FA : 67 6C 6F 62 61 6C               byt "global foo",$00
+                    20 66 6F 6F 00    
+      47/     305 :                     
+      48/     305 :                         section sec1                            ; level 1   :sec1:
+      49/     305 : (MACRO)             foo         strz    ":sec1 foo"
+      49/     305 : 3A 73 65 63 31 20               byt ":sec1 foo",$00
+                    66 6F 6F 00       
+      50/     30F : (MACRO)             bar         strz    ":sec1 bar"
+      50/     30F : 3A 73 65 63 31 20               byt ":sec1 bar",$00
+                    62 61 72 00       
+      51/     319 :                     
+      52/     319 :                           section sec2                          ; level 2   :sec1:sec2:
+      53/     319 : (MACRO)             foo         strz    ":sec1:sec2 foo"
+      53/     319 : 3A 73 65 63 31 3A               byt ":sec1:sec2 foo",$00
+                    73 65 63 32 20 66 
+                    6F 6F 00          
+      54/     328 :                     
+      55/     328 :                       public bar
+      56/     328 : (MACRO)             bar         strz    "global bar"
+      56/     328 : 67 6C 6F 62 61 6C               byt "global bar",$00
+                    20 62 61 72 00    
+      57/     333 :                                 ;   there should be no ":sec1 bar" or ":sec1:sec2 bar"
+      58/     333 :                     
+      59/     333 :                         public baz:parent
+      60/     333 : (MACRO)             baz         strz    ":sec1 baz"
+      60/     333 : 3A 73 65 63 31 20               byt ":sec1 baz",$00
+                    62 61 7A 00       
+      61/     33D :                                 ;   there should be no "global baz" or ":sec1:sec2 baz"
+      62/     33D :                     
+      63/     33D :                             section sec2                        ; level 3   :sec1:sec2:sec2:
+      64/     33D : (MACRO)             foo         strz    ":sec1:sec2:sec2 foo"
+      64/     33D : 3A 73 65 63 31 3A               byt ":sec1:sec2:sec2 foo",$00
+                    73 65 63 32 3A 73 
+                    65 63 32 20 66 6F 
+                    6F 00             
+      65/     351 :                             endsection sec2                     ; level 2
+      66/     351 :                     
+      67/     351 :                           endsection sec2                       ; level 1
+      68/     351 :                     
+      69/     351 : (MACRO)             quux        strz    ":sec1 quux"
+      69/     351 : 3A 73 65 63 31 20               byt ":sec1 quux",$00
+                    71 75 75 78 00    
+      70/     35C :                         endsection sec1                         ; global
+      71/     35C :                         section sec2                            ; level 1   :sec2
+ AS V1.42 Beta [Bld 151] - Source File program.a65 - Page 3 - 12/30/2019 12:21:19 PM
+
+
+      72/     35C : (MACRO)             foo         strz    ":sec2 foo"
+      72/     35C : 3A 73 65 63 32 20               byt ":sec2 foo",$00
+                    66 6F 6F 00       
+      73/     366 :                         endsection sec2                         ; global
+      74/     366 :                     
+      75/     366 :                     ;--------------------------------------------------------------------------
+      76/     366 :                     ;   Something we can call.
+      77/     366 :                     
+      78/     366 :                     ;   Add X and Y, storing the result in xybuf and returning it in A
+      79/     366 : 8A                  addxy       txa
+      80/     367 : 8C 72 03                        sty xybuf
+      81/     36A : 18                              clc
+      82/     36B : 6D 72 03                        adc xybuf
+      83/     36E : 8D 72 03                        sta xybuf
+      84/     371 : 60                              rts
+      85/     372 :                     xybuf       byt ?
+      86/     373 :                     
+      87/     373 :                     ;--------------------------------------------------------------------------
+      88/     373 :                     ;   Some data far away from the above, to generate another CODE record.
+      89/     373 :                     
+      90/    F480 :                                 org $F480
+      91/    F480 : (MACRO)             data0       strz "Hello."
+      91/    F480 : 48 65 6C 6C 6F 2E               byt "Hello.",$00
+                    00                
+      92/    F487 : (MACRO)             data1       strz "Goodbye."
+      92/    F487 : 47 6F 6F 64 62 79               byt "Goodbye.",$00
+                    65 2E 00          
+      93/    F490 :                     
+      94/    F490 :                     ;--------------------------------------------------------------------------
+      95/    F490 :                     ;   Define an entry point so we get a record for that we can test.
+      96/    F490 :                     
+      97/    F490 :                                 end addxy
+ AS V1.42 Beta [Bld 151] - Source File program.a65 - Page 4 - 12/30/2019 12:21:19 PM
+
+
+  Symbol Table (* = unused):
+  --------------------------
+
+*ARCHITECTURE :                                        x86_64-unknown-linux - |
+*BIGENDIAN :                      0 - | *BRANCHEXT :                      0 - |
+*CASESENSITIVE :                  1 - | *CONSTPI :        3.141592653589793 - |
+*DATE :                  12/30/2019 - | *FALSE :                          0 - |
+*FULLPMMU :                       1 - | *HAS64 :                          1 - |
+*HASDSP :                         0 - | *HASFPU :                         0 - |
+*HASPMMU :                        0 - | *INEXTMODE :                      0 - |
+*INLWORDMODE :                    0 - | *INMAXMODE :                      0 - |
+*INSRCMODE :                      0 - | *INSUPMODE :                      0 - |
+*LISTON :                         1 - | *MACEXP :                         7 - |
+*MOMCPU :                      6502 - | *MOMCPUNAME :                  6502 - |
+*NESTMAX :                      100 - | *PACKING :                        0 - |
+*PADDING :                        1 - | *RELAXED :                        0 - |
+*TIME :                 12:21:19 PM - | *TRUE :                           1 - |
+*VERSION :                     142F - | *__back0 :                      2C5 C |
+*__forw0 :                      2CD C | *__forw1 :                      2D5 C |
+*__forw1.composed :             2DD C |  addxy :                        366 C |
+*bar :                          328 C | *bar [sec1] :                   30F C |
+*baz [sec1] :                   333 C | *data0 :                       F480 C |
+*data1 :                       F487 C | *eq0int :                    BC614E - |
+*eq1float :                  1.2345 - | *eq2floatE :               6.78E-90 - |
+*eq3strN :                  nospace - | *eq4strT :        lead/trail space  - |
+*eq5strW :                                    \000\009\010\013\034'\092\127 - |
+*eq6strL :              This is a very long string, with a trailing space:  - |
+*foo :                          2FA C | *foo [sec1] :                   305 C |
+*foo [sec2] :                   319 C | *foo [sec2] :                   33D C |
+*foo [sec2] :                   35C C | *global0 :                      280 C |
+*globalinc :                    288 C | *named13 :                      2AE C |
+*named13.composed :             2B5 C | *quux [sec1] :                  351 C |
+*tempsyms :                     292 C | *tempsyms.composed :            29C C |
+*tempsyms_end :                 2EE C |  xybuf :                        372 C |
+
+     59 Symbols
+     57 unused symbols
+
+ AS V1.42 Beta [Bld 151] - Source File program.a65 - Page 5 - 12/30/2019 12:21:19 PM
+
+
+  Defined Macros:
+  ---------------
+
+strz                                  |
+
+      1 macro
+
+ AS V1.42 Beta [Bld 151] - Source File program.a65 - Page 6 - 12/30/2019 12:21:19 PM
+
+
+  Code Pages:
+  ----------
+
+STANDARD (0 changed characters)
+
+1 code page
+ AS V1.42 Beta [Bld 151] - Source File program.a65 - Page 7 - 12/30/2019 12:21:19 PM
+
+
+  Sections:
+  ---------
+
+  sec1
+    sec2
+      sec2
+  sec2
+
+0.00 seconds assembly time
+
+    103 lines source file
+    125 lines incl. macro expansions
+      2 passes
+      0 errors
+      0 warnings

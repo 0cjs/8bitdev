@@ -1,0 +1,88 @@
+Segment CODE
+File /home/cjs/co/github.com/0cjs/8bitdev/lib/testmc/testfiles/asl/program.a65
+   25:00000280 
+File /home/cjs/co/github.com/0cjs/8bitdev/lib/testmc/testfiles/asl/program.inc
+    4:00000288 
+File /home/cjs/co/github.com/0cjs/8bitdev/lib/testmc/testfiles/asl/program.a65
+   32:00000292    33:0000029C    34:000002AE    35:000002B5    36:000002C5 
+   37:000002CD    38:000002D5    39:000002DD    41:000002EE    46:000002FA 
+   49:00000305    50:0000030F    53:00000319    56:00000328    60:00000333 
+   64:0000033D    69:00000351    72:0000035C    79:00000366    80:00000367 
+   81:0000036A    82:0000036B    83:0000036E    84:00000371    91:0000F480 
+   92:0000F487 
+
+Symbols in Segment NOTHING
+ARCHITECTURE                          String x86_64-unknown-linux      -1  0
+BIGENDIAN                             Int    0                         -1  0
+BRANCHEXT                             Int    0                         -1  0
+CASESENSITIVE                         Int    1                         -1  0
+CONSTPI                               Float  3.141592653589793         -1  0
+DATE                                  String 12/30/2019                -1  0
+FALSE                                 Int    0                         -1  0
+FULLPMMU                              Int    1                         -1  0
+HAS64                                 Int    1                         -1  0
+HASDSP                                Int    0                         -1  0
+HASFPU                                Int    0                         -1  0
+HASPMMU                               Int    0                         -1  0
+INEXTMODE                             Int    0                         -1  0
+INLWORDMODE                           Int    0                         -1  0
+INMAXMODE                             Int    0                         -1  0
+INSRCMODE                             Int    0                         -1  0
+INSUPMODE                             Int    0                         -1  0
+LISTON                                Int    1                         -1  0
+MACEXP                                Int    7                         -1  0
+MOMCPU                                Int    6502                      -1  0
+MOMCPUNAME                            String 6502                      -1  0
+NESTMAX                               Int    100                       -1  0
+PACKING                               Int    0                         -1  0
+PADDING                               Int    1                         -1  0
+RELAXED                               Int    0                         -1  0
+TIME                                  String 12:21:19\032PM            -1  0
+TRUE                                  Int    1                         -1  0
+VERSION                               Int    142F                      -1  0
+eq0int                                Int    BC614E                    -1  0
+eq1float                              Float  1.2345                    -1  0
+eq2floatE                             Float  6.78E-90                  -1  0
+eq3strN                               String nospace                   -1  0
+eq4strT                               String \032lead/trail\032space\032 -1  0
+eq5strW                               String \000\009\010\013\034'\092\127 -1  0
+eq6strL                               String This\032is\032a\032very\032long\032string,\032with\032a\032trailing\032space:\032 -1  0
+
+Symbols in Segment CODE
+__back0                               Int    2C5                       -1  0
+__forw0                               Int    2CD                       -1  0
+__forw1                               Int    2D5                       -1  0
+__forw1.composed                      Int    2DD                       -1  0
+addxy                                 Int    366                       -1  1
+bar                                   Int    328                       -1  0
+bar[0]                                Int    30F                       -1  0
+baz[0]                                Int    333                       -1  0
+data0                                 Int    F480                      -1  0
+data1                                 Int    F487                      -1  0
+foo                                   Int    2FA                       -1  0
+foo[0]                                Int    305                       -1  0
+foo[1]                                Int    319                       -1  0
+foo[2]                                Int    33D                       -1  0
+foo[3]                                Int    35C                       -1  0
+global0                               Int    280                       -1  0
+globalinc                             Int    288                       -1  0
+named13                               Int    2AE                       -1  0
+named13.composed                      Int    2B5                       -1  0
+quux[0]                               Int    351                       -1  0
+tempsyms                              Int    292                       -1  0
+tempsyms.composed                     Int    29C                       -1  0
+tempsyms_end                          Int    2EE                       -1  0
+xybuf                                 Int    372                       0   1
+
+Info for Section 0 sec1 -1
+305-318
+351-35B
+
+Info for Section 1 sec2 0
+319-33C
+
+Info for Section 2 sec2 1
+33D-350
+
+Info for Section 3 sec2 -1
+35C-365

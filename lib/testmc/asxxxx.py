@@ -43,7 +43,7 @@ def parse_cocobin(bytestream):
 ####################################################################
 
 
-class SymTab():
+class AxSymTab():
     ''' The symbol table of an ASxxxx module, including local symbols.
 
         You may look up the value of a symbol directly with
@@ -133,7 +133,7 @@ class SymTab():
         for withext in (path, noext+'.sym', noext+'.rst', noext+'.lst'):
             try:
                 with open(withext, 'r') as stream:
-                    symtab = SymTab.readsymtabstream(stream)
+                    symtab = AxSymTab.readsymtabstream(stream)
             except FileNotFoundError:
                 pass
         if symtab is None:
@@ -158,17 +158,17 @@ class SymTab():
             To patch relocatable values to their proper locations
             based on a .map file, use `relocate()`.
         '''
-        symlines, arealines = SymTab.symtab_lines(stream)
+        symlines, arealines = AxSymTab.symtab_lines(stream)
         if len(symlines) == 0:
             return None
 
-        symbols = tuple(map(SymTab.parse_symline, symlines))
+        symbols = tuple(map(AxSymTab.parse_symline, symlines))
 
         #   It appears that areas within a single module are numbered
         #   consecutively (though not printed in order) with area
         #   numbers local to that module.
-        areas = sorted(tuple(map(SymTab.parse_arealine, arealines)))
-        return SymTab(symbols, areas)
+        areas = sorted(tuple(map(AxSymTab.parse_arealine, arealines)))
+        return AxSymTab(symbols, areas)
 
     HEADERLINE = re.compile(r'.?ASxxxx Assembler')
 
@@ -199,7 +199,7 @@ class SymTab():
             if line == '': break                        # EOF
             if line == '\n': continue                   # blank line
             if line.strip() == 'Area Table': break      # end of symbol table
-            if SymTab.HEADERLINE.match(line):
+            if AxSymTab.HEADERLINE.match(line):
                 f.readline()                            # skip 2nd header line
             else:
                 if '| ' not in line:
@@ -214,7 +214,7 @@ class SymTab():
             if line == '': break                        # EOF
             if line == '\n': continue                   # blank line
             if line[0] == '[': continue                 # CSEG/DSEG
-            if SymTab.HEADERLINE.match(line):
+            if AxSymTab.HEADERLINE.match(line):
                 f.readline()                            # skip 2nd header line
             else:
                 arealines.append(line.rstrip())
@@ -242,7 +242,7 @@ class SymTab():
         else:
             areanum, name, value, flags = line.split()
             areanum = int(areanum)
-        return SymTab.Symbol(name, int(value, 16), areanum)
+        return AxSymTab.Symbol(name, int(value, 16), areanum)
 
     class Area(ntup('Area', 'number, name, flags')):
         def isrelative(self):
@@ -254,20 +254,21 @@ class SymTab():
     @staticmethod
     def parse_arealine(line):
         num, name, _, size, _, flags = line.split()
-        return SymTab.Area(int(num), name, int(flags, 16))
+        return AxSymTab.Area(int(num), name, int(flags, 16))
 
     ####################################################################
     #   .map files and relocation
 
     def relocate(self, stream):
         ''' Read an ASxxxx .map file and relocate the symbols in this
-            SymTab based on the area addresses in that file.
+            AxSymTab based on the area addresses in that file.
 
             This completely ignores bank information.
         '''
         if self.relocated:
             raise TypeError("Already relocated")
-        areas = map(SymTab.parse_maparealine, SymTab.mapfile_arealines(stream))
+        areas = map(AxSymTab.parse_maparealine,
+            AxSymTab.mapfile_arealines(stream))
         for name, addr in areas:
             if addr == 0: continue      # No relocation to be done
             areanum = self.areanamed(name).number
@@ -283,7 +284,7 @@ class SymTab():
     @staticmethod
     def mapfile_arealines(stream):
         ''' Return a list of area lines from a map file. '''
-        areaheader = SymTab.MAPFILE_AREAHEADER
+        areaheader = AxSymTab.MAPFILE_AREAHEADER
         lines = []
         while True:
             line = stream.readline()

@@ -124,7 +124,7 @@ class Machine():
 
     def __init__(self):
         self.mpu = MPU()
-        self.symtab = asxxxx.SymTab([], [])
+        self.symtab = asxxxx.AxSymTab([], [])
 
     @property
     def regs(self):
@@ -255,7 +255,7 @@ class Machine():
         '''
         self.load_memimage(asxxxx.parse_cocobin_fromfile(path + '.bin'))
         try:
-            self.symtab = asxxxx.SymTab.readsymtabpath(path)
+            self.symtab = asxxxx.AxSymTab.readsymtabpath(path)
         except FileNotFoundError as err:
             print('WARNING: could not read symbol table file from path ' \
                 + path, file=stderr)

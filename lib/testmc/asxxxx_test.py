@@ -28,44 +28,44 @@ def test_parse_cocobin():
 
 
 ####################################################################
-#   SymTab - Parse symbol table from ASxxxx listing file
+#   AxSymTab - Parse symbol table from ASxxxx listing file
 
-def test_SymTab_parse_symline_wide():
-    s = SymTab.parse_symline(
+def test_AxSymTab_parse_symline_wide():
+    s = AxSymTab.parse_symline(
         '  3 ar_local0                                                   0FE3 R'
         )
     assert      'ar_local0' == s.name
     assert           0x0fe3 == s.value
     assert                3 == s.areanum
 
-def test_SymTab_parse_symline_narrow():
-    s = SymTab.parse_symline('0 n_longsym_1234     0041 GR')
+def test_AxSymTab_parse_symline_narrow():
+    s = AxSymTab.parse_symline('0 n_longsym_1234     0041 GR')
     assert     'n_longsym_1234' == s.name       # XXX truncated!
     assert               0x0041 == s.value
     assert                    0 == s.areanum
 
-def test_SymTab_parse_symline_equate():
-    s = SymTab.parse_symline('    .__.$$$.       =   2710 L')
+def test_AxSymTab_parse_symline_equate():
+    s = AxSymTab.parse_symline('    .__.$$$.       =   2710 L')
     assert           '.__.$$$.' == s.name
     assert               0x2710 == s.value
     assert                 None is s.areanum
 
-def test_SymTab_parse_symline_noflags():
-    s = SymTab.parse_symline('    valF123        =   F123')
+def test_AxSymTab_parse_symline_noflags():
+    s = AxSymTab.parse_symline('    valF123        =   F123')
     assert            'valF123' == s.name
     assert               0xf123 == s.value
     assert                 None is s.areanum
 
-def test_SymTab_parse_arealine_wide():
-    a = SymTab.parse_arealine(
+def test_AxSymTab_parse_arealine_wide():
+    a = AxSymTab.parse_arealine(
         '   2 area_abs                              size 8012   flags  908')
     assert            2 == a.number
     assert   'area_abs' == a.name
     assert       0x0908 == a.flags
     assert not a.isrelative()
 
-def test_SymTab_parse_arealine_narrow():
-    a = SymTab.parse_arealine('   0 _CODE            size   69   flags C180')
+def test_AxSymTab_parse_arealine_narrow():
+    a = AxSymTab.parse_arealine('   0 _CODE            size   69   flags C180')
     assert            0 == a.number
     assert      '_CODE' == a.name
     assert       0xC180 == a.flags
@@ -81,9 +81,9 @@ def tdatafile(filename):
 
 @pytest.mark.parametrize('filename',
     ['wide.sym', 'wide.lst', 'wide.rst' ])
-def test_SymTab_symtab_lines_wide(filename):
+def test_AxSymTab_symtab_lines_wide(filename):
     with tdatafile(filename) as f:
-        sl, al = SymTab.symtab_lines(f)
+        sl, al = AxSymTab.symtab_lines(f)
     s0  = '    .__.$$$.                                                =   2710 L'
     s4  = '  2 aa_local0                                                   8000 R'
     s12 = '  0 w_longsym_123456789_123456789_123456789_123456789_12345     003B GR'
@@ -102,9 +102,9 @@ def test_SymTab_symtab_lines_wide(filename):
 
 @pytest.mark.parametrize('filename',
     ['narrow.sym', 'narrow.lst', 'narrow.rst', ])
-def test_SymTab_symtab_lines_narrow(filename):
+def test_AxSymTab_symtab_lines_narrow(filename):
     with tdatafile(filename) as f:
-        sl, al = SymTab.symtab_lines(f)
+        sl, al = AxSymTab.symtab_lines(f)
 
     assert '    .__.$$$.       =   2710 L'                  == sl[0]
     assert '    .__.ABS.       =   0000 G'                  == sl[1]
@@ -118,29 +118,29 @@ def test_SymTab_symtab_lines_narrow(filename):
     assert '   1 _DATA            size    0   flags C0C0'   == al[1]
     assert  2 == len(al)
 
-def test_SymTab_symtab_lines_empty():
+def test_AxSymTab_symtab_lines_empty():
     with open('/dev/null') as f:
-        sl, al = SymTab.symtab_lines(f)
+        sl, al = AxSymTab.symtab_lines(f)
     assert len(sl) == 0
 
-def test_SymTab_readsymtabpath_nonexistent_file():
+def test_AxSymTab_readsymtabpath_nonexistent_file():
     #   No files exist at all
     with pytest.raises(FileNotFoundError):
-        SymTab.readsymtabpath('/foo/bar/baz/quux')
+        AxSymTab.readsymtabpath('/foo/bar/baz/quux')
     #   One or more files exist, but none contain a symbol table
     with pytest.raises(FileNotFoundError):
-        SymTab.readsymtabpath('/dev/null')
+        AxSymTab.readsymtabpath('/dev/null')
 
-def test_SymTab_readsymtabpath():
+def test_AxSymTab_readsymtabpath():
     #   XXX This depends on CWD.
-    assert SymTab.readsymtabpath('lib/testmc/testfiles/asxxxx/wide.rst')
-    assert SymTab.readsymtabpath('lib/testmc/testfiles/asxxxx/wide')
+    assert AxSymTab.readsymtabpath('lib/testmc/testfiles/asxxxx/wide.rst')
+    assert AxSymTab.readsymtabpath('lib/testmc/testfiles/asxxxx/wide')
 
-def test_SymTab_readsymtabstream():
+def test_AxSymTab_readsymtabstream():
     #   Here we deliberately use a file that does not list the areas
     #   in numerical order.
     with tdatafile('wide.sym') as f:
-        stab = SymTab.readsymtabstream(f)
+        stab = AxSymTab.readsymtabstream(f)
 
     with pytest.raises(KeyError):
         stab.areanamed('this is not an area name')
@@ -159,7 +159,7 @@ def test_SymTab_readsymtabstream():
     assert 'area_rel' == stab.areas[3].name
     assert               stab.areas[3].isrelative()
 
-    Sym = SymTab.Symbol
+    Sym = AxSymTab.Symbol
     assert Sym('aa_local0', 0x8000, 2) == stab.sym('aa_local0')
     assert                   0x8000 ==     stab['aa_local0']
     assert                   0x8000 ==     stab.aa_local0
@@ -168,29 +168,29 @@ def test_SymTab_readsymtabstream():
     assert                   0x0000 ==     stab['ar_local0']
     assert                   0x0000 ==     stab.ar_local0
 
-def test_SymTab_parse_maparealine():
+def test_AxSymTab_parse_maparealine():
     line = '_CODE                      0800        003D ' \
            '=          61. bytes (REL,CON,CSEG)'
-    name, addr = SymTab.parse_maparealine(line)
+    name, addr = AxSymTab.parse_maparealine(line)
     assert      '_CODE' == name
     assert       0x0800 == addr
 
-def test_SymTab_parse_maparealine_withspace():
+def test_AxSymTab_parse_maparealine_withspace():
     #   Some area names seem to have spaces in them?
     #   This nearly matches a non-area symbol in the .sym/.lst file.
     #   Tweaked for testing; the .__.ABS. value in real map files is 0.
     line = '.  .ABS.                   1001        0000 ' \
            '=           0. bytes (ABS,OVR,CSEG)'
-    name, addr = SymTab.parse_maparealine(line)
+    name, addr = AxSymTab.parse_maparealine(line)
     assert   '.  .ABS.' == name
     assert       0x1001 == addr
 
 @pytest.mark.parametrize('filename',
     ['narrow.map', 'wide.map', ])
-def test_SymTab_mapfile_arealines(filename):
-    parseline = SymTab.parse_maparealine
+def test_AxSymTab_mapfile_arealines(filename):
+    parseline = AxSymTab.parse_maparealine
     with tdatafile(filename) as f:
-        lines = SymTab.mapfile_arealines(f)
+        lines = AxSymTab.mapfile_arealines(f)
 
     assert 2 <= len(lines)
     assert '.  .ABS.', 0 == parseline(lines[0])    # Same in all files
@@ -201,9 +201,9 @@ def test_SymTab_mapfile_arealines(filename):
         assert 4 <= len(name),          line
         assert 0 <= addr,               line
 
-def test_SymTab_relocate():
+def test_AxSymTab_relocate():
     with tdatafile('wide.sym') as f:
-        s = SymTab.readsymtabstream(f)
+        s = AxSymTab.readsymtabstream(f)
     assert (0xf123,    0x002c,   0x0039,  0x8000,      0x0000, ) \
         == (s.valF123, s.c_wide, s.c_vec, s.aa_local0, s.ar_local0, )
 

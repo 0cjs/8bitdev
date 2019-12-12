@@ -11,7 +11,7 @@ from    py65.devices.mpu6502  import MPU
 from    sys import stderr
 
 from    testmc import symtab
-from    testmc import asxxxx
+from    testmc import asl, asxxxx
 
 __all__ = ['Registers', 'Machine']
 
@@ -254,13 +254,21 @@ class Machine():
             symbols from a ``.rst`` (ASxxxx linker listing file)
             in the same directory.
         '''
-        self.load_memimage(asxxxx.parse_cocobin_fromfile(path + '.bin'))
-        try:
-            self.symtab = asxxxx.AxSymTab.readsymtabpath(path)
-        except FileNotFoundError as err:
-            print('WARNING: could not read symbol table file from path ' \
-                + path, file=stderr)
-            print('FileNotFoundError: ' + str(err), file=stderr)
+        if path.lower().endswith('.p'):
+            #   Assume it's Macro Assembler AS output.
+            self.load_memimage(asl.parse_obj_fromfile(path))
+            # XXX still need to read .map file
+        else:
+            #   Assume it's the basename of ASxxxx toolchain output.
+            #   (This should probably be changed to require something
+            #   indicating this explicitly.)
+            self.load_memimage(asxxxx.parse_cocobin_fromfile(path + '.bin'))
+            try:
+                self.symtab = asxxxx.AxSymTab.readsymtabpath(path)
+            except FileNotFoundError as err:
+                print('WARNING: could not read symbol table file from path ' \
+                    + path, file=stderr)
+                print('FileNotFoundError: ' + str(err), file=stderr)
 
     def load_memimage(self, memimage):
         for addr, data in memimage:

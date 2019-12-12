@@ -10,7 +10,7 @@ from    numbers  import Integral
 from    py65.devices.mpu6502  import MPU
 from    sys import stderr
 
-from    testmc.asxxxx import MemImage, SymTab
+from    testmc import asxxxx
 
 __all__ = ['Registers', 'Machine']
 
@@ -124,7 +124,7 @@ class Machine():
 
     def __init__(self):
         self.mpu = MPU()
-        self.symtab = SymTab([], [])
+        self.symtab = asxxxx.SymTab([], [])
 
     @property
     def regs(self):
@@ -253,9 +253,9 @@ class Machine():
             symbols from a ``.rst`` (ASxxxx linker listing file)
             in the same directory.
         '''
-        self.load_memimage(MemImage.parse_cocobin_fromfile(path + '.bin'))
+        self.load_memimage(asxxxx.parse_cocobin_fromfile(path + '.bin'))
         try:
-            self.symtab = SymTab.readsymtabpath(path)
+            self.symtab = asxxxx.SymTab.readsymtabpath(path)
         except FileNotFoundError as err:
             print('WARNING: could not read symbol table file from path ' \
                 + path, file=stderr)

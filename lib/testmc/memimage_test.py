@@ -1,3 +1,4 @@
+from    collections   import namedtuple as ntup
 from    struct   import unpack_from
 from    testmc.memimage   import MemImage
 
@@ -20,3 +21,16 @@ def test_memimage_memrec():
         assert 0x1234 == addr
         assert testdata == data
 
+def test_memimage_memrec_alternate():
+    ''' When MemRec is a different type with additional attributes,
+        `for` should still return (addr,data) tuples.
+    '''
+    MR = ntup('MR', 'x, addr, y, data, z')
+    testaddr = 0x2345
+    testdata = b'\x67\x89\xAB\xCD\xEF'
+
+    mi = MemImage()
+    mi.append(MR('x', testaddr, 'y', testdata, 'z'))
+    for addr, data in mi:
+        assert testaddr == addr
+        assert testdata == data

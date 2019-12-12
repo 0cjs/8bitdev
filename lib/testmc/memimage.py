@@ -3,8 +3,12 @@ from    collections import namedtuple as ntup
 class MemImage(list):
     ''' A memory image, usually loaded from an assembler or linker
         output file, consisting of an entrypoint and a list of
-        `MemRecord` data records, each with the memory address at
-        which it starts.
+        `MemRecord` or similar data records, each with the memory
+        address at which it starts and the data.
+
+        The data records may contain additional information, but
+        iterating over the sequence will always return ``(addr,data)``
+        tuples.
 
         This is a mutable ordered collection. The records are
         not necessarily in order of address, but `sorted()` will
@@ -21,3 +25,6 @@ class MemImage(list):
         '''
     def addrec(self, addr, data):
         self.append(MemImage.MemRecord(addr, data))
+
+    def __iter__(self):
+        return ((mr.addr, mr.data) for mr in super().__iter__())

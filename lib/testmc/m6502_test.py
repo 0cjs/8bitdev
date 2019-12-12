@@ -280,8 +280,8 @@ def test_Machine_examine_stack(M):
 def test_Machine_load_memimage(M):
     mi = MemImage()
     rec1data = (0x8a, 0x8c, 0x09, 0x04, 0x18, 0x6d, 0x09, 0x04, 0x60)
-    mi.append((0x400, rec1data))
-    mi.append((0x123, (0xee,)))
+    mi.append(mi.MemRecord(0x400, rec1data))
+    mi.append(mi.MemRecord(0x123, (0xee,)))
     mi.entrypoint = 0x0403
 
     expected_mem \

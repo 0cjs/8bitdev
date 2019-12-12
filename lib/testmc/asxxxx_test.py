@@ -159,7 +159,7 @@ def test_AxSymTab_readsymtabstream():
     assert 'area_rel' == stab.areas[3].name
     assert               stab.areas[3].isrelative()
 
-    Sym = AxSymTab.Symbol
+    Sym = AxSymTab.AxSymbol
     assert Sym('aa_local0', 0x8000, 2) == stab.sym('aa_local0')
     assert                   0x8000 ==     stab['aa_local0']
     assert                   0x8000 ==     stab.aa_local0

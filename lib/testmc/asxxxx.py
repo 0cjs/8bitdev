@@ -8,6 +8,7 @@ from    struct import unpack_from
 import  re
 
 from    testmc.memimage   import MemImage
+from    testmc.symtab   import SymTab
 
 ####################################################################
 
@@ -43,15 +44,15 @@ def parse_cocobin(bytestream):
 ####################################################################
 
 
-class AxSymTab():
+class AxSymTab(SymTab):
     ''' The symbol table of an ASxxxx module, including local symbols.
 
-        You may look up the value of a symbol directly with
-        ``stab.name`` or ``stab['name']`` or get the `Symbol` object
-        by name with ``stab.sym('name')``.
+        To standard SymTab this adds `Area` objects. Each symbol
+        is in an area and may need to be relocated based on the
+        start point of that area.
 
         `Area` objects may be looked up by area number from the
-        ``stab.areas`` tuple.
+        ``.areas`` tuple.
 
         If relocations have been done (using `relocate()`),
         `relocated` will be `True`.
@@ -65,33 +66,15 @@ class AxSymTab():
         testing.
     '''
 
+    AxSymbol = ntup('AxSymbol', SymTab.Symbol._fields + ('areanum',))
+
     def __init__(self, symbols, areas):
         ''' Takes a container of `Symbol`s and a sequence of `Area`s.
             Each Area's number must also be its index.
         '''
-        self.symbols = { s.name: s for s in symbols }
+        super().__init__(symbols)
         self.areas = tuple(areas)
         self.relocated = False
-
-    def sym(self, name):
-        ' Given a symbol name, return its Symbol object. '
-        return self.symbols[name]
-
-    def __len__(self):
-        return len(self.symbols)
-
-    def __getitem__(self, key):
-        ' Given a symbol name, return its value. '
-        return self.sym(key).value
-
-    def __getattr__(self, name):
-        ''' Allow reading of symbol values as attributes, so long as
-            they do not collide with existing attributes.
-        '''
-        if name in self.symbols:
-            return self[name]
-        else:
-            raise AttributeError("No such attribute: " + name)
 
     def areanamed(self, name):
         ' Return the area with the given name; throw KeyError if not found. '
@@ -221,9 +204,6 @@ class AxSymTab():
 
         return symlines, arealines
 
-    class Symbol(ntup('Symbol', 'name, value, areanum')):
-        pass
-
     @staticmethod
     def parse_symline(line):
         ''' Given a symbol table line (from `symtab_lines()`),
@@ -242,7 +222,7 @@ class AxSymTab():
         else:
             areanum, name, value, flags = line.split()
             areanum = int(areanum)
-        return AxSymTab.Symbol(name, int(value, 16), areanum)
+        return AxSymTab.AxSymbol(name, int(value, 16), areanum)
 
     class Area(ntup('Area', 'number, name, flags')):
         def isrelative(self):

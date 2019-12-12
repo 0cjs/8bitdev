@@ -10,6 +10,7 @@ from    numbers  import Integral
 from    py65.devices.mpu6502  import MPU
 from    sys import stderr
 
+from    testmc import symtab
 from    testmc import asxxxx
 
 __all__ = ['Registers', 'Machine']
@@ -124,7 +125,7 @@ class Machine():
 
     def __init__(self):
         self.mpu = MPU()
-        self.symtab = asxxxx.AxSymTab([], [])
+        self.symtab = symtab.SymTab([])     # symtab initially empty
 
     @property
     def regs(self):

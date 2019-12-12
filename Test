@@ -39,10 +39,15 @@ download_asxxxx() {
 basedir=$(cd "$(dirname "$0")" && pwd -P)
 builddir="$basedir/.build"
 
-#   Command line args
-#       -C as first argument does clean rebuild.
-#       All other args are passed on to pytest.
-[[ ${#@} -gt 0 && $1 == -C ]] && { shift; rm -rf "$builddir"; }
+#   Leading command line args (these must be at the start):
+#   • -C: clean rebuild of everything, including toolchains
+#   • -c: clean rebuild of only this repo's source (test/toolchain output)
+#   All args after these are passed on to pytest.
+while [[ ${#@} -gt 0 ]]; do case "$1" in
+    -C)     shift; rm -rf "$builddir";;
+    -c)     shift; rm -rf "$builddir"/{obj,pytest};;
+    *)      break;;
+esac; done
 
 cd "$basedir"
 

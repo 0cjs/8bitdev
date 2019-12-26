@@ -4,11 +4,11 @@
 
     A word of warning here: a testmc "section" is referred to as a
     "segment" in AS documentation, and AS documentation uses "section"
-    to refer to local scopes for symbols. There's no easy fix for this
-    terminology problem; we prefer terminology that gives us
-    consistency across toolchains rather than using terminology
-    specific to a particular toolchain that would then be inconsistent
-    with other toolchains.
+    to refer to local scopes for symbols, which we refer to as
+    "scopes." There's no easy fix for this terminology problem; we
+    prefer terminology that gives us consistency across toolchains
+    rather than using terminology specific to a particular toolchain
+    that would then be inconsistent with other toolchains.
 '''
 
 from    testmc.memimage import MemImage
@@ -166,3 +166,115 @@ class PFile(MemImage):
         0x11: 1,    # 65xx/MELPS-740
         0x61: 1,    # 6800, 6301, 6811 (not confirmed from actual AS output)
     }
+
+####################################################################
+#   Symbol table (map file) parsing.
+#
+#   The `.map` file format is documented in §5.2 "Debug Files":
+#     http://john.ccac.rwth-aachen.de:8000/as/as_EN.html#sect_5_2_
+#   However, this documentation is not actually correct; see below.
+
+def parse_symtab_fromfile(path):
+    ' Given the path to a ``.map`` file, run `parse_symtab` on it. '
+    with open(path, 'r', encoding='ascii') as stream:
+        return parse_symtab(stream)
+
+class ParseError(RuntimeError):
+    pass
+
+def parse_symtab(stream):
+    ''' Parse the contents of an AS .map file, returning a `SymTab`.
+
+        The map file is always ASCII-encoded (chars with the high bit set
+        are not allowed in symbol names); we expect that the caller opened
+        the file in text mode with that encoding specified. Newline format
+        is less criticial; the caller must ensure that it's opened such
+        that `readline()` works but we ignore all whitespace (\r, \n) at
+        line ends.
+    '''
+    symbols = []
+    while True:
+        line = stream.readline()
+        if line == '':  # EOF
+            break
+        elif line.startswith('Segment '):
+            #   Source code line number to machine code address mapping
+            #   information. We (currently) don't use this.
+            ps_skip_block(stream)
+        elif line.startswith('Symbols in Segment '):
+            #   List of all symbols in a section. Symbol names include
+            #   scope numbers for symbols in a local scope, but we do not
+            #   yet know the name of that scope so we deal with that later.
+            l = len('Symbols in Segment ')
+            section_name = line[l:].strip()
+            symbols += ps_parse_section(section_name, stream)
+        elif line.startswith('Info for Section '):
+            #   Number to name mapping for local variable scopes.
+            #   We currently don't handle this, but we need to because a
+            #   given scope can have a different number from run to run.
+            ps_skip_block(stream)
+        else:
+            raise ParseError(line.rstrip())
+    #   Here is where we should be renaming locally scoped symbols to
+    #   have the scope name, rather than number, involved in it in
+    #   some way. Potentially we might also use a Symbol subclass that
+    #   allows us to note how things are scoped.
+    return SymTab(symbols)
+
+def ps_skip_block(stream):
+    ' Read up to and including the next empty line. '
+    while True:
+        if '' == stream.readline().strip():
+            return None
+
+def ps_parse_section(secname, stream):
+    ''' Read the symbols in a section, discarding the ending blank line.
+        Returns a list of `Symbol` objects.
+
+        This assumes that all ``Int`` values are in hexadecimal. This
+        is not specified in the documentation but experimentally seems
+        to be the case.
+
+        From about 2008 through asl-current-142-bld151 there was a bug in
+        .map file output where spaces in symbol values were not translated
+        to `\032` as documented__ in §5.2. This does not work with those
+        buggy versions, but does a heuristic check for some cases of wrong
+        output.
+
+        .. _documented: http://john.ccac.rwth-aachen.de:8000/as/
+
+    '''
+    syms = []
+    while True:
+        line = stream.readline().strip()
+        if '' == line:                      # blank line or EOF
+            return syms
+
+        try:
+            name, type, value, size, used = line.split()
+        except ValueError as ex:
+            raise ParseError("Bad asl version? Got '{}' while parsing {}" \
+                .format(ex, repr(line)))
+
+        if type == 'Int':
+            value = int(value, base=16)
+        elif type == 'Float':
+            value = float(value)
+        elif type == 'String':
+            value = aslunescape(value)
+        else:
+            raise ParseError("Unknown type '{}': {}".format(type, line))
+        sym = SymTab.Symbol(name, value, secname)
+        syms.append(sym)
+
+def aslunescape(s):
+    ''' Unescape a string with AS `\nnn` decimal escapes.
+        This does very little error checking because we don't expect
+        to see badly formed strings.
+    '''
+    if len(s) == 0:
+        return s
+    elif s[0] != '\\':
+        return s[0] + aslunescape(s[1:])
+    else:
+        return chr(int(s[1:4])) + aslunescape(s[4:])

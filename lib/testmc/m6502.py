@@ -257,7 +257,13 @@ class Machine():
         if path.lower().endswith('.p'):
             #   Assume it's Macro Assembler AS output.
             self.load_memimage(asl.parse_obj_fromfile(path))
-            # XXX still need to read .map file
+            mapfile_path = path[0:-2] + '.map'
+            try:
+                self.symtab = asl.parse_symtab_fromfile(mapfile_path)
+            except FileNotFoundError as err:
+                print('WARNING: could not read symbol table file from path ' \
+                    + mapfile_path, file=stderr)
+                print('FileNotFoundError: ' + str(err), file=stderr)
         else:
             #   Assume it's the basename of ASxxxx toolchain output.
             #   (This should probably be changed to require something

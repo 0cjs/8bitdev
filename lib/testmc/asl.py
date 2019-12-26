@@ -1,6 +1,14 @@
 ''' testmc.asl - Support for Macro Assembler AS__ assembler output.
 
     .. _AS: http://john.ccac.rwth-aachen.de:8000/as/
+
+    A word of warning here: a testmc "section" is referred to as a
+    "segment" in AS documentation, and AS documentation uses "section"
+    to refer to local scopes for symbols. There's no easy fix for this
+    terminology problem; we prefer terminology that gives us
+    consistency across toolchains rather than using terminology
+    specific to a particular toolchain that would then be inconsistent
+    with other toolchains.
 '''
 
 from    testmc.memimage import MemImage
@@ -28,24 +36,30 @@ def parse_obj(bytestream):
 
 class PFile(MemImage):
     ''' Parsed Macro Assembler AS code (``.p``) file.
+
+        Our "sections" are what the AS documentation calls "segments."
+        These should not be confused with AS "sections" which are
+        actually symbol scopes. (Scoping in AS is dealt with in the
+        asl SymTab code and does not apply to `.p` files, which are
+        already "linked.")
     '''
 
-    class Record(ntup('Record', 'header, segment, gran, addr, length data')):
+    class Record(ntup('Record', 'header, section, gran, addr, length data')):
         ''' A data record from a code file. This is used for both
             full/new ($81) and short/legacy ($01-$7F) records.
         '''
 
-    #   Segement codes
-    SEG_UNDEF   = 0x00
-    SEG_CODE    = 0x01
-    SEG_DATA    = 0x02
-    SEG_IDATA   = 0x03
-    SEG_XDATA   = 0x04
-    SEG_YDATA   = 0x05
-    SEG_BDATA   = 0x06
-    SEG_IO      = 0x07
-    SEG_REG     = 0x08
-    SEG_ROMDATA = 0x09
+    #   Section (generic term) / segment (AS term) codes
+    SE_UNDEF    = 0x00
+    SE_CODE     = 0x01
+    SE_DATA     = 0x02
+    SE_IDATA    = 0x03
+    SE_XDATA    = 0x04
+    SE_YDATA    = 0x05
+    SE_BDATA    = 0x06
+    SE_IO       = 0x07
+    SE_REG      = 0x08
+    SE_ROMDATA  = 0x09
 
     def __repr__(self):
         ''' We do not want the default representation from `list` because
@@ -106,7 +120,7 @@ class PFile(MemImage):
 
     def parse_newrec(self):
         header  = self.read8()
-        segment = self.read8()
+        section = self.read8()
         gran    = self.read8()
         start   = self.read32()
         length  = self.read16()
@@ -115,7 +129,7 @@ class PFile(MemImage):
             raise ValueError('Bad data length: expected {} bytes but read {}' \
                 .format(length, len(data)))
         self.append(self.Record(
-            header, segment, gran, start, length, data))
+            header, section, gran, start, length, data))
         return None
 
     def parse_oldrec(self, rectype):
@@ -133,13 +147,13 @@ class PFile(MemImage):
             just update your version of AS).
         '''
         header  = rectype
-        segment = self.SEG_CODE
+        section = self.SE_CODE
         gran    = self.GRAN_LOOKUP[rectype]
         start   = self.read32()
         length  = self.read16()
         data    = self.istream.read(length)
         self.append(self.Record(
-            header, segment, gran, start, length, data))
+            header, section, gran, start, length, data))
 
     #   Old-style records do not include the granularity (which is
     #   perhaps why AS seems no longer to generate them, despite the

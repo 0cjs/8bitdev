@@ -35,10 +35,10 @@ def PF(bs):
 
 def recnodata(rec):
     ' Return metadata for `PFile.Record` for easy asserting. '
-    return rec.header, rec.segment, rec.gran, rec.addr, rec.length
+    return rec.header, rec.section, rec.gran, rec.addr, rec.length
 
-SEG_CODE = PFile.SEG_CODE
-SEG_DATA = PFile.SEG_DATA
+SE_CODE = PFile.SE_CODE
+SE_DATA = PFile.SE_DATA
 
 #
 #   Tests for individual record parsters
@@ -78,7 +78,7 @@ def test_PFFile_parse_61():
     assert None is pf.parse_oldrec(p61[0])
     assert (
         0x61,       # record header, 65816/MELPS-7700
-        0x01,       # CODE segment
+        0x01,       # CODE section
         0x01,       # granularity = 1 byte
         0x10325476, # start address
         0x000B,     # length of data
@@ -97,7 +97,7 @@ def test_PFFile_parse_81():
     assert None is pf.parse_newrec()
     assert (
                     0x61,       # record header, 65816/MELPS-7700
-                    SEG_DATA,
+                    SE_DATA,
                     0x01,       # granularity = 1 byte
                     0xEFCDAB89, # start address
                     0x0010,     # length of data
@@ -127,9 +127,9 @@ def test_PFFile_parse_obj_constructed():
     assert 0x12345678 == pf.entrypoint
     assert b'Mr. Pufinpuff' == pf.creator
     def recsummary(pf):
-        return  (pf.header, pf.segment, pf.length, len(pf.data))
-    assert (0x61, SEG_CODE, 0x0B, 0x0B) == recsummary(pf[0])
-    assert (0x61, SEG_DATA, 0x10, 0x10) == recsummary(pf[1])
+        return  (pf.header, pf.section, pf.length, len(pf.data))
+    assert (0x61, SE_CODE, 0x0B, 0x0B) == recsummary(pf[0])
+    assert (0x61, SE_DATA, 0x10, 0x10) == recsummary(pf[1])
     assert 2 == len(pf)
 
 def test_PFFile_parse_obj_real_file():
@@ -142,7 +142,7 @@ def test_PFFile_parse_obj_real_file():
 
     assert (
         0x11,       # record header, 65xx/MELPS-740
-        0x01,       # CODE segment
+        0x01,       # CODE section
         0x01,       # granularity = 1 byte
         0x280,      # start address
         0x00F2,     # length of data
@@ -151,7 +151,7 @@ def test_PFFile_parse_obj_real_file():
 
     assert (
         0x11,       # record header, 65xx/MELPS-740
-        0x01,       # CODE segment
+        0x01,       # CODE section
         0x01,       # granularity = 1 byte
         0xF480,     # start address
         0x0010,     # length of data

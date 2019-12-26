@@ -1,3 +1,25 @@
+''' The symbol table from toolchain output, mapping symbol names to
+    values.
+
+    This is the generic part of the symbol table produced by a
+    toolchain; both the `SymTab` itself and the `Symbol` objects it
+    holds may be subclassed for a particular toolchain.
+
+    Each `Symbol` in a `SymTab` has a name and a value and also
+    belongs to a *section* which may determine output addresses and/or
+    banks, addressing modes, and the like, or may just be an
+    assembly-time distinction (such as non-contiguous addresses in
+    source code). Names are unique across all sections; sec section
+    names (or numbers) are toolchain-dependent.
+
+    Sections are often called "segments" and sometimes "areas" in
+    particular toolchains; we use "section" to avoid confusion with
+    the "segments" used in memory addressing in some processors. This
+    is the same terminology as ELF, where "sections" refer to
+    link-time distinctions (such as symbols) and "segments" refer to
+    run-time image setup.
+'''
+
 from    collections   import namedtuple as ntup
 
 class SymTab():
@@ -11,9 +33,12 @@ class SymTab():
         ``stab.sym('name')``.
     '''
 
-    class Symbol(ntup('Symbol', 'name, value')):
-        ''' A Symbol has a name, value and possibly other
-            toolchain-specific information.
+    class Symbol(ntup('Symbol', 'name, value, section')):
+        ''' A Symbol has a name, value, section and possibly other
+            toolchain-specific information. The section is a
+            toolchain-specific value and may be `None` if the
+            toolchain does not support sections or an equivalent
+            concept.
         '''
         pass
 

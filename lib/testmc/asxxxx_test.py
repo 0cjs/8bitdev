@@ -36,25 +36,25 @@ def test_AxSymTab_parse_symline_wide():
         )
     assert      'ar_local0' == s.name
     assert           0x0fe3 == s.value
-    assert                3 == s.areanum
+    assert                3 == s.section
 
 def test_AxSymTab_parse_symline_narrow():
     s = AxSymTab.parse_symline('0 n_longsym_1234     0041 GR')
     assert     'n_longsym_1234' == s.name       # XXX truncated!
     assert               0x0041 == s.value
-    assert                    0 == s.areanum
+    assert                    0 == s.section
 
 def test_AxSymTab_parse_symline_equate():
     s = AxSymTab.parse_symline('    .__.$$$.       =   2710 L')
     assert           '.__.$$$.' == s.name
     assert               0x2710 == s.value
-    assert                 None is s.areanum
+    assert                 None is s.section
 
 def test_AxSymTab_parse_symline_noflags():
     s = AxSymTab.parse_symline('    valF123        =   F123')
     assert            'valF123' == s.name
     assert               0xf123 == s.value
-    assert                 None is s.areanum
+    assert                 None is s.section
 
 def test_AxSymTab_parse_arealine_wide():
     a = AxSymTab.parse_arealine(
@@ -159,7 +159,7 @@ def test_AxSymTab_readsymtabstream():
     assert 'area_rel' == stab.areas[3].name
     assert               stab.areas[3].isrelative()
 
-    Sym = AxSymTab.AxSymbol
+    Sym = SymTab.Symbol
     assert Sym('aa_local0', 0x8000, 2) == stab.sym('aa_local0')
     assert                   0x8000 ==     stab['aa_local0']
     assert                   0x8000 ==     stab.aa_local0

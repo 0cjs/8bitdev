@@ -47,15 +47,16 @@ def parse_cocobin(bytestream):
 class AxSymTab(SymTab):
     ''' The symbol table of an ASxxxx module, including local symbols.
 
-        To standard SymTab this adds `Area` objects. Each symbol
-        is in an area and may need to be relocated based on the
-        start point of that area.
+        ASxxxx calls sections "areas"; the `Symbol` section value is
+        the area number. The addtional `areas` property is a tuple of
+        `Area` objects indexed by area number.
 
-        `Area` objects may be looked up by area number from the
-        ``.areas`` tuple.
-
-        If relocations have been done (using `relocate()`),
-        `relocated` will be `True`.
+        The source data for the symbols in relocatable sections has
+        non-relocated (pre-link) symbol values; the `readsymtabpath()`
+        function will call `relocate()` to read the area information
+        and modify the symbol values to their relocated values. If
+        relocations have been done (using `relocate()`), `relocated`
+        will be `True`.
 
         This is normally generated from symbol and area tables in a
         .sym file or .lst/.rst listing file (both are the same format
@@ -65,8 +66,6 @@ class AxSymTab(SymTab):
         module, and we want to be able to use local symbols when
         testing.
     '''
-
-    AxSymbol = ntup('AxSymbol', SymTab.Symbol._fields + ('areanum',))
 
     def __init__(self, symbols, areas):
         ''' Takes a container of `Symbol`s and a sequence of `Area`s.
@@ -222,7 +221,7 @@ class AxSymTab(SymTab):
         else:
             areanum, name, value, flags = line.split()
             areanum = int(areanum)
-        return AxSymTab.AxSymbol(name, int(value, 16), areanum)
+        return SymTab.Symbol(name, int(value, 16), areanum)
 
     class Area(ntup('Area', 'number, name, flags')):
         def isrelative(self):
@@ -253,7 +252,7 @@ class AxSymTab(SymTab):
             if addr == 0: continue      # No relocation to be done
             areanum = self.areanamed(name).number
             for name, sym in self.symbols.items():
-                if areanum == sym.areanum:
+                if areanum == sym.section:
                     self.symbols[name] = sym._replace(value=sym.value+addr)
         #   Even if we did no actual relocations, set this so that clients
         #   know relocation was done and no symbols needed to be updated.

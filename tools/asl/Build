@@ -12,7 +12,7 @@
 #
 
 #   Whence to clone ASL. It looks like this repo is kept up to date.
-asl_repo=https://github.com/KubaO/asl.git
+asl_repo=https://github.com/0cjs/asl.git
 
 #   Ref to checkout to after cloning, if not empty.
 #   (The checkout is not done if the source is already there.)

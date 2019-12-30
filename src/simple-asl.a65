@@ -39,6 +39,31 @@ foo         nop                 ;           :sec2:foo
     endsection sec2
 
 ;--------------------------------------------------------------------------
+;   Macros to standardize constant definition and storage allocation.
+;   • We use the intel DS/DB/DW syntax.
+;   • Unfortunately, this currently uses the native duplication syntax,
+;     i.e. a prefixed bracketed count `[8]$FF` on 6502.
+;   • Not totally sure how good an idea this is, since it does clutter
+;     up the listing with the extra (MACRO) lines.
+
+ds          macro
+            rmb ALLARGS
+            endm
+db          macro
+            byt ALLARGS
+            endm
+dw          macro
+            fdb ALLARGS
+            endm
+
+;   Tests of DS/DB/DW
+defalloctest
+dstest0     ds  3
+dstest1     ds  1
+dbtest      db  $00,"abc",[2]$FF
+dwtest      dw  $ABCD
+
+;--------------------------------------------------------------------------
 ;   Add X and Y, storing the result in xybuf and returning it in A
 addxy       txa
             sty xybuf
@@ -46,7 +71,7 @@ addxy       txa
             adc xybuf
             sta xybuf
             rts
-xybuf       byt ?
+xybuf       ds  1
 
 ;--------------------------------------------------------------------------
 ;           Clear an area. fillptr₁=startaddr-1, Y=length.

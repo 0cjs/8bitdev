@@ -18,6 +18,17 @@ def M():
 
     return M
 
+def test_ds_db_dw(M):
+    S = M.symtab
+    start = S.defalloctest
+    assert S.dstest0            == start
+    assert S.dstest1            == start+3
+    assert S.dbtest             == start+4
+    assert b'\x00abc\xFF\xFF'   == bytes(M.bytes(S.dbtest, 6))
+    assert S.dwtest             == start+10
+    assert 0xABCD               == M.word(S.dwtest)
+    assert (0xCD, 0xAB)         == (M.byte(S.dwtest), M.byte(S.dwtest+1))
+
 def test_addxy(M):
     S = M.symtab
     M.call(S.addxy, R(x=0x2A, y=0x33, C=1))

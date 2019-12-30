@@ -64,6 +64,30 @@ dbtest      db  $00,"abc",[2]$FF
 dwtest      dw  $ABCD
 
 ;--------------------------------------------------------------------------
+;   Macros for "in-line" zero-page allocation.
+
+;   We reserve the first 16 bytes of the zero page for use by "system"
+;   stuff external to us, such as the BIOS, 6510 PIO registers, etc.
+__ZDS_loc   set $10
+
+            macexp_dft off      ; XXX {NOEXPAND} doesn't work
+zds         macro len,{INTLABEL},{NOEXPAND}
+__ZDS_save  set *
+            org __ZDS_loc
+__LABEL__   label *
+            rmb len
+            org __ZDS_save
+__ZDS_loc   set __ZDS_loc+len
+            endm
+            macexp_dft on       ; XXX {NOEXPAND} doesn't work
+
+;   Test of ZDS: byte at current loc, two allocs in ZP, byte at next loc
+zdstest0    db  $F0
+zdstest1    zds 3
+zdstest2    zds 2
+zdstest3    db  $F3
+
+;--------------------------------------------------------------------------
 ;   Add X and Y, storing the result in xybuf and returning it in A
 addxy       txa
             sty xybuf
@@ -80,5 +104,4 @@ fill        lda #0
             dey
             bne -
             rts
-
-fillbase    equ $30
+fillbase    zds 2

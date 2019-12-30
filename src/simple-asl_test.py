@@ -29,6 +29,21 @@ def test_ds_db_dw(M):
     assert 0xABCD               == M.word(S.dwtest)
     assert (0xCD, 0xAB)         == (M.byte(S.dwtest), M.byte(S.dwtest+1))
 
+def test_zds(M):
+    S = M.symtab
+
+    #   The initial value of __ZDS_loc at the zdstest0 label.
+    #   This value $10 assumes that zdstest1 is the first ZDS in this assembly.
+    zloc = 0x10
+
+    assert 0xFF        < S.zdstest0
+    assert 0xFF       >= S.zdstest1
+    assert zloc       == S.zdstest1
+    assert 0xFF       >= S.zdstest2
+    assert zloc+3     == S.zdstest2
+    assert 0xFF        < S.zdstest3
+    assert S.zdstest3 == S.zdstest0 + 1     # Original location ctr. preserved
+
 def test_addxy(M):
     S = M.symtab
     M.call(S.addxy, R(x=0x2A, y=0x33, C=1))

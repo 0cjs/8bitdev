@@ -158,10 +158,8 @@ bi_readhex  ldx #0              ; constant for indirect addressing
             bne .conv           ; no (more) leading zeros; start conversion
             dey                 ; reduce length
             beq .conv0          ; but if it's last digit, convert the 0 anyway
-            inc buf0ptr         ; move past leading 0
-            bne .nocarry0
-            inc buf0ptr+1
-.nocarry0   clc
+            incw buf0ptr        ; move past leading 0
+            clc
             bcc .stripl0
             ;   Conversion, two input digits at a time
 .conv0      iny
@@ -420,9 +418,7 @@ bi_read_dec
             bne .skipzeros      ; no, skip sign char removal
 .dropsign   ;   Remove the sign char from the input
             dey                 ; dec [buf1ptr₀] (input) length
-            inc buf1ptr         ; move input start forward one char
-            bne .skipzeros
-            inc buf1ptr+1
+            incw buf1ptr        ; move input start forward one char
 .skipzeros  ;   Skip past leading zeros (except last char, of course)
             clv                 ; for later BRA
 .skipzero   cpy #1              ; on last char of input?
@@ -431,9 +427,7 @@ bi_read_dec
             cmp #'0'            ; leading zero?
             bne .convert        ; no, start conversion
             dey                 ; otherwise dec length
-            inc buf1ptr         ;   and move input ptr forward past the '0'
-            bne .skipzero
-            inc buf1ptr+1
+            incw buf1ptr        ;   and move input ptr forward past the '0'
             bvc .skipzero       ; BRA
 
 .onedigit   ;   We have only one char of input left. We special-case 0 because
@@ -473,9 +467,9 @@ bi_read_dec
                                 ;   keep sign extension byte to preserve sign
             dey                 ; set Y back to start of buf for next iteration
             dec buf0len         ; drop this byte by reducing length by one
-            inc buf0ptr         ;   and moving start point up
-            bne .normalize
-            inc buf0ptr+1
+            incw buf0ptr        ;   and moving start point up
+                                ;   XXX no test case covers this increment
+                                ;       not being 16-bit
             bvc .normalize      ; BRA
 
 .done       ;   Produce final result in [buf2ptr₁] with 1-based indexing.

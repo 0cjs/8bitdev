@@ -147,6 +147,7 @@ asbuild() {
             -i "$basedir" "$src" -L -s -g
     )
 }
+asbuild src/asl-nomacro.a65
 asbuild src/simple-asl.a65
 
 ####################################################################

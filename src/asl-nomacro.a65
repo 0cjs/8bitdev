@@ -1,0 +1,38 @@
+;   Demonstrate that the {NOEXPAND} parameter to macros seems not to
+;   be working (though {EXPAND} is working). Look at the listing to
+;   see if unwanted expansion of noexp_param_{0,1} is appearing.
+
+expanded        macro
+                ; You should see this in the expansion.
+                endm
+
+noexp_param_0   macro {NOEXPAND}
+                ; *** THIS SHOULD NOT BE EXPANDED. ***
+                endm
+
+    macexp_dft off
+exp_forced      macro {EXPAND}
+                ; You should see this in the expansion.
+                endm
+noexp_macexp    macro
+                ; *** THIS SHOULD NOT BE EXPANDED. ***
+                endm
+    macexp_dft on
+
+noexp_param_1   macro {NOEXPAND}
+                ; *** THIS SHOULD NOT BE EXPANDED. ***
+                endm
+
+;----------------------------------------------------------------------
+;   In the following we should not see any upper-case text stating
+;   that the macro should not be expanded.
+
+            expanded
+
+            noexp_param_0           ; No expansion should be seen below.
+
+            exp_forced
+
+            noexp_macexp
+
+            noexp_param_1           ; No expansion should be seen below.

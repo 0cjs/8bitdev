@@ -363,3 +363,19 @@ def test_bi_read_dec(M, input, bytes):
     #   Assert output buffer is correct and without out-of-bounds writes.
     assert [221, len(bytes)] + bytes + [224] \
         == M.bytes(TOUT_ADDR-1, len(bytes)+3)
+
+@pytest.mark.parametrize('bufstart', (0x70FD, 0x70FE, 0x70FF, 0x7100))
+def test_bi_read_dec_bufstart(M, bufstart):
+    ' Edge case where the sign char is on the last byte of a page, etc. '
+    S = M.symtab
+    scratch, temp, inbuf, outbuf \
+        = bufstart, bufstart+0x100, bufstart+0x200, bufstart+0x300
+    input = b'+003'
+
+    M.depword(S.bufSptr, scratch)
+    M.depword(S.buf0ptr, temp)
+    M.depword(S.buf1ptr, inbuf)     ; M.deposit(inbuf, input)
+    M.depword(S.buf2ptr, outbuf)
+
+    M.call(S.bi_read_dec, R(y=len(input)))
+    assert [0, 1, 3, 0] == M.bytes(outbuf-1, 4)

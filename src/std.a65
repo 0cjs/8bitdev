@@ -1,0 +1,53 @@
+;
+;   std.a65 - Standard 6502 definitions
+;
+;   These are some standard definitions (mainly macros) we commonly
+;   use with source code assembled with the Macro Assembler AS.
+;
+;   The CPU must be specified with the `CPU` pseudo-op before this
+;   file is included; that allows this file to use MOMCPU/MOMCPUNAME
+;   to change its behaviour for different 6502 variants.
+;
+
+;--------------------------------------------------------------------------
+;   Constant definition and storage allocation.
+;   • We use the Intel DS/DB/DW syntax everywhere to allow us to use the
+;     same data files with different processor families.
+;   • Unfortunately, this currently uses the native duplication syntax,
+;     i.e. a prefixed bracketed count `[8]$FF` on 6502.
+
+ds          macro
+            rmb ALLARGS
+            endm
+db          macro
+            byt ALLARGS
+            endm
+dw          macro
+            fdb ALLARGS
+            endm
+
+;--------------------------------------------------------------------------
+;   ZDS macro for "in-line" zero-page allocation.
+
+;   By default we reserve the first 16 bytes of the zero page for use
+;   by "system" things external to the program, such as the BIOS, 6510
+;   PIO registers, etc. However, this can be changed later by the
+;   including program.
+__ZDS_loc   set $10
+
+            macexp_dft off      ; XXX {NOEXPAND} doesn't work
+zds         macro len,{INTLABEL},{NOEXPAND}
+__ZDS_save  set *
+            org __ZDS_loc
+__LABEL__   label *
+            rmb len
+            org __ZDS_save
+__ZDS_loc   set __ZDS_loc+len
+            endm
+            macexp_dft on       ; XXX {NOEXPAND} doesn't work
+
+;--------------------------------------------------------------------------
+;   INCW macro to increment a word
+
+incw        macro addr
+            endm

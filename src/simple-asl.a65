@@ -1,6 +1,8 @@
 ;   Simple 6502 routines to test with Macro Assembler AS
 
             cpu 6502
+            include "src/std.a65"
+
 ident       byt "simple-asl.a65"    ; we use this to check that we've loaded
                                     ; the correct binary data and symbol table.
 
@@ -38,53 +40,20 @@ foo         nop                 ;           :sec2:foo
     endsection sec2
 
 ;--------------------------------------------------------------------------
-;   Macros to standardize constant definition and storage allocation.
-;   • We use the intel DS/DB/DW syntax.
-;   • Unfortunately, this currently uses the native duplication syntax,
-;     i.e. a prefixed bracketed count `[8]$FF` on 6502.
-;   • Not totally sure how good an idea this is, since it does clutter
-;     up the listing with the extra (MACRO) lines.
+;   std.a65 test code
 
-ds          macro
-            rmb ALLARGS
-            endm
-db          macro
-            byt ALLARGS
-            endm
-dw          macro
-            fdb ALLARGS
-            endm
-
-;   Tests of DS/DB/DW
+;   DS/DB/DW
 defalloctest
 dstest0     ds  3
 dstest1     ds  1
 dbtest      db  $00,"abc",[2]$FF
 dwtest      dw  $ABCD
 
-;--------------------------------------------------------------------------
-;   Macros for "in-line" zero-page allocation.
-
-;   We reserve the first 16 bytes of the zero page for use by "system"
-;   stuff external to us, such as the BIOS, 6510 PIO registers, etc.
-__ZDS_loc   set $10
-
-            macexp_dft off      ; XXX {NOEXPAND} doesn't work
-zds         macro len,{INTLABEL},{NOEXPAND}
-__ZDS_save  set *
-            org __ZDS_loc
-__LABEL__   label *
-            rmb len
-            org __ZDS_save
-__ZDS_loc   set __ZDS_loc+len
-            endm
-            macexp_dft on       ; XXX {NOEXPAND} doesn't work
-
-;   Test of ZDS: byte at current loc, two allocs in ZP, byte at next loc
-zdstest0    db  $F0
-zdstest1    zds 3
-zdstest2    zds 2
-zdstest3    db  $F3
+;   ZDS
+zdstest0    db  $F0     ; byte at current location
+zdstest1    zds 3       ; zero page allocation
+zdstest2    zds 2       ; zero page allocation
+zdstest3    db  $F3     ; byte at current location +1
 
 ;--------------------------------------------------------------------------
 ;   Add X and Y, storing the result in xybuf and returning it in A

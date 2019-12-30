@@ -48,6 +48,16 @@ __ZDS_loc   set __ZDS_loc+len
 
 ;--------------------------------------------------------------------------
 ;   INCW macro to increment a word
+;
+;   We must use only composed or named temporary symbols in macros because
+;   even a macro-internal non-temporary symbol will close the current
+;   composed/named temporary symbol scope and open a new one. (Nameless +/-
+;   temporary symbols also cannot be used because they generate a fresh
+;   non-temporary symbol.) The unit test takes care to cover this.
 
 incw        macro addr
+            inc addr
+            bne .nocarry
+            inc addr+1
+.nocarry
             endm

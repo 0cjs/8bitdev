@@ -44,6 +44,24 @@ def test_zds(M):
     assert 0xFF        < S.zdstest3
     assert S.zdstest3 == S.zdstest0 + 1     # Original location ctr. preserved
 
+@pytest.mark.parametrize('input, expected', (
+    (0x0000, 0x0001),
+    (0x1234, 0x1235),
+    (0x00FE, 0x00FF),
+    (0x00FF, 0x0100),
+    (0xFF00, 0xFF01),
+    (0xFFFF, 0x0000),
+))
+def test_incw(M, input, expected):
+    incw = M.symtab.incwtest
+    data = M.symtab.incwdata
+    r    = R(a=0x12, x=0x34, y=0x56)
+
+    M.depword(data, input)
+    M.call(incw, r)
+    assert r == M.regs
+    assert expected == M.word(data)
+
 def test_addxy(M):
     S = M.symtab
     M.call(S.addxy, R(x=0x2A, y=0x33, C=1))

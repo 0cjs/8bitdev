@@ -140,15 +140,16 @@ asbuild() {
     #   with a command-line option.
     mkdir -p "$objdir"
     (cd "$objdir" \
-        && echo -e >"$src" '' \
-            '   page 0\n' \
-            "   include $srcpath\n" \
+        && echo  >"$src" '   page 0' \
+        && for line in "$@"; do echo >>"$src" "$line"; done \
+        && echo >>"$src" "   include $srcpath" \
         && asl </dev/null -qxx -U \
             -i "$basedir" "$src" -L -s -g
     )
 }
+
 asbuild src/asl-nomacro.a65
-asbuild src/simple-asl.a65
+asbuild src/simple-asl.a65  ';  Unit Test Assembly' '   org $240'
 
 ####################################################################
 #   Tests

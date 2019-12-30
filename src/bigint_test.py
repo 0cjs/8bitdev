@@ -8,7 +8,7 @@ from    itertools import chain, count
 @pytest.fixture
 def M():
     M = Machine()
-    M.load('.build/obj/bigint')
+    M.load('.build/obj/src/bigint.p')
     return M
 
 ####################################################################

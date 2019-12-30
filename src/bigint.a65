@@ -35,20 +35,6 @@
 ;   stored elsewhere.
 
 ;---------------------------------------------------------------------
-            .radix h
-
-            .globl convascdigit
-            .globl bi_readhex, bi_read_dec
-
-            .area ZP  (abs,pag)
-            .org 0
-            ;   Reserve the first 16 bytes of the zero page for system-
-            ;   specific storage such as a BIOS or ROM I/O routines and
-            ;   the PIO registers on 6510 (C64 etc.)
-            .ds  10
-            .area   _CODE
-
-;---------------------------------------------------------------------
 ;   Routines that do not need memory storage
 
 ;   Convert ASCII character to binary number in bases up to 41.
@@ -60,15 +46,15 @@
 ;     N flag: (w) clear on success, set on error.
 ;       X, Y: (p)
 ;
-convascdigit:
+convascdigit
             ;   This routine has extra explanation for 6502 beginners.
-            cmp #'9+1
-            bcs 5$              ; >'9', convert letter
+            cmp #'9'+1
+            bcs .letter         ; >'9', convert letter
             ;   At this point we know that the carry is clear, better thought
             ;   of as the borrow being set. Rather than use an extra instr
             ;   to set the carry, we instead subtract 1 from the subtrahend
             ;   because the set borrow will also be subtracted from the result.
-            sbc #'0-1           ; convert digit; if <'0', N flag set for error
+            sbc #'0'-1          ; convert digit; if <'0', N flag set for error
             ;   Normally for an unsigned comparison we'd check to see if the
             ;   carry is clear, i.e., the borrow was used, to determine
             ;   whether our result was negative. We can't do this here to see
@@ -80,8 +66,8 @@ convascdigit:
             ;   Since the N flag is our error code, we need not even BMI;
             ;   just let the N flag pass through.
             rts                 ; N clear, no error
-5$:
-            and #$%11011111     ; clear bit 5 to convert to upper-case
+.letter
+            and #%11011111      ; clear bit 5 to convert to upper-case
             ;   Now the char is in one of two ranges:
             ;     $3A-$40  chars between '9' and 'A'
             ;     $40-$5F  A-Z and punctuation after ([\]^_)
@@ -90,13 +76,13 @@ convascdigit:
             ;   means the character is invalid. We have to do the AND first
             ;   because the N bit from the CMP test is based on the result
             ;   of the CMP subtraction.
-            bmi 9$              ; high bit set, error
+            bmi .exit           ; high bit set, error
             ;   We subtract 'A'-$0A to bring it down to the $00-$28 range,
             ;   No SEC is needed before this SBC; we branched here because the
             ;   carry was already set and AND does not affect the carry.
-            sbc #'A-0A
+            sbc #'A'-$0A
             ;   Values less than $0A are invalid, so error out on those.
-            cmp #0A             ; if <$0A, set N flag to indicate error
+            cmp #$0A            ; if <$0A, set N flag to indicate error
             ;   The result of SBC is signed, so it may be, e.g., -$01 = $FF.
             ;   However, CMP does only unsigned comparisons so the carry flag
             ;   would be set (indicating ≥) rather than clear (indicating <)
@@ -104,25 +90,23 @@ convascdigit:
             ;   is in range $00-$28, the most negative possible result produced
             ;   by the SBC is -$28 = $D8, so we can check the N flag instead.
             ;   Since the N flag is our error code, we need not even BMI.
-9$:         rts
+.exit       rts
 
 ;---------------------------------------------------------------------
 ;   Common zero-page storage.
 
-            .area ZP
-
 ;   Temporary storage bytes that may be destroyed by subroutine calls.
 ;   Since subroutines are allowed to destroy these at will, they may
 ;   be used freely, but only between subroutine calls.
-temp1:      .ds     1
-temp2:      .ds     1
+temp1:      zds     1
+temp2:      zds     1
 
 ;   Sign byte for numerical processing; either $00 or $FF. This is shared
 ;   amongst multiple routines that co-operate on processing a number; it
 ;   should only be set once by one routine during processing and used as a
 ;   read-only parameter by all routines called, directly or indirectly, by
 ;   that routine.
-sign:       .ds 1               ; saved sign of input
+sign:       zds 1               ; saved sign of input
 
 ;   Routines that need "buffers," or generic pointers to memory with
 ;   an optional length, use a standard set defined here. `buf0` is the
@@ -142,17 +126,16 @@ sign:       .ds 1               ; saved sign of input
 ;   length and the buffer itself are preserved, overwritten or
 ;   destroyed, per the coding at the top of this file.
 
-bufSptr:    .ds  2              ; pointer to a buffer
-bufSlen:    .ds  1              ; length of that buffer
-buf0ptr:    .ds  2
-buf0len:    .ds  1
-buf1ptr:    .ds  2
-buf1len:    .ds  1
-buf2ptr:    .ds  2
-buf2len:    .ds  1
-buf3ptr:    .ds  2
-buf3len:    .ds  1
-            .area   _CODE
+bufSptr:    zds  2              ; pointer to a buffer
+bufSlen:    zds  1              ; length of that buffer
+buf0ptr:    zds  2
+buf0len:    zds  1
+buf1ptr:    zds  2
+buf1len:    zds  1
+buf2ptr:    zds  2
+buf2len:    zds  1
+buf3ptr:    zds  2
+buf3len:    zds  1
 
 ;---------------------------------------------------------------------
 ;   Read the ASCII hex two's complement representation of an integer
@@ -167,61 +150,61 @@ buf3len:    .ds  1
 ;         buf1ptr: (d) output buffer, must be length (A+1)/2.
 ;       [buf1ptr]: (w) bigint output
 ;
-bi_readhex: ldx #0              ; constant for indirect addressing
+bi_readhex  ldx #0              ; constant for indirect addressing
             ;   Start by skipping past any leading '0's.
             tay                 ; save length
-0$:         lda [*buf0ptr,x]
-            cmp #'0
-            bne 3$              ; no (more) leading zeros; start conversion
+.stripl0    lda (buf0ptr,x)
+            cmp #'0'
+            bne .conv           ; no (more) leading zeros; start conversion
             dey                 ; reduce length
-            beq 2$              ; but if it's last digit, convert the 0 anyway
-            inc *buf0ptr       ; move past leading 0
-            bne 1$
-            inc *buf0ptr+1
-1$:         clc
-            bcc 0$
+            beq .conv0          ; but if it's last digit, convert the 0 anyway
+            inc buf0ptr         ; move past leading 0
+            bne .nocarry0
+            inc buf0ptr+1
+.nocarry0   clc
+            bcc .stripl0
             ;   Conversion, two input digits at a time
-2$:         iny
-3$:         tya                 ; copy input length to A
+.conv0      iny
+.conv       tya                 ; copy input length to A
             dey                 ; length -1 = last byte of input buffer
-4$:         clc
+            clc
             ror                 ; output length is 1/2 input length
             adc #0              ; plus 1 if input length is odd
-            sta [*buf1ptr,x]  ; store output length
-            adc *buf1ptr      ; set buf1ptr to end of buffer
-            sta *buf1ptr
-            bcc 5$
-            inc *buf1ptr+1
-5$:         lda [*buf0ptr],y   ; first char for this byte of output buffer
+            sta (buf1ptr,x)     ; store output length
+            adc buf1ptr         ; set buf1ptr to end of buffer
+            sta buf1ptr
+            bcc .nextbyte
+            inc buf1ptr+1
+.nextbyte   lda (buf0ptr),y     ; first char for this byte of output buffer
             jsr convascdigit    ; convert ASCII digit to binary
-            bmi 9$              ; bad digit, error
-            cmp #10
-            bcs 9$              ; >=16, error
-            sta [*buf1ptr,x]
+            bmi .err            ; bad digit, error
+            cmp #$10
+            bcs .err            ; >=16, error
+            sta (buf1ptr,x)
             dey                 ; second char for this byte of output buffer
-            bmi 8$              ; if input done, return success
-            lda [*buf0ptr],y
+            bmi .done           ; if input done, return success
+            lda (buf0ptr),y
             jsr convascdigit    ; convert ASCII digit to binary
-            bmi 9$              ; bad digit, error
-            cmp #10
-            bcs 9$              ; >=16, error
+            bmi .err            ; bad digit, error
+            cmp #$10
+            bcs .err            ; >=16, error
             asl                 ; shift up to high nybble
             asl
             asl
             asl
             clc
-            adc [*buf1ptr,x]
-            sta [*buf1ptr,x]
-            dec *buf1ptr
-            lda *buf1ptr
-            cmp #0FF
-            bne 6$
-            dec *buf1ptr+1
-6$:         dey
-            cpy #0FF
-            bne 5$              ; next chars
-8$:         rts                 ; success; return
-9$:         brk                 ; readhex error
+            adc (buf1ptr,x)
+            sta (buf1ptr,x)
+            dec buf1ptr
+            lda buf1ptr
+            cmp #$FF
+            bne .nocarry1
+            dec buf1ptr+1
+.nocarry1   dey
+            cpy #$FF
+            bne .nextbyte       ; next chars
+.done       rts                 ; success; return
+.err        brk                 ; readhex error
 
 ;---------------------------------------------------------------------
 
@@ -268,44 +251,44 @@ bi_readhex: ldx #0              ; constant for indirect addressing
 ;   could be worked around with self-modifying code, but currently it's not
 ;   worth the effort.
 ;
-bi_x10:     ldy *buf0len
+bi_x10      ldy buf0len
             ;   Multiply the buffer by 2
             clc
-2$:         lda [buf0ptr],y
+-           lda (buf0ptr),y
             rol
-            sta [buf0ptr],y
+            sta (buf0ptr),y
             dey
-            bne 2$
+            bne -
             ;   Make a copy of the ×2 value for later addition
-            ldy *buf0len
-3$:         lda [buf0ptr],y
-            sta [bufSptr],y
+            ldy buf0len
+-           lda (buf0ptr),y
+            sta (bufSptr),y
             dey
-            bne 3$
+            bne -
             ;   Multiply buffer by 2 again, for ×4
-            ldy *buf0len
+            ldy buf0len
             clc
-4$:         lda [buf0ptr],y
+-           lda (buf0ptr),y
             rol
-            sta [buf0ptr],y
+            sta (buf0ptr),y
             dey
-            bne 4$
+            bne -
             ;   Multiply buffer by 2 again, for ×8
-            ldy *buf0len
+            ldy buf0len
             clc
-8$:         lda [buf0ptr],y
+-           lda (buf0ptr),y
             rol
-            sta [buf0ptr],y
+            sta (buf0ptr),y
             dey
-            bne 8$
+            bne -
             ;   Add the ×2 value, for ×10
-            ldy *buf0len
+            ldy buf0len
             clc
-10$:        lda [bufSptr],y
-            adc [buf0ptr],y
-            sta [buf0ptr],y
+-           lda (bufSptr),y
+            adc (buf0ptr),y
+            sta (buf0ptr),y
             dey
-            bne 10$
+            bne -
             rts
 
 ;   Read the ASCII decimal representation of a positive or negative integer
@@ -347,61 +330,59 @@ bi_x10:     ldy *buf0len
 bi_read_decdigits:
             ;   Set output buffer to starting value of zero.
             lda #0
-            ldy *buf0len
-10$:        sta [*buf0ptr],y
+            ldy buf0len
+.clearbuf   sta (buf0ptr),y
             dey
-            bne 10$
-            sta *curdigit       ; start with most signficant digit (at pos. 0)
-            beq 33$             ; BRA; skip initial multiply of zeroed buffer
+            bne .clearbuf
+            sta curdigit        ; start with most signficant digit (at pos. 0)
+            beq .skip10x        ; BRA; skip initial multiply of zeroed buffer
 
-30$:        ;   Multiply current intermediate value (buf0ptr) by ten.
+.digit      ;   Multiply current intermediate value (buf0ptr) by ten.
             jsr bi_x10
-33$:        ;   Add in or subtract the current digit.
-            ldy *curdigit
-            inc *curdigit       ; for next loop iteration
-            lda [buf1ptr],y     ; load this digit
-            eor #30             ; convert ASCII to binary
-            ldy *buf0len        ; output LSB index for following add/sub code
-            bit *sign           ; load high bit of sign into N flag
-            bmi 60$             ; if negative, go subtract
+.skip10x    ;   Add in or subtract the current digit.
+            ldy curdigit
+            inc curdigit        ; for next loop iteration
+            lda (buf1ptr),y     ; load this digit
+            eor #$30            ; convert ASCII to binary
+            ldy buf0len         ; output LSB index for following add/sub code
+            bit sign            ; load high bit of sign into N flag
+            bmi .subdigit       ; if negative, go subtract
 
-50$:        ;   Add binary value of digit in A into output
-            clc
-            adc [buf0ptr],y     ; add LSB to new digit
-            sta [buf0ptr],y     ;   and store new LSB
-52$:        dey                 ; another byte?
-            beq 70$             ; no, carry propagation complete
-            lda [buf0ptr],y
+            ;   Add binary value of digit in A into output
+.adddigit   clc
+            adc (buf0ptr),y     ; add LSB to new digit
+            sta (buf0ptr),y     ;   and store new LSB
+.addnext    dey                 ; another byte?
+            beq .nextdigit      ; no, carry propagation complete
+            lda (buf0ptr),y
             adc #0              ; propagate carry
-            sta [buf0ptr],y
+            sta (buf0ptr),y
             clv
-            bvc 52$             ; BRA
+            bvc .addnext        ; BRA
 
-60$:        ;   Subtract binary value of digit from output
-            sta *temp1          ; subtrahend must be in memory
-            lda [buf0ptr],y     ; load current LSB
+.subdigit   ;   Subtract binary value of digit from output
+            sta temp1           ; subtrahend must be in memory
+            lda (buf0ptr),y     ; load current LSB
             sec
-            sbc *temp1          ; calculate new LSB
-            sta [buf0ptr],y     ;   and store it
-62$:        dey                 ; propagation done?
-            beq 70$             ; yes, move on to next digit
-            lda [buf0ptr],y     ; propagate carry
+            sbc temp1           ; calculate new LSB
+            sta (buf0ptr),y     ;   and store it
+.subnext    dey                 ; propagation done?
+            beq .nextdigit      ; yes, move on to next digit
+            lda (buf0ptr),y     ; propagate carry
             sbc #0
-            sta [buf0ptr],y
+            sta (buf0ptr),y
             clv
-            bvc 62$             ; BRA; continue propagation
+            bvc .subnext        ; BRA; continue propagation
 
-70$:        ;   Propagation complete; on to next digit
-            lda *curdigit       ; digits remaining
-            cmp *buf1len
-            beq 79$             ; none, we're done
+.nextdigit  ;   Propagation complete; on to next digit
+            lda curdigit        ; digits remaining
+            cmp buf1len
+            beq .done           ; none, we're done
             clv
-            bvc 30$             ; BRA; continue with next digit
-79$:        rts
+            bvc .digit          ; BRA; continue with next digit
+.done       rts
 
-            .area ZP
-curdigit:   .ds 1               ; temporary storage
-            .area _CODE
+curdigit    zds 1               ; temporary storage
 
 ;   Read the ASCII signed decimal representation of an integer and convert
 ;   it to a bigint. The first character may be a optional `+` or `-` sign;
@@ -426,83 +407,85 @@ curdigit:   .ds 1               ; temporary storage
 ;            A,X: (d)
 ;       buf1len : (d)
 ;
-bi_read_dec:
+bi_read_dec
             ldx #0              ; constant for indirect addressing, etc.
             ;   Check for and process a `+` or `-` prefix
-            stx *sign           ; assume positive
-            lda [buf1ptr,x]
-            cmp #'-             ; starts with '-' sign?
-            bne 110$            ; no, check for other things
-            dec *sign           ; change sign to negative
-            bmi 150$            ; BRA; remove sign char
-110$:       cmp #'+             ; starts with a '+' sign?
-            bne 200$            ; no, skip sign char removal
-150$:       ;   Remove the sign char from the input
+            stx sign            ; assume positive
+            lda (buf1ptr,x)
+            cmp #'-'            ; starts with '-' sign?
+            bne .checkplus      ; no, check for other things
+            dec sign            ; change sign to negative
+            bmi .dropsign       ; BRA; remove sign char
+.checkplus  cmp #'+'            ; starts with a '+' sign?
+            bne .skipzeros      ; no, skip sign char removal
+.dropsign   ;   Remove the sign char from the input
             dey                 ; dec [buf1ptr₀] (input) length
             inc buf1ptr         ; move input start forward one char
-            bne 200$
+            bne .skipzeros
             inc buf1ptr+1
-200$:       ;   Skip past leading zeros (except last char, of course)
+.skipzeros  ;   Skip past leading zeros (except last char, of course)
             clv                 ; for later BRA
-210$:       cpy #1              ; on last char of input?
-            beq 300$            ; yes, special case for single-digit conversion
-            lda [*buf1ptr,x]
-            cmp #'0             ; leading zero?
-            bne 500$            ; no, start conversion
+.skipzero   cpy #1              ; on last char of input?
+            beq .onedigit       ; yes, special case for single-digit conversion
+            lda (buf1ptr,x)
+            cmp #'0'            ; leading zero?
+            bne .convert        ; no, start conversion
             dey                 ; otherwise dec length
-            inc *buf1ptr        ;   and move input ptr forward past the '0'
-            bne 210$
-            inc *buf1ptr+1
-            bvc 210$            ; BRA
+            inc buf1ptr         ;   and move input ptr forward past the '0'
+            bne .skipzero
+            inc buf1ptr+1
+            bvc .skipzero       ; BRA
 
-300$:       ;   We have only one char of input left. We special-case 0 because
+.onedigit   ;   We have only one char of input left. We special-case 0 because
             ;   it breaks our leading-zero-digit removal during later
             ;   normalization. Also, it may be a common case so fast is nice.
-            lda [*buf1ptr,x]
-            cmp #'0
-            bne 500$            ; not zero, continue with standard conversion
+            lda (buf1ptr,x)
+            cmp #'0'
+            bne .convert        ; not zero, continue with standard conversion
             ldy #0              ; output length byte location
             lda #1              ; output length byte value
-            sta [*buf2ptr],y
+            sta (buf2ptr),y
             tya                 ; output value (0) to A
             iny                 ; output value location = 1
-            sta [*buf2ptr],y
+            sta (buf2ptr),y
             rts
 
-500$:       ;   ASCII to binary conversion by bi_read_decdigits.
+.convert    ;   ASCII to binary conversion by bi_read_decdigits.
                                 ; buf1ptr₁ already points to start of input
-            sty *buf1len        ; set remaining input length
+            sty buf1len         ; set remaining input length
             tya                 ; calculate the temp/scratch buffer length
             clc                 ;   ...
             ror a               ;   divide by two, leaving old LSbit in carry
             adc #0              ;   round up
-            sta *buf0len        ;   set output buf size
+            sta buf0len         ;   set output buf size
             jsr bi_read_decdigits
-800$:       ;   Normalize by dropping redundant leading sign bytes
+
+            ;   Normalize by dropping redundant leading sign bytes
             clv                 ; for later BRA
             ldy #1              ; [buf0ptr₁] uses 1-based indexing
-810$:       lda [*buf0ptr],y
-            cmp *sign
-            bne 900$            ; not a sign extension byte, we're normalized
+.normalize  lda (buf0ptr),y
+            cmp sign
+            bne .done           ; not a sign extension byte, we're normalized
             iny                 ; check following byte
-            lda [*buf0ptr],y
-            eor *sign           ; next char's sign bit same as sign?
-            bmi 900$            ; no, we're done with normalization, we must
+            lda (buf0ptr),y
+            eor sign            ; next char's sign bit same as sign?
+            bmi .done           ; no, we're done with normalization, we must
                                 ;   keep sign extension byte to preserve sign
             dey                 ; set Y back to start of buf for next iteration
-            dec *buf0len        ; drop this byte by reducing length by one
-            inc *buf0ptr        ;   and moving start point up
-            bne 810$
-            inc *buf0ptr+1
-            bvc 810$            ; BRA
-900$:       ;   Produce final result in [buf2ptr₁] with 1-based indexing.
-            lda *buf0len        ; Store length as
+            dec buf0len         ; drop this byte by reducing length by one
+            inc buf0ptr         ;   and moving start point up
+            bne .normalize
+            inc buf0ptr+1
+            bvc .normalize      ; BRA
+
+.done       ;   Produce final result in [buf2ptr₁] with 1-based indexing.
+            lda buf0len         ; Store length as
             ldy #0              ;   first byte of
-            sta [*buf2ptr],y    ;   [buf2ptr₀]
+            sta (buf2ptr ),y    ;   [buf2ptr₀]
             ;   Copy normalized value to output buffer
-            ldy *buf0len
-910$:       lda [*buf0ptr],y
-            sta [*buf2ptr],y    ; assume output len is that of bi_read_udec
+            ldy buf0len
+-           lda (buf0ptr),y
+            sta (buf2ptr),y     ; assume output len is that of bi_read_udec
             dey
-            bne 910$
+            bne -
             rts

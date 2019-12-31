@@ -13,15 +13,27 @@ storage for the object. A pointer will only ever actually reference
 memory in the heap if it points to a _cons cell_ or a _heapdata
 header_.
 
-Objects are allocated on the heap with both address and size [aligned]
-to a two word (four byte) boundry. Objects in the heap either:
-- start with a heapdata header giving format and length information,
-  followed object data, of arbitrary length; or
-- are a cons cell of two pointer words, the _car_ followed by the
-  _cdr_.
+Objects are allocated on the heap at addresses [aligned] to a two word
+(four byte) boundary. Objects in the heap are of two types:
+- _Heapdata objects_ start with a type byte, determining format of
+  object, followed by a length byte for the size of the following
+  data, followed by and up to 254 bytes of object data.
+- _Cons cells_ are two pointer words, the _car_ followed by the _cdr_.
 
-Unallocated heap elements must be initialized to "empty" cons cells of
-`(nil,nil)`.
+Every address in the heap is part of an object. Space available for
+allocation is indicated by free space heapdata objects (_FSO_s) of
+type `HDT_FREE`.
+
+All objects on the heap have an allocation size or _asize_ that is a
+multiple of four and 256 bytes or less; the next object starts
+immediately after this.
+
+Additionally, heapdata objects have an _hdsize_ as the second byte of
+the header indicating the length of the data after the header. The
+header plus the hdsize may be less than a multiple of four (indicating
+that there are "filler" bytes for alignment after the object data).
+The header plus the hdsize will always be between _asize_ and
+_asize-3_, allowing the asize to be calculated from the hdsize.
 
 Given an arbitrary (properly aligned) address in the heap we cannot
 tell if it points to a cons cell or a heapdata object because it might
@@ -52,7 +64,7 @@ followed by the GC.
     00   000000 x0      nil
     00   000001 x0      true, t
     00   ?????? x0      (other special values?)
-    AA   aaaaaa x0   R  pointer into heap (except special values above)
+    AA   aaaaaa x0   R  (AA≠00) pointer into heap
     NN   000000 01      byte/char (unsigned) value NN
     LL   ffffff 01   R  heapdata header: length LL, format id ffffff (1-63)
     NN   nnnnnn 11      smallint: -8192 to 8191
@@ -74,7 +86,7 @@ A heapdata object starts with a two-byte header.
 
 The LSB describes the format and always has its least significant two
 bits set to `01`. The upper six bits are the format identifier
-(ranging from 1-63); when shifted left two bits iwth the lowest two
+(ranging from 1-63); when shifted left two bits with the lowest two
 bits set to the required `01` this whole byte is referred to as the
 _format number_. (Format number `$01` is a `byte` with value in the
 MSB and no additional data; in the heap this is recognized as the car
@@ -96,7 +108,8 @@ on the heap and the length value when not variable; and the name of
 the format and type using it. Following this are more detailed
 descriptions of the individual formats.
 
-    num   binary  id siz len descr
+    num   binary  id siz len  descr
+    $01  0000 00   0          free block
     $09  0000 10   2   8  6   env-header
     $0D  0000 11   3   8  6   env-entry
     $21  0010 00   8          symbol (string)
@@ -111,6 +124,11 @@ descriptions of the individual formats.
       5     Sign bit: floats, ...
       4     Number, including modular
       3     Atomic (?)
+
+- __free block__: The header and the next _len_ bytes (always even,
+  and always two less than a multiple of four) are space available to
+  be allocated. _len_ ranges from $02 (4 bytes available) to $FE (256
+  bytes available).
 
 - __env-header__: _len=6_. The header record for an environment. The
   data are as follows. All pointers may be `nil` for no value.

@@ -52,7 +52,7 @@ followed by the GC.
     00   000000 x0      nil
     00   000001 x0      true, t
     00   ?????? x0      (other special values?)
-    AA   aaaaaa x0   R  pointer into heap (except special values above)
+    AA   aaaaaa x0   R  (AA≠00) pointer into heap
     NN   000000 01      byte/char (unsigned) value NN
     LL   ffffff 01   R  heapdata header: length LL, format id ffffff (1-63)
     NN   nnnnnn 11      smallint: -8192 to 8191
@@ -74,7 +74,7 @@ A heapdata object starts with a two-byte header.
 
 The LSB describes the format and always has its least significant two
 bits set to `01`. The upper six bits are the format identifier
-(ranging from 1-63); when shifted left two bits iwth the lowest two
+(ranging from 1-63); when shifted left two bits with the lowest two
 bits set to the required `01` this whole byte is referred to as the
 _format number_. (Format number `$01` is a `byte` with value in the
 MSB and no additional data; in the heap this is recognized as the car
@@ -96,7 +96,8 @@ on the heap and the length value when not variable; and the name of
 the format and type using it. Following this are more detailed
 descriptions of the individual formats.
 
-    num   binary  id siz len descr
+    num   binary  id siz len  descr
+    $01  0000 00   0          free block
     $09  0000 10   2   8  6   env-header
     $0D  0000 11   3   8  6   env-entry
     $21  0010 00   8          symbol (string)
@@ -111,6 +112,10 @@ descriptions of the individual formats.
       5     Sign bit: floats, ...
       4     Number, including modular
       3     Atomic (?)
+
+- __free block__: The next _len_ bytes (always even) are free and may
+  be allocated. _len_ may be 0 indicating that the free space is just
+  the word containing the header itself.
 
 - __env-header__: _len=6_. The header record for an environment. The
   data are as follows. All pointers may be `nil` for no value.

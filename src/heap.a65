@@ -1,0 +1,95 @@
+;   heap
+
+;--------------------------------------------------------------------------
+
+;   Parameters specified in the documentation for each function are
+;   annotated as follows.
+;     (p) - preserved: value at exit is the same at entry
+;     (w) - written: value at exit is an intended output value
+;     (d) - destroyed: value at exit may be different from value at entry
+;           and is not useful
+;   Flags should be considered destroyed unless otherwise specified.
+;   * For pointers (usually in the zero page), two letters are given: the
+;   first for the pointer itself and the second for the contents of the
+;   buffer to which it points.
+;   * Pointers are also given a suffix of subscript 0 or 1 to indicate if
+;   their indexing is 0-based (`ptr₀` points to the beginning of the
+;   buffer) or 1-based (`ptr₁` points to the byte before the beginning of
+;   the buffer). The latter is often used because it's easier and more
+;   efficient to loop through such a buffer on the 6502.
+
+;--------------------------------------------------------------------------
+
+;   A heap starts at an even (word-aligned) address and consists of a
+;   header, consecutive _objects_ (some of which may indicate free space)
+;   and an empty area from the _top_ up to but not including the _end_:
+;
+;     • end (header): the first address after the last word of the heap
+;     • top (header): start of the empty area of the heap
+;     • object …: objects in the heap
+;     • empty area: heap has no objects allocated from this point on.
+;
+;   Allocation of a new object first looks for a sufficient block of free
+;   space from the start of the heap and, if none is found, space is
+;   allocated at the top and the top is moved up to just beyond the
+;   allocation.
+;
+;   If no sufficient block of free space is found below the top of the
+;   heap and the empty area from top to end is not large enough, the
+;   heap may be garbage-collected and/or compacted to free space for
+;   another attempt at allocation.
+;
+
+;   The starting point of the current heap.
+;   We currently support only one active heap.
+heapstart   zds 2
+
+;   Temporary pointers used by heap routines
+P0          zds 2
+P1          zds 2
+
+;--------------------------------------------------------------------------
+;   heapinit - initialize the current heap
+;
+;   Initialize a heap starting at [heapstart₀] and ending just below the
+;   end address given in A:X. The end address must be at least four bytes
+;   past the start address.
+;
+;   If the heap does not start at an even address or is too small a BRK
+;   will be executed. Otherwise no error checking is done.
+;
+;               A: (d) High byte of heap end address.
+;               X: (d) Low byte of heap end address. Must be even.
+;               Y: (d) -
+;      heapstart₀: (p) Pointer to the start of the heap. Must be even.
+;
+heapinit
+            ;   Store end of heap in header end pointer
+            ldy #1
+            sta (heapstart),y
+            txa
+            dey
+            sta (heapstart),y
+
+            ;   Set top of heap to first address after header
+            lda heapstart
+            sta P0
+            lda heapstart+1
+            sta P0+1
+            incw P0             ; point to second word of header
+            incw P0
+            lda P0              ; make a copy
+            sta P1
+            lda P0+1
+            sta P1+1
+            incw P1             ; point to word after header
+            incw P1
+            ldy #0              ; copy to heap top word
+            lda P1
+            sta (P0),y
+            iny
+            lda P1+1
+            sta (P0),y
+            rts
+
+

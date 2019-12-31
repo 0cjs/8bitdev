@@ -150,6 +150,12 @@ asbuild src/asl-nomacro.a65
 asbuild src/simple-asl.a65  ';  Unit Test Assembly' '   org $240'
 asbuild src/stdtest.a65     \
     '   cpu 6502' '   include "src/std.a65"' '   org $240'
+asbuild src/heap.a65            \
+    '   cpu 6502'               \
+    '   listing off'            \
+    '   include "src/std.a65"'  \
+    '   listing on'             \
+    '   org $300'
 asbuild src/bigint.a65      \
     '   cpu 6502' '   include "src/std.a65"' '   org $1000'
 

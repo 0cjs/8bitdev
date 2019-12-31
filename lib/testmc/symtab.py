@@ -65,3 +65,11 @@ class SymTab():
         else:
             raise AttributeError("No such attribute: " + name)
 
+    def __iter__(self):
+        ''' Iteration iterates over just the ``(name,value)`` of all symbols.
+
+            This avoids having to deconstruct returned Symbol objects.
+            We anticipate that most users of this iteration will be
+            generic, so not returning the additional information is ok.
+        '''
+        return ((s.name, s.value) for _, s in self.symbols.items())

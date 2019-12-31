@@ -14,3 +14,8 @@ def test_SymTab():
     assert        1 == s.one
     assert    'Two' == s.two
 
+    #   Confirm we're iterable
+    for name, value in s:
+        assert name in ('one', 'two')
+        assert value in (1, 'Two')
+

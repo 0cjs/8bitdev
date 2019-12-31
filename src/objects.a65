@@ -1,9 +1,0 @@
-;   Some "objects" as described in objects.md
-
-            .radix h
-
-            .area ZP  (abs,pag)
-            .org 0
-            .area   _CODE
-
-donothing:  rts

@@ -108,7 +108,6 @@ link() {
 asm src/simple-asx.a65  ; link simple-asx
 asm src/c64.a65         ; link c64
 asm src/reloctest.a65   ; link reloctest -b '_code=0x400' reloctest
-asm src/objects.a65     ; link objects   -b '_code=0x1000' objects
 asm src/zptest.a65      ; link zptest    -b '_code=0x0300'
 
 #   Replace form feeds since we view listing only on screen. This must

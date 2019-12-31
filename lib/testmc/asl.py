@@ -195,8 +195,10 @@ def parse_symtab(stream):
     symbols = []
     while True:
         line = stream.readline()
-        if line == '':  # EOF
-            break
+        if line == '': break    # EOF
+
+        if line.strip() == '':
+            pass # skip blank lines
         elif line.startswith('Segment '):
             #   Source code line number to machine code address mapping
             #   information. We (currently) don't use this.

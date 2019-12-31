@@ -228,6 +228,13 @@ def test_ps_parse_section_space_in_string():
         ps_parse_section('', stream)
     assert ex.match('Bad asl version?')
 
+def test_parse_symtab_empty():
+    ' Blank lines are ignored '
+    stream = StringIO('\n\r\n\n')
+    symtab = parse_symtab(stream)
+    assert '' == stream.read()   # consumed all input
+    assert 0 == len(symtab)
+
 def test_parse_symtab_ParseError():
     s = StringIO(' one\n two\n')
     with pytest.raises(ParseError) as ex:

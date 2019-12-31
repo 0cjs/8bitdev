@@ -20,76 +20,111 @@
 
 ;--------------------------------------------------------------------------
 
-;   A heap starts at an even (word-aligned) address and consists of a
-;   header, consecutive _objects_ (some of which may indicate free space)
-;   and an empty area from the _top_ up to but not including the _end_:
-;
-;     • end (header): the first address after the last word of the heap
-;     • top (header): start of the empty area of the heap
-;     • object …: objects in the heap
-;     • empty area: heap has no objects allocated from this point on.
-;
-;   Allocation of a new object first looks for a sufficient block of free
-;   space from the start of the heap and, if none is found, space is
-;   allocated at the top and the top is moved up to just beyond the
-;   allocation.
-;
-;   If no sufficient block of free space is found below the top of the
-;   heap and the empty area from top to end is not large enough, the
-;   heap may be garbage-collected and/or compacted to free space for
-;   another attempt at allocation.
-;
+;   Below, _words_ are two-byte values and _doublewords_ are 4-byte values.
 
-;   The starting point of the current heap.
-;   We currently support only one active heap.
-heapstart   zds 2
+;   The heap is a series of consecutive doubleword aligned _objects_
+;   representing either two word-sized cons cells or heap objects
+;   ("heapdata") of size 0 or larger. Heap objects may have arbitrary byte
+;   sizes of 0 through 255, but the allocated space is always a multiple of
+;   four bytes, with any extra space at the end allocated but unused.
+;
+;   Free space is represented by free block heap objects. The heap starts
+;   at `heapstart` and extends up to but not including the `heapend`
+;   address, both of which must of course be doubleword aligned.
+;
+;   As well as the start and end, we also in `heapff` ("heap first free")
+;   track the location of the first free block object within the heap  so
+;   that allocation does not need to trace through all the objects filling
+;   allocated space up to that point in the heap.
+;
+;   If during allocation no sufficient block of free space is found, the
+;   heap may be compacted and/or garbage-collected to free space for
+;   another attempt at allocation.
+
+heapstart   zds 2       ; start of heap
+heapff      zds 2       ; address of first free block object
+heapend     zds 2       ; first address after heap
 
 ;   Temporary pointers used by heap routines
 P0          zds 2
 P1          zds 2
 
 ;--------------------------------------------------------------------------
+;   Heapdata object data types
+
+hdtype          macro typnum,{INTLABEL},{NOEXPAND}
+__LABEL__       equ typnum<<2 | 1
+                endm
+
+HDT_FREE        hdtype 0
+HDT_ENVHEADER   hdtype 2
+HDT_ENVENTRY    hdtype 3
+
+;--------------------------------------------------------------------------
 ;   heapinit - initialize the current heap
 ;
-;   Initialize a heap starting at [heapstart₀] and ending just below the
-;   end address given in A:X. The end address must be at least four bytes
-;   past the start address.
+;   Initialize a heap by filling it with free block objects and setting
+;   heapff. heapstart and heapend must contain the heap start and end
+;   locations, which must be doubleword (4 byte) aligned, and heapend must
+;   be after heapstart.
 ;
-;   If the heap does not start at an even address or is too small a BRK
-;   will be executed. Otherwise no error checking is done.
+;   The alignment of heapstart and heapend is checked and, if not correct,
+;   a BRK will be executed. No other error checking is done.
 ;
-;               A: (d) High byte of heap end address.
-;               X: (d) Low byte of heap end address. Must be even.
-;               Y: (d) -
-;      heapstart₀: (p) Pointer to the start of the heap. Must be even.
+;               X: (p)
+;            A, Y: (d)
+;       heapstart: (p) Pointer to the start of the heap.
+;         heapend: (p) Pointer to the address just after the heap.
+;          heapff: (w) Set to the address of the first free block object,
+;                      which will be at the start of the heap.
+;          P0, P1: (d)
 ;
 heapinit
-            ;   Store end of heap in header end pointer
-            ldy #1
-            sta (heapstart),y
-            txa
-            dey
-            sta (heapstart),y
-
-            ;   Set top of heap to first address after header
+            lda heapend
+            and #%00000011  ; alignment check
+            beq .endok
+            brk
+.endok      ;   The first free block will be at start of heap.
+            ;   Also make a copy in P0 for use in filling the heap.
             lda heapstart
+            sta heapff
             sta P0
+            and #%00000011  ; alignment check
+            beq .startok
+            brk
+.startok
             lda heapstart+1
+            sta heapff+1
             sta P0+1
-            incw P0             ; point to second word of header
-            incw P0
-            lda P0              ; make a copy
+            ;   Calculate in P1 bytes remaining in the heap
+            sec
+            lda heapend
+            sbc heapstart
             sta P1
-            lda P0+1
+            lda heapend+1
+            sbc heapstart+1
             sta P1+1
-            incw P1             ; point to word after header
-            incw P1
-            ldy #0              ; copy to heap top word
-            lda P1
+            ;   Allocate a block. If less than $100 bytes of space remains
+            ;   (remaining size MSB is 0) we allocate a short block,
+            ;   otherwise we can allocate a full $100 size block.
+.nextblock  beq .lastblock
+            ldy #0
+            lda #HDT_FREE
             sta (P0),y
             iny
-            lda P1+1
+            lda #$FE        ; max size block
+            sta (P0),y
+            inc P0+1
+            dec P1+1
+            bne .nextblock
+.lastblock
+            ldy #0
+            lda #HDT_FREE
+            sta (P0),y
+            iny
+            lda P1
+            sec
+            sbc #2          ; subtract the two bytes used by the header
             sta (P0),y
             rts
-
 

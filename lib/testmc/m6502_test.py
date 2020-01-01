@@ -17,7 +17,8 @@ def test_Regs_cons_default():
         assert None is getattr(r, attrname)
 
 def test_Regs_cons():
-    r = R(pc=0x1234, a=0x56, x=0x78, y=0x9A, N=1, V=0, D=1, I=0, Z=1, C=0)
+    r = R(pc=0x1234, a=0x56, x=0x78, y=0x9A,
+        N=1, V=0, D=1, I=0, Z=True, C=False)
     assert 0x1234 == r.pc
     assert   0x56 == r.a
     assert   0x78 == r.x
@@ -71,6 +72,12 @@ def test_Regs_repr_1():
 def test_Regs_repr_2():
     r = R(y=7, V=1, Z=0)
     rs = '6502 pc=---- a=-- x=-- y=07 sp=-- -V----z-'
+    assert rs == repr(r)
+    assert rs == str(r)
+
+def test_Regs_repr_3():
+    r = R(N=True, D=True, C=False)
+    rs = '6502 pc=---- a=-- x=-- y=-- sp=-- N---D--c'
     assert rs == repr(r)
     assert rs == str(r)
 

@@ -66,8 +66,16 @@ class Registers(RegistersTuple):
             V = 1 if psr & 0x40 else 0
             N = 1 if psr & 0x80 else 0
 
+        def eint(x):
+            ''' Ensure that `x` is an `int`. It's not clear if the emulator
+                requires this or not, but best to stay consistent. We also
+                elsewhere depend on flags being `None`, `0` or `1`.
+            '''
+            return (x if x is None else int(x))
+
         self = super(Registers, cls) \
-            .__new__(cls, pc, a, x, y, sp, N, V, D, I, Z, C)
+            .__new__(cls, pc, a, x, y, sp,
+                eint(N), eint(V), eint(D), eint(I), eint(Z), eint(C))
         return self
 
     def __repr__(self):

@@ -20,17 +20,18 @@
 
 ;--------------------------------------------------------------------------
 
-;   Below, _words_ are two-byte values and _doublewords_ are 4-byte values.
+;   Below, _words_ are two-byte values and _dwords_ are 4-byte values.
 
-;   The heap is a series of consecutive doubleword aligned _objects_
+;   The heap is a series of consecutive dword aligned _objects_
 ;   representing either two word-sized cons cells or heap objects
 ;   ("heapdata") of size 0 or larger. Heap objects may have arbitrary byte
-;   sizes of 0 through 255, but the allocated space is always a multiple of
-;   four bytes, with any extra space at the end allocated but unused.
+;   sizes of 0 through hd_maxsiz, but the allocated space is always a
+;   multiple of four bytes, with any extra space at the end allocated but
+;   unused.
 ;
 ;   Free space is represented by free block heap objects. The heap starts
 ;   at `heapstart` and extends up to but not including the `heapend`
-;   address, both of which must of course be doubleword aligned.
+;   address, both of which must of course be dword aligned.
 ;
 ;   As well as the start and end, we also in `heapff` ("heap first free")
 ;   track the location of the first free block object within the heap  so
@@ -41,13 +42,33 @@
 ;   heap may be compacted and/or garbage-collected to free space for
 ;   another attempt at allocation.
 
-heapstart   zds 2       ; start of heap
-heapff      zds 2       ; address of first free block object
-heapend     zds 2       ; first address after heap
+;   All routines below read and preserve the following pointers:
+;
+;       heapstart: (p) Pointer to the start of the heap.
+;         heapend: (p) Pointer to the address just after the heap.
 
-;   Temporary pointers used by heap routines
-P0          zds 2
+;--------------------------------------------------------------------------
+;   Heap constants and storage
+
+tagmask     equ %00000011   ; mask to isolate pointer LSB tag bits
+typemask    equ %11111100   ; mask to isolate heapdata type bits
+
+;   We restrict the maximum size of the data for a heapdata object to $FF
+;   minus 2 bytes for the header and a further 3 bytes for ease of
+;   alignment. This ensures that we can always align the total size without
+;   overflowing by adding 3 to the total size value and masking it down.
+hd_maxsiz   equ 256-2-3-1   ; 250 ($FA) bytes
+
+heapstart   zds 2           ; start of heap
+heapff      zds 2           ; address of first free block object
+heapend     zds 2           ; first address after heap
+
+;   Temporary pointers and sizes used by heap routines
+P0          zds 2           ; often used as current loc. when searching heap
+P0size      zds 1           ; typically size of wanted allocation
 P1          zds 2
+P2          zds 2
+P3          zds 2
 
 ;--------------------------------------------------------------------------
 ;   Heapdata object data types
@@ -59,29 +80,28 @@ __LABEL__       equ typnum<<2 | 1
 HDT_FREE        hdtype 0
 HDT_ENVHEADER   hdtype 2
 HDT_ENVENTRY    hdtype 3
+HDT_SYMBOL      hdtype 8
 
 ;--------------------------------------------------------------------------
 ;   heapinit - initialize the current heap
 ;
 ;   Initialize a heap by filling it with free block objects and setting
 ;   heapff. heapstart and heapend must contain the heap start and end
-;   locations, which must be doubleword (4 byte) aligned, and heapend must
-;   be after heapstart.
+;   locations, which must be dword aligned, and heapend must be after
+;   heapstart.
 ;
 ;   The alignment of heapstart and heapend is checked and, if not correct,
 ;   a BRK will be executed. No other error checking is done.
 ;
 ;               X: (p)
 ;            A, Y: (d)
-;       heapstart: (p) Pointer to the start of the heap.
-;         heapend: (p) Pointer to the address just after the heap.
 ;          heapff: (w) Set to the address of the first free block object,
 ;                      which will be at the start of the heap.
 ;          P0, P1: (d)
 ;
 heapinit
             lda heapend
-            and #%00000011  ; alignment check
+            and #tagmask    ; alignment check
             beq .endok
             brk
 .endok      ;   The first free block will be at start of heap.
@@ -89,7 +109,7 @@ heapinit
             lda heapstart
             sta heapff
             sta P0
-            and #%00000011  ; alignment check
+            and #tagmask    ; alignment check
             beq .startok
             brk
 .startok
@@ -128,3 +148,248 @@ heapinit
             sta (P0),y
             rts
 
+;--------------------------------------------------------------------------
+;   allocn - "simple" heap object allocation without compaction or GC
+;
+;   The object type is be passed in A; this must be $00 to allocate a dword
+;   cons cell or a valid heapdata type, i.e., the least significant bits
+;   must be %01. If a cons cell is being allocated the size will always be
+;   4 bytes; for heapdata objects the size (0-255) is passed in X. In the
+;   latter case the allocated space will be the size in X plus two bytes
+;   for the heapdata header (type and length) rounded up to a dword
+;   boundary (ensuring heap object alignment) but the actual size written
+;   to the length byte will be what was specified in X.
+;
+;   If object type s not either $00 (cons cell) or a value with least
+;   significant bits set to %01 (heapdata object) a BRK will be executed.
+;   Heapdata types are not checked beyond this, however, so it's possible
+;   to "allocate" an HDT_FREE "object" which may be used for temporary
+;   storage until the the next call to allocn, at which point it will be
+;   considered usable free space.
+;
+;   Starting at heapff this will search the heap for a block of free space
+;   large enough to hold the object. Multiple contiguous HDT_FREE objects
+;   are treated as a single block of free space.
+;
+;   If a sufficiently large free block is found, the given object type and
+;   length will be written to the object header in the heap (or $00 and $00
+;   if a cons cell is being allocated), a new free block object of
+;   appropriate size will be written after the newly allocated object,
+;   heapff will be updated, and the address of the new object will be
+;   written to P0.
+;
+;   If not enough contiguous free space is found, the total amount of free
+;   space found during the search will be left in P1; this can be used by
+;   the caller to determine if compacting the objects in the heap will
+;   generate enough contiguous free space for another try at allocation to
+;   succeed or if a GC must be done.
+;
+;   XXX how does this indicate success or failure? Carry clear/set?
+;
+;                A: (d) object type
+;                X: (d) length of object
+;                Y: (d) -
+;       heapff: (w) The location at which the search for free space starts,
+;                   and set to the address of the first free block object
+;                   after a successful allocation.
+;           P0: (w) If successful, the address of the allocated block.
+;       P0size: (w) Calculated allocation size. This is 4 for a cons cell
+;                   or object length + 2 rounded up to the next dword
+;                   for a heapdata object.
+;           P1: (w) Total amount of free space found during the search.
+;                   On failure, this will be the total amount of free
+;                   (but non-contiguous) space in the heap.
+;           P2: (d) (temporary storage for type, heapdata length)
+;           P3: (d) (temporary storage used by splitfree)
+;
+allocn:
+            stx P2+1        ; save length, if heapdata object
+            sta P2          ; save type
+            cmp #0          ; are we allocating a cons cell?
+            bne .chk_hdtype ; no, check for valid heapdata type
+            lda #4          ; yes, cons cell will be a dword, 4 bytes
+            sta P0size      ; save allocation size
+            bne .start      ; BRA
+
+.chk_hdtype and #tagmask    ; mask out type number, leaving tag bits
+            cmp #1          ; valid heapdata type (tag bits = %01)?
+            beq .chk_hdsize ; yes, continue
+            brk             ; no, signal error
+.chk_hdsize ;   Load and check the requested heapdata object data length
+            lda P2+1        ; load heapdata length
+            cmp #hd_maxsiz+1; is it <= maximum heapdata object size?
+            bcc .calc_asiz  ; yes, continue
+            brk             ; no, signal error
+.calc_asiz  ;   Calculate the dword-aligned allocation size for a heapdata obj.
+            clc
+            adc #2+3        ; add 2 for the heapdata header and 3 to make it
+                            ;   at least as large as next dword boundry
+            and #typemask   ; mask down to dword boundry
+            sta P0size      ; save allocation size
+
+.start      ;   Start search of heap for a free block.
+            ldx #0          ; utility zero
+            stx P1          ; init free space count
+            stx P1+1
+            lda heapff      ; init search pos. in heap (first free obj is next)
+            sta P0
+            lda heapff+1
+            sta P0+1
+
+.nextobj
+            ;   Check to see if we are past the end of the heap.
+            jsr p0pastheap
+            bcs .nospace
+            ;   Check the next object in the heap ([P0]) to see if it
+            ;   indicates free space.
+            lda (P0,x)      ; get object type at current search position
+            cmp #HDT_FREE
+            beq .foundfree
+            and #tagmask    ; is the LSB of the word a heapdata type?
+            cmp #1
+            beq .skip_heapdata
+.skip_dword lda #4          ; skip past cons cell
+            jsr p0add
+            clv             ; XXX actually could use BNE because P0 MSB is
+                            ; never $00 for an address in heap?
+            bvc .nextobj    ; BRA
+.skip_heapdata
+            ldy #1
+            lda (P0),y      ; get object length at current search position
+            cmp #2+1        ; is obj size <= minimum alloc size of 2?
+            bcc .skip_dword ; yes, we can skip it just like a cons cell
+            and #typemask   ; no, we add allocated length - 4
+            jsr p0add
+            clv
+            bvc .skip_dword ; BRA to skip the final dword
+
+.foundfree
+            jsr mergefree   ; try to create FBO of proper size at P0
+            bcs .allocated  ; we allocated the object; fill it in
+            ;   XXX here we should update the count in P1?
+            bcc .nextobj    ; not enough space in this FBO; search for next one
+.allocated  BRK
+            ;   XXX How do we figure out if we need to update heapff?
+            ;   perhaps an easier way to deal with this is to start updating
+            ;   it when we start our search and keep doing so until we find
+            ;   the first free block.
+
+.notminsz   BRK
+
+            brk
+            clc             ; XXX clear carry = success
+            rts
+
+.nospace
+            sec             ; XXX set carry = failure
+            rts
+
+;   mergefree - merge a free block with following contiguous free blocks
+;
+;   P0 must point to a free block object and P0size must hold the requested
+;   allocation size of that FBO. If the FBO can be set (via splitting or
+;   merging with following FBOs) to that allocation size that will be done,
+;   remaining free space will be in following FBOs, and the carry will be
+;   set. Otherwise the carry will be clear on return, though the initial
+;   FBO may still have been expanded via merging with following FBOs.
+;
+;         A, Y: (d)
+;            X: (d)
+;           P0: (p) Points to the free block to split.
+;       P0size: (p) the (8-bit) size that we require (dword aligned)
+;           P3: (d) (temporary storage for splitfree)
+;
+mergefree
+            jsr splitfree   ; can this block be used?
+            bcc .merge      ; no, we need to merge
+            rts             ; yes, block is now exact size
+.merge      brk
+
+;   splitfree - make an existing free block object a given size
+;
+;   P0 must point to a free block object (FBO) and P0size must contain the
+;   requested dword-aligned allocation size for the FBO, which must be at
+;   least 4. Note that, to account for the header, this asize must be two
+;   bytes larger than the hdsize if the space is intended to be be used for
+;   a heapdata object.
+;
+;   The requested size is compared to the allocation size of the FBO: • If
+;   they are the same, success is returned. • If the FBO is larger, it is
+;   split into two FBOs, the first of the requested asize and the second
+;   filling the remaining space. • If the FBO is smaller, an error is
+;   returned.
+;
+;   On successful return the carry flag will be set (indicating that the
+;   FBO's asize was at least as large as the requested size) and the object
+;   to which P0 points will be a free block of exactly the size requested.
+;   Otherwise the the carry will be clear and the heap will be unchanged.
+;
+;         A, Y: (d)
+;            X: (p)
+;           P0: (p) Points to the free block to split.
+;       P0size: (p) the (8-bit) size that we require (dword aligned)
+;           P3: (d) (temporary storage)
+splitfree
+            ldy #1
+            lda (P0),y      ; Get data size of free block. For a free block
+                            ; the header + data size is always dword aligned.
+            clc
+            adc #2          ; add header size to get total space alloc'd to blk
+            cmp P0size
+            beq .exit       ; exactly right: we're done
+            bcs .split      ; bigger than we need: split it
+            ;   Carry is clear here, indicating FBO is small.
+.exit       rts
+.split
+            ;   Calculate location of second FBO for space we don't need.
+            lda P0
+            clc
+            adc P0size
+            sta P3
+            lda P0+1
+            adc #0
+            sta P3+1
+            ;   Create header for second free space block (unused space).
+            ldy #0          ; heapdata object header: type byte
+            lda #HDT_FREE   ; new free block
+            sta (P3),y
+            ;   Calculate and set new free space block data size byte.
+            iny             ; heapdata object header: datasize byte
+            lda (P0),y      ; total data size
+            sec
+            sbc P0size      ; subtract data size of space we're allocating
+           ; XXX figure out why we don't need this next line
+           ;sbc #2          ; subtract space used by new heapdata object header
+            sta (P3),y
+            ;   Calculate and set allocated size for original free space block.
+            lda P0size      ; allocated size
+            sec
+            sbc #2          ; subtract header size
+            sta (P0),y
+            ;   Carry is set here because it was not used; the requested
+            ;   allocation size is at least 4, and we subtracted only 2.
+            rts
+
+;--------------------------------------------------------------------------
+;   Utility routines
+
+;   Add contents of A to p0. Destroys A.
+p0add       clc
+            adc P0
+            sta P0
+            lda #0
+            adc P0+1
+            sta P0+1
+            rts
+
+;   Check to see if P0 points past the end of the heap.
+;   Returns carry set if past end of heap, clear if not.
+;   Destroys A and Y. XXX maybe not Y
+p0pastheap
+            lda P0+1            ; MSB of current address
+            cmp heapend+1
+            beq .checklsb       ; MSBs equal; go compare LSB
+            rts                 ; carry set if we are past end, clear if not
+.checklsb   lda P0
+            cmp heapend
+            rts                 ; carry set if we are past end, clear if not

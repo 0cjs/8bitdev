@@ -15,13 +15,21 @@ header_.
 
 Objects are allocated on the heap with both address and size [aligned]
 to a two word (four byte) boundry. Objects in the heap either:
-- start with a heapdata header giving format and length information,
-  followed object data, of arbitrary length; or
-- are a cons cell of two pointer words, the _car_ followed by the
+- _heapdata objects_, which start with a header giving format and
+  length information followed object data, of arbitrary length; or
+- are a _cons cell_ of two pointer words, the _car_ followed by the
   _cdr_.
 
-Unallocated heap elements must be initialized to "empty" cons cells of
-`(nil,nil)`.
+All objects on the heap have an allocation size or _asize_ of the
+total number of bytes used by the object, which will always be a
+multiple of 4 to ensure that heap objects are always aligned.
+Additionaly, heapdata objects have an _hdsize_ as the second byte of
+the header indicating the length of the data after the header. The
+header plus the hdsize may be smaller than the asize due to object
+alignment.
+
+No part of the heap is not part of an object; free space is indicated
+by free space heapdata objects (type `HDT_FREE`) or _FSO_s.
 
 Given an arbitrary (properly aligned) address in the heap we cannot
 tell if it points to a cons cell or a heapdata object because it might

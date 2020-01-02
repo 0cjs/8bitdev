@@ -2,6 +2,9 @@
 ;   be working (though {EXPAND} is working). Look at the listing to
 ;   see if unwanted expansion of noexp_param_{0,1} is appearing.
 
+;   This bug is in versions through asl-current-142-bld151. A patch from
+;   the author to fix it has been applied to github.com/0cjs/asl:master.
+
 expanded        macro
                 ; You should see this in the expansion.
                 endm

@@ -35,7 +35,6 @@ dw          macro
 ;   including program.
 __ZDS_loc   set $10
 
-            macexp_dft off      ; XXX {NOEXPAND} doesn't work
 zds         macro len,{INTLABEL},{NOEXPAND}
 __ZDS_save  set *
             org __ZDS_loc
@@ -44,7 +43,6 @@ __LABEL__   label *
             org __ZDS_save
 __ZDS_loc   set __ZDS_loc+len
             endm
-            macexp_dft on       ; XXX {NOEXPAND} doesn't work
 
 ;--------------------------------------------------------------------------
 ;   INCW macro to increment a word

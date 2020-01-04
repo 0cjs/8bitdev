@@ -50,3 +50,16 @@ def test_incw(M, input, expected):
     M.call(incw, r)
     assert r == M.regs
     assert expected == M.word(data)
+
+@pytest.mark.parametrize('inp, exp', (
+    (0x1F9, 0x1FC), (0x1FA, 0x1FC), (0x1FB, 0x1FC), (0x1FC, 0x1FC),
+    (0x1FD, 0x200), (0x1FE, 0x200), (0x1FF, 0x200), (0x200, 0x200),
+    (0xFFFF, 0x0000), (0x0000, 0x0000),
+))
+def test_dwalign(M, inp, exp):
+    dwaligntest, data = M.symtab.dwaligntest, M.symtab.dwaladdr
+    preservedregs = R(x=87, y=65)
+    M.depword(data, inp)
+    M.call(dwaligntest, preservedregs)
+    assert           exp == M.word(data)
+    assert preservedregs == M.regs

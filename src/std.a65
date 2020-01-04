@@ -9,6 +9,12 @@
 ;   to change its behaviour for different 6502 variants.
 ;
 
+;   In general, we use {NOEXPAND} on macros that do not generate code in
+;   order to keep the listing clean. However, for macros that do generate
+;   code we do not use it so that we can see the code that was generated;
+;   without this one sees just a (MACRO) line followed by the address after
+;   the macro, which can be a bit confusing.
+
 ;--------------------------------------------------------------------------
 ;   Constant definition and storage allocation.
 ;   • We use the Intel DS/DB/DW syntax everywhere to allow us to use the

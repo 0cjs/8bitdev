@@ -25,3 +25,8 @@ incwtest    clv
             rts
 incwdata    zds 2
 
+;   DWALIGN
+dwaligntest dwalign dwaladdr
+            rts
+
+dwaladdr    zds 2

@@ -65,3 +65,22 @@ incw        macro addr
             inc addr+1
 .nocarry
             endm
+
+;--------------------------------------------------------------------------
+;   DWALIGN - align pointer at given address to a dword (4 byte) boundary
+;
+;   Rounds the address in the given location up to the next dword boundary,
+;   leaving it at the current value if it's already aligned.
+;
+;   Destroys the A register and flags.
+;
+dwalign     macro addr
+            lda addr
+            clc
+            adc #3
+            and #%11111100
+            sta addr
+            bcc .nocarry
+            inc addr+1
+.nocarry
+            endm

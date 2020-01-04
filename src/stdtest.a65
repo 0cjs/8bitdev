@@ -1,0 +1,27 @@
+;   test code for std.a65 include file
+
+            ;   This is done automatically by the test framework.
+            ;cpu 6502
+            ;include "src/std.a65"
+
+;   DS/DB/DW
+defalloctest
+dstest0     ds  3
+dstest1     ds  1
+dbtest      db  $00,"abc",[2]$FF
+dwtest      dw  $ABCD
+
+;   ZDS
+zdstest0    db  $F0     ; byte at current location
+zdstest1    zds 3       ; zero page allocation
+zdstest2    zds 2       ; zero page allocation
+zdstest3    db  $F3     ; byte at current location +1
+
+;   INCW
+incwtest    clv
+            bvs .incwtemp   ; show that composed temps can cross macro
+.nocarry    incw incwdata   ; show no collision w/macro-internal .nocarry
+.incwtemp
+            rts
+incwdata    zds 2
+

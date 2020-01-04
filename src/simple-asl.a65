@@ -40,30 +40,6 @@ foo         nop                 ;           :sec2:foo
     endsection sec2
 
 ;--------------------------------------------------------------------------
-;   std.a65 test code
-
-;   DS/DB/DW
-defalloctest
-dstest0     ds  3
-dstest1     ds  1
-dbtest      db  $00,"abc",[2]$FF
-dwtest      dw  $ABCD
-
-;   ZDS
-zdstest0    db  $F0     ; byte at current location
-zdstest1    zds 3       ; zero page allocation
-zdstest2    zds 2       ; zero page allocation
-zdstest3    db  $F3     ; byte at current location +1
-
-;   INCW
-incwtest    clv
-            bvs .incwtemp   ; show that composed temps can cross macro
-.nocarry    incw incwdata   ; show no collision w/macro-internal .nocarry
-.incwtemp
-            rts
-incwdata    zds 2
-
-;--------------------------------------------------------------------------
 ;   Add X and Y, storing the result in xybuf and returning it in A
 addxy       txa
             sty xybuf

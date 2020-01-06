@@ -250,16 +250,11 @@ bi_readhex  ldx #0              ; constant for indirect addressing
 ;   worth the effort.
 ;
 bi_x10      ldy buf0len
-            ;   Multiply the buffer by 2
+            ;   Multiply the buffer by 2, also making a copy for later addition
             clc
 -           lda (buf0ptr),y
             rol
             sta (buf0ptr),y
-            dey
-            bne -
-            ;   Make a copy of the ×2 value for later addition
-            ldy buf0len
--           lda (buf0ptr),y
             sta (bufSptr),y
             dey
             bne -

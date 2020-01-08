@@ -272,23 +272,26 @@ def test_p0add(M, p0, a, expected):
     assert expected == M.word(S.P0)
     assert R(x=34, y=56) == M.regs
 
-@pytest.mark.parametrize('heapend, p0, carry', (
-    (0x4280, 0x0000, False),
-    (0x4280, 0x4100, False),
-    (0x4280, 0x41FF, False),
-    (0x4280, 0x4200, False),
-    (0x4280, 0x427F, False),
-    (0x4280, 0x4280, True),
-    (0x4280, 0x42FF, True),
-    (0x4280, 0x4300, True),
-    (0x4280, 0xFFFF, True),
+@pytest.mark.parametrize('heapend, pN, x, carry', (
+    (0x4280, 0x0000, 0, False),
+    (0x4280, 0x4100, 0, False),
+    (0x4280, 0x41FF, 0, False),
+    (0x4280, 0x4200, 0, False),
+    (0x4280, 0x427F, 0, False),
+    (0x4280, 0x4280, 0, True),
+    (0x4280, 0x42FF, 0, True),
+    (0x4280, 0x4300, 0, True),
+    (0x4280, 0xFFFF, 0, True),
+    #   Other locations for the zero-page pointer
+    (0x1000, 0x0FFF, 3, False),
+    (0x1000, 0x1000, 6, True),
 ))
-def test_p0pastheap(M, heapend, p0, carry):
+def test_pXpastheap(M, heapend, pN, x, carry):
     S = M.symtab
     M.depword(S.heapend, heapend)
-    M.depword(S.P0, p0)
-    M.call(S.p0pastheap, R(C=not carry))
-    assert R(C=carry) == M.regs
+    M.depword(S.P0+x, pN)
+    M.call(S.pXpastheap, R(x=x, y=0xAE, C=not carry))
+    assert R(y=0xAE, C=carry) == M.regs
 
 ####################################################################
 #   heapinit tests
@@ -382,6 +385,7 @@ def test_splitfree(M, allocsize, availsize, success_expected):
 ####################################################################
 #   mergefree tests
 
+@pytest.mark.parametrize('endobj', (False, True))
 @pytest.mark.parametrize('allocsize, availsizes, finalsizes, success_expected', (
     #   Sizes are a dword-aligned allocation size, including object header.
     #   Success via initial splitfree call.
@@ -392,29 +396,47 @@ def test_splitfree(M, allocsize, availsize, success_expected):
     ( 16, [12, 4, 4],       [16, 4],                True),
     ( 20, [8, 8, 4],        [20],                   True),
     ( 24, [8, 8, 16, 4],    [24, 8, 4],             True),
+    #   Sum of two FBO dsizes > 256 should not cause problems.
+    ( 28, [16, 0xFC],       [28, 0xF0],             True),
     #   Failure
     ( 32, [28],             [28],                   False),
     ( 36, [20, 4, 4, 4],    [32],                   False),
+    #   XXX needs to test with full-size (hdsize=$FE) heapdata object?
+    #   maybe not, since that has to be big enough for any allocation we
+    #   want
 ))
-def test_mergefree(M, allocsize, availsizes, finalsizes, success_expected):
+def test_mergefree(M, allocsize, availsizes, finalsizes, endobj, success_expected):
     assert sum(availsizes) == sum(finalsizes)
 
-    S = M.symtab
+    initobjs = [ (HDT_FREE, asize-2, asize-2) for asize in availsizes ]
+    finalsizes2 = finalsizes.copy()     # pytest gets weird if you modify args
+    if endobj:
+        #   We end with an allocated object, rather than end of heap.
+        initobjs.append((0x04, 0xAA, [0x08, 0xAB]))     # cons cell
+        finalsizes2.append(4)                           # cons cell size
+
     start = 0x3FFC
-    buildheap(M, start,
-        [ (HDT_FREE, asize-2, asize-2) for asize in availsizes ])
-    M.depword(S.P0, start)
-    M.deposit(S.P0size, allocsize)
+    heapsize = buildheap(M, start, initobjs)
+    #   An FBO after the heap to show that we're checking for end of heap.
+    M.deposit(start+heapsize, [HDT_FREE, 0xFA])
+    print('start+heapsize {:04X}'.format(start+heapsize))
+    M.depword(M.symtab.P0, start)
+    M.deposit(M.symtab.P0size, allocsize)
 
     print('before', heapobjs(M, free=True))
-    M.call(S.splitfree, R(C=0 if success_expected else 1))
+    M.call(M.symtab.mergefree, R(C=0 if success_expected else 1))
     objs = heapobjs(M, free=True)
     print(' after', objs)
+    print('    P0 {:04X}'.format(M.word(M.symtab.P0)))
+    print('    P3 {:04X}'.format(M.word(M.symtab.P3)))
+    print('  [P3] ', M.bytes(M.word(M.symtab.P3), 4))
 
     expectedC = 1 if success_expected else 0
     actualC = M.regs.C
-    assert (expectedC, finalsizes) \
-        == (actualC,   [ hdlen+2 for type, hdlen in objs ])
+    assert (expectedC, finalsizes2) \
+        == (actualC,   [ 4 if type == -1 else hdlen+2 for type, hdlen in objs ])
+
+    #   XXX check again that removing end-of-heap-test in CUT fails test
 
 ####################################################################
 #   allocn tests

@@ -64,6 +64,7 @@ heapff      zds 2           ; address of first free block object
 heapend     zds 2           ; first address after heap
 
 ;   Temporary pointers and sizes used by heap routines
+;   P0 must be first because we access, e.g., P1 via X offset of P1-P0.
 P0          zds 2           ; often used as current loc. when searching heap
 P0size      zds 1           ; typically size of wanted allocation
 P1          zds 2
@@ -238,7 +239,7 @@ allocn:
 
 .nextobj
             ;   Check to see if we are past the end of the heap.
-            jsr p0pastheap
+            jsr pXpastheap  ; x=0 thus P0
             bcs .nospace
             ;   Check the next object in the heap ([P0]) to see if it
             ;   indicates free space.
@@ -297,13 +298,45 @@ allocn:
 ;            X: (d)
 ;           P0: (p) Points to the free block to split.
 ;       P0size: (p) the (8-bit) size that we require (dword aligned)
-;           P3: (d) (temporary storage for splitfree)
+;           P3: (d) (temporary storage for mergefree and splitfree)
 ;
 mergefree
             jsr splitfree   ; can this block be used?
-            bcc .merge      ; no, we need to merge
-            rts             ; yes, block is now exact size
-.merge      brk
+            bcc .checknext  ; no, check next object for merge
+            rts             ; yes, block is now requested size and carry
+                            ;   is set for success
+.checknext  ;   Set P3 to point to next object
+            ldy #1          ; FBO hdsize byte offset
+            lda (P0),y      ; load hdsize
+            clc
+            adc #2          ; add 2 bytes for header of this object;
+                            ;    this cannot overflow (C=1) because alignment
+            adc P0          ; add LSB of FBO's address
+            sta P3          ; build next object's address in P3
+            lda P0+1        ; increment high byte if overflow
+            adc #0
+            sta P3+1
+            ;   Check if we're past the end of the heap.
+            ldx #(P3-P0)
+            jsr pXpastheap
+            bcs .errexit
+            ;   Check if we've got an FBO after this that we can merge.
+            ldy #0          ; heapdata type offset
+            lda (P3),y
+            cmp #HDT_FREE   ; is it an FBO?
+            bne .errexit    ; no, fail
+            ;   Merge as much of the next FBO as we need.
+            ldy #1          ; heapdata size offset
+            lda P0size      ; requested size
+            sec             ; XXX no need since we will never use carry?
+            sbc 2           ; subtract header size of current block
+            sbc (P0),y      ; and space available in current block
+
+            BRK
+
+.errexit    clc
+            rts
+
 
 ;   splitfree - make an existing free block object a given size
 ;
@@ -382,14 +415,14 @@ p0add       clc
             sta P0+1
             rts
 
-;   Check to see if P0 points past the end of the heap.
+;   Check to see if P0,X points past the end of the heap.
 ;   Returns carry set if past end of heap, clear if not.
-;   Destroys A and Y. XXX maybe not Y
-p0pastheap
-            lda P0+1            ; MSB of current address
+;   Destroys A, preserves X, Y.
+pXpastheap
+            lda P0+1,x          ; MSB of address
             cmp heapend+1
             beq .checklsb       ; MSBs equal; go compare LSB
             rts                 ; carry set if we are past end, clear if not
-.checklsb   lda P0
+.checklsb   lda P0,x
             cmp heapend
             rts                 ; carry set if we are past end, clear if not

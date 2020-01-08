@@ -299,6 +299,7 @@ allocn:
 ;           P0: (p) Points to the free block to split.
 ;       P0size: (p) the (8-bit) size that we require (dword aligned)
 ;           P3: (d) (temporary storage for mergefree and splitfree)
+;       P3size: (d) (temporary storage for mergefree)
 ;
 mergefree
             jsr splitfree   ; can this block be used?
@@ -319,22 +320,36 @@ mergefree
             ;   Check if we're past the end of the heap.
             ldx #(P3-P0)
             jsr pXpastheap
-            bcs .errexit
+            bcs .nospace
             ;   Check if we've got an FBO after this that we can merge.
             ldy #0          ; heapdata type offset
             lda (P3),y
             cmp #HDT_FREE   ; is it an FBO?
-            bne .errexit    ; no, fail
+            bne .nospace    ; no, not enough space free at this point in heap
             ;   Merge as much of the next FBO as we need.
             ldy #1          ; heapdata size offset
-            lda P0size      ; requested size
+            lda P0size      ; requested alloc size
+            sta P3size      ; save a copy to use later
             sec             ; XXX no need since we will never use carry?
-            sbc 2           ; subtract header size of current block
-            sbc (P0),y      ; and space available in current block
+            sbc -1+2        ; add 1, subtract header size (2)
+            sbc (P0),y      ;    and space available in current block
+                            ;    giving us bytes we need + 1
+            cmp (P3),y      ; compare with bytes in next block
+            bcs .mergecont  ; not enough, merge that block and continue looking
 
+            ;   XXX P0size already saved in P3size so we can use it for next try
+            ;   XXX split the following block so first and second have
+            ;       exactly the space we need
+            ;   XXX merge the two blocks and we're done.
+
+.mergecont: ;   The space in the initial block plus the space in the next
+            ;   block is not enough; merge the two and try again.
             BRK
 
-.errexit    clc
+
+.exact      BRK
+
+.nospace    clc
             rts
 
 

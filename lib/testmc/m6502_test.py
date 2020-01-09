@@ -126,84 +126,92 @@ def test_Regs_eq_flags():
 def test_Machine_memory_zeroed(M):
     assert [0]*0x10000 == M.mpu.memory
 
-def test_Machine_deposit_byte(M):
+def test_Machine_deposit_byte_single(M):
     for i in (0xEE, 0x17, 0, 0xFF, 0x10):
-        M.deposit(6, i)
+        data = M.deposit(6, i)
         assert [0, i, 0] == M.mpu.memory[5:8]
         assert 0x10000 == len(M.mpu.memory)
+        assert data == [i]
+
+def test_Machine_deposit_byte_multi(M):
+    data = M.deposit(12, 0x61, [0x62, 0x63], (0x64,), b'ef', 0x67)
+    assert b'\x00abcdefg\x00' == bytes(M.mpu.memory[11:20])
+    #   We must not change the size of the memory array.
+    assert 0x10000 == len(M.mpu.memory)
+    assert data == list(range(0x61, 0x68))
 
 def test_Machine_deposit_byte_badaddr(M):
     with pytest.raises(ValueError) as e:
         M.deposit(-1, 0)
-    assert e.match(r'Bad address \$-001 to deposit byte value \$00')
+    assert e.match(r'^deposit @\$-001: address out of range$')
 
     with pytest.raises(ValueError) as e:
         M.deposit(0x10000, 0)
-    assert e.match(r'Bad address \$10000 to deposit byte value \$00')
+    assert e.match(r'^deposit @\$10000: address out of range$')
+
+def test_Machine_deposit_byte_toomuchdata(M):
+    # XXX check list of values too long
+    with pytest.raises(ValueError) as e:
+        M.deposit(0xFFFE, b'EF0')
+    assert e.match(r'^deposit @\$FFFE: data length 3 exceeds memory$')
 
 def test_Machine_deposit_byte_badvalue(M):
     with pytest.raises(ValueError) as e:
         M.deposit(6, -1)
-    assert e.match(r'Bad byte value \$-1 to deposit at addr \$0006')
+    assert e.match(r'^deposit @\$0006: invalid byte value \$-1$')
 
     with pytest.raises(ValueError) as e:
         M.deposit(0xFEDC, 0x100)
-    assert e.match(r'Bad byte value \$100 to deposit at addr \$FEDC')
+    assert e.match(r'^deposit @\$FEDC: invalid byte value \$100$')
 
     with pytest.raises(ValueError) as e:
-        M.deposit(0xA0, 1.5)
-    assert e.match(
-        r'Bad \(non-integral\) byte value 1.5 to deposit at addr \$00A0')
+        M.deposit(0xA0, [1.5])
+    assert e.match(r'^deposit @\$00A0: non-integral value 1.5$')
 
-def test_Machine_deposit_sequence(M):
-    M.deposit(6, [9, 2, 3, 8])
-    assert [0]*6 + [9, 2, 3, 8] + [0]*(0x10000 - 6 - 4) == M.mpu.memory
+    with pytest.raises(ValueError) as e:
+        M.deposit(0xB0, {1:2})
+    assert e.match(r'^deposit @\$00B0: invalid argument {1: 2}$')
 
-def test_Machine_deposit_bytestr(M):
-    addr = 0x1234
-    M.deposit(addr, b'@ABC\00\xff')
-    #   Also check the two guard bytes on either side.
-    expected = [0, 0, 0x40, 0x41, 0x42, 0x43, 0, 0xff, 0, 0]
-    assert expected == M.mpu.memory[addr-2:addr-2+len(expected)]
-
-def test_Machine_depword(M):
-    M.depword(0x152, 0x1234)
+def test_Machine_depword_single(M):
+    words = M.depword(0x152, 0x1234)
     assert 0x0000 == M.word(0x150)
     assert 0x1234 == M.word(0x152)
     assert 0x0000 == M.word(0x154)
+    assert [ 0x1234 ] == words
 
 def test_Machine_depword_oddaddr(M):
-    M.depword(0x163, 0x1234)
+    words = M.depword(0x163, 0x5678)
     assert 0x0000 == M.word(0x161)
-    assert 0x1234 == M.word(0x163)
+    assert 0x5678 == M.word(0x163)
     assert 0x0000 == M.word(0x165)
+    assert [ 0x5678 ] == words
 
-def test_Machine_depword_badvalue(M):
-    with pytest.raises(ValueError) as e:
-        M.depword(0x3, -1)
-    assert e.match(r'Bad word value \$-001 to deposit at addr \$0003')
-
-    with pytest.raises(ValueError) as e:
-        M.depword(0xF0F0, 0x10000)
-    assert e.match(r'Bad word value \$10000 to deposit at addr \$F0F0')
-
-    with pytest.raises(ValueError) as e:
-        M.depword(0xA0, 3.321)
-    assert e.match(
-        r'Bad \(non-integral\) word value 3.321 to deposit at addr \$00A0')
-
-    with pytest.raises(ValueError) as e:
-        M.depword(0xFFFF, 0x1234)
-    assert e.match(r'Bad address \$10000 to deposit byte value \$12')
-
-def test_Machine_depword_sequence(M):
+def test_Machine_depword_multi(M):
     addr = 0x1111   # Odd, just to be weird
-    M.depword(addr, [0x1234, 0xFEDC, 0x1001])
+    words = M.depword(addr, [0x1234, 0xFEDC], 0x1001)
     assert      0 == M.word(addr-2)
     assert 0x1234 == M.word(addr+0)
     assert 0xFEDC == M.word(addr+2)
     assert 0x1001 == M.word(addr+4)
     assert      0 == M.word(addr+6)
+    assert [0x1234, 0xFEDC, 0x1001] == words
+
+def test_Machine_depword_badvalue(M):
+    with pytest.raises(ValueError) as e:
+        M.depword(0x3, -1)
+    assert e.match(r'^deposit @\$0003: invalid word value \$-1$')
+
+    with pytest.raises(ValueError) as e:
+        M.depword(0xF0F0, 0x10000)
+    assert e.match(r'^deposit @\$F0F0: invalid word value \$10000$')
+
+    with pytest.raises(ValueError) as e:
+        M.depword(0xA0, set([13]))
+    assert e.match(r'^deposit @\$00A0: invalid argument \{13}$')
+
+    with pytest.raises(ValueError) as e:
+        M.depword(0xFFFF, 0x1234)
+    assert e.match(r'^deposit @\$FFFF: data length 2 exceeds memory')
 
 def test_Machine_examine(M):
     M.mpu.memory[0x180:0x190] = range(0xE0, 0xF0)

@@ -22,9 +22,9 @@ def M():
 
 def test_addxy(M):
     S = M.symtab
-    M.deposit(0x8000, [
+    M.deposit(0x8000,
         I.JSR, S.addxy & 0xff, (S.addxy & 0xff00) >> 8,
-        I.NOP, I.NOP, I.NOP, I.NOP ])
+        I.NOP, I.NOP, I.NOP, I.NOP)
     assert S.addxy == M.word(0x8001)     # Did we set it up right?
     M.setregs(R(pc=S.addxy, x=0x12, y=0x34))
     #   XXX Test entry with carry flag set.
@@ -46,8 +46,8 @@ signeq_neg = [0x80, 0x81, 0xFE, 0xFF]
 )
 def test_signeq(M, match, a, b):
     S = M.symtab
-    M.deposit(S.signeq_a, [a])
-    M.deposit(S.signeq_b, [b])
+    M.deposit(S.signeq_a, a)
+    M.deposit(S.signeq_b, b)
     print('[a,b] = {}'.format(list(map(hex, (M.bytes(S.signeq_a, 2))))))
     M.call(S.signeq, R(N=int(match)))
     assert R(N=int(not match)) == M.regs
@@ -124,8 +124,8 @@ def test_read_ascii_byte(M):
 def test_stk(M):
     S = M.symtab
 
-    M.deposit(S.stkval_i1, [0xDE])  # sentinal: 222
-    M.deposit(S.stkval_i3, [0xDE])
+    M.deposit(S.stkval_i1, 0xDE)    # sentinel to ensure overwrite
+    M.deposit(S.stkval_i3, 0xDE)
     M.call(S.stk_main, R(a=0xFF, sp=0xFF), maxops=100, trace=0)
 
     #   Verify correct test data was pushed on the stack.

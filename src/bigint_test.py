@@ -160,7 +160,7 @@ def test_bi_x10(M, signed, value):
     M.depword(TSCR_ADDR+buflen, 212)
     M.depword(S.bufSptr, TSCR_ADDR-1)
 
-    M.deposit(TOUT_ADDR-1, [221] + value + [222])   # guard bytes
+    M.deposit(TOUT_ADDR-1, 221, value, 222)     # guard bytes
     M.depword(S.buf0ptr, TOUT_ADDR-1)
 
     M.deposit(S.buf0len, buflen)
@@ -215,16 +215,16 @@ def test_bi_read_decdigits(M, sign, input, buf):
     S = M.symtab
 
     if sign != 0: sign = 0xFF
-    M.deposit(S.sign, [sign])
+    M.deposit(S.sign, sign)
 
     osize = len(buf)
     M.deposit(S.buf0len, osize)
-    M.deposit(TOUT_ADDR-1, [240] + [241]*osize + [242])
+    M.deposit(TOUT_ADDR-1, 240, [241]*osize, 242)
     M.depword(S.buf0ptr, TOUT_ADDR-1)
 
-    M.deposit(TIN_ADDR-1, b'\xDD' + input + b'\xDF')    # guard bytes
+    M.deposit(TIN_ADDR-1, 0xDD, input, 0xDF)            # guard bytes
     M.depword(S.buf1ptr, TIN_ADDR)
-    M.deposit(S.buf1len, [len(input)])
+    M.deposit(S.buf1len, len(input))
 
     M.deposit(TSCR_ADDR-1, 250)                         # guard bytes
     M.deposit(TSCR_ADDR+osize, 251)
@@ -253,7 +253,7 @@ def test_bi_read_decdigits(M, sign, input, buf):
 def test_bi_read_decdigits_max(M, sign):
     S = M.symtab
 
-    M.deposit(S.sign, [sign])
+    M.deposit(S.sign, sign)
 
     input = b'9'*255
     input_i = int(input)
@@ -261,13 +261,13 @@ def test_bi_read_decdigits_max(M, sign):
     expected = list(input_i.to_bytes(128, byteorder='big', signed=True))
     print(input_i, '\n', expected)
 
-    M.deposit(TIN_ADDR-1, [122] + list(input) + [133])  # guard bytes
+    M.deposit(TIN_ADDR-1, 122, list(input), 133)  # guard bytes
     M.depword(S.buf1ptr, TIN_ADDR)
-    M.deposit(S.buf1len, [len(input)])
+    M.deposit(S.buf1len, len(input))
 
     osize = len(expected)
     M.deposit(S.buf0len, osize)
-    M.deposit(TOUT_ADDR-1, [155] + [0]*osize + [166])
+    M.deposit(TOUT_ADDR-1, 155, [0]*osize, 166)
     M.depword(S.buf0ptr, TOUT_ADDR-1)
     M.depword(S.bufSptr, TSCR_ADDR-1)
 
@@ -327,15 +327,15 @@ def test_bi_read_dec(M, input, bytes):
     #   Note that the pointers point to 1 below the buffer itself.
     scratchlen = 128
     M.depword(S.bufSptr, TSCR_ADDR-1)
-    M.deposit(TSCR_ADDR-1, [111] + [112]*scratchlen + [113])
+    M.deposit(TSCR_ADDR-1, 111, [112]*scratchlen, 113)
     M.depword(S.buf0ptr, TTMP_ADDR-1)
-    M.deposit(TTMP_ADDR-1, [121] + [122]*scratchlen + [123])
+    M.deposit(TTMP_ADDR-1, 121, [122]*scratchlen, 123)
 
     M.depword(S.buf1ptr, TIN_ADDR)
-    M.deposit(TIN_ADDR-1, [211] + input + [213])
+    M.deposit(TIN_ADDR-1, 211, input, 213)
     M.depword(S.buf2ptr, TOUT_ADDR)
     #   guard, output length, output value, guard
-    M.deposit(TOUT_ADDR-1, [221, 222] + [223] * len(bytes) + [224])
+    M.deposit(TOUT_ADDR-1, 221, 222, [223] * len(bytes), 224)
 
     try:
         M.call(S.bi_read_dec, R(y=len(input)))

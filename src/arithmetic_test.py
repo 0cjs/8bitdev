@@ -23,11 +23,11 @@ def M():
     return Machine()
 
 def add(M, a, b):
-    M.deposit(0x200, [ I.LDA, a, I.CLC, I.ADC, b, I.RTS, ])
+    M.deposit(0x200, I.LDA, a, I.CLC, I.ADC, b, I.RTS)
     M.call(0x200)
 
 def sub(M, a, b):
-    M.deposit(0x200, [ I.LDA, a, I.SEC, I.SBC, b, I.RTS, ])
+    M.deposit(0x200, I.LDA, a, I.SEC, I.SBC, b, I.RTS)
     M.call(0x200)
 
 ####################################################################
@@ -52,10 +52,10 @@ def test_2s_complement(M):
     #   bits (i.e., XOR with $7F then add 1) with the sign set. Thus, abs()
     #   for values of -1 to -(2^(n-1)-1) is the just the XOR with $FF.
     def absofneg(a):
-        M.deposit(0x200, [
+        M.deposit(0x200,
             I.LDA, a, I.EOR, 0xFF,  # XOR with $FF
             I.CLC, I.ADC, 0x01,     # Add 1
-            I.RTS, ])
+            I.RTS)
         M.call(0x200)
 
     absofneg(0xFF); assert R(a=0x01) == M.regs  # -$01 → $01
@@ -73,12 +73,12 @@ def test_2s_complement_abs(M):
         #   Returns the absolute value of the 8-bit signed input.
         #   N flag set indicates overflow, i.e., input was -$80
         #       and we can't represent $80 in a signed 8-bit value
-        M.deposit(0x200, [
+        M.deposit(0x200,
             I.LDA, a,
             I.BPL, 5,               # Not negative; we're done (jump to RTS)
             I.EOR, 0xFF,            # XOR with $FF
             I.CLC, I.ADC, 0x01,     # Add 1, setting N if we overflowed
-            I.RTS, ])
+            I.RTS)
         M.call(0x200)
 
     abs(0x00); assert R(a=0x00, N=0) == M.regs
@@ -293,7 +293,7 @@ def test_sbc_signed(M):
 ####################################################################
 
 def cmp(M, a, b):
-    M.deposit(0x200, [ I.LDA, a, I.CMP, b, I.RTS, ])
+    M.deposit(0x200, I.LDA, a, I.CMP, b, I.RTS)
     M.call(0x200)
 
 #   CMP nn is a subtract without carry (SEC; SBC nn) but the result is

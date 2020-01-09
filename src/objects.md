@@ -7,18 +7,18 @@ want for a small language to run on an 8-bit microprocessor system.
 Representation of Objects in Memory
 -----------------------------------
 
-Pointers are stored in 16-bit _words_ as _[tagged]_ values that in
-some cases represent the object itself, rather than pointing to
-storage for the object. A pointer will only ever actually reference
-memory in the heap if it points to a _cons cell_ or a _heapdata
-header_.
+Object references are 16-bit _words_ containing _[tagged]_ values. If
+the value cannot be a _dword_ (two-word- or 4-byte-) [aligned] pointer,
+i.e., at least one of the two least bits is not 0, it represents the
+object itself. Otherwise the value is a pointer to an object in the
+heap.
 
-Objects are allocated on the heap at addresses [aligned] to a two word
-(four byte) boundary. Objects in the heap are of two types:
-- _Heapdata objects_ start with a type byte, determining format of
-  object, followed by a length byte for the size of the following
-  data, followed by and up to 254 bytes of object data.
-- _Cons cells_ are two pointer words, the _car_ followed by the _cdr_.
+Objects are allocated on the heap at addresses [aligned] to a dword
+(four byte) boundary. Objects in the heap are either:
+- a _cons cell_ of two object reference words, the _car_ followed by
+  the _cdr_; or
+- _heapdata objects_, which start with a header giving format and
+  length information followed object data, of arbitrary length.
 
 Every address in the heap is part of an object. Space available for
 allocation is indicated by free space heapdata objects (_FSO_s) of
@@ -38,44 +38,46 @@ _asize-3_, allowing the asize to be calculated from the hdsize.
 Given an arbitrary (properly aligned) address in the heap we cannot
 tell if it points to a cons cell or a heapdata object because it might
 point into the middle of a heapdata object; thus walking the entire
-heap must be done by starting at its lowest location in memory.
+heap must be done by starting at its lowest location in memory or at a
+known-good pointer to an object.
 
-This allows us to tag pointers in the following way:
-- Heapdata headers are never pointers, because they must be
-  distinguishable from pointers in order to determine that a heap
-  object is not a cons cell.
-- Values with the least siginificant bit set are one of two types: an
-  unsigned byte (or char) or a small (14-bit) signed integer.
-- Values with the least significant bit clear and a non-zero high
-  address byte are pointers into the heap.
-- Values with the LSB clear and a zero high address byte are fixed
-  constant objects identified by their location so that no heap
-  storage is necessary for them. (The first 256 bytes of memory cannot
-  be used for heap storage; this isn't a problem since most 8-bit
-  processors have other more important uses for this anyway: zero page
-  on 6800/6502 and interrupt vectors on the 8080.)
+### Reference/Pointer Tagging
+
+The different types of object references are determined by whether
+their most significant byte (MSByte) is zero and the values of their
+two least significant bits (LSbits).
+
+    MSByte LSbits   Type
+      00    %00     Fixed constant; no heap storage
+     ≠00    %00     Pointer into heap
+     any    %01     Heapdata header; never an object reference
+     any    %10     Character or unsigned byte; MSByte is char/byte value
+     any    %11     Small (14-bit) signed integer (see below)
+
+Notes:
+- Because the fixed constants (MSbyte=0 LSbits=%00) share the format
+  of pointers into the heap, addresses $00nn cannot be used for heap
+  storage. Most 8-bit processors have other more important uses for
+  this page anyway (zero page for 6800/6502; interrupt vectors for
+  8080).
+- Heapdata headers are not object references and appear in the heap
+  only. Within the heap, this allows distingushing a cons cell (whose
+  car is always an object reference) from a heapdata object.
 
 The following table shows the details of tagging and determining
 values. `x` represents a don't-care bit, but see below. Objects marked
-`R` may contain pointers themselves and need to be recursively
-followed by the GC.
+`R` may contain further references and must be recursively followed by
+the GC.
 
     MSB LSB (binary) R  Description
-    00   000000 x0      nil
-    00   000001 x0      true, t
-    00   ?????? x0      (other special values?)
-    AA   aaaaaa x0   R  (AA≠00) pointer into heap
-    NN   000000 01      byte/char (unsigned) value NN
-    LL   ffffff 01   R  heapdata header: length LL, format id ffffff (1-63)
-    NN   nnnnnn 11      smallint: -8192 to 8191
-
-The `x` bit on pointers into the heap is available for use by the
-garbage collector. However, as an alternative a separate bit array
-could be allocated for this (one bit for every possible address on
-the heap, even those that may be in the middle of heapdata objects),
-increasing heap overhead by about 12.5%. (This would not be necessary
-for read-only heap areas.) A Schorr-Wait algorithm would require two
-bits.
+    00   000000-00      nil
+    00   000001-00      true, t
+    00   ??????-00      (other special values?)
+    AA   aaaaaa-00   R  (AA≠00) pointer into heap, address AAaaaaaa00.
+    xx   000000-01      currently unused; could be a heapdata header?
+    LL   ffffff-01   R  heapdata header: length LL, format id ffffff (1-63)
+    CC   000000-10      character or unsigned byte, value CC
+    NN   nnnnnn-11      smallint: -8192 to 8191
 
 ### Heapdata Formats
 
@@ -109,7 +111,7 @@ the format and type using it. Following this are more detailed
 descriptions of the individual formats.
 
     num   binary  id siz len  descr
-    $01  0000 00   0          free block
+    $01  0000 00   0          free block object
     $09  0000 10   2   8  6   env-header
     $0D  0000 11   3   8  6   env-entry
     $21  0010 00   8          symbol (string)
@@ -375,6 +377,17 @@ unit suffixes.)
     is supplied.
   - It's not clear on the best way to assign precision at initial
     allocation.
+
+#### Garbage Collection
+
+Read-only heaps do not need to be collected.
+
+There is currently no room in the heap object format for mark bits.
+Possibly a separate bit array could be allocated for this: one bit for
+every possible address on the heap, even those that may be in the
+middle of heapdata objects. This would increase heap overhead by about
+12.5%, but is necessary only during collection. A Schorr-Wait
+algorithm would require two bits.
 
 
 References

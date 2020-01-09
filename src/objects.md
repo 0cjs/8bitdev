@@ -7,49 +7,55 @@ want for a small language to run on an 8-bit microprocessor system.
 Representation of Objects in Memory
 -----------------------------------
 
-Pointers are stored in 16-bit _words_ as _[tagged]_ values that in
-some cases represent the object itself, rather than pointing to
-storage for the object. A pointer will only ever actually reference
-memory in the heap if it points to a _cons cell_ or a _heapdata
-header_.
+Object references are 16-bit _words_ containing _[tagged]_ values. If
+the value cannot be a _dword_ (two-word- or 4-byte-) [aligned] pointer,
+i.e., at least one of the two least bits is not 0, it represents the
+object itself. Otherwise the value is a pointer to an object in the
+heap.
 
-Objects are allocated on the heap with both address and size [aligned]
-to a two word (four byte) boundry. Objects in the heap either:
+Objects are allocated in the heap with both address and allocation
+size [aligned] to a dword boundary. Objects in the heap are either:
+- a _cons cell_ of two object reference words, the _car_ followed by
+  the _cdr_; or
 - _heapdata objects_, which start with a header giving format and
-  length information followed object data, of arbitrary length; or
-- are a _cons cell_ of two pointer words, the _car_ followed by the
-  _cdr_.
+  length information followed object data, of arbitrary length.
 
 All objects on the heap have an allocation size or _asize_ of the
-total number of bytes used by the object, which will always be a
-multiple of 4 to ensure that heap objects are always aligned.
-Additionaly, heapdata objects have an _hdsize_ as the second byte of
-the header indicating the length of the data after the header. The
-header plus the hdsize may be smaller than the asize due to object
+total number of bytes used in the heap by the object, which will
+always be a multiple of 4 to ensure that heap objects are always
+aligned. Additionally, heapdata objects have an _hdsize_ as the second
+byte of the header indicating the length of the data after the header.
+The header plus the hdsize may be smaller than the asize due to object
 alignment.
 
-No part of the heap is not part of an object; free space is indicated
-by free space heapdata objects (type `HDT_FREE`) or _FSO_s.
+The heap is always a contiguous series of objects. Blocks of free
+space are indicated by a sequence of one or more _FSO_s, free space
+objects that are heapdata objects of type `HDT_FREE`.
 
 Given an arbitrary (properly aligned) address in the heap we cannot
 tell if it points to a cons cell or a heapdata object because it might
 point into the middle of a heapdata object; thus walking the entire
-heap must be done by starting at its lowest location in memory.
+heap must be done by starting at its lowest location in memory or at a
+known-good pointer to an object.
 
-This allows us to tag pointers in the following way:
-- Heapdata headers are never pointers, because they must be
-  distinguishable from pointers in order to determine that a heap
-  object is not a cons cell.
-- Values with the least siginificant bit set are one of two types: an
-  unsigned byte (or char) or a small (14-bit) signed integer.
-- Values with the least significant bit clear and a non-zero high
-  address byte are pointers into the heap.
-- Values with the LSB clear and a zero high address byte are fixed
-  constant objects identified by their location so that no heap
-  storage is necessary for them. (The first 256 bytes of memory cannot
-  be used for heap storage; this isn't a problem since most 8-bit
-  processors have other more important uses for this anyway: zero page
-  on 6800/6502 and interrupt vectors on the 8080.)
+Object references are tagged in the following way:
+- Values with the two least significant bits `%00` and most
+  significant byte not `$00` are pointers into the heap.
+- Values with the LSBits `%00` and an MSB of `$00` are fixed constant
+  objects identified by their value alone so that no heap storage is
+  necessary for them. (This means that the first 256 bytes of memory
+  cannot be used for heap storage; this isn't a problem since most
+  8-bit processors have other more important uses for this anyway:
+  zero page on 6800/6502 and interrupt vectors on the 8080.)
+- Values with LSbits `%01` are heapdata headers; the six MSbits of the
+  least significant byte are the type and the most significant byte is
+  the length of the object's data. Object references may never have
+  such a value; these exist only as headers of objects on the heap.
+  This makes it easy to distinguish objects on the heap as object
+  references or heapdata objects.
+- Values with LSbits `%10` are a character or unsigned byte; the most
+  significant byte is the char/byte value.
+- Values with LSbits `%11` are small (14-bit) signed integers.
 
 The following table shows the details of tagging and determining
 values. `x` represents a don't-care bit, but see below. Objects marked
@@ -57,13 +63,14 @@ values. `x` represents a don't-care bit, but see below. Objects marked
 followed by the GC.
 
     MSB LSB (binary) R  Description
-    00   000000 x0      nil
-    00   000001 x0      true, t
-    00   ?????? x0      (other special values?)
-    AA   aaaaaa x0   R  (AA≠00) pointer into heap
-    NN   000000 01      byte/char (unsigned) value NN
-    LL   ffffff 01   R  heapdata header: length LL, format id ffffff (1-63)
-    NN   nnnnnn 11      smallint: -8192 to 8191
+    00   000000-00      nil
+    00   000001-00      true, t
+    00   ??????-00      (other special values?)
+    AA   aaaaaa-00   R  (AA≠00) pointer into heap, address AAaaaaaa00.
+    xx   000000-01      currently unused; could be a heapdata header?
+    LL   ffffff-01   R  heapdata header: length LL, format id ffffff (1-63)
+    CC   000000-10      character or unsigned byte, value CC
+    NN   nnnnnn-11      smallint: -8192 to 8191
 
 The `x` bit on pointers into the heap is available for use by the
 garbage collector. However, as an alternative a separate bit array
@@ -105,7 +112,7 @@ the format and type using it. Following this are more detailed
 descriptions of the individual formats.
 
     num   binary  id siz len  descr
-    $01  0000 00   0          free block
+    $01  0000 00   0          free block object
     $09  0000 10   2   8  6   env-header
     $0D  0000 11   3   8  6   env-entry
     $21  0010 00   8          symbol (string)

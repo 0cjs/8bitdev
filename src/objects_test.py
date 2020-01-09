@@ -1,9 +1,5 @@
-from    testmc.m6502 import  Machine, Registers as R, Instructions as I
+from    testmc.m6502 import  Machine, Registers as R
 import  pytest
-from    itertools import chain, count
-
-####################################################################
-#   Test fixtures and support
 
 @pytest.fixture
 def M():

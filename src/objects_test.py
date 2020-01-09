@@ -4,7 +4,7 @@ import  pytest
 @pytest.fixture
 def M():
     M = Machine()
-    M.load('.build/obj/objects')
+    M.load('.build/obj/src/objects.p')
     return M
 
 ####################################################################

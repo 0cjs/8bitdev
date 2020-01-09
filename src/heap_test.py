@@ -39,7 +39,7 @@ def test_HDT_values(M):
 ####################################################################
 #   Test support: heap setup
 
-def setheap(M, start, *, end=None, len=None, heapff=None, init=False):
+def setheap(M, start, *, end=None, len=None, heaplowat=None, init=False):
     ''' Set up data structures for a heap starting at `start`. One of
         `end` (the first address after the heap) or `len` (the length
         of the heap from which the end address will be calculated)
@@ -57,10 +57,7 @@ def setheap(M, start, *, end=None, len=None, heapff=None, init=False):
 
     S = M.symtab
     M.depword(S.heapstart, start)
-    if heapff is None:
-        M.depword(S.heapff, start)
-    else:
-        M.depword(S.heapff, heapff)
+    M.depword(S.heaplowat, start if heaplowat is None else heaplowat)
     M.depword(S.heapend, endaddr)
     if init:
         M.call(S.heapinit)
@@ -123,7 +120,7 @@ def heapobjs(M, *, data=False, free=False, limit=None):
             return objs
     return objs
 
-def buildheap(M, addr, objs=None, heapff=None):
+def buildheap(M, addr, objs=None, heaplowat=None):
     ''' Build a test heap at `addr` containing the given `objs`.
         This is done entirely "by hand" and does not depend on any of
         the code under test. No error checking is done; if invalid
@@ -138,19 +135,19 @@ def buildheap(M, addr, objs=None, heapff=None):
         of bytes to skip or a sequence of bytes to fill in after the
         type and length bytes.
 
-        The `heapstart` and `heapff` memory locations will be filled
-        with the given parameters. (`heapff` defaults to `addr`. It
-        must be explicitly specified if the heap does not start with a
-        free block; this will not calculate the actual position of the
-        first free block.) `heapend` will be calculated from the data
-        and filled in.
+        The `heapstart` and `heaplowat` memory locations will be
+        filled with the given parameters. (`heaplowat` defaults to
+        `addr`. It must be explicitly specified if the heap does not
+        start with a free block; this will not calculate the actual
+        position of the first free block.) `heapend` will be
+        calculated from the data and filled in.
 
         The length of the built heap will be returned.
     '''
     #   Making objs a keyword param with a default value allows us to
-    #   specify the optional heapff before it.
-    if objs is None:    raise ValueError('objs must be specified')
-    if heapff is None:  heapff=addr
+    #   specify the optional heaplowat before it.
+    if objs is None:        raise ValueError('objs must be specified')
+    if heaplowat is None:   heaplowat=addr
 
     S = M.symtab
     pos = addr
@@ -163,7 +160,7 @@ def buildheap(M, addr, objs=None, heapff=None):
             M.deposit(pos, fill)
             pos += len(fill)
 
-    setheap(M, addr, end=pos, heapff=heapff)
+    setheap(M, addr, end=pos, heaplowat=heaplowat)
     return pos - addr   # length
 
 ####################################################################
@@ -324,7 +321,7 @@ def test_heapinit(M, size):
             'pos: {:04x}'.format(pos)
 
     #   First free block object is at the start of the heap.
-    assert start == M.word(S.heapff)
+    assert start == M.word(S.heaplowat)
 
     #   Nothing other than free space on the heap.
     assert 0 == len(heapobjs(M, free=False))
@@ -480,7 +477,7 @@ def test_allocn(M):
     S = M.symtab
     setheap(M, 0x1000, end=0x2000, init=True)
     assert     16 == len(heapobjs(M, free=True))
-    assert 0x1000 == M.word(S.heapff)
+    assert 0x1000 == M.word(S.heaplowat)
     expected = []
     assert expected == heapobjs(M)
 
@@ -489,7 +486,7 @@ def test_allocn(M):
     #   expected to be filled in by the caller.
     M.call(S.allocn, R(a=0, x=0, C=1));  expected.append((0,4))
     assert R(C=0) == M.regs                 # returned success
-    heapff = M.word(S.heapff)
-    assert 0x1004 == heapff                 # new free start is after cons cell
-    assert HDT_FREE == M.byte(heapff)       # and is start of a free block
+    heaplowat = M.word(S.heaplowat)
+    assert 0x1004 == heaplowat              # new free start is after cons cell
+    assert HDT_FREE == M.byte(heaplowat)    # and is start of a free block
     assert expected == heapobjs(M)          # heap contains new cons cell

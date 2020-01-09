@@ -33,10 +33,15 @@
 ;   at `heapstart` and extends up to but not including the `heapend`
 ;   address, both of which must of course be dword aligned.
 ;
-;   As well as the start and end, we also in `heapff` ("heap first free")
-;   track the location of the first free block object within the heap  so
-;   that allocation does not need to trace through all the objects filling
-;   allocated space up to that point in the heap.
+;   As well as the start and end store two more values to increase
+;   effeciency of allocation. `heaplowat` ("heap low water mark") contains
+;   the address of a heap object no higher than (but possibly lower than)
+;   the first free block object within the heap  so that allocation does
+;   not need to trace through all the objects filling allocated space up to
+;   that point in the heap. `heapfbf` ("heap free bytes found") stores a a
+;   count of bytes "allocated" to free blocks found in the most recent
+;   operation that were not used during that operation to give an estimate
+;   of the minimum number of bytes currently free in the heap.
 ;
 ;   If during allocation no sufficient block of free space is found, the
 ;   heap may be compacted and/or garbage-collected to free space for
@@ -60,8 +65,9 @@ typemask    equ %11111100   ; mask to isolate heapdata type bits
 hd_maxsiz   equ 256-2-3-1   ; 250 ($FA) bytes
 
 heapstart   zds 2           ; start of heap
-heapff      zds 2           ; address of first free block object
 heapend     zds 2           ; first address after heap
+heaplowat   zds 2           ; address of first free block object
+heapfbf     zds 2           ; free bytes found and not used in recent heap oper
 
 ;   Temporary pointers and sizes used by heap routines
 ;   P0 must be first because we access, e.g., P1 via X offset of P1-P0.
@@ -70,6 +76,7 @@ P0size      zds 1           ; typically size of wanted allocation
 P1          zds 2
 P2          zds 2
 P3          zds 2
+P3size      zds 1
 
 ;--------------------------------------------------------------------------
 ;   Heapdata object data types
@@ -87,7 +94,7 @@ HDT_SYMBOL      hdtype 8
 ;   heapinit - initialize the current heap
 ;
 ;   Initialize a heap by filling it with free block objects and setting
-;   heapff. heapstart and heapend must contain the heap start and end
+;   heaplowat. heapstart and heapend must contain the heap start and end
 ;   locations, which must be dword aligned, and heapend must be after
 ;   heapstart.
 ;
@@ -96,7 +103,7 @@ HDT_SYMBOL      hdtype 8
 ;
 ;               X: (p)
 ;            A, Y: (d)
-;          heapff: (w) Set to the address of the first free block object,
+;       heaplowat: (w) Set to the address of the first free block object,
 ;                      which will be at the start of the heap.
 ;          P0, P1: (d)
 ;
@@ -108,14 +115,14 @@ heapinit
 .endok      ;   The first free block will be at start of heap.
             ;   Also make a copy in P0 for use in filling the heap.
             lda heapstart
-            sta heapff
+            sta heaplowat
             sta P0
             and #tagmask    ; alignment check
             beq .startok
             brk
 .startok
             lda heapstart+1
-            sta heapff+1
+            sta heaplowat+1
             sta P0+1
             ;   Calculate in P1 bytes remaining in the heap
             sec
@@ -168,7 +175,7 @@ heapinit
 ;   storage until the the next call to allocn, at which point it will be
 ;   considered usable free space.
 ;
-;   Starting at heapff this will search the heap for a block of free space
+;   Starting at heaplowat this will search the heap for a block of free space
 ;   large enough to hold the object. Multiple contiguous HDT_FREE objects
 ;   are treated as a single block of free space.
 ;
@@ -176,7 +183,7 @@ heapinit
 ;   length will be written to the object header in the heap (or $00 and $00
 ;   if a cons cell is being allocated), a new free block object of
 ;   appropriate size will be written after the newly allocated object,
-;   heapff will be updated, and the address of the new object will be
+;   heaplowat will be updated, and the address of the new object will be
 ;   written to P0.
 ;
 ;   If not enough contiguous free space is found, the total amount of free
@@ -187,21 +194,23 @@ heapinit
 ;
 ;   XXX how does this indicate success or failure? Carry clear/set?
 ;
-;                A: (d) object type
-;                X: (d) length of object
-;                Y: (d) -
-;       heapff: (w) The location at which the search for free space starts,
+;            A: (d) object type
+;            X: (d) length of object
+;            Y: (d) -
+;    heaplowat: (w) The location at which the search for free space starts,
 ;                   and set to the address of the first free block object
 ;                   after a successful allocation.
 ;           P0: (w) If successful, the address of the allocated block.
 ;       P0size: (w) Calculated allocation size. This is 4 for a cons cell
 ;                   or object length + 2 rounded up to the next dword
 ;                   for a heapdata object.
-;           P1: (w) Total amount of free space found during the search.
-;                   On failure, this will be the total amount of free
-;                   (but non-contiguous) space in the heap.
+;           P1: (d) (temporary storage for mergefree, splitfree)
 ;           P2: (d) (temporary storage for type, heapdata length)
 ;           P3: (d) (temporary storage used by splitfree)
+;      heapfbf: (w) Total amount of free space found but not allocated
+;                   during the search. On failure, this will be the total
+;                   amount of free (but non-contiguous) space in the heap.
+;                   XXX Just an estimate?
 ;
 allocn:
             stx P2+1        ; save length, if heapdata object
@@ -230,11 +239,11 @@ allocn:
 
 .start      ;   Start search of heap for a free block.
             ldx #0          ; utility zero
-            stx P1          ; init free space count
-            stx P1+1
-            lda heapff      ; init search pos. in heap (first free obj is next)
+            stx heapfbf     ; init free space count
+            stx heapfbf+1
+            lda heaplowat   ; init search pos. in heap (first free obj is next)
             sta P0
-            lda heapff+1
+            lda heaplowat+1
             sta P0+1
 
 .nextobj
@@ -267,10 +276,10 @@ allocn:
 .foundfree
             jsr mergefree   ; try to create FBO of proper size at P0
             bcs .allocated  ; we allocated the object; fill it in
-            ;   XXX here we should update the count in P1?
+            ;   XXX here we should update the free space count in heapfbf?
             bcc .nextobj    ; not enough space in this FBO; search for next one
 .allocated  BRK
-            ;   XXX How do we figure out if we need to update heapff?
+            ;   XXX How do we figure out if we need to update heaplowat?
             ;   perhaps an easier way to deal with this is to start updating
             ;   it when we start our search and keep doing so until we find
             ;   the first free block.
@@ -336,18 +345,22 @@ mergefree
                             ;    giving us bytes we need + 1
             cmp (P3),y      ; compare with bytes in next block
             bcs .mergecont  ; not enough, merge that block and continue looking
+            sec             ; XXX again no need because carry not used?
+            sbc #1          ; A now has exact bytes we need from 2nd FBO
 
-            ;   XXX P0size already saved in P3size so we can use it for next try
+            jsr splitfree
+
+
             ;   XXX split the following block so first and second have
             ;       exactly the space we need
             ;   XXX merge the two blocks and we're done.
 
+
 .mergecont: ;   The space in the initial block plus the space in the next
             ;   block is not enough; merge the two and try again.
+            ;   XXX P0size already saved in P3size so we can use it for next try
             BRK
 
-
-.exact      BRK
 
 .nospace    clc
             rts

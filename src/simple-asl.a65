@@ -81,3 +81,37 @@ fill        lda #0
             bne -
             rts
 fillbase    zds 2
+
+;--------------------------------------------------------------------------
+;           Demonstrate use of "negative offset" indexing
+
+LSB         function addr,(addr & $FF)
+MSB         function addr,((addr & $FF00) >> 8)
+
+;   negoff - calculate base address for use of index reg with negative offset
+;
+;   This must be given the END address of the array. You can then load the
+;   index register with -(len(data)) and iterate forward across the data
+;   with INX/INY; when it reaches 0 you are done.
+;
+negoff      function end,(end-$100)
+
+negoffcalc  ;   store calculated address for test/debug
+            lda #LSB(negoff(no_data_end))
+            sta no_dbgaddr
+            lda #MSB(negoff(no_data_end))
+            sta no_dbgaddr+1
+            rts
+
+negoffdemo
+            ldx #-6         ; length of no_data must be 6
+.loop       inc negoff(no_data_end),x
+            inx
+            bne .loop
+            rts
+
+no_dbgaddr  ds  2           ; read by unit test
+            db  $E0         ; guard byte
+no_data     db  "0a5g8s"
+no_data_end
+            db  $E1         ; guard byte

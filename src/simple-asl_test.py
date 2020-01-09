@@ -82,3 +82,27 @@ def test_fill(M, len):
     M.depword(S.fillbase, base)
     M.call(S.fill, R(y=len))
     assert guard + [0xFF] + [0]*len + guard == M.bytes(base-2, len+5)
+
+def test_negoff(M):
+    S = M.symtab
+
+    #   Show what negoff() calculates.
+    M.call(S.negoffcalc)
+    print('no_data=${:04X} negoff=${:04X}'
+        .format(S.no_data, M.word(S.no_dbgaddr)))
+
+    #   Confirm we have correct data in memory.
+    assert [0xE0, b'0a5g8s', 0xE1] \
+        == [ M.byte(S.no_data-1),           # guard
+             bytes(M.bytes(S.no_data, 6)),  # string
+             M.byte(S.no_data+6),           # guard
+           ]
+
+    #   Run the demo and confirm it worked.
+    M.call(S.negoffdemo, trace=True)
+    assert [0xE0, b'1b6h9t', 0xE1] \
+        == [ M.byte(S.no_data-1),           # guard
+             bytes(M.bytes(S.no_data, 6)),  # string
+             M.byte(S.no_data+6),           # guard
+           ]
+    assert R(x=0) == M.regs

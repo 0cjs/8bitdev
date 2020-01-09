@@ -50,8 +50,8 @@ two least significant bits (LSbits).
     MSByte LSbits   Type
       00    %00     Fixed constant; no heap storage
      ≠00    %00     Pointer into heap
-     any    %01     Heapdata header; never an object reference
-     any    %10     Character or unsigned byte; MSByte is char/byte value
+     any    %01     Character or unsigned byte; MSByte is char/byte value
+     any    %10     Heapdata header; never an object reference
      any    %11     Small (14-bit) signed integer (see below)
 
 Notes:
@@ -63,6 +63,9 @@ Notes:
 - Heapdata headers are not object references and appear in the heap
   only. Within the heap, this allows distingushing a cons cell (whose
   car is always an object reference) from a heapdata object.
+- The char/unsigned byte type (MSbyte=value, LSbits=%10) is not
+  strictly necessary; it may be replaced with something else if need
+  arises.
 
 The following table shows the details of tagging and determining
 values. `x` represents a don't-care bit, but see below. Objects marked
@@ -74,9 +77,9 @@ the GC.
     00   000001-00      true, t
     00   ??????-00      (other special values?)
     AA   aaaaaa-00   R  (AA≠00) pointer into heap, address AAaaaaaa00.
-    xx   000000-01      currently unused; could be a heapdata header?
-    LL   ffffff-01   R  heapdata header: length LL, format id ffffff (1-63)
-    CC   000000-10      character or unsigned byte, value CC
+    LL   ffffff-10   R  heapdata header: length LL, format id ffffff (0-63)
+    CC   000000-01      character or unsigned byte, value CC
+    xx   ??????-01      (other single-byte types?)
     NN   nnnnnn-11      smallint: -8192 to 8191
 
 ### Heapdata Formats
@@ -87,12 +90,10 @@ symbol, float) have multiple formats for storage as heapdata objects.
 A heapdata object starts with a two-byte header.
 
 The LSB describes the format and always has its least significant two
-bits set to `01`. The upper six bits are the format identifier
-(ranging from 1-63); when shifted left two bits with the lowest two
-bits set to the required `01` this whole byte is referred to as the
-_format number_. (Format number `$01` is a `byte` with value in the
-MSB and no additional data; in the heap this is recognized as the car
-of a cons cell rather than as heapdata.)
+bits set to `%10`. The upper six bits are the format identifier
+(ranging from 0-63); when shifted left two bits with the lowest two
+bits set to the required `%10` this whole byte is referred to as the
+_format number_.
 
 The MSB indicates the length of the data after the header, in bytes.
 (The actual storage used will be _len + 2_ rounded up to the next
@@ -111,21 +112,21 @@ the format and type using it. Following this are more detailed
 descriptions of the individual formats.
 
     num   binary  id siz len  descr
-    $01  0000 00   0          free block object
-    $09  0000 10   2   8  6   env-header
-    $0D  0000 11   3   8  6   env-entry
-    $21  0010 00   8          symbol (string)
-    $25  0010 01   9   8  4   symbol substring
-    $61  0110 00  24          integer
-    $69  0110 10  26          float, positive mantessa
-    $79  0111 10  30   4  2   word
-    $7D  0111 11  31   8  4   longword
-    $E9  1110 10  58          float, negative mantessa
+    $03  0000-00   0          free block object (FBO)
+    $0B  0000-10   2   8  6   env-header
+    $0F  0000-11   3   8  6   env-entry
+    $23  0010-00   8          symbol (string)
+    $27  0010-01   9   8  4   symbol substring
+    $63  0110-00  24          integer
+    $6B  0110-10  26          float, positive mantessa
+    $7B  0111-10  30   4  2   word
+    $7F  0111-11  31   8  4   longword
+    $EB  1110-10  58          float, negative mantessa
 
-    Bit assignments:
-      5     Sign bit: floats, ...
-      4     Number, including modular
-      3     Atomic (?)
+    Bit assignments (type byte/format number):
+      7 / 5     Sign bit: floats, ...
+      6 / 4     Number, including modular
+      5 / 3     Atomic (?)
 
 - __free block__: The header and the next _len_ bytes (always even,
   and always two less than a multiple of four) are space available to
@@ -303,6 +304,12 @@ Considerations and Alternatives
 -------------------------------
 
 ### Representation
+
+- Consider changing the "meaning bits" of the heapdata type bytes to
+  put the most important distinguishers in bits 7 and 6, because
+  testing these comes "for free" when testing a third or more bits
+  with the `BIT` instruction. (N=bit 7, V=bit 6, Z=all bits tested
+  with the operand are zero.)
 
 - To avoid duplicate symbols, and just for general symbol lookup, we
   need to be able to search through all symbols in memory. This

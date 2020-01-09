@@ -1,3 +1,59 @@
 ;   Some "objects" as described in objects.md
 
-donothing:  rts
+
+;   typedisp - dispatch based on type of object reference in `ref`
+;
+;   If `ref` is a pointer, does nothing and returns with carry clear.
+;
+;   Otherwise the tags indicate it's not a pointer, in which case the value
+;   is deconstructed into `type`/`len`, `char`, or `smallint` and carry is
+;   set on return.
+;
+;   Least significant bits of LSB (first byte) determine type:
+;     %00   pointer
+;     %10   heapdata object header
+;     %01   number: byte/char
+;     %11   number: smallint
+;
+;   The 6502 has no arithmetic shift right (ASR) instruction, so we have to
+;   synthesise it with CMP #80 (which loads the high bit of the accumulator
+;   into the carry flag) followed by ROR.
+;
+typedisp
+            lda ref         ; type byte or LSB of tagged pointer
+            cmp #$80        ; ASR, which helps later if it's a smallint
+            ror             ; bit 0 → carry
+            bcs .number     ; %x1: smallint or byte/char
+            lsr             ; original bit 1 → carry
+            bcs .heapdata   ; %10: a heapdata object
+            ;   tag=%00
+            rts             ; %00: pointer; we're done
+.heapdata   ;   tag=%10
+            lda ref         ; what we loaded has been destroyed, so reload type
+            sta type
+            lda ref+1       ; heapdata object header length byte
+            sta hdlen
+            rts
+.number     ;   tag=%x1
+            cmp #$80        ; ASR
+            ror             ; original bit 1 → carry
+            bcc .bytechar   ; %01: a byte/char
+            ;   tag=%11
+.smallint   sta smallint+1  ; MSB has already been ASR'd twice; store it
+            lda ref+1       ; LSB is byte after "type" byte, so we reverse
+            sta smallint    ;   the bytes to get native little-endian order
+            rts
+.bytechar   ;   tag=%10
+            lda ref+1       ; load byte/char value
+            sta char
+            rts
+
+
+;   typedisp input
+ref         ds      2       ; input object reference. not in ZP because
+                            ;   we'd often be reading this from the heap
+;   typedisp outputs
+type        zds     1       ; heapdata type
+hdlen       zds     1       ; heapdata length
+char        zds     1       ; char type
+smallint    zds     2       ; smallint type

@@ -40,6 +40,28 @@ foo         nop                 ;           :sec2:foo
     endsection sec2
 
 ;--------------------------------------------------------------------------
+;   BRK opcode generation and workarounds
+
+;   The standard BRK mnemonic assembles to $00 $EA (i.e., a NOP is added
+;   following the BRK). This is intentional behaviour, though there's just
+;   been some discussion about it on the list, as of 2020-01-10.
+
+;   It can be worked around by redefining BRK as a macro:
+
+brk         macro   arg=-1,{NOEXPIF}
+            byt $00     ; BRK opcode
+        if arg >= 0
+            byt arg     ; optional "argument" after BRK opcode
+        endif
+            endm
+
+testbrk     brk
+            byt $FF     ; sentinel
+
+testbrkarg  brk $38
+            byt $FE     ; sentinel
+
+;--------------------------------------------------------------------------
 ;   std.a65 test code
 
 ;   DS/DB/DW

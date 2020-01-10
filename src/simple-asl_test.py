@@ -18,6 +18,16 @@ def M():
 
     return M
 
+def test_brk(M):
+    S = M.symtab
+    assert 0x00 == M.byte(S.testbrk)
+    assert 0xFF == M.byte(S.testbrk+1), \
+        'redefined BRK should not add EA after 00'
+
+    assert 0x00 == M.byte(S.testbrkarg)
+    assert 0x38 == M.byte(S.testbrkarg+1)
+    assert 0xFE == M.byte(S.testbrkarg+2)
+
 def test_ds_db_dw(M):
     S = M.symtab
     start = S.defalloctest

@@ -12,11 +12,11 @@
 #
 
 #   Whence to clone ASL. It looks like this repo is kept up to date.
-asl_repo=https://github.com/0cjs/asl.git
+asl_repo=https://github.com/KubaO/asl.git
 
-#   Ref to checkout to after cloning, if not empty.
+#   Ref or branch to checkout after cloning, if not empty.
 #   (The checkout is not done if the source is already there.)
-asl_repo_ref=
+asl_repo_ref=dev/cjs/current
 
 #   Be careful here not to set variables, shell options, etc. that
 #   could affect scripts sourcing this file (e.g., don't `set -e`).
@@ -69,7 +69,7 @@ fetch_asl() {
     echo "Cloning asl from $asl_repo"
     git clone "$asl_repo" "$target_dir" || return $?
     [[ -z $asl_repo_ref ]] || {
-        echo "Switching to ref $asl_repo_ref"
+        echo "Switching to ref or branch $asl_repo_ref"
         git -C "$target_dir" checkout "$asl_repo_ref" || return $?
     }
 }

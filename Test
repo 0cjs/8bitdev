@@ -21,10 +21,11 @@ setup_asxxxx() {
     sha256sum --version >/dev/null || die 3
     local shacheck=$(sha256sum "$dldir/$archive" 2>/dev/null)
     [[ ${shacheck%% *} = $sha ]] || {
-        echo "Downloading $archive"
+        echo "----- Downloading ASxxxx from $archive"
         curl --create-dirs -o "$dldir/$archive" -L "$url/$archive"
     }
 
+    echo '----- Installing ASxxxx'
     unzip -h >/dev/null || die 3
     mkdir -p "$instdir"
     (cd "$instdir" && unzip -qo "$dldir/$archive" && chmod +x as* s19os9*)

@@ -9,12 +9,13 @@ ident       byt "simple-asl.a65"    ; we use this to check that we've loaded
 ;       Temporary symbol demonstrations
 tempsyms    nop     ; tempsyms
 .foo        nop     ; tempsyms.foo
-$$named     nop     ; named5
-.foo        nop     ; named5.foo
+$$named     nop     ; named8
+.foo        nop     ; named8.foo
 -           nop     ; __back0
 /           nop     ; __forw0
 +           nop     ; __forw1
-.foo        nop     ; __forw1.foo
+.foo2       nop     ; named8.foo (as of bld152 __back#/__forw# definitions
+                    ;   no longer start a new scope for dotted vars)
             rts
 tempsyms_end
 

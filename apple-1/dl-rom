@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -eu -o pipefail
+
+url='http://www.callapple.org/soft/ap1/emul/'
+archive='Apple1_bios.zip'
+
+dldir='../.download'
+
+cd "$(dirname "$0")"
+[[ -r $dldir/$archive ]] \
+    || curl --create-dirs -o "$dldir/$archive" -L "$url/$archive"
+unzip -u "$dldir/$archive"

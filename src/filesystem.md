@@ -80,6 +80,11 @@ unused 0 block and the free block table.
      4096 128 MiB   Optical disk, large hard disk, flash storage or image
     65536   4 GiB   Maximum block size
 
+To reduce memory pressure, block sizes of 256 bytes or less are
+preferred. Larger block sizes are here mainly to support media with
+larger sector sizes in situations where it's not practical to have the
+block driver subdivide sectors into multiple blocks.
+
 
 System Layers
 -------------
@@ -194,6 +199,10 @@ address in memory. The read function copies a block's worth of data
 from memory to the given block/volume; the write function does the
 reverse. There are no alignment constraints on the address, but a full
 block is always read or written.
+
+Anything here that can lessen the need for buffering (by supporting
+no-copy transfers, streamed processing, or other means) is worth
+bringing in here.
 
 (It's possible that this should be extended to take a length for the
 data in memory, reading/writing undefined data for the remainder of

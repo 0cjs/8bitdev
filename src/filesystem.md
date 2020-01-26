@@ -19,14 +19,17 @@ Design Criteria
   media with seeking heads. Random access within files on rotating
   media need not be optimized, but should be possible.
 - It should be optimal on devices storing around 100 KiB to 1 MiB, but
-  should also support very small devices (e.g., for RAM or ROM disks)
-  and larger devices up to some size reasonable for the 8-bit world.
-- It should have as much support as reasonable for recovering from
-  data errors; trashing a single sector ideally should corrupt no more
-  than one file or only file metadata without corrupting contents.
+  should also support very small devices (e.g., RAM or ROM volumes of
+  just a few kilotbytes) and larger devices up to some size reasonable
+  for the 8-bit world.
 - It should support varying block sizes, in particular at least all
   powers of two between 128 bytes and 4096 bytes, in order to support
   various floppy, HDD and optical media.
+- It should have as much support as reasonable for recovering from
+  data errors; trashing a single sector ideally should corrupt no more
+  than one file or only file metadata without corrupting contents,
+  though a recovery program may be necessary to recover from that
+  situation.
 - In order to reduce complexity, a hierarchical directory structure is
   not supported. However, up to 256 volumes may be simultaneously
   available, and volumes may have names, so this does give a sort of

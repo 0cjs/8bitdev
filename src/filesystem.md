@@ -96,18 +96,20 @@ The system is divided into layers in order to allow mixing and
 matching of hardware and software components. From the lowest to the
 highest layer, these are:
 
-1. Hardware using an interface specific to the block device interface
-   layer above it.
-2. A _block device_ interface for reads from and writes to block
-   storage by block number. (This does not cover formatting and
+1. Hardware using an interface specific to the following layer above it.
+2. A _block device interface_ or _BDI_ handling reads from and writes
+   to _volumes_ by block number. (This does not cover formatting and
    similar activities, which are external to this interface, whether
    done on the target microcomputer system itself or on other computer
    systems.)
-3. A _filesystem_ layer which communicates with the block device layer
-   on one side and presents an API for reading/writing/etc. files on
-   the other side.
-4. An _OS_ interface that is the client to the filesystem layer,
-   allowing opening/closing/reading/writing of files and so on.
+3. A _filesystem_ layer which communicates with the BDI on one side
+   and presents an API for reading/writing/etc. files on the other side.
+   The filesystem layer handles directories, free space tracking, and
+   the like.
+4. An _OS_ interface that is the client to a filesystem layer,
+   allowing opening/closing/reading/writing of files and so on. It may
+   also call the BDI layer directly to handle connection of block
+   volumes.
 
 This document covers the API between the block device and filesystem
 layers and an implementation of the filesystem layer itself. It's
@@ -127,73 +129,73 @@ actually exists and whether the driver gives access to read and write
 it is driver-dependent. (This allows, e.g., ROM volumes to save the
 space that would otherwise be allocated to an unused block.)
 
-Block numbers and addresses are always in native byte order (little-
-or big-endian depending on the CPU).
+Blocks may consist of multiple sectors, or parts of sectors, but this
+is transparent to the layers above. For example, floppy drives
+typically have 128 byte sectors but for efficiency would typically
+have a BDI using 256 byte blocks, reading and writing each block as a
+pair of sectors. But different BDIs might be created, or BDIs might be
+parameterized, to use different blocking for the same physical device.
 
-Blocks may consist of multiple sectors, but this is transparent to the
-layers above. For example, floppy drives typically have 128 byte
-sectors but for efficiency would typically have a BDI using 256 byte
-blocks, reading and writing each block as a pair of sectors. But
-different BDIs might be created, or BDIs might be parameterized, to
-use different blocking for the same physical device.
-
-### BDI Functions
-
-The block device interface (BDI) has three main functions. In all
-cases it should be assumed that an error can be returned to indicate
-failure of some sort; how this is done is not yet defined.
+A BDI driver never does caching of writes; that must be done by higher
+layers. A BDI driver may do caching of reads, but guarantees that any
+data read is from the current media; if it does cache reads it must be
+able to detect a media change and invalidate the cache when that
+happens.
 
 On systems with multiple kinds of devices, there may be a higher-level
 BDI that maps requests to several different lower-level BDIs. In any
 case, the address of the BDI entry point to be used by higher layers
-should be stored in RAM so that it can be replaced. (It might be
-replaced with a completely different driver or perhaps a shim to allow
-the use of multiple drivers).
+should be stored in RAM so that it can be replaced, or it should be
+possible to specify in some other way the BDI to be used by BDI
+clients. (BDIs provided with a system might be replaced with a
+completely different driver or perhaps a shim to allow the use of
+multiple drivers).
 
-#### Connect Device
+### BDI Functions
 
-_Connect Device_ is given an 8-bit _volume number_ and an optional
-string serving as a device or volume name; on return the device or
-volume name will be associated with that number for use in other calls
-below, or an error indication will be returned to indicate that the
-volume number is not available or no volume is available with that
-name. This is intended to allow, e.g., opening a filesystem image
-stored in a non-native filesystem on external media (e.g.,
-`MYSTUFF.DSK` on a FAT filesystem on an SD card).
+The BDI offers four basic functions:
+- Query/Connect volume, used to get volume information and connect
+  volumes to volume numbers where that functionality is available.
+- Read Block
+- Write Block
+- Read Bytes (optional), which allows reading of part of a block.
 
-BDIs with fixed volume assignments may allow only certain volume
-numbers (e.g., 0 and 1 for each of two floppy drives). In this case it
-might accept any device/volume name so long as the volume number is
-one of the valid fixed assignments, always returning success, and
-always return error for any other device/volume number.
+#### Query/Connect Volume
 
-#### Get Volume Information
+The _Query/Connect Volume_ function returns information about a given
+volume number or attempts to connect a volume with a given identifier
+to a volume number.
 
-_Get Volume Information_ is given an 8-bit volume number (either fixed
-by the driver or returned by the Connect Device function) and an
-address at which to store the volume information. The following data
-structure will be written starting at that address. Sizes are given in
-bytes; multi-byte numbers are big-endian. (The caller is free to swap
-bytes in the data structure after it's been written, if that's
-convenient.)
+Every BDI provides access to one or more _volumes_ identified by an
+8-bit _volume number_. These are of one of two types.
 
-    Name    Size    Description
-    BLKSIZ    1     n, where the block size of the device is 2^n
-    VOLLEN    2     The number of blocks (starting at 0) available on
-                    the volume currently mounted.
-    METASTART 2     The suggested block number at which filesystem
-                    metadata should start.
+_Fixed volumes_ are volume numbers that are always connected (at least
+for any given OS session) to a given source of block storage. This
+does not imply that the media cannot be changed, just that after a
+change reads from/writes to that volume number would then be using the
+new media. Examples are floppy drives and ROM filesystem images.
 
-`METASTART` is used on filesystems where seek time is dependent on
-distance; it will point to the start of a track/cylinder somewhere in
-the middle of the disk. Filesystems may (but do not have to) use this
-as the location at which to start their metadata (catalogue
-information or the like) in order to reduce average seek time between
-metadata and other data on the disk.
+_Named volumes_ are block images/devices identified by a name or other
+(possibly binary) identifier; they must be associated with a volume
+number before use. Examples might include disk partitions, network
+shares, or block device images in files on another filesystem.
 
-It's possible that this also ought to include volume name and other
-information as well. But given that can vary drastically in size,
-possibly that should be a separate call, if it's even necessary.
+If a BDI provides fixed volumes, these must be sequentially assigned
+from volume number 0. Any additional volume numbers that can be
+connected to a named volume must be sequentially assigned from after
+the first fixed volume. Having the volume numbers contiguous in this
+way allows clients of the driver to enumerate all fixed volumes and
+determine if connectable named volumes are available from this BDI.
+
+In simple environments the application using the filesystem might
+specify that the filesystem use only one BDI with a short list of
+fixed volumes. In more complex environments the application might have
+a list of BDIs, enumerate fixed volumes on them by doing queries
+before any connect requests, and provide the user a way to initiate
+connect requests for named volumes to specific BDIs.
+
+For the details of how the Query/Qonnect Volume function works, see
+the 6502 ABI as an example.
 
 #### Read Block, Write Block
 
@@ -207,10 +209,139 @@ Anything here that can lessen the need for buffering (by supporting
 no-copy transfers, streamed processing, or other means) is worth
 bringing in here.
 
-(It's possible that this should be extended to take a length for the
-data in memory, reading/writing undefined data for the remainder of
-the block if the data in memory are not a full block long, but I'm not
-sure if this is would actually be useful.)
+#### Read Bytes
+
+This is an optional function, reading just a range of bytes within a
+block, intended to be helpful to reduce memory usage on systems
+needing to access volumes with large block sizes. It probably should
+not be implemented if this would require the BDI to buffer a full
+block and copy parts of it; the filesystem layer itself should instead
+have generic code for handling this if that needs to be supported.
+
+
+BDI 6502 ABI (Application Binary Interface)
+-------------------------------------------
+
+XXX This section particularly is still under development.
+
+On 6502 processors, a BDI has a single entry point address and is
+called with a function number in the X register, parameter block MSB
+in the A register, and parameter block LSB in the Y register. On
+return the carry is clear to indicate success or set to indicate an
+error; where further error information is available the error code
+will be in the X register. Any registers or flags not holding
+return information may be destroyed.
+
+All addresses pointing into system memory are always in the 6502's
+native byte order, LSB followed by MSB. Multi-byte numbers refering to
+the disk, however, are always in big-endian order. (It's intended that
+filesystems will generally not be CPU-specific, and thus will store
+disk block addresses and lengths in big-endian format, as the
+filesystem describe in later sections does.)
+
+The function numbers (X register) are summarized in the table below.
+(Function numbers not defined below return with carry set and no other
+action taken.) These are more or less in order of frequency of use,
+allowing fairly efficient dispatch using `DEX; BEQ …` sequences.
+
+    $00   (Undefined)
+    $01   Read Block
+    $02   Read Bytes (optional)
+    $03   Write Block
+    $04   Query/Connect Volume
+
+The parameter block has the following data at the given offsets into
+the block. Parameter block values not specifically used by a function
+are guaranteed not to be read or written when that function is called,
+thus a shorter parameter block may be used for those functions.
+
+    $00   DPL: Data Pointer LSB
+    $01   DPH: Data Pointer MSB
+    $02   VOL: Volume Number
+    $03   ARG0: Additional byte argument
+    $04   BLKH: Block Number MSB
+    $05   BLKL: Block Number LSB
+    $06   ARG1H: MSB of additional argument
+    $07   ARG1L: LSB of additional argument
+
+### Query/Connect Volume
+
+This returns information about a connected volume or connects a volume
+to a given volume number. VOL contains the volume number to be queried
+or connected.
+
+If `ARG0` is $00 this returns information about the volume currently
+connected to the volume number given in `VOL`.
+- If a volume is connected  to `VOL` (through a previous call to this
+  function or because a volume is always connected to `VOL`) on return
+  the carry will be clear and the following will be filled in to the
+  parameter block:
+  - `ARG0`: _n_, where _2^n_ is the block size of the volume,
+  - `BLKH/BLKL`: the total number of blocks available on the volume,
+  - `ARG1H/ARG1L`: the block number of the first metadata block, METASTART.
+- If no volume is connected nothing will be written to the parameter
+  block, the carry will be set on return, and A will contain an error
+  code:
+  - $01: The BDI or currently connected hardware does not support use
+    of this or any higher volume number.
+  - $02: `VOL` could be connected, but currently isn't.
+
+If `ARG0` is greater than zero, `DPL/DPH` points to a buffer, of
+length given in ARG0, containing driver-specific connection
+information. (This might be an ASCII name for a volume image, a
+partition number, or anything else; the client of the filesystem layer
+would typically provide this.)
+- On success the carry will be clear and the same information will be
+  written to the parameter block as for the `ARG0` = $00 case above.
+- On failure the carry will be set and A will contain an error code:
+  - $01: The BDI or currently connected hardware does not support use
+    of this or any higher volume number.
+  - $02: `VOL` is connectable, but the connection information pointed
+    to by `DPL/DPH` was invalid.
+  - $03: This is a fixed volume number that does not support named
+    volumes.
+
+### Read Block, Write Block
+
+On entry the function number ($01 for read or $03 for write) must be
+in the A register and the parameter block must have `DPL/DPH`, `VOL`
+and `BLKH/BLKL` set to the memory address for the data to be
+read/written and the volume number and block number to be
+read/written.
+
+On success a block of data is copied from the volume to memory
+starting at `DPL/DPH` or vice versa and the call returns with carry
+clear. (The volume's blocksize is available by calling Query/Connect
+Volume.)
+
+On error, the call returns with the carry set and one of the following
+error codes is returned in the A register.
+- $02: `VOL` is not connected.
+- $04: The block is outside the range of the device, or a block 0
+  read/write was requested and is not supported.
+- $05: An error occurred when trying to read or write the block. This
+  may or may not have read or written (partially or fully) the memory
+  pointed to by `DPL/DPH`.
+
+### Read Bytes
+
+This is an optional function that may or may not be supported by any
+particular BIO.
+
+On entry the function number ($02) must be in the A register and the
+parameter block must have:
+- `DPL/DPH` set to the start address for writing the data
+- `VOL` set to a connected volume number from which to read
+- `ARG0` set to the number of bytes to read. 0 means 256 bytes.
+- `BLKH/BLKL` set to the block number to read
+- `ARG1H/ARG1L` set to the offset within the block at which to start reading
+
+The success and error returns are the same as for Read Block and Write
+Block, except with an additional error code and slight change for an
+existing error code:
+- $01: The Read Bytes call is not supported by this BIO.
+- $04: The block number `BLKH/BLKL` or range of bytes within a valid
+  block number specified by `ARG1H/ARG1L` and `ARG0` is invalid.
 
 
 Filesystem Design and Layout
@@ -441,10 +572,22 @@ Problems and Potential Design Changes
 We should probably add load address (and perhaps entry point address)
 tags for binary files, since this idea is common to many systems.
 
+It's possible that the Write Block function should be extended to take
+a length for the data in memory, reading/writing undefined data for
+the remainder of the block if the data in memory are not a full block
+long, but I'm not sure if this is would actually be useful.
+
+Possibly the 6502 API should allow Read Bytes to read more than 256
+bytes in a go. But it's not clear how useful this really is; no more
+than a block can be read at once anyway, and on systems with blocks
+larger than 256 bytes the most likely reason to want to use this is
+becuase of a desire to avoid allocating large amounts of memory to
+read relatively small portions of a block.
+
 One thing that's not entirely clear is if clustering of sectors into
 blocks should be handled by the block device interface, rather than
 the filesystem. Currently it seems easier to do the former, but that
-may introduce problems not documented here.
+may introduce problems not anticipated here.
 
 The filesystem currently can't deal with bad blocks, especially if the
 initial directory block is bad. Perhaps there's a way to work out how

@@ -352,30 +352,38 @@ above; others could be written or ported.
 
 The filesystem blocks are organized as follows:
 - A never-used block at offset 0. (This leaves room for a boot block).
-- A free block map starting at METASTART. This is a sequential bitmap
-  with a bit for each sector from 0 through VOLLEN, taking as many
-  sectors as necessary for the bitmap.
+- An optional free block map starting at METASTART. This is a
+  sequential bitmap with a bit for each sector from 0 through VOLLEN,
+  taking as many sectors as necessary for the bitmap.
 - An initial directory block starting immediately after the free block map.
 - All remaining blocks are directory or data blocks, allocated as
   necessary.
 
 #### Free Block Map
 
-The free block map is a convenience for efficiency and should not be
-assumed always to be correct. Whenever allocation information in the
-data blocks themselves conflicts with the free block map, the data
-blocks should be assumed correct and the free block map updated
-appropriately. It's possible that, for efficiency, free block map
-updates will be delayed until long after data block updates, and due
-to this the free block map updates do not happen at all. (This would
-be the case if someone removes a floppy disk in the middle of a
-write.)
+The free block map, if present, is a convenience for efficiency and
+should not be assumed always to be correct. Whenever allocation
+information in the data blocks themselves conflicts with the free
+block map, the data blocks should be assumed correct and the free
+block map updated appropriately. It's possible that, for efficiency,
+free block map updates will be delayed until long after data block
+updates, and due to this the free block map updates do not happen at
+all. (This would be the case if someone removes a floppy disk in the
+middle of a write.)
+
+The first byte of the first block of the free space map is always
+non-zero, because bit 0 must always be set (indicating that block 0 is
+not free). If the first byte is $00, the block is instead the first
+directory block and there is no free space map present. (This would be
+typical for read-only filesystems.)
 
 The map is a sequence of bytes where the LSB to MSB (bits 0 to 7) of
 the first byte represents the status of blocks 0 through 7, the next
 byte's 0-7 bits the status of blocks 8-15, and so on. This continues
 for as many device blocks as necessary to account for all blocks on
-the device.
+the device. For example on a volume with 256 byte blocks there will be
+one free space block for each 2048 (or fraction thereof) blocks on the
+volume, up to 32 for a volume with the maximum of 65536 blocks.
 
 Each bit is `0` to indicate that the block is (likely) free, and `1`
 to indicate that it is (likely) allocated.

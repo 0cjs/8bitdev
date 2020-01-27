@@ -272,7 +272,9 @@ Every file on the volume is assigned an 8-bit _file number_ from 0 to
 255. 0 and 1 are special file numbers; 0 indicates unallocated space
 and 1 indicates the block belongs to the _directory_, a special "file"
 containing the metadata for files (file numers, names, starting
-blocks, and so on).
+blocks, and so on). File numbers of deleted files are not reused until
+all subsequent file numbers have been used once (or once again); for
+more on this see below.
 
 When new data blocks are added to a file they are written first, and
 only after they have been successfully written to the block device are
@@ -305,28 +307,37 @@ The directory is always file 1 and its first block is the block
 immediately after the free block map. Additional directory blocks may
 be allocated as necessary anywhere on the disk.
 
-The directory contains a sequence of entries and unused areas. Each
-entry is as follows, with offsets and sizes in bytes:
+The directory contains a header entry followed by a sequence of
+entries for files and free space in the directory. All entries start
+with a single _file number_ byte (some file numbers are special and
+indicate information other than file metadata) followed by a length
+byte giving the total length of the data for that entry, not including
+the file number and length bytes themselves.
+
+The first entry always has file number $00. The length is always 1
+(for this version of the file system) and the sole byte of data is the
+_next file number_ field (details below).
+
+Subsequent entries are as follows, with offsets and sizes in bytes:
 
     Offset  Size    Description
-       0     1      File number, or 0 for an unused area in the directory
-       1     1      Total length of the metadata in this directory entry,
-                    from offset 2
-       2     1      "1" to indicate a first block field
-       3     1      "2" for the length of the first block field, not
-                    including the previous and this byte
+       0     1      File number, or $00 for an unused entry in the directory.
+       1     1      Total length (not including the file number and length
+                    bytes) of the data in this entry.
+       2     1      $01 or $02 to indicate a first block field. $01
+                    indicates an allocated file; $02 a deleted file whose
+                    blocks have not yet been deallocated.
+       3     1      $02 for the length of the first block field.
        4     2      The block number of the first block containing the
-                    contents of this file
-       6     2      "2" to indicate a filename field.
-       7     1      The length of the filename, _m_, not including
-                    this or the previous byte.
-       8     m      A filename as arbitrary ASCII bytes.
-       8+m   1      "0" to indicate the end of this directory entry, or
-                    any other non-"1" number to indicate the type of
-                    additional metadata
-       8+m+1 1      Length of this additional metadata field (not including
-                    the previous and this byte), if present.
-       8+m+2 ?      Additional metadata
+                    contents of this file.
+       6     2      $03 to indicate a filename field.
+       7     1      The length of the filename, _m_.
+       8     m      A filename as arbitrary bytes (usually printable ASCII).
+       8+m   1      $00 to indicate the end of this directory entry, or any
+                    other number (excepting $01, $02 or $03) to indicate
+                    the type of additional metadata.
+       8+m+1 1      Length of this additional metadata field, if present.
+       8+m+2 ?      Additional metadata.
        ...
 
 The directory entry always starts with a byte for the file number and
@@ -350,12 +361,14 @@ The currently defined field types are as follows:
     0   Unused field. (This is useful for deleting fields.)
     1   Start block of file data; always length 2 with the two bytes
         of data being the starting block in big-endian form.
-    2   Name field; length is the length of the name in bytes. There
+    2   Start block of file data for a deleted file whose blocks have
+        not (yet) been deallocated.
+    3   Name field; length is the length of the name in bytes. There
         is no terminator byte after the name.
-    3   Approximate file size in blocks. len=2, value big-endian.
-    4   Approximate file size in bytes. len=4, value big-endian.
-    5   File creation timestamp.
-    6   File modification timestamp.
+    4   Approximate file size in blocks. len=2, value big-endian.
+    5   Approximate file size in bytes. len=4, value big-endian.
+    6   File creation timestamp.
+    7   File modification timestamp.
 
 The only required fields are the start block and name fields. All
 implementations of this filesystem should handle directory entries
@@ -375,6 +388,33 @@ are likely to be system-specific, and need to be worked out if they're
 required. It's reasonable that we might have several different types
 for different platforms, with the presence of a particular filetype
 type indicating it's a file for that platform.
+
+#### File Number Assignment
+
+File numbers are assigned starting at 2 and proceeding sequentially
+for each new file to 255, wrapping around after that. This maximally
+delays the time at which a file number for a deleted file will be
+re-used, increasing the chances of recovery of corrupted disks and
+making available both file "undeletion" and optimizations when
+deleting files.
+
+The next file number to attempt to use when assigning a new file
+number is stored as the first data byte the first entry of the
+directory, as described in the section above. I.e., a freshly
+initialized filesystem image will contain $00 $01 $02 (type, length
+and next file number) at the start of the directory. This number must
+be read and it must be confirmed (by reading all other directory
+entries) that it's not in use; if it is used the number should be
+incremented and the procedure iterated until a free file number is
+found.
+
+When a file is deleted its start block field in the directory entry is
+changed from type $01 to $02. At this point the data blocks of the
+file are still allocated and the file can be undeleted by changing the
+type back to $02. At any point in the future (either automatically,
+when free space needs to be recovered for new files, or through user
+request) the deletion can be made permanent by deallocating the
+individual file blocks and the directory entry.
 
 
 Filesystem API
@@ -397,6 +437,9 @@ of _De Re Atari_.
 
 Problems and Potential Design Changes
 -------------------------------------
+
+We should probably add load address (and perhaps entry point address)
+tags for binary files, since this idea is common to many systems.
 
 One thing that's not entirely clear is if clustering of sectors into
 blocks should be handled by the block device interface, rather than

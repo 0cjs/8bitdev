@@ -385,6 +385,16 @@ determined, but is probably heavily dependent on the particular system
 in which it's running.
 
 
+Related Work
+------------
+
+The Atari DOS filesystem uses a nearly identical technique of storing
+file number, byte count and next sector information at the end of each
+sector. [This was not known to me when I did this design --cjs] It's
+described in detail in [Chapter 9, "The Disk Operating System"][dra9]
+of _De Re Atari_.
+
+
 Problems and Potential Design Changes
 -------------------------------------
 
@@ -401,3 +411,9 @@ block remapping may still have their own mechanisms to help with this.
 For floppies, it may be reasonable just not to use media with bad
 blocks. An alterative would be to make the first block at METASTART a
 list of bad blocks, but that would add a complexity to the filesystem.
+
+
+
+<!-------------------------------------------------------------------->
+[dra9]: https://www.atariarchives.org/dere/chapt09.php
+

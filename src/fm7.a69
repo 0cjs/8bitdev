@@ -1,0 +1,17 @@
+;   6809 code to be tested on Fujitsu FM-7
+
+            cpu 6809
+
+BIOS        equ $FBFA   ; holds address of BIOS request routine
+MON         equ $ABF9   ; entry point of monitor in BASIC ROM
+
+            org $7020
+
+bios        ldx #$7000
+            jsr [BIOS]
+            tfr cc,a
+            sta $701F
+            jmp MON     ; RTS goes back to BASIC, often generating an error
+
+return      rts
+-           bra -

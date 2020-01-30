@@ -155,7 +155,7 @@ chromatix_id:
             sta  $85
             lda  #$1D       ; 'N' EOR 'S'
             sta  $83
-            lda  #$25       ; 'N' EOR 'S' EOR '8'
+            lda  #$6B       ; 'N' EOR 'S' EOR '8'
             sta  $1D
             lda  #$4E       ; 'N'
     cpu 65C02

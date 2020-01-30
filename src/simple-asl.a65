@@ -138,3 +138,28 @@ no_dbgaddr  ds  2           ; read by unit test
 no_data     db  "0a5g8s"
 no_data_end
             db  $E1         ; guard byte
+
+;--------------------------------------------------------------------------
+;           Chromatix' 65*02 family identification
+;           http://forum.6502.org/viewtopic.php?f=2&t=5931
+
+;   on exit, A will contain ASCII char:
+;       N - NMOS 6502
+;       S - 65SC02
+;       C - 65C02 or 65CE02
+;       8 - 68C816 or 65C802
+
+chromatix_id:
+            lda   #0
+            sta  $84
+            sta  $85
+            lda  #$1D       ; 'N' EOR 'S'
+            sta  $83
+            lda  #$25       ; 'N' EOR 'S' EOR '8'
+            sta  $1D
+            lda  #$4E       ; 'N'
+    cpu 65C02
+            rmb4 $83        ; magic $47 opcode
+    cpu 6502
+            eor  $83
+            rts

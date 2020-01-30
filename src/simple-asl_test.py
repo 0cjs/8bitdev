@@ -116,3 +116,8 @@ def test_negoff(M):
              M.byte(S.no_data+6),           # guard
            ]
     assert R(x=0) == M.regs
+
+def test_chromatix_id(M):
+    M.call(M.symtab.chromatix_id)
+    expa = ord('S')             # 65C02, this emulator is, apparently
+    assert R(a=expa) == M.regs

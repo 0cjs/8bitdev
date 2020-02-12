@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+TTY=/dev/ttyUSB0
+
+basedir=$(dirname "$(dirname "$0")")
+
+errecho() { echo 1>&2 "$@"; }
+
+for file in "$@"; do
+    errecho "Sending $file"
+    ascii-xfr  -s >"$TTY" -l 150 -c 50 <("$basedir/bin/wozmon-deposit" "$file")
+done
+

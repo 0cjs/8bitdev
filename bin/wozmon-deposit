@@ -1,0 +1,35 @@
+#!/usr/bin/env python3
+
+from    os.path  import abspath, dirname, join
+from    site  import addsitedir
+from    sys  import argv
+
+BASEDIR = dirname(dirname(abspath(__file__)))
+
+def load_image(fname):
+    if '.' not in fname: fname += '.p'
+    if '/' not in fname: fname = join(BASEDIR, '.build', 'obj', 'src', fname)
+    return parse_obj_fromfile(fname)
+
+def print_wozinput(mi):
+    ''' Given a `testmc.memimage.MemImage`, print it out in the form
+        you would enter it into the Apple 1 Woz monitor.
+    '''
+    BYTES = 16                  # number of bytes per input line
+    for rec in mi:
+        data = rec.data
+        addr = rec.addr
+        index = 0
+        while index < len(data):
+            line = '{:04X}:'.format(addr)
+            for i in range(index, index+BYTES):
+                if i < len(data):
+                    line += ' {:02X}'.format(data[i])
+            print(line)
+            addr += BYTES
+            index += BYTES
+
+if __name__ == '__main__':
+    addsitedir(join(BASEDIR, 'lib'))
+    from testmc.asl import parse_obj_fromfile
+    print_wozinput(load_image(argv[1]))

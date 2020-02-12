@@ -66,7 +66,7 @@ class PFile(MemImage):
             that can create confusion when debugging. This is just a
             quick hack, however; the format should not be relied upon.
         '''
-        return 'PFfile(entrypoint={} creator={} records={})'.format(
+        return 'PFile(entrypoint={} creator={} records={})'.format(
             self.entrypoint, self.creator, super().__repr__())
 
     def __init__(self, istream):

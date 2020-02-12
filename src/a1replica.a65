@@ -1,0 +1,63 @@
+;   Routines for my Apple 1 Replica SBC and bits of hardware I've added to it.
+;
+;   PIA0 (onboard): $D010-$D01F; mirrored at $D030, $D050, ...
+;   PIA1: $D000-$D00F, mirrored at $D020, $D040, ...
+
+            cpu 6502
+            include "src/std.a65"
+
+            org $400
+
+;----------------------------------------------------------------------
+;   Utility routines
+
+;   Short delay loop; exact timing is not so important.
+;   At 1 MHz it's about 1.8 ms * X-1.
+;
+;   Destroys X and Y.
+;
+loopdlymax: ldx #0          ; maximum human delay this routine can do
+loopdly:    dex             ; otherwise we take delay amount in X
+            beq .done
+            ldy #$00
+.innerloop  dey
+            beq loopdly
+            bne .innerloop
+.done       rts
+
+;----------------------------------------------------------------------
+;   PIA routines
+
+PIA2_DA     equ     $D000
+PIA2_CA     equ     $D001
+PIA2_DB     equ     $D002
+PIA2_CB     equ     $D003
+
+;   Initialize PIA 2: Port A all input, port B all output.
+;
+;   This may be called any time; it does not depend on the PIA having
+;   been reset first.
+;
+;   A is unused at the moment, but may be used for I/O with a device
+;   that requires CMOS-level inputs (min. 3.5 V high rather than 2 V).
+;
+;   B currently drives an LED display of some sort.
+;
+pia2init:   lda #0
+            sta PIA2_CA
+            sta PIA2_CB
+            sta PIA2_DA
+            lda #$FF
+            sta PIA2_DB
+            lda #%00000100  ; C{AB}{12} lines input, no interrupts
+            rts
+
+;   Count up port B, with user visible timing.
+countB:     lda #$FF
+            sec
+.loop       sta PIA2_DB
+            ldx #110        ; about 200 ms.
+            jsr loopdly
+            sbc #1
+            bne .loop
+            rts

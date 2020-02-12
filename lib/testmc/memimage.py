@@ -27,4 +27,4 @@ class MemImage(list):
         self.append(MemImage.MemRecord(addr, data))
 
     def __iter__(self):
-        return ((mr.addr, mr.data) for mr in super().__iter__())
+        return (self.MemRecord(mr.addr, mr.data) for mr in super().__iter__())

@@ -20,6 +20,9 @@ def test_memimage_memrec():
     for addr, data in mi:           # make sure we're iterable
         assert 0x1234 == addr
         assert testdata == data
+    for rec in mi:                  # and our tuple has accessors
+        assert 0x1234 == rec.addr
+        assert testdata == rec.data
 
 def test_memimage_memrec_alternate():
     ''' When MemRec is a different type with additional attributes,

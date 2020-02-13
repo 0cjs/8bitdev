@@ -57,8 +57,8 @@ PIA2_CB     equ     $D003
 pia2init:   lda #0
             sta PIA2_CA
             sta PIA2_CB
-            sta PIA2_DA
             lda #$FF
+            sta PIA2_DA
             sta PIA2_DB
             lda #%00000100  ; C{AB}{12} lines input, no interrupts
             sta PIA2_CA
@@ -69,18 +69,20 @@ pia2init:   lda #0
 ;   Counting in various ways out port B, with user-visible timing.
 ;
 
-countdownB: lda #$FF
+countdown:  lda #$FF
             sec
 .loop       sta PIA2_DB
+            sta PIA2_DA
             ldx #110        ; about 200 ms.
             jsr loopdly
             sbc #1
             bne .loop
             rts
 
-countupB:   lda #$00
+countup:    lda #$00
             clc
 .loop       sta PIA2_DB
+            sta PIA2_DA
             ldx #110        ; about 200 ms.
             jsr loopdly
             adc #1
@@ -88,5 +90,5 @@ countupB:   lda #$00
             rts
 
 main:       jsr pia2init
-            jsr countupB
+            jsr countup
             jmp wozmon

@@ -8,6 +8,6 @@ errecho() { echo 1>&2 "$@"; }
 
 for file in "$@"; do
     errecho "Sending $file"
-    ascii-xfr  -s >"$TTY" -l 150 -c 50 <("$basedir/bin/wozmon-deposit" "$file")
+    ascii-xfr  -s >"$TTY" -l 100 -c 35 <("$basedir/bin/wozmon-deposit" "$file")
 done
 

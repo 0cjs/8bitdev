@@ -8,8 +8,19 @@
 
             org $400
 
+wozmon      equ     $FF1F   ; Woz monitor entry point
+
 ;----------------------------------------------------------------------
 ;   Utility routines
+
+;   Call a single routine and return to the monitor.
+;
+;   This is intended for the developer to tweak on the Apple 1 by
+;   changing the jump location, e.g., `401:7` to call loopdlymax.
+;
+call:       jsr nothing
+            jmp wozmon
+nothing:    rts
 
 ;   Short delay loop; exact timing is not so important.
 ;   At 1 MHz it's about 1.8 ms * X-1.
@@ -50,6 +61,8 @@ pia2init:   lda #0
             lda #$FF
             sta PIA2_DB
             lda #%00000100  ; C{AB}{12} lines input, no interrupts
+            sta PIA2_CA
+            sta PIA2_CB
             rts
 
 ;   Count up port B, with user visible timing.
@@ -61,3 +74,7 @@ countB:     lda #$FF
             sbc #1
             bne .loop
             rts
+
+main:       jsr pia2init
+            jsr countB
+            jmp wozmon

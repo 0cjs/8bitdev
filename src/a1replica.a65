@@ -91,4 +91,7 @@ countup:    lda #$00
 
 main:       jsr pia2init
             jsr countup
+            lda #0
+            sta PIA2_DB     ; turn off all lights
+            sta PIA2_DA
             jmp wozmon

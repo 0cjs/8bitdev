@@ -12,10 +12,10 @@ def M():
 #   Utility routines
 
 @pytest.mark.parametrize('x, cycles', (
-    (0x01,      5), # "no" delay: 5 μs
-    (0x02,   1801), # minimum real delay: 1.8 ms
-    (0x03,   3597), # next step: 3.6 ms; each additional step adds about 1.8 ms
-   #(0x81, 229893), # half total delay available: about 230 ms
+    (0x01,     23), # "no" delay: 23 μs
+    (0x02,   1819), # minimum real delay: 1.8 ms
+    (0x03,   3615), # next step: 3.6 ms; each additional step adds about 1.8 ms
+   #(0x81, 229911), # half total delay available: about 230 ms (slowish test)
 ))
 def test_humdly(M, x, cycles):
     M.call(M.symtab.loopdly, R(x=x))

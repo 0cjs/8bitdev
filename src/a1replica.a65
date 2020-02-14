@@ -23,18 +23,22 @@ call:       jsr main
 nothing:    rts             ; test target for JSR above
 
 ;   Short delay loop; exact timing is not so important.
-;   At 1 MHz it's about 1.8 ms * X-1.
-;
-;   Destroys X and Y.
+;   Delay is X * 1.8 ms (@1 MHz). Preserves A and Y.
 ;
 loopdlymax: ldx #0          ; maximum human delay this routine can do
-loopdly:    dex             ; otherwise we take delay amount in X
+loopdly:    pha
+            tya
+            pha
+.outerloop  dex
             beq .done
             ldy #$00
 .innerloop  dey
-            beq loopdly
+            beq .outerloop
             bne .innerloop
-.done       rts
+.done       pla
+            tay
+            pla
+            rts
 
 ;----------------------------------------------------------------------
 ;   PIA routines

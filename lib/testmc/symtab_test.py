@@ -5,17 +5,18 @@ def test_SymTab():
     sym2 = SymTab.Symbol('two', 'Two', None)
     s = SymTab([sym1, sym2])
 
-    assert        2 == len(s)
+    #   .sym() interface
     assert     sym1 == s.sym('one')
     assert     sym2 == s.sym('two')
 
-    assert        1 == s['one']
-    assert   'Two'  == s['two']
+    #   Attribute interface
     assert        1 == s.one
     assert    'Two' == s.two
 
-    #   Confirm we're iterable
+    #   Collection interface
+    assert        1 == s['one']
+    assert   'Two'  == s['two']
+    assert        2 == len(s)
     for name, value in s:
         assert name in ('one', 'two')
         assert value in (1, 'Two')
-

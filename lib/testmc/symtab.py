@@ -30,7 +30,9 @@ class SymTab():
 
         You may look up the value of a symbol directly with ``stab.name``
         or ``stab['name']`` or get the `Symbol` object by name with
-        ``stab.sym('name')``.
+        ``stab.sym('name')``. Iterating over the `SymTab` will produce a
+        stream of ``(name, value)`` tuples for those attributes of each
+        `Symbol`.
     '''
 
     class Symbol(ntup('Symbol', 'name, value, section')):

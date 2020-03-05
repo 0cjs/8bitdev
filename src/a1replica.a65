@@ -8,7 +8,14 @@
 
             org $400
 
-wozmon      equ     $FF1F   ; Woz monitor entry point
+KBD         equ     $D010   ; PIA.A keyboard input
+KBDCR       equ     $D011   ; PIA.A control register
+DSP         equ     $D012   ; PIA.B display output register
+DSPCR       equ     $D013   ; PIA.B control register
+wozmon      equ     $FF1F   ; Woz monitor entry point (GETLINE)
+echo        equ     $FFEF   ; print char in A to terminal
+prbyte      equ     $FFDC   ; print value in A as two hex digits
+prhex       equ     $FFE5   ; print lower nybble of A as a hex digit
 
 ;----------------------------------------------------------------------
 ;   Utility routines
@@ -38,6 +45,14 @@ loopdly:    pha
 .done       pla
             tay
             pla
+            rts
+
+;   Wait for a key from the keyboard, returning it in A.
+;   The Apple 1 keyboard always returns chars with the MSB set.
+;   (The ROM has no separate subroutine for this.)
+getkey:     lda KBDCR
+            bpl getkey      ; IRQ1A flag (b7) not set: no input ready
+            lda KBD
             rts
 
 ;----------------------------------------------------------------------
@@ -90,6 +105,19 @@ countup:    lda #$00
             ldx #110        ; about 200 ms.
             jsr loopdly
             adc #1
+            bne .loop
+            rts
+
+mancount:   ;   Manual count triggered via keyboard input
+            ldy #00
+.loop       sty PIA2_DB
+            sty PIA2_DA
+            lda #' '
+            jsr echo
+            tya
+            jsr prbyte
+            jsr getkey
+            iny
             bne .loop
             rts
 

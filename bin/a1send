@@ -8,6 +8,9 @@ errecho() { echo 1>&2 "$@"; }
 
 for file in "$@"; do
     errecho "Sending $file"
-    ascii-xfr  -s >"$TTY" -l 100 -c 35 <("$basedir/bin/wozmon-deposit" "$file")
+    #   We'd like to use wozmon-deposit -c here to avoid the extra
+    #   blank lines, but ascii-xfr uses line pause only on \n, not \r.
+    ascii-xfr  -s >"$TTY" -l 100 -c 35 \
+        <("$basedir/bin/wozmon-deposit" -n "$file")
 done
 

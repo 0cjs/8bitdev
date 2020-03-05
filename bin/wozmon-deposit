@@ -2,7 +2,7 @@
 
 from    os.path  import abspath, dirname, join
 from    site  import addsitedir
-from    sys  import argv
+from    sys  import argv, stderr
 
 BASEDIR = dirname(dirname(abspath(__file__)))
 
@@ -11,7 +11,7 @@ def load_image(fname):
     if '/' not in fname: fname = join(BASEDIR, '.build', 'obj', 'src', fname)
     return parse_obj_fromfile(fname)
 
-def print_wozinput(mi):
+def print_wozinput(eol, mi):
     ''' Given a `testmc.memimage.MemImage`, print it out in the form
         you would enter it into the Apple 1 Woz monitor.
     '''
@@ -25,11 +25,19 @@ def print_wozinput(mi):
             for i in range(index, index+BYTES):
                 if i < len(data):
                     line += ' {:02X}'.format(data[i])
-            print(line)
+            print(line, end=eol)
             addr += BYTES
             index += BYTES
+
+def usage():
+    print('Usage: wozmon-deposit -c|-n <file>', file=stderr)
+    exit(2)
 
 if __name__ == '__main__':
     addsitedir(join(BASEDIR, 'lib'))
     from testmc.asl import parse_obj_fromfile
-    print_wozinput(load_image(argv[1]))
+    if len(argv) < 3: usage()
+    if   argv[1] == '-c': eol = '\r'
+    elif argv[1] == '-n': eol = '\n'
+    else                : usage()
+    print_wozinput(eol, load_image(argv[2]))

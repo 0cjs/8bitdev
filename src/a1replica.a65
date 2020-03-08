@@ -127,3 +127,11 @@ main:       jsr pia2init
             sta PIA2_DB     ; turn off all lights
             sta PIA2_DA
             jmp wozmon
+
+;----------------------------------------------------------------------
+; SPI testing
+
+            include "src/spi.a65"
+
+SPI_DR     equ     PIA2_DB      ; direction/data register for SPI routines
+SPI_CR     equ     PIA2_CB      ; control register for SPI routines

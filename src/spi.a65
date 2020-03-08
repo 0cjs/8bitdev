@@ -1,0 +1,8 @@
+;   SPI via 6821 PIA
+;
+;   General idea and some code taken from Dr Jefyll:
+;   http://forum.6502.org/viewtopic.php?p=45555#p45555
+;
+;   These assume an MC6821 or similar PIA with direction/data and
+;   control registers on SPI_DR and SPI_CR, connected as follows:
+;     P0-CLK   P1-MOSI  P7-MISO   Vcc-CS

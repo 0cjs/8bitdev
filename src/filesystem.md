@@ -504,15 +504,18 @@ The currently defined field types are as follows:
         not (yet) been deallocated.
     3   Name field; length is the length of the name in bytes. There
         is no terminator byte after the name.
-    4   Approximate file size in blocks. len=2, value big-endian.
-    5   Approximate file size in bytes. len=4, value big-endian.
-    6   File creation timestamp.
-    7   File modification timestamp.
+    4   Read-only flag; len=0. (Just its presence indicates a read-only file.)
+    5   Approximate file size in blocks. len=2, value big-endian.
+    6   Approximate file size in bytes. len=4, value big-endian.
+    7   File creation timestamp.
+    8   File modification timestamp.
 
 The only required fields are the start block and name fields. All
 implementations of this filesystem should handle directory entries
 with only those two fields, and should ignore any fields whose type
-they do not understand.
+they do not understand. (However, it would be advisable for most
+implementations also to understand and honour the read-only flag,
+disallowing modification and deletion for files with the flag.)
 
 The approximate size fields are for convenience when listing directory
 information; the actual size of the file (in blocks and bytes) will

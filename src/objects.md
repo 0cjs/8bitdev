@@ -41,11 +41,14 @@ determine the type.
      MSB  LSBs  Type
      $00  %00   Fixed constant; type and value determined by bits 7-2
     ≠$00  %00   Pointer to a cons cell or object data
-     any  %01   Character or unsigned byte; MSB is char/byte value
-     any  %10   Obdata header; never an object reference
-     any  %11   Smallint: 14-bit signed integer
+     any  %10   Smallint: 14-bit signed integer
+     any  %01   unused
+     any  %11   Obdata header; never an object reference
 
 Notes:
+- Bit 0 of the LSB indicates whether an object in memory is a cons
+  cell (clear) or obdata (set). ANDing the LSB with $01 will leave
+  zero flag clear for cons cell, set for obdata.
 - Because the fixed constants (MS=$00 LSBs=%00) share the format of
   pointers, addresses the lowest 256 memory locations ($00nn) cannot
   be used for object data storage. Most 8-bit processors have other
@@ -72,10 +75,9 @@ recursively followed by the GC.
     00   000001-00     true, t
     00   ??????-00     (other special values?)
     AA   aaaaaa-00  R  (AA≠00) pointer to object, address AAaaaaaa00.
-    LL   ffffff-10  R  obdata header: length LL, format number ffffff
-    CC   000000-01     character or unsigned byte, value CC
-    xx   ??????-01     (other single-byte types?)
-    NN   nnnnnn-11     smallint: -8192 to 8191
+    NN   nnnnnn-10     smallint: -8192 to 8191
+    xx   ??????-01     (unused)
+    LL   ffffff-11  R  obdata header: length LL, format number ffffff
 
 A smallint is a two's complement signed 14-bit value (range decimal
 -8192 to 8191). Bits 0-7 are taken from the MSB of the reference and
@@ -359,11 +361,6 @@ Considerations and Alternatives
 
 ### Representation
 
-- Consider dropping char/unsigned byte and using separate heaps for
-  cons cells and obdata values in order to to free bit 0 for a GC mark
-  bit. (Even without the mark bit, this split might still might
-  substantially speed up allocation and GC.)
-
 - Consider changing the "meaning bits" of the heapdata type bytes to
   put the most important distinguishers in bits 7 and 6, because
   testing these comes "for free" when testing a third or more bits
@@ -448,12 +445,26 @@ unit suffixes.)
 
 Read-only heaps do not need to be collected.
 
-There is currently no room in the heap object format for mark bits.
-Possibly a separate bit array could be allocated for this: one bit for
-every possible address on the heap, even those that may be in the
-middle of heapdata objects. This would increase heap overhead by about
-12.5%, but is necessary only during collection. A Schorr-Wait
-algorithm would require two bits.
+If heap can contain all object types, there is currently no room in
+the heap object format for mark bits. Possibly a separate bit array
+could be allocated for this: one bit for every possible address on the
+heap, even those that may be in the middle of heapdata objects. This
+would increase heap overhead by about 12.5%, but is necessary only
+during collection. A Schorr-Wait algorithm would require two bits.
+
+However, if two heaps are used, one for cons cells and the other for
+obdata, bit 0 is no longer needed to distinguish between the two,
+since the type of heap itself encodes that information. This frees bit
+0 for use as a mark bit which may be set or cleared (if one knows its
+current value) with absolute `INC` or `DEC`. (However, an object with
+a mark bit set must never be accessed during normal operation as code
+that does not know the heaps but is just following a pointer will see
+an incorrect tag.)
+
+Even without the mark bit, using separate heaps for cons cells and
+obdata values may speed up allocation and GC because the former heap
+would contain only one size of object (dword), thus lengths never need
+be read and that heap doesn't need compaction.
 
 
 References

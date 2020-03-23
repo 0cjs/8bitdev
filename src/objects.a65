@@ -39,9 +39,12 @@ typedisp
             ror             ; original bit 1 → carry
             bcc .bytechar   ; %01: a byte/char
             ;   tag=%11
-.smallint   sta smallint+1  ; MSB has already been ASR'd twice; store it
-            lda ref+1       ; LSB is byte after "type" byte, so we reverse
-            sta smallint    ;   the bytes to get native little-endian order
+.smallint   ;   At this point the reference's LSB has been ASR'd twice,
+            ;   which gives us the MSB of a smallint. Store the smallint
+            ;   converted to native 16-bit format and endianness.
+            sta smallint+1
+            lda ref+1
+            sta smallint
             rts
 .bytechar   ;   tag=%10
             lda ref+1       ; load byte/char value

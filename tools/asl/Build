@@ -17,6 +17,7 @@ asl_repo=https://github.com/KubaO/asl.git
 #   Ref or branch to checkout after cloning, if not empty.
 #   (The checkout is not done if the source is already there.)
 asl_repo_ref=dev/cjs/current
+#asl_repo_ref=dev/cjs/testing
 
 #   Be careful here not to set variables, shell options, etc. that
 #   could affect scripts sourcing this file (e.g., don't `set -e`).
@@ -84,10 +85,8 @@ configure_asl_build() {
     [[ -r $ASL_BUILD_DIR/.gitignore ]] \
         || cp -v "$ASL_BUILD_DIR/gitignore" "$target_dir/.gitignore" \
         || return 1
-    cp -v "$ASL_BUILD_DIR/Makefile.def-native-unknown-linux" \
-        "$target_dir/Makefile.def-samples/" || return 1
-    cp -v "$ASL_BUILD_DIR/Makefile.def-native-unknown-linux" \
-        "$target_dir/Makefile.def" || return 1
+    def="$target_dir/Makefile.def-samples/Makefile.def-x86_64-unknown-linux"
+    cp -v "$def" "$target_dir/Makefile.def" || return 1
 }
 
 ####################################################################

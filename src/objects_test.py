@@ -10,13 +10,13 @@ def M():
 ####################################################################
 #   Tests
 
-@pytest.mark.parametrize('ref, expected', (
-    #   ref     (type, hdlen, char, smallint)
-    # Least significant bits of ref determine type:
+@pytest.mark.parametrize('obj, expected', (
+    #   obj     (obfmtid, oblen, char, smallint)
+    # Least significant bits of obj determine type:
     #   %00   pointer to object
     (0x0000,    (0xFF, 0xFF, 0xFF,     -1)),
     (0xFFFC,    (0xFF, 0xFF, 0xFF,     -1)),
-    #   %10   heapdata; type is upper six bits of LSB; length is MSB
+    #   %10   obdata: format number is LSB[7‥2], length is MSB
     (0x00FE,    (0xFE, 0x00, 0xFF,     -1)),
     (0x21EE,    (0xEE, 0x21, 0xFF,     -1)),
     (0xFE06,    (0x06, 0xFE, 0xFF,     -1)),
@@ -33,25 +33,25 @@ def M():
     (0xFDFF,    (0xFF, 0xFF, 0xFF,     -3)),
     (0x2493,    (0xFF, 0xFF, 0xFF,  -7132)),    # non-zero MSB negative number
 ))
-def test_typedisp(M, ref, expected):
+def test_typedisp(M, obj, expected):
     S = M.symtab
-    M.deposit(S.type,       0xFF)   # set outputs to sentinel values
-    M.deposit(S.hdlen,      0xFF)
+    M.deposit(S.obfmtid,    0xFF)   # set outputs to sentinel values
+    M.deposit(S.oblen,      0xFF)
     M.deposit(S.char,       0xFF)
     M.depword(S.smallint,   0xFFFF) # -1
 
-    M.depword(S.ref, ref)
+    M.depword(S.obj, obj)
     M.call(S.typedisp)
-    type, hdlen, char = M.byte(S.type), M.byte(S.hdlen), M.byte(S.char)
+    obfmtid, oblen, char = M.byte(S.obfmtid), M.byte(S.oblen), M.byte(S.char)
     smallint =int.from_bytes(
         M.bytes(S.smallint, 2), byteorder='little', signed=True)
 
-    print('ref ${:04X}, type ${:02X}, hdlen ${:02X} char ${:02X}, ' \
+    print('obj ${:04X}, obfmtid ${:02X}, oblen ${:02X} char ${:02X}, ' \
           'smallint: ${:04X} {}' \
-          .format(ref, type, hdlen, char, smallint, smallint))
+          .format(obj, obfmtid, oblen, char, smallint, smallint))
 
-    assert expected == (type, hdlen, char, smallint)
-    assert ref == M.word(S.ref), 'original ref should never be modified'
+    assert expected == (obfmtid, oblen, char, smallint)
+    assert obj == M.word(S.obj), 'original obj should never be modified'
 
     #   XXX It might be useful to set some flags based on type.
     #   Depending on the next processing step may want to know

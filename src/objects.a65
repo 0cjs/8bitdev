@@ -1,17 +1,17 @@
 ;   Some "objects" as described in objects.md
 
 
-;   typedisp - dispatch based on type of object reference in `ref`
+;   typedisp - dispatch based on type of object at location
 ;
-;   If `ref` is a pointer, does nothing and returns with carry clear.
+;   If `obj` is a pointer, does nothing and returns with carry clear.
 ;
-;   Otherwise the tags indicate it's not a pointer, in which case the value
-;   is deconstructed into `type`/`len`, `char`, or `smallint` and carry is
-;   set on return.
+;   Otherwise the tags indicate the referenced object is not a pointer, in
+;   which case the value is deconstructed into `obfmtid`/`oblen`, `char`, or
+;   `smallint` and carry is set on return.
 ;
 ;   Least significant bits of LSB (first byte) determine type:
 ;     %00   pointer
-;     %10   heapdata object header
+;     %10   obdata
 ;     %01   number: byte/char
 ;     %11   number: smallint
 ;
@@ -20,19 +20,19 @@
 ;   into the carry flag) followed by ROR.
 ;
 typedisp
-            lda ref         ; type byte or LSB of tagged pointer
+            lda obj         ; format ID byte or LSB of tagged pointer
             cmp #$80        ; ASR, which helps later if it's a smallint
             ror             ; bit 0 → carry
             bcs .number     ; %x1: smallint or byte/char
             lsr             ; original bit 1 → carry
-            bcs .heapdata   ; %10: a heapdata object
+            bcs .obdata     ; %10: object data
             ;   tag=%00
             rts             ; %00: pointer; we're done
-.heapdata   ;   tag=%10
-            lda ref         ; what we loaded has been destroyed, so reload type
-            sta type
-            lda ref+1       ; heapdata object header length byte
-            sta hdlen
+.obdata     ;   tag=%10
+            lda obj         ; what we loaded has been destroyed, so reload
+            sta obfmtid
+            lda obj+1       ; obdata header length byte
+            sta oblen
             rts
 .number     ;   tag=%x1
             cmp #$80        ; ASR
@@ -43,20 +43,20 @@ typedisp
             ;   which gives us the MSB of a smallint. Store the smallint
             ;   converted to native 16-bit format and endianness.
             sta smallint+1
-            lda ref+1
+            lda obj+1
             sta smallint
             rts
 .bytechar   ;   tag=%10
-            lda ref+1       ; load byte/char value
+            lda obj+1       ; load byte/char value
             sta char
             rts
 
 
-;   typedisp input
-ref         ds      2       ; input object reference. not in ZP because
+;   object on which to do type dispatch
+obj         ds      2       ; input object reference. not in ZP because
                             ;   we'd often be reading this from the heap
 ;   typedisp outputs
-type        zds     1       ; heapdata type
-hdlen       zds     1       ; heapdata length
+obfmtid     zds     1       ; obdata format ID
+oblen       zds     1       ; obdata length
 char        zds     1       ; char type
 smallint    zds     2       ; smallint type

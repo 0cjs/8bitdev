@@ -4,129 +4,183 @@ Objects for a Small Language
 This is just kicking around some ideas for the data types one would
 want for a small language to run on an 8-bit microprocessor system.
 
-Representation of Objects in Memory
------------------------------------
+Binary numbers are prefixed with "%"; hexadecimal numbers are prefixed
+with "$". "MSB"/"LSB" mean most/least significant bit or byte,
+depending on context; usually the size of the value (1-2 bits or 8
+bits) will make it clear which is meant.
 
-Object references are 16-bit _words_ containing _[tagged]_ values. If
-the value cannot be a _dword_ (two-word- or 4-byte-) [aligned] pointer,
-i.e., at least one of the two least bits is not 0, it represents the
-object itself. Otherwise the value is a pointer to an object in the
-heap.
 
-Objects are allocated on the heap at addresses [aligned] to a dword
-(four byte) boundary. Objects in the heap are either:
-- a _cons cell_ of two object reference words, the _car_ followed by
-  the _cdr_; or
-- _heapdata objects_, which start with a header giving format and
-  length information followed object data, of arbitrary length.
+Representation of Object References and Data
+--------------------------------------------
 
-Every address in the heap is part of an object. Space available for
-allocation is indicated by free space heapdata objects (_FSO_s) of
-type `HDT_FREE`.
+_Object references_ are 16-bit _words_ (in native byte order)
+containing _[tagged]_ values that determine the type. When the value
+of a reference is a _pointer_, it points to either a _cons cell_ or
+object data _obdata_ in memory. Otherwise the reference alone
+represents the object itself.
 
-All objects on the heap have an allocation size or _asize_ that is a
-multiple of four and 256 bytes or less; the next object starts
-immediately after this.
+In memory, cons cells and obdata are [aligned] to _dword_ (32-bit or
+4-byte) addresses. They may be stored anywhere in the full address
+space except for the first page (MSB=$00, address=$00nn). The storage
+may be part of a dynamically allocated and freed heap or may be static
+data, possibly in ROM.
 
-Additionally, heapdata objects have an _hdsize_ as the second byte of
-the header indicating the length of the data after the header. The
-header plus the hdsize may be less than a multiple of four (indicating
-that there are "filler" bytes for alignment after the object data).
-The header plus the hdsize will always be between _asize_ and
-_asize-3_, allowing the asize to be calculated from the hdsize.
+A cons cell is fixed size and consists of two object reference words,
+a _car_ followed by a _cdr_.
 
-Given an arbitrary (properly aligned) address in the heap we cannot
-tell if it points to a cons cell or a heapdata object because it might
-point into the middle of a heapdata object; thus walking the entire
-heap must be done by starting at its lowest location in memory or at a
-known-good pointer to an object.
+Obdata is variable length and starts with a header giving format and
+length information, followed by further data that varies depending on
+the format or obdata type.
 
-### Reference/Pointer Tagging
+### Reference and Data Types and Tagging
 
-The different types of object references are determined by whether
-their most significant byte (MSByte) is zero and the values of their
-two least significant bits (LSbits).
+The two least significant bits (LSBs) and, in some cases, the most
+significant byte (MSB) of a reference or the first two bytes of obdata
+determine the type.
 
-    MSByte LSbits   Type
-      00    %00     Fixed constant; no heap storage
-     ≠00    %00     Pointer into heap
-     any    %01     Character or unsigned byte; MSByte is char/byte value
-     any    %10     Heapdata header; never an object reference
-     any    %11     Small (14-bit) signed integer (see below)
+     MSB  LSBs  Type
+     $00  %00   Fixed constant; type and value determined by bits 7-2
+    ≠$00  %00   Pointer to a cons cell or object data
+     any  %01   Character or unsigned byte; MSB is char/byte value
+     any  %10   Obdata header; never an object reference
+     any  %11   Smallint: 14-bit signed integer
 
 Notes:
-- Because the fixed constants (MSbyte=0 LSbits=%00) share the format
-  of pointers into the heap, addresses $00nn cannot be used for heap
-  storage. Most 8-bit processors have other more important uses for
-  this page anyway (zero page for 6800/6502; interrupt vectors for
-  8080).
-- Heapdata headers are not object references and appear in the heap
-  only. Within the heap, this allows distingushing a cons cell (whose
-  car is always an object reference) from a heapdata object.
-- The char/unsigned byte type (MSbyte=value, LSbits=%10) is not
-  strictly necessary; it may be replaced with something else if need
-  arises.
+- Because the fixed constants (MS=$00 LSBs=%00) share the format of
+  pointers, addresses the lowest 256 memory locations ($00nn) cannot
+  be used for object data storage. Most 8-bit processors have other
+  more important uses for this page anyway (zero page for 6800/6502;
+  interrupt vectors for 8080).
+- A pointer may point to either a cons cell or obdata; the type of the
+  pointer's target is determined by whether or not the first two bytes
+  of the target are tagged as an obdata header.
+- The char/unsigned byte type (MSB=value, LSBs=%10) is not strictly
+  necessary; it may be replaced with something else if need arises.
+- Details of the smallint type are given below.
 
-The following table shows the details of tagging and determining
-values. `x` represents a don't-care bit, but see below. Objects marked
-`R` may contain further references and must be recursively followed by
-the GC.
+### Tag Format and Reference Data Types
 
-    MSB LSB (binary) R  Description
-    00   000000-00      nil
-    00   000001-00      true, t
-    00   ??????-00      (other special values?)
-    AA   aaaaaa-00   R  (AA≠00) pointer into heap, address AAaaaaaa00.
-    LL   ffffff-10   R  heapdata header: length LL, format id ffffff (0-63)
-    CC   000000-01      character or unsigned byte, value CC
-    xx   ??????-01      (other single-byte types?)
-    NN   nnnnnn-11      smallint: -8192 to 8191
+The following table summarizes the details of tagging and determining
+values. The most significant byte is given in hexadecimal; the least
+significant byte in binary, with a separator before the two least
+significant bits. `x` represents a don't-care bit, but see below.
+Objects marked `R` may contain further references and must be
+recursively followed by the GC.
 
-### Heapdata Formats
+    MSB   LSBits    R  Description
+    00   000000-00     nil
+    00   000001-00     true, t
+    00   ??????-00     (other special values?)
+    AA   aaaaaa-00  R  (AA≠00) pointer to object, address AAaaaaaa00.
+    LL   ffffff-10  R  obdata header: length LL, format number ffffff
+    CC   000000-01     character or unsigned byte, value CC
+    xx   ??????-01     (other single-byte types?)
+    NN   nnnnnn-11     smallint: -8192 to 8191
+
+A smallint is a two's complement signed 14-bit value (range decimal
+-8192 to 8191). Bits 0-7 are taken from the MSB of the reference and
+bits 8-13 are taken from bits 7-2 of the LSB of the reference. (i.e.,
+do two arithmetic shifts right on the reference's LSB). Looking at the
+two sequential locations in memory:
+
+           Reference LSB                 Reference MSB
+    |  7  6  5  4  3  2  1  0 |   |  7  6  5  4  3  2  1  0 |
+    ---------------------------------------------------------
+    | 13 12 11 10 09 08 xx xx |   | 07 06 05 04 03 02 01 00 |
+           smallint MSB                  smallint LSB
+
+
+Heaps
+-----
+
+Though pointers may point to cons cells or obdata (almost) anywhere in
+memory, typically a system will have one or more _heap_ areas in which
+cons cells and obdata are dynamically allocated.
+
+Unlike arbitrary areas of memory, every address in a heap is part of
+an object. Space available for allocation is indicated by "free space"
+obdata objects (_FSO_s) of type `HDT_FREE` (see below).
+
+All objects on the heap have an allocation size or _asize_, given in
+bytes, that is a multiple of four and 256 bytes or less. The next
+object is located at the address of the current object plus its asize.
+
+Cons cells always are two words in size, thus always having an asize
+of 4 bytes.
+
+Obdata values (described in detail below) may have a size that is not
+a multiple of four bytes; in a heap they will always be padded out to
+have an asize that's a multiple of 4. (This may not be the case for
+obdata values stored outside of a heap where the immediately following
+unaligned bytes may be used for other purposes.) The asize can always
+be determined from the odsize by rounding odsize+2 up to the next dword
+boundary. A formula for this is `(odsize+5) ∧ $FC`.
+
+Because obdata values have variable size, given an arbitrary (but
+properly aligned) address in a heap we cannot tell if it points to an
+object or not. Thus walking the entire heap must be done by starting
+at its lowest location in memory or at a known-good pointer to an
+object.
+
+
+Obdata Types and Formats
+------------------------
+
+An obdata value always starts with a two-byte _obdata header_.
+
+The first byte of the header describes the format. It always has its
+least significant two bits (the tag) set to `%10`. The upper six bits
+are the _format number_ (ranging from 0-63); when shifted left two
+bits with the lowest two bits set to the required `%10` this whole
+byte is referred to as the _format ID_.
+
+The second byte contains the _odsize_ indicating the length of data
+following the header. The odsize has no alignment restrictions, and so
+when stored within a heap there may be padding at the end of the
+obdata value as described in the "Heaps" section above.
+
+        byte || --------0-------- || -------1------- ||
+         bit || 7 6 5 4 3 2 | 1 0 || 7 6 5 4 3 2 1 0 ||
+
+    contents || format num. | 1 0 ||     odsize      ||
+             ||     format ID     ||                 ||
+
+(Storing the odsize in dwords rather than bytes was also considered,
+allowing larger individual objects, but then individual formats that
+did not entirely fill the space would need additional length or
+termination bytes to determine the actual length of their data.)
+
+### Obdata Formats
 
 Note that these are "formats" rather than types: some data types (e.g.
-symbol, float) have multiple formats for storage as heapdata objects.
+symbol, float) have multiple formats for storage as obdata values.
 
-A heapdata object starts with a two-byte header.
+Format summary:
 
-The LSB describes the format and always has its least significant two
-bits set to `%10`. The upper six bits are the format identifier
-(ranging from 0-63); when shifted left two bits with the lowest two
-bits set to the required `%10` this whole byte is referred to as the
-_format number_.
+                  ID: format ID in hexadecimal
+          format num: format number (ID bits 7-2) in binary and decimal
+                 num: format number in decimal
+                 asz: asize (allocation size) on heap, if fixed
+                 len: length, if fixed
 
-The MSB indicates the length of the data after the header, in bytes.
-(The actual storage used will be _len + 2_ rounded up to the next
-dword boundary.) This allows determination of the exact size of any
-object on the heap (and thus the location of the next object on the
-heap) with no knowledge of the particular heapdata formats. (Storing
-the length in dwords was also considered, allowing larger
-individual objects, but then individual formats that did not entirely
-fill the space would need additional length or termination bytes to
-determine the actual length of their data.)
-
-Following are the heapdata formats. The table gives the format number
-in hexadecimal; the format identifier in binary and decimal; the size
-on the heap and the length value when not variable; and the name of
-the format and type using it. Following this are more detailed
-descriptions of the individual formats.
-
-    num   binary  id siz len  descr
-    $03  0000-00   0          free block object (FBO)
-    $0B  0000-10   2   8  6   env-header
-    $0F  0000-11   3   8  6   env-entry
-    $23  0010-00   8          symbol (string)
-    $27  0010-01   9   8  4   symbol substring
-    $63  0110-00  24          integer
-    $6B  0110-10  26          float, positive mantessa
-    $7B  0111-10  30   4  2   word (16-bit unsigned int, modular arithmetic)
-    $7F  0111-11  31   8  4   dword (32-bit unsigned int, modular arithmetic)
-    $EB  1110-10  58          float, negative mantessa
+     ID   format num  asz len  description
+    $03  0000-00   0           free block object (FBO)
+    $0B  0000-10   2   8   6   env-header
+    $0F  0000-11   3   8   6   env-entry
+    $23  0010-00   8           symbol (string)
+    $27  0010-01   9   8   4   symbol substring
+    $63  0110-00  24           integer
+    $6B  0110-10  26           float, positive mantissa
+    $7B  0111-10  30   4   2   word (16-bit unsigned int, modular arithmetic)
+    $7F  0111-11  31   8   4   dword (32-bit unsigned int, modular arithmetic)
+    $EB  1110-10  58           float, negative mantissa
 
     Bit assignments (type byte/format number):
       7 / 5     Sign bit: floats, ...
       6 / 4     Number, including modular
       5 / 3     Atomic (?)
+
+Format details:
 
 - __free block__: The header and the next _len_ bytes (always even,
   and always two less than a multiple of four) are space available to
@@ -180,7 +234,7 @@ Floating point values always consist of an 8-bit exponent in the first
 byte, followed by however many bytes of mantissa. Negative and
 positive numbers are separate heapdata formats; keeping the mantissa's
 sign separate from the mantissa itself makes calculations easier. The
-sign can be determined from the high bit of the format number.
+sign can be determined from the high bit (bit 7) of the format ID.
 
 The exponent is, in the usual way, offset by $80: 0 = $80, 1 = $81,
 -1 = $79, etc.
@@ -221,11 +275,11 @@ indexed addressing, e.g., `(+ $FF00 2)`.
   - Literal: `%n.n` for high/low bytes where _n_ is 1-8 binary digits.
   - Uses: addresses for examine/deposit.
 
-- __dword__: Unsigned 32-bit value; modular arithmetic. Probably
-  won't be implemented, but would work like above. Could consider
-  64-bit quadword, too, but large sizes seem wanted only for
-  cryptogaphy functions which probably want even larger modular
-  integers, maybe expressed as bitfields.
+- __dword__: Unsigned 32-bit value; modular arithmetic. Probably won't
+  be implemented, but would work like above. Could consider 64-bit
+  _quadword_ , too, but large sizes seem wanted only for cryptographic
+  functions which probably want even larger modular integers, maybe
+  expressed as bitfields.
 
 #### Numbers
 
@@ -236,9 +290,10 @@ integers to be converted to floats (generating error on overflow),
 producing a float result. If modular numbers are involved, see that
 section above.
 
-- __smallint__: Signed 14-bit integer; fits into a tagged pointer. This
-  would normally not be considered by the programmer as the system
-  will automatically convert between these and integers as necessary.
+- __smallint__: Signed 14-bit integer; fits into a tagged pointer.
+  These would normally not be considered by the programmer as the
+  system will automatically convert between these and integers as
+  necessary.
 
 - __integer__: Signed arbitrary-precision integer. For operations
   between two integers of different precisions, the smaller is
@@ -303,6 +358,11 @@ Considerations and Alternatives
 -------------------------------
 
 ### Representation
+
+- Consider dropping char/unsigned byte and using separate heaps for
+  cons cells and obdata values in order to to free bit 0 for a GC mark
+  bit. (Even without the mark bit, this split might still might
+  substantially speed up allocation and GC.)
 
 - Consider changing the "meaning bits" of the heapdata type bytes to
   put the most important distinguishers in bits 7 and 6, because

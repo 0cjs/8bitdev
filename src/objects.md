@@ -97,10 +97,10 @@ _format number_.
 
 The MSB indicates the length of the data after the header, in bytes.
 (The actual storage used will be _len + 2_ rounded up to the next
-longword boundary.) This allows determination of the exact size of any
+dword boundary.) This allows determination of the exact size of any
 object on the heap (and thus the location of the next object on the
 heap) with no knowledge of the particular heapdata formats. (Storing
-the length in longwords was also considered, allowing larger
+the length in dwords was also considered, allowing larger
 individual objects, but then individual formats that did not entirely
 fill the space would need additional length or termination bytes to
 determine the actual length of their data.)
@@ -119,8 +119,8 @@ descriptions of the individual formats.
     $27  0010-01   9   8  4   symbol substring
     $63  0110-00  24          integer
     $6B  0110-10  26          float, positive mantessa
-    $7B  0111-10  30   4  2   word
-    $7F  0111-11  31   8  4   longword
+    $7B  0111-10  30   4  2   word (16-bit unsigned int, modular arithmetic)
+    $7F  0111-11  31   8  4   dword (32-bit unsigned int, modular arithmetic)
     $EB  1110-10  58          float, negative mantessa
 
     Bit assignments (type byte/format number):
@@ -159,9 +159,8 @@ descriptions of the individual formats.
   the original symbol can be GC'd if it's not directly referenced and
   much of it is no longer needed.
 
-- __word__; __longword__: _len_=2; _len=4_. Data are unsigned 16-bit
-  resp. 32-bit integers. Arithmetic is modular and overflow is
-  ignored.
+- __word__; __dword__: _len_=2; _len=4_. Data are unsigned 16-bit
+  resp. 32-bit integers. Arithmetic is modular and overflow is ignored.
 
 - __integer__: A signed integer value of arbitrary length (up to 255
   bytes). Data is a vector of _len_ bytes, LSB to MSB, with sign as
@@ -169,26 +168,26 @@ descriptions of the individual formats.
   value.
 
 - __float__: Positive and negative floating point numbers with
-  mantessa of _len_-1 bytes. (Storing the mantessa sign outside of the
-  mantessa itself makes calculations easier.) The first byte of data
+  mantissa of _len_-1 bytes. (Storing the mantissa sign outside of the
+  mantissa itself makes calculations easier.) The first byte of data
   is the (always 8-bit) exponent (2's complement with reversed sign;
-  `$80` is zero) and the remaining bytes are the mantessa MSB to LSB.
+  `$80` is zero) and the remaining bytes are the mantissa MSB to LSB.
   See below for more details.
 
 #### Floating Point Format and Representation
 
 Floating point values always consist of an 8-bit exponent in the first
-byte, followed by however many bytes of mantessa. Negative and
-positive numbers are separate heapdata formats; keeping the mantessa's
-sign separate from the mantessa itself makes calculations easier. The
+byte, followed by however many bytes of mantissa. Negative and
+positive numbers are separate heapdata formats; keeping the mantissa's
+sign separate from the mantissa itself makes calculations easier. The
 sign can be determined from the high bit of the format number.
 
 The exponent is, in the usual way, offset by $80: 0 = $80, 1 = $81,
 -1 = $79, etc.
 
-The mantessa, when normalized, is assumed to have an implicit `1` bit
+The mantissa, when normalized, is assumed to have an implicit `1` bit
 before it. For simplicity we may decide to disallow denormalized
-mantessas (with one or more leading zeros) even though this slightly
+mantissa (with one or more leading zeros) even though this slightly
 reduces the range that can be represented by a floating point value.
 
 
@@ -222,7 +221,7 @@ indexed addressing, e.g., `(+ $FF00 2)`.
   - Literal: `%n.n` for high/low bytes where _n_ is 1-8 binary digits.
   - Uses: addresses for examine/deposit.
 
-- __longword__: Unsigned 32-bit value; modular arithmetic. Probably
+- __dword__: Unsigned 32-bit value; modular arithmetic. Probably
   won't be implemented, but would work like above. Could consider
   64-bit quadword, too, but large sizes seem wanted only for
   cryptogaphy functions which probably want even larger modular
@@ -371,7 +370,7 @@ unit suffixes.)
   vectors or arrays.
 
 - __float__:
-  - As with integers, making the mantessa a fixed size rather than
+  - As with integers, making the mantissa a fixed size rather than
     arbitrary precision saves basically no effort. However, having
     more than one size of exponent would involve extra effort, so
     exponents are always 8 bits. (Again, this may change if we decide

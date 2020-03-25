@@ -51,7 +51,7 @@ def test_PFile_parse_magic():
 
     with pytest.raises(ValueError) as ex:
         PF(bfh('14 89')).parse_magic()
-    assert ex.match('Bad magic number: \$8914')
+    assert ex.match(r'Bad magic number: \$8914')
 
 p00     = b'\x00Mr. Pufinpuff'      # Creator record; always at end
 def test_PFile_parse_creator():
@@ -139,7 +139,7 @@ def test_PFFile_parse_obj_real_file():
         pf = parse_obj(f)
         assert b'' == pf.istream.read() # consumed all input
 
-    assert re.match(b'AS 1\.', pf.creator) #   AS 2.x may require changes
+    assert re.match(b'AS 1\\.', pf.creator) #   AS 2.x may require changes
     assert           0x0366 == pf.entrypoint
 
     assert (

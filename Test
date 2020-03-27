@@ -107,7 +107,6 @@ link() {
 }
 
 asm src/simple-asx.a65  ; link simple-asx
-asm src/c64.a65         ; link c64
 asm src/reloctest.a65   ; link reloctest -b '_code=0x400' reloctest
 asm src/zptest.a65      ; link zptest    -b '_code=0x0300'
 
@@ -155,6 +154,7 @@ asbuild src/bigint.a65      \
     '   cpu 6502' '   include "src/std.a65"' '   org $1000'
 
 asbuild src/a1replica.a65
+asbuild src/c64.a65
 asbuild src/fm7.a69
 
 ####################################################################

@@ -4,7 +4,7 @@ import  pytest
 @pytest.fixture
 def M():
     M = Machine()
-    M.load('.build/obj/c64')
+    M.load('.build/obj/src/c64.p')
     return M
 
 def test_invscr(M):

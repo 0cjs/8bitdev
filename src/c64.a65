@@ -1,17 +1,12 @@
 ;   Various bits of C64 code.
 
-            .radix h
-
-            .area   CODE (abs)
-            .org    8000        ; cartridge ROML
-            .end    8000        ; entry point
+            cpu     6502
+            org     $8000        ; cartridge ROML
 
 ;---------------------------------------------------------------------
 ;   Invert the screen on a C64 by setting high bit on each byte in screen RAM.
 
-            .globl invscr
-
-addr        .equ    00fc        ; unused zero-page location
+addr        equ     $FC         ; two unused zero-page locations
 
 invscr:     lda     #00         ; screen RAM start low byte
             sta     addr        ; unused zero-page location
@@ -19,13 +14,13 @@ invscr:     lda     #00         ; screen RAM start low byte
             sta     addr+1      ; unused zero-page location
 
 nextpage:   ldy     #0          ; set 8-bit register Y to 0
-nextchar:   lda     [addr],y    ; load character from addr + Y
-            ora     #80         ; set bit 7 to make it inverse
-            sta     [addr],y    ; store modified character
+nextchar:   lda     (addr),y    ; load character from addr + Y
+            ora     #$80        ; set bit 7 to make it inverse
+            sta     (addr),y    ; store modified character
             iny                 ; increment Y
             bne     nextchar    ; branch back if y != 0
             inc     addr+1      ; increment 16-bit screen address by 256
             lda     addr+1
-            cmp     #08         ; reached end of screen?
+            cmp     #$08        ; reached end of screen?
             bne     nextpage
             rts

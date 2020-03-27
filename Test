@@ -154,6 +154,7 @@ asbuild src/bigint.a65      \
     '   cpu 6502' '   include "src/std.a65"' '   org $1000'
 
 asbuild src/a1replica.a65
+asbuild src/a2.a65
 asbuild src/c64.a65
 asbuild src/fm7.a69
 

@@ -1,0 +1,40 @@
+;   Various bits of Apple II code.
+
+            cpu     6502
+            include "src/a2def.a65"
+
+;---------------------------------------------------------------------
+;   Memory dump in hexadecimal and characters.
+;   For use instead of the standard monitor `D` command.
+;   Store start location at $3F8 to execute with Ctrl-Y in the monitor.
+
+            org     $300        ; suggested; it's location-independent
+
+hexdump     rts
+
+            jsr PRBYTE
+            ;jsr CROUT1
+            rts
+
+;   Print the values of ZP words `A1` through `A5` as 16-bit words.
+;   (These are the locations the monitor uses for "remembered" addresses.)
+;
+;   This depends on COUT preserving X and Y.
+;
+;   This is position-independent code. Set monitor Ctrl-Y command to run
+;   this with `3F8: 4C 30 03` if you're using start address $330.
+;
+dumpA15     ldy #5              ; 5 words to display
+            ldx #A1L            ; first word to display
+.loop       lda 1,x             ; high byte
+            jsr PRBYTE
+            lda 0,x             ; low byte
+            jsr PRBYTE
+            lda #AA(' ')
+            jsr COUT
+            inx                 ; next word
+            inx
+            dey                 ; decrement count
+            bne .loop
+            jsr CROUT1
+            rts

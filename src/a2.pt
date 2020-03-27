@@ -1,0 +1,14 @@
+from    testmc.m6502 import  Machine, Registers as R, Instructions as I
+import  pytest
+
+@pytest.fixture
+def M():
+    M = Machine()
+    M.load('.build/obj/src/a2.p')
+    return M
+
+def test_dump(M):
+    S = M.symtab
+
+    M.call(S.hexdump, R(a=0))
+    assert R(a=0) == M.regs

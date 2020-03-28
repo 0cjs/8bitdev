@@ -1,4 +1,7 @@
 ;   Various bits of Apple II code.
+;
+;   Position-independent routines are marked "(PIC)".
+;
 
             cpu     6502
             include "src/a2def.a65"
@@ -16,17 +19,29 @@ hexdump     rts
             ;jsr CROUT1
             rts
 
-;   Print the values of ZP words `A1` through `A5` as 16-bit words.
-;   (These are the locations the monitor uses for "remembered" addresses.)
+;   (PIC) dumpmonvar: print monitor UI variables
 ;
-;   This depends on COUT preserving X and Y.
+;   This prints the character in MODE and the words A1 through A5 in native
+;   byte order. These are variables used by the monitor user interface for
+;   command handling and "remembered" addresses.
 ;
-;   This is position-independent code. Set monitor Ctrl-Y command to run
-;   this with `3F8: 4C 30 03` if you're using start address $330.
+;   This depends on COUT preserving X and Y. This is true for the screen
+;   (PR#0), but may not be for other char switch (CSW) routines.
 ;
-dumpA15     ldy #5              ; 5 words to display
+;   This is position-independent code and may be loaded anywhere. $300 is a
+;   usual place for it. Use `3F8: 4C LL HH`, where $HHLL is the start of
+;   this routine, to set the Monitor Ctrl-Y command to run this.
+;
+dumpmonvar
+            ;   Display mode
+            lda MODE
+            jsr COUT
+            lda #AA(' ')
+            jsr COUT
+            ;   Display A1 to A5 values
+            ldy #5              ; 5 words to display
             ldx #A1L            ; first word to display
-.loop       lda 1,x             ; high byte
+.nextA      lda 1,x             ; high byte
             jsr PRBYTE
             lda 0,x             ; low byte
             jsr PRBYTE
@@ -35,6 +50,6 @@ dumpA15     ldy #5              ; 5 words to display
             inx                 ; next word
             inx
             dey                 ; decrement count
-            bne .loop
+            bne .nextA
             jsr CROUT1
             rts

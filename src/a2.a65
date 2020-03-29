@@ -21,8 +21,8 @@ hexdump     rts
 
 ;   (PIC) dumpmonvar: print monitor UI variables
 ;
-;   This prints the character in MODE and the words A1 through A5 in native
-;   byte order. These are variables used by the monitor user interface for
+;   This prints the saved PC and the addresses/16-bit values stored in  A1
+;   through A5 These are variables used by the monitor user interface for
 ;   command handling and "remembered" addresses.
 ;
 ;   This depends on COUT preserving X and Y. This is true for the screen
@@ -33,20 +33,15 @@ hexdump     rts
 ;   this routine, to set the Monitor Ctrl-Y command to run this.
 ;
 dumpmonvar
-            ;   Display mode
-            lda MODE
+            ;   Print PC, A1, ..., A5
+            ldy #6              ; 6 words to display
+            ldx #PCL            ; first word to display
+.nextA      lda #AA(' ')
             jsr COUT
-            lda #AA(' ')
-            jsr COUT
-            ;   Display A1 to A5 values
-            ldy #5              ; 5 words to display
-            ldx #A1L            ; first word to display
-.nextA      lda 1,x             ; high byte
+            lda 1,x             ; high byte
             jsr PRBYTE
             lda 0,x             ; low byte
             jsr PRBYTE
-            lda #AA(' ')
-            jsr COUT
             inx                 ; next word
             inx
             dey                 ; decrement count

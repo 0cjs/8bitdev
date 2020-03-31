@@ -7,33 +7,31 @@
             include "src/a2def.a65"
 
 ;---------------------------------------------------------------------
-;   Memory dump in hexadecimal and characters.
-;   For use instead of the standard monitor `D` command.
-;   Store start location at $3F8 to execute with Ctrl-Y in the monitor.
+;   The following routines are designed to extend the Monitor via the
+;   Ctrl-Y command. To connect code starting at $HHLL to Ctrl-Y, enter a
+;   JMP to its start point $HHLL at $3F8: `3F8: 4C LL HH`.
+;
+;   Most of the routines are PIC (Position-Independent Code) and may be
+;   loaded anywhere. The $300-$3CF area is a common place for these. (Note
+;   that EDASM claims to use this entire page, though I've seen it use only
+;   the first dozen or so bytes of it.)
+;
+;   For more details on how the Monitor works, see:
+;   https://github.com/0cjs/sedoc/blob/master/8bit/apple2/monitor.md
 
             org     $300        ; suggested; it's location-independent
 
-hexdump     rts
-
-            jsr PRBYTE
-            ;jsr CROUT1
-            rts
-
+;---------------------------------------------------------------------
 ;   (PIC) dumpmonvar: print monitor UI variables
 ;
 ;   This prints the saved PC and the addresses/16-bit values stored in  A1
-;   through A5 These are variables used by the monitor user interface for
+;   through A5. These are variables used by the monitor user interface for
 ;   command handling and "remembered" addresses.
 ;
 ;   This depends on COUT preserving X and Y. This is true for the screen
 ;   (PR#0), but may not be for other char switch (CSW) routines.
 ;
-;   This is position-independent code and may be loaded anywhere. $300 is a
-;   usual place for it. Use `3F8: 4C LL HH`, where $HHLL is the start of
-;   this routine, to set the Monitor Ctrl-Y command to run this.
-;
-dumpmonvar
-            ;   Print PC, A1, ..., A5
+dumpmonvar  ;   Print PC, A1, ..., A5
             ldy #6              ; 6 words to display
             ldx #PCL            ; first word to display
 .nextA      lda #AA(' ')
@@ -47,4 +45,15 @@ dumpmonvar
             dey                 ; decrement count
             bne .nextA
             jsr CROUT1
+            rts
+
+;---------------------------------------------------------------------
+;   Memory dump in hexadecimal and characters.
+;   For use instead of the standard monitor `D` command.
+;   Store start location at $3F8 to execute with Ctrl-Y in the monitor.
+
+hexdump     rts
+
+            jsr PRBYTE
+            ;jsr CROUT1
             rts

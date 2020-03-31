@@ -17,13 +17,69 @@
 
             org     $300        ; suggested; it's location-independent
 
+;   Argument and temporary address storage. See
+;   https://github.com/0cjs/sedoc/blob/master/8bit/apple2/monitor.md
+
+mnext       equ A1L         ; Next location to be printed;
+                            ;    set by entering an address.
+mend        equ A2L         ; End address; set to mnext when mnext set;
+                            ;    `.` command changes it to following addr;
+                            ;    cleared after following command.
+mdest       equ A3L         ; Dest address copied from mnext by `<` command;
+                            ;    cleared after any non-`.` command.
+;PCL        equ PCL         ; Current PC set by `L` and `G` commands.
+
 ;---------------------------------------------------------------------
-;   Memory dump in hexadecimal and characters.
-;   For use instead of the standard monitor `D` command.
-;   Store start location at $3F8 to execute with Ctrl-Y in the monitor.
+;   (PIC) Memory dump in hexadecimal and characters.
+;
+;   In order to make life a bit more convenient, this differs from the
+;   Monitor's standard memory dump command in the following ways:
+;
+;   * The "end" address argument is not the last address to be dumped, but
+;     _one past_ the last address to be dumped. (This also makes the code
+;     simpler.
+;   * The saved PC is set to the start address of the dump, so that a
+;     subsequent L or G command will use that location.
+;
+;   Notes:
+;   * This depends on COUT preserving X and Y. This is true for the screen
+;     (PR#0), but may not be for other char switch (CSW) routines.
 
-hexdump     rts
+hexdump
+            ldy #0          ; Constant value for indexed addressing.
 
+            ;   Set the PC (next address for the G and L commands)
+            ;   to our start address, to make it convenient to list
+            ;   or run what we just looked at.
+            ;   This also serves as our saved start value for printing
+            ;   the characters after the hex dump.
+            lda mnext
+            sta PCL
+            lda mnext+1
+            sta PCH
+
+            ;   Print current address (followed by hyphen) and hex bytes
+            ;   up to mod-8 boundary.
+.nextline   jsr PRA1
+.nexthex    lda #AA(' ')    ; space before every hex byte
+            jsr COUT
+            lda (mnext),y   ; and the data itself
             jsr PRBYTE
-            ;jsr CROUT1
-            rts
+            inc mnext
+            bne .checkend
+            inc mnext+1
+.checkend   ;   Check to see if we've reached the end.
+            lda mend
+            cmp mnext
+            bne .checkline
+            lda mend+1
+            cmp mnext+1
+            beq .finish
+.checkline  lda mnext
+            and #$07        ; A mod 8 == 0?
+            beq .nextline
+            bne .nexthex
+
+.finish     rts
+
+            ; XXX print the char values somehow.

@@ -1,10 +1,187 @@
+from    numbers import Number
 from    testmc.m6502 import  Machine, Registers as R, Instructions as I
-import  pytest
+from    pytest import fixture, mark
 
 object_file = 'src/a2/mondump.p'
 
+####################################################################
+#   Utility routines
+
+def LSB(n):  return n & 0xFF
+def MSB(n):  return (n>>8) & 0xFF
+
+@mark.parametrize('word, msb, lsb', (
+    ( 0x0000, 0x00, 0x00),
+    ( 0x1234, 0x12, 0x34),
+    ( 0xFFFE, 0xFF, 0xFE),
+    (0xF2345, 0x23, 0x45),
+))
+def test_LSB_MSB(word, msb, lsb):
+    assert lsb == LSB(word)
+    assert msb == MSB(word)
+
+
+####################################################################
+#  outbuf - mocked output routines
+
+class Outbuf:
+    ''' Set up routines that store values in a buffer. This is
+        typically used to mock system output routines or other calls.
+
+        The buffer is 255 bytes and is not checked for overflow.
+
+        The core code, data and buffer start at `storeaddr` and their
+        total length is given by `__len__()`, if you need that to
+        determine what space is free beyond it. The buffer may be
+        cleared with `reset()` and retrived with `getbuf()` or
+        `getbytes()`.
+
+        As well as `storeaddr`, the constructor takes named parameters
+        for the subroutines that will append to the buffer in
+        different ways. Give the start address of each subroutine; the
+        code to call the core append will be filled in at that
+        location. The parameters/subroutine types are:
+
+        - `valouts`: Append a constant value (a sentinel). Specify as
+          a dict mapping address to its (8-bit) value as an int or
+          char.
+        - `aouts`: Append the contents of register A. Specify as a
+          sequence of addresses.
+        - `aprocs`: Process the contents of register A with 6502 code
+          and then append as `aouts` above. Specify as a dict mapping
+          address to the machine code as a list of ints.
+
+        The `aprocs` are designed for ouput routines where conversion
+        would be convenient for the tests. E.g. on Apples, where
+        ``COUT`` takes an ASCII char with the high bit set, you can
+        use ``[I.EOR, 0x80]`` to flip that bit to translate the
+        appended character to ASCII with the high bit clear. For code
+        much longer than this, you probably want to use a JSR to your
+        more complex code, which might record other things as well.
+    '''
+    def __init__(self, machine, storeaddr, *, valouts={}, aouts=[], aprocs=[]):
+        ''' Set up the code/data/buffer starting at `storeaddr`,
+            and deposit calls to the code at each address in
+            `valouts`, `aouts` and `aprocs`.
+        '''
+        M = self.M = machine
+
+        self.ytmp = self.pos = self.buf = 0  # dummy values to get code length
+        codelen   = len(self.outsubr_code())
+        self.ytmp = storeaddr + codelen         # temp. storage
+        self.pos  = storeaddr + codelen + 1     # next free byte in buffer
+        self.buf  = storeaddr + codelen + 2     # start of buffer
+        self.len  = self.buf + 256 - storeaddr
+
+        M.deposit(storeaddr, self.outsubr_code())
+        #   The following subroutine is tail-call optimized.
+        aout_subr = ( I.JMP, LSB(storeaddr), MSB(storeaddr), )
+        for aout in aouts:
+            M.deposit(aout, aout_subr)
+        for addr, proc in aprocs:
+            M.deposit(addr, tuple(proc) + aout_subr)
+        for valout, val in valouts.items():
+            if not isinstance(val, Number):
+                val = ord(val)
+            M.deposit(valout, ( I.LDA, val, ) + aout_subr)
+
+        self.reset()
+
+    def reset(self):
+        ' Empty the buffer. '
+        self.M.deposit(self.pos, 0)
+
+    def getbuf(self):
+        ''' Return the buffer containing the accumulated output
+            as a list of byte values.
+        '''
+        return self.M.bytes(self.buf, self.M.byte(self.pos))
+
+    def getbytes(self):
+        ''' Return the buffer containing the accumulated output
+            as a byte string.
+        '''
+        return bytes(self.getbuf())
+
+    def __len__(self):
+        ' Return the length of storage used by the code, data and buffer. '
+        return self.len
+
+    def outsubr_code(self):
+        return (
+            I.STYa,  LSB(self.ytmp), MSB(self.ytmp),    # save Y
+            I.LDYa,  LSB(self.pos),  MSB(self.pos),     # load position
+            I.STAay, LSB(self.buf),  MSB(self.buf),     # store A at position
+            I.INY,                                      # increment position
+            I.STYa,  LSB(self.pos),  MSB(self.pos),     # store position
+            I.LDYa,  LSB(self.ytmp), MSB(self.ytmp),    # restore Y
+            I.RTS,
+            )
+
+def test_Outbuf(M):
+    S = M.symtab
+    M.deposit(0x400, ( I.JSR, 0x34, 0x12, I.RTS ))
+    M.deposit(0x410, ( I.JSR, 0xFE, 0x13, I.RTS ))
+
+    aout1 = 0x1234; aout2=0x13FE; aouts = [ aout1, aout2, ]
+    aproc = 0x1440; aprocs  = [ (aproc, [I.EOR, 0xAA]), ]
+    valout1 = 0x1307; valout2 = 0x1318
+    valouts = { valout1: '@', valout2: 0x18, }
+
+    out = Outbuf(M, 0x2000, aouts=aouts, aprocs=aprocs, valouts=valouts)
+    assert 275 == len(out)          # code + data + buffer
+    assert [] == out.getbuf()
+
+    ogb = out.getbytes
+    M.call(aout1, R(a=0))           ; assert b'\x00'               == ogb()
+    M.call(aout2, R(a=ord('.')))    ; assert b'\x00.'              == ogb()
+    M.call(aproc, R(a=0))           ; assert b'\x00.\xAA'          == ogb()
+    M.call(aproc, R(a=0xFF))        ; assert b'\x00.\xAA\x55'      == ogb()
+    M.call(valout1)                 ; assert b'\x00.\xAA\x55@'     == ogb()
+    M.call(valout2)                 ; assert b'\x00.\xAA\x55@\x18' == ogb()
+
+    out.reset()
+    M.call(aout1, R(a=0xFF))   ; assert [0xFF] == out.getbuf()
+
+####################################################################
+
+#@mark.xfail(strict=True) # XXX
 def test_dump(M):
     S = M.symtab
+    start = 0x17FE
 
-    M.call(S.hexdump, R(a=0))
-    assert R(a=0) == M.regs
+    out = Outbuf(M, 0xC080, aouts=[ S.PRBYTE, ],
+        aprocs=[ (S.COUT, [I.EOR, 0x80]), ],
+        valouts={ S.PRA1:0x90, S.CROUT1:0x91 })
+
+    M.depword(S.A2L, start)
+    data = [
+        0x00, 0x80,                                     # $01FE-$01FF
+        0xA1, 0xA0, 0x40, 0x8A, 0x1A, 0xC0, 0xC1, 0xC2, # $0200-$0207
+        0xC3,                                           # $0208
+        ]
+    M.deposit(start, data)
+    M.depword(S.mnext, start)
+    M.depword(S.mend,  start+len(data))
+    M.depword(S.PCL, 0)                                 # should be overwritten
+
+    M.call(S.hexdump)
+
+    #   Sets default addr for G and L to the start of the area we dumped.
+    assert start == M.word(S.PCL)
+
+    expected_output = [
+        b'\x90',                                        # PRA1: line 1
+        b' \x00 \x80',                                  # PRBYTEs
+        b'\x90',                                        # PRA1: line 2
+        b' \xA1 \xA0 \x40 \x8A \x1A \xC0 \xC1 \xC2',    # PRBYTEs
+        b'\x90',                                        # PRA1: line 3
+        b' \xC3',                                       # PRBYTEs
+    ]
+    assert out.getbytes() == b''.join(expected_output)
+
+    #   The next address to be dumped should be next addr after end.
+    assert start+len(data) == M.word(S.mnext)
+    #   XXX can we have it set the next end to the same length here, too?
+    #   Or will it be wiped out by the monitor parsing the next command?
+    #assert start+len(data)+len(data) = M.word(S.mend)

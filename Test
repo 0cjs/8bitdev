@@ -37,7 +37,7 @@ setup_asxxxx() {
 }
 
 setup_asl() {
-    . tools/asl/Build
+    . tool/asl/Build
     PATH="$builddir/asl:$PATH"
     asl_installed && return 0
     install_asl "$builddir/asl"

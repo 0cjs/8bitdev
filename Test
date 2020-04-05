@@ -10,11 +10,11 @@ die() {
 setup_asxxxx() {
     local archive=5p31_exe_linux.zip
     local dldir="$basedir/.download"
-    local instdir="$builddir/bin"
+    local instdir="$BUILDDIR/bin"
     local url='http://shop-pdp.net/_ftp/asxxxx'
     local sha=648a11d48daab3b67e97d82221315b074e874ea30b3f0ead2836baec211940c7
 
-    PATH="$builddir/bin:$PATH"
+    PATH="$BUILDDIR/bin:$PATH"
 
     [[ -x $instdir/aslink && -x $instdir/as6500 ]] && return
 
@@ -38,24 +38,24 @@ setup_asxxxx() {
 
 setup_asl() {
     . tool/asl/Build
-    PATH="$builddir/asl:$PATH"
+    PATH="$BUILDDIR/asl:$PATH"
     asl_installed && return 0
-    install_asl "$builddir/asl"
+    install_asl "$BUILDDIR/asl"
 }
 
 ####################################################################
 #   Main
 
 basedir=$(cd "$(dirname "$0")" && pwd -P)
-builddir="$basedir/.build"
+export BUILDDIR="$basedir/.build"
 
 #   Leading command line args (these must be at the start):
 #   • -C: clean rebuild of everything, including toolchains
 #   • -c: clean rebuild of only this repo's source (test/toolchain output)
 #   All args after these are passed on to pytest.
 while [[ ${#@} -gt 0 ]]; do case "$1" in
-    -C)     shift; rm -rf "$builddir";;
-    -c)     shift; rm -rf "$builddir"/{obj,pytest};;
+    -C)     shift; rm -rf "$BUILDDIR";;
+    -c)     shift; rm -rf "$BUILDDIR"/{obj,pytest};;
     *)      break;;
 esac; done
 
@@ -65,7 +65,7 @@ setup_asxxxx
 setup_asl
 . ./activate -q
 
-mkdir -p "$builddir/obj"
+mkdir -p "$BUILDDIR/obj"
 
 ####################################################################
 #   ASxxxx builds
@@ -95,7 +95,7 @@ linkopts="-numwt"
 asm() {
     local srcfile="$1"; shift
     #   `.rel` output extension is replaced/added automatically
-    as6500 $asmopts "$builddir/obj/"$(basename "$srcfile") "$srcfile" "$@"
+    as6500 $asmopts "$BUILDDIR/obj/"$(basename "$srcfile") "$srcfile" "$@"
 }
 
 link() {
@@ -103,7 +103,7 @@ link() {
     #   Subsequent filenames are input files, with or without .rel extension
     #   Single filename is ouput and input.
     #   Other arguments before and after
-    (cd $builddir/obj/ && aslink $linkopts "$@")
+    (cd $BUILDDIR/obj/ && aslink $linkopts "$@")
 }
 
 asm src/simple-asx.a65  ; link simple-asx
@@ -114,7 +114,7 @@ asm src/zptest.a65      ; link zptest    -b '_code=0x0300'
 #   be done *after* the .rst file is created by the linker because
 #   otherwise the extra newlines make the linker edit the wrong lines
 #   in the .lst file.
-sed -i -e 's/\f/\n/' "$builddir"/obj/*.{lst,rst,map}
+sed -i -e 's/\f/\n/' "$BUILDDIR"/obj/*.{lst,rst,map}
 
 ####################################################################
 #   AS builds

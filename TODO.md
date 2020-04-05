@@ -3,6 +3,9 @@ To-do List
 
 #### Features
 
+- Add "hexadecimal integers" to framework with `__repr__()`s that
+  print as `$EA` or `$FFFF`. Construct perhaps with `A(0xFFFF)`
+  (address) and `B(0xFF)` (byte)?
 - "Omniscient debugging"; dump initial memory and symbol table to a
   file, followed by a trace of full execution (instruction, resulting
   register values and the memory change for each step) of a call.

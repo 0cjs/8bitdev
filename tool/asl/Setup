@@ -59,10 +59,17 @@ class ASL(Setup):
         shutil.copyfile(
             str(Path(__file__).parent.joinpath('gitignore')),
             str(self.srcdir().joinpath('.gitignore')))
-        shutil.copyfile(
-            str(self.srcdir().joinpath(
-                'Makefile.def-samples', 'Makefile.def-x86_64-unknown-linux')),
-            str(self.srcdir().joinpath('Makefile.def')))
+
+        mfdef_template = self.srcdir().joinpath(
+                'Makefile.def-samples', 'Makefile.def-x86_64-unknown-linux')
+        mfdef = self.srcdir().joinpath('Makefile.def')
+        shutil.copyfile(str(mfdef_template), str(mfdef))
+        with mfdef.open('at') as fd:
+            print('\n\n#', '-'*73, file=fd)
+            print('# tool/asl/Setup additional configuration\n', file=fd)
+            #   These are the two dirs defined when compiling.
+            print('LIBDIR =', self.pdir('lib', 'asl'), file=fd)
+            print('INCDIR =', self.pdir('include', 'asl'), file=fd)
 
     def build(self):
         ''' Build  the tool.
@@ -101,7 +108,7 @@ class ASL(Setup):
         #   programs can automatically find them.
         #
         for path in self.srcdir().glob('*.msg'):
-            dest = self.pdir('bin').joinpath(path.name)
+            dest = self.pdir('lib', 'asl').joinpath(path.name)
             if not dest.exists(): dest.symlink_to(path)
 
         srcs = self.srcdir().joinpath('include')

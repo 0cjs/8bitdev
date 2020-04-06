@@ -34,6 +34,7 @@
 ####################################################################
 #   Configuration
 
+TOOLSET_NAME = 'asl'
 SOURCE_REPO = 'https://github.com/KubaO/asl.git'
 SOURCE_REF  = 'dev/cjs/current'
 
@@ -49,16 +50,21 @@ EX_UNAVAILABLE  = 69    # A service or support program/file doesn't exist
 EX_SOFTWARE     = 70    # (Non-OS) internal software error
 EX_CONFIG       = 78    # Configuration error
 
-BUILDDIR    = None      # Project build directory for source and executables
+#   The list of standard subdirectories for build and installation of
+#   toolsets under the tool directory, $BUILD/tool/. This follows
+#   the standard Unix /usr/local/* arrangement.
+PREFIX_SUBDIRS = ('bin', 'doc', 'include', 'lib', 'man', 'share', 'src')
 
-def targetdir(resolve=False):
+BUILDDIR = None  # Project build directory for tool source and executables
+
+def srcdir(resolve=False):
     if not resolve:
-        return BUILDDIR.joinpath('asl')
+        return BUILDDIR.joinpath('tool', 'src', TOOLSET_NAME)
     else:
         #   Work around not having ``strict=True`` option to `Path.resolve()`
         #   in Python ≤3.5 by resolving `BUILDDIR` instead, which will
         #   always exist if we've reached the point of needing the target dir.
-        return BUILDDIR.resolve().joinpath('asl')
+        return BUILDDIR.joinpath('tool', 'src').resolve().joinpath(TOOLSET_NAME)
 
 ####################################################################
 #   printconfig()
@@ -115,8 +121,8 @@ def runcmd(command, *, cwd=None):
 #   Fetch/build/install routines
 
 def check_installed():
-    ''' *Silently* determine if asl is currently available or not and
-        exit with success if it is.
+    ''' *Silently* determine if the toolset is currently available or
+        not and exit with success if it is.
     '''
     #   XXX Start with shutil.which, first?
     try:
@@ -138,7 +144,8 @@ def setbuilddir():
 
     if os.environ.get('BUILDDIR', None):
         BUILDDIR = Path(os.environ['BUILDDIR'])
-        BUILDDIR.mkdir(parents=True, exist_ok=True)
+        for d in PREFIX_SUBDIRS:
+            BUILDDIR.joinpath('tool', d).mkdir(parents=True, exist_ok=True)
         return
 
     if Path('.build').is_dir():
@@ -158,7 +165,7 @@ def setpath():
     if path is None:
         errexit(EX_CONFIG, 'ERROR: No PATH variable in environment')
     separator = ':'     # XXX not right for Windows
-    td = str(targetdir(resolve=True))
+    td = str(srcdir(resolve=True))
     if td in path:                      # XXX mismatches if substring
         return
     path = td + separator + path
@@ -167,31 +174,31 @@ def setpath():
 
 def fetch():
     ''' Fetch the tool if not already present in TARGET. '''
-    if targetdir().is_dir():
-        print('----- Using existing source in {}'.format(targetdir()))
+    if srcdir().is_dir():
+        print('----- Using existing source in {}'.format(srcdir()))
         return
 
-    print('----- Cloning ASL from {}'.format(SOURCE_REPO))
-    runcmd([ 'git', 'clone', str(SOURCE_REPO), str(targetdir()) ])
+    print('----- Cloning {} from {}'.format(TOOLSET_NAME, SOURCE_REPO))
+    runcmd([ 'git', 'clone', str(SOURCE_REPO), str(srcdir()) ])
 
     print('----- Switching to ref or branch {}'.format(SOURCE_REF))
-    runcmd([ 'git', '-C', str(targetdir()), 'checkout', str(SOURCE_REF) ])
+    runcmd([ 'git', '-C', str(srcdir()), 'checkout', str(SOURCE_REF) ])
 
 def configure():
     ''' Configure build, if not already done. '''
-    if targetdir().joinpath('Makefile.def').exists():
+    if srcdir().joinpath('Makefile.def').exists():
         print('----- Using existing build configuration')
         return
 
-    print('----- Configuring {}'.format(targetdir()))
+    print('----- Configuring {}'.format(srcdir()))
 
     shutil.copyfile(
         str(Path(__file__).parent.joinpath('gitignore')),
-        str(targetdir().joinpath('.gitignore')))
+        str(srcdir().joinpath('.gitignore')))
     shutil.copyfile(
-        str(targetdir().joinpath(
+        str(srcdir().joinpath(
             'Makefile.def-samples', 'Makefile.def-x86_64-unknown-linux')),
-        str(targetdir().joinpath('Makefile.def')))
+        str(srcdir().joinpath('Makefile.def')))
 
 def build():
     ''' Build  the tool.
@@ -200,7 +207,7 @@ def build():
         have changed in the local source copy.
     '''
     #   Note we avoid building the documentation here.
-    runcmd(['make', '-j8'], cwd=targetdir())
+    runcmd(['make', '-j8'], cwd=srcdir())
 
 def install():
     #   XXX We just run it straight from this directory, until we

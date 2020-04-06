@@ -120,6 +120,25 @@ class Setup(metaclass=abc.ABCMeta):
         #   Project build directory under which we put our tool/ directory.
         self.builddir = None
 
+    def main(self):
+        ''' Run the setup etc. process by calling the `setup` function.
+
+            To help shells scripts sourcing this exit properly when an
+            unepxected error occurs, this catches most exceptions that the
+            interpreter would otherwise handle, prints an error message as
+            the interpreter does, but also generates a `return` command
+            with an error exit code on the config channel. (This does not,
+            however, catch syntax errors, bad imports and other errors
+            that occur before this is called.)
+        '''
+        try:
+            self.setup()
+        except Exception as ex:
+            printconfig('return', EX_SOFTWARE)
+            errprint('INTERNAL ERROR in', sys.argv[0])
+            traceback.print_exc()
+            sys.exit(EX_SOFTWARE)
+
     def pdir(self, dir, *subdirs, create=True):
         ''' Return an absolute path to a subdirectory under the prefix
             ($builddir/tools) we use for toolsets. The first level `dir`
@@ -186,4 +205,3 @@ class Setup(metaclass=abc.ABCMeta):
         path = td + separator + path
         os.environ['PATH'] = path
         printconfig("PATH='{}'".format(path))
-

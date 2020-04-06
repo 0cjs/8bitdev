@@ -115,7 +115,7 @@ class ASL(Setup):
             dest.parent.mkdir(parents=True, exist_ok=True)
             if not dest.exists(): dest.symlink_to(src)
 
-    def main(self):
+    def setup(self):
         self.setbuilddir()
         self.setpath()
         self.check_installed()
@@ -128,14 +128,5 @@ class ASL(Setup):
             self.build()
             self.install()
 
-####################################################################
-#   Main program
-
 if (__name__) == '__main__':
-    try:
-        ASL().main()
-    except Exception as ex:
-        printconfig('return', EX_SOFTWARE)
-        errprint('INTERNAL ERROR in', sys.argv[0])
-        traceback.print_exc()
-        sys.exit(EX_SOFTWARE)
+    ASL().main()

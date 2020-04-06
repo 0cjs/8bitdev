@@ -264,7 +264,7 @@ def install():
         if src.is_dir(): continue
         dest = pdir('include', 'asl').joinpath(src.relative_to(srcs))
         dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.symlink_to(src)
+        if not dest.exists(): dest.symlink_to(src)
 
 ####################################################################
 #   Main program

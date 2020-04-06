@@ -103,11 +103,11 @@ try:
     #   done only once per process; it will fail with [Errno 9] Bad
     #   file descriptor if tried a second time.
     config_out = open(3, 'w')
-    def printconfig(s):
-        print(s, file=config_out)
+    def printconfig(*s):
+        print(*s, file=config_out)
 except OSError as e:                     # [Errno 9] Bad file descriptor
-    def printconfig(s):
-        print('CONFIG:', s)
+    def printconfig(*s):
+        print('CONFIG:', *s)
 
 ####################################################################
 #   Utility routines
@@ -289,3 +289,4 @@ if (__name__) == '__main__':
         printconfig('return', EX_SOFTWARE)
         errprint('INTERNAL ERROR in', sys.argv[0])
         traceback.print_exc()
+        sys.exit(EX_SOFTWARE)

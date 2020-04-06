@@ -72,9 +72,9 @@ esac; done
 
 cd "$basedir"
 
+. ./activate -q
 setup_asxxxx
 tool_setup tool/asl/Setup
-. ./activate -q
 
 mkdir -p "$BUILDDIR/obj"
 

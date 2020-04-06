@@ -24,8 +24,6 @@
     copy these and execute them by hand if he likes.)
 
     TODO:
-    - Install or link to build/bin rather than having a separate dir
-      in path for ASL.
     - Add ability to force fetch/build/use of local tool version even
       when one is available from the environment.
 
@@ -56,6 +54,27 @@ EX_CONFIG       = 78    # Configuration error
 PREFIX_SUBDIRS = ('bin', 'doc', 'include', 'lib', 'man', 'share', 'src')
 
 BUILDDIR = None  # Project build directory for tool source and executables
+
+def pdir(dir, *subdirs, create=True):
+    ''' Return an absolute path to a subdirectory under the prefix
+        (`BUILDDIR`/tools) we use for toolsets. The first level `dir`
+        must be a member of `PREFIX_SUBDIRS`.
+
+        If `create` is `True`, this will create the directory, if
+        necessary.
+    '''
+    if not dir in PREFIX_SUBDIRS:
+        raise ValueError('Internal error: {} not in PREFIX_SUBDIRS'.format(dir))
+
+    d = BUILDDIR.joinpath('tool', dir, *subdirs)
+    if create:
+        d.mkdir(parents=True, exist_ok=True)
+    #   We do not have strict=False in which means we must
+    #   create the directories _before_
+    d = d.resolve()     # strict=False not available in Python ≤3.5, so we
+                        # must have created the directories before we resolve.
+    return d
+
 
 def srcdir(resolve=False):
     if not resolve:
@@ -165,7 +184,7 @@ def setpath():
     if path is None:
         errexit(EX_CONFIG, 'ERROR: No PATH variable in environment')
     separator = ':'     # XXX not right for Windows
-    td = str(srcdir(resolve=True))
+    td = str(pdir('bin'))
     if td in path:                      # XXX mismatches if substring
         return
     path = td + separator + path
@@ -210,9 +229,42 @@ def build():
     runcmd(['make', '-j8'], cwd=srcdir())
 
 def install():
-    #   XXX We just run it straight from this directory, until we
-    #   move to a system with a proper .build/tools/bin/ etc.
-    pass
+    ''' For ASL we don't use `make install` because that wants to build the
+        documentation, which requires LaTeX and even then tends to drop to
+        interactive prompts about missing `german.sty` etc.
+
+        As well, it's nicer four our purposes to use symlinks back to the
+        build directory because then a developer tweaking AS can just
+        `make` in the source directory to make the new version available to
+        the build system.
+
+        So instead we emulate the parts of install.{bat,cmd,sh} we want,
+        which is bin/, lib/ (the message files are required) and include/.
+    '''
+
+    binfiles = ('asl', 'plist', 'alink', 'pbind', 'p2hex', 'p2bin',)
+    for f in binfiles:
+        dest = pdir('bin').joinpath(f)
+        if not dest.exists(): dest.symlink_to(srcdir().joinpath(f))
+
+    #   The localization message files normally go in lib/asl/, but the
+    #   programs don't find them there by default (unless perhaps the
+    #   prefix is /usr/local/). We could emit a setting for the AS_MSGPATH
+    #   environment variable to indicate where they are, but to allow use
+    #   of these tools from the command line without running the Setup
+    #   script, it seems better to just drop the files into bin/, where the
+    #   programs can automatically find them.
+    #
+    for path in srcdir().glob('*.msg'):
+        dest = pdir('bin').joinpath(path.name)
+        if not dest.exists(): dest.symlink_to(path)
+
+    srcs = srcdir().joinpath('include')
+    for src in srcs.glob('**/*'):
+        if src.is_dir(): continue
+        dest = pdir('include', 'asl').joinpath(src.relative_to(srcs))
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.symlink_to(src)
 
 ####################################################################
 #   Main program

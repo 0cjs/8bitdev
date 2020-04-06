@@ -1,0 +1,232 @@
+#!/usr/bin/env python3
+'''
+    Configure for use of the Macroassembler AS.
+
+    This will prefer, in order:
+      1. An already-built version local to this project under .build/.
+      2. A version provided by the environment.
+      3. Fetch, build and install a local version for #1 above.
+
+    This has three output streams: stdout and stderr from this program
+    and any programs it calls to do the setup (fetch, build and
+    install), and the "configuration output," which prints Bash
+    commands to configure the caller to use what it's set up.
+
+    If file descriptor 3 is open when this is started, the
+    configuration commands will be printed to that. The caller is
+    expected to execute these, while passing through stdout and
+    stderr, with the following Bash magic incantation:
+
+        . <($tool_path 3>&1 1>/proc/$$/fd/1)
+
+    If file descriptor 3 is not open, the configuration commands will
+    be printed to stdout, prefixed by ``CONFIG: ``. (The caller can
+    copy these and execute them by hand if he likes.)
+
+    TODO:
+    - Install or link to build/bin rather than having a separate dir
+      in path for ASL.
+    - Add ability to force fetch/build/use of local tool version even
+      when one is available from the environment.
+
+'''
+
+####################################################################
+#   Configuration
+
+SOURCE_REPO = 'https://github.com/KubaO/asl.git'
+SOURCE_REF  = 'dev/cjs/current'
+
+####################################################################
+#   Globals
+
+from    pathlib import Path
+import  os, shutil, subprocess, sys, traceback
+
+#   From /usr/include/sysexits.h
+EX_USAGE        = 64    # Bad command arguments, etc.
+EX_UNAVAILABLE  = 69    # A service or support program/file doesn't exist
+EX_SOFTWARE     = 70    # (Non-OS) internal software error
+EX_CONFIG       = 78    # Configuration error
+
+BUILDDIR    = None      # Project build directory for source and executables
+
+def targetdir(resolve=False):
+    if not resolve:
+        return BUILDDIR.joinpath('asl')
+    else:
+        #   Work around not having ``strict=True`` option to `Path.resolve()`
+        #   in Python ≤3.5 by resolving `BUILDDIR` instead, which will
+        #   always exist if we've reached the point of needing the target dir.
+        return BUILDDIR.resolve().joinpath('asl')
+
+####################################################################
+#   printconfig()
+#
+#   Define printconfig() to print a configuration command to be
+#   executed by the caller. This should be bash code, e.g., ``export
+#   PATH=...``.
+#
+#   The string will be printed on file descriptor 3, if it was open
+#   when we started, otherwise it it will be printed on stdout
+#   prefixed with ``CONFIG: ``, presumably for the user to read and do
+#   by hand.
+#
+
+try:
+    #   Use file descriptor 3, if it's open. This open(3) call can be
+    #   done only once per process; it will fail with [Errno 9] Bad
+    #   file descriptor if tried a second time.
+    config_out = open(3, 'w')
+    def printconfig(s):
+        print(s, file=config_out)
+except OSError as e:                     # [Errno 9] Bad file descriptor
+    def printconfig(s):
+        print('CONFIG:', s)
+
+####################################################################
+#   Utility routines
+
+def errprint(*args, **kwargs):
+    print(*args, **kwargs, file=sys.stderr, flush=True)
+
+def errexit(exitcode, *messages):
+    errprint(*messages)
+    printconfig('return', exitcode)   # Sourced stdout also exits with code.
+    sys.exit(exitcode)
+
+def successexit():
+    printconfig('return 0')
+    sys.exit(0)
+
+def runcmd(command, *, cwd=None):
+    ''' Run a command, failing the program with an error message if the
+        command fails.
+
+        Stdout is being used for shell commands to be executed by our
+        caller, so the subprocess' stdout is sent to stderr.
+    '''
+    if cwd: cwd = str(cwd)  # Convert Path object for Python ≤3.5
+    c = subprocess.run(command, cwd=cwd, stdout=sys.stderr)
+    if c.returncode != 0:
+        errexit(c.returncode, 'Command failed: {}'.format(command))
+
+####################################################################
+#   Fetch/build/install routines
+
+def check_installed():
+    ''' *Silently* determine if asl is currently available or not and
+        exit with success if it is.
+    '''
+    #   XXX Start with shutil.which, first?
+    try:
+        c = subprocess.run(['asl', '-this-is-not-an-option'],
+            stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
+    except FileNotFoundError:
+        return
+    if c.returncode == 4 and b'Invalid option' in c.stdout:
+        successexit()
+
+def setbuilddir():
+    ''' Locate build and target directories.
+
+        If the ``BUILDDIR`` environment variable is set, we use that,
+        creating that directory if necessary. Otherwise if ``.build/``
+        exists in the current working directory, we use that.
+    '''
+    global BUILDDIR
+
+    if os.environ.get('BUILDDIR', None):
+        BUILDDIR = Path(os.environ['BUILDDIR'])
+        BUILDDIR.mkdir(parents=True, exist_ok=True)
+        return
+
+    if Path('.build').is_dir():
+        BUILDDIR = Path('.build')
+        return
+
+def setpath():
+    ''' Update ``PATH`` to include the tools we're building.
+
+        XXX This does not work on Windows.
+    '''
+    if not BUILDDIR:
+        #   Cannot build, so must rely on the environment providing the tool.
+        return
+
+    path = os.environ.get('PATH', None)
+    if path is None:
+        errexit(EX_CONFIG, 'ERROR: No PATH variable in environment')
+    separator = ':'     # XXX not right for Windows
+    td = str(targetdir(resolve=True))
+    if td in path:                      # XXX mismatches if substring
+        return
+    path = td + separator + path
+    os.environ['PATH'] = path
+    printconfig("PATH='{}'".format(path))
+
+def fetch():
+    ''' Fetch the tool if not already present in TARGET. '''
+    if targetdir().is_dir():
+        print('----- Using existing source in {}'.format(targetdir()))
+        return
+
+    print('----- Cloning ASL from {}'.format(SOURCE_REPO))
+    runcmd([ 'git', 'clone', str(SOURCE_REPO), str(targetdir()) ])
+
+    print('----- Switching to ref or branch {}'.format(SOURCE_REF))
+    runcmd([ 'git', '-C', str(targetdir()), 'checkout', str(SOURCE_REF) ])
+
+def configure():
+    ''' Configure build, if not already done. '''
+    if targetdir().joinpath('Makefile.def').exists():
+        print('----- Using existing build configuration')
+        return
+
+    print('----- Configuring {}'.format(targetdir()))
+
+    shutil.copyfile(
+        str(Path(__file__).parent.joinpath('gitignore')),
+        str(targetdir().joinpath('.gitignore')))
+    shutil.copyfile(
+        str(targetdir().joinpath(
+            'Makefile.def-samples', 'Makefile.def-x86_64-unknown-linux')),
+        str(targetdir().joinpath('Makefile.def')))
+
+def build():
+    ''' Build  the tool.
+
+        This is generally expected to rebuild the tool if any files
+        have changed in the local source copy.
+    '''
+    #   Note we avoid building the documentation here.
+    runcmd(['make', '-j8'], cwd=targetdir())
+
+def install():
+    #   XXX We just run it straight from this directory, until we
+    #   move to a system with a proper .build/tools/bin/ etc.
+    pass
+
+####################################################################
+#   Main program
+
+def setup():
+    setbuilddir()
+    setpath()
+    check_installed()
+    if not BUILDDIR:
+        errexit(EX_USAGE,
+            'BUILDDIR not set and {} is not a directory.'.format(BUILDDIR))
+    else:
+        fetch()
+        configure()
+        build()
+        install()
+
+if (__name__) == '__main__':
+    try:
+        setup()
+    except Exception as ex:
+        printconfig('return', EX_SOFTWARE)
+        errprint('INTERNAL ERROR in', sys.argv[0])
+        traceback.print_exc()

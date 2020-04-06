@@ -4,15 +4,14 @@ Support Files for The Macroassembler AS
 This is support for projects that want to use
 [The Macroassembler AS][asl] on Linux.
 
-The `Build` script in this directory contains Bash functions to help a
-master build script check for the presence of the `asl` command in the
-path and fetch/build it if necessary. Use the Bash `.` or `source`
-directive in your script to load those functions. See the script
-itself for further details.
+The `Setup` script in this directory will do nothing if the tool is
+already available from the environment (e.g., an OS package for it has
+been installed, or you have added it an external version to your
+`$PATH`), otherwise it will fetch, configure and build a copy under
+`$BUILDDIR` (default: `.build/` in the current working directory) and
+emit configuration for the build environment to use that.
 
-You may also run `Build` directly from the command line, in which case
-it will always fetch and build AS into `.build/asl/` under the current
-directory (or fail if the `.build/` directory doesn't exist).
+See the documentation in `Setup` for more details.
 
 
 

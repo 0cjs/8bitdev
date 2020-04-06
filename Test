@@ -7,6 +7,24 @@ die() {
     exit $exitcode
 }
 
+tool_setup() {
+    [[ ${#@} -eq 1 ]] \
+        || { echo 1>&2 'tool_setup(): tool path arg required'; return 2; }
+    local tool_path="$1"; shift
+    [[ -x $tool_path ]] || return 69    # EX_UNAVAILABLE: support file nonexist
+
+    #   The tool_path command is expected to produce build output messages
+    #   on stdout (1) and stderr (2), and commands to configure this shell
+    #   process (e.g., to set environment variables) on file descriptor 3.
+    #
+    #   The following rather magical statement handles this by redirecting
+    #   fd 3 of the subprocess to the standard output, to be read and
+    #   executed by the source (`.`) command, and redirecting stdout of the
+    #   subprocess to our current process' stdout so we can still see that
+    #   output or have it properly sent to wherever our stdout is directed.
+    . <($tool_path 3>&1 1>/proc/$$/fd/1)
+}
+
 setup_asxxxx() {
     local archive=5p31_exe_linux.zip
     local dldir="$basedir/.download"
@@ -36,13 +54,6 @@ setup_asxxxx() {
     #   help message returns an error exit code.
 }
 
-setup_asl() {
-    . tool/asl/Build
-    PATH="$BUILDDIR/asl:$PATH"
-    asl_installed && return 0
-    install_asl "$BUILDDIR/asl"
-}
-
 ####################################################################
 #   Main
 
@@ -62,7 +73,7 @@ esac; done
 cd "$basedir"
 
 setup_asxxxx
-setup_asl
+tool_setup tool/asl/Setup
 . ./activate -q
 
 mkdir -p "$BUILDDIR/obj"

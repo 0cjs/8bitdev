@@ -2,120 +2,28 @@
 '''
     Configure for use of the Macroassembler AS.
 
-    This will prefer, in order:
-      1. An already-built version local to this project under .build/.
-      2. A version provided by the environment.
-      3. Fetch, build and install a local version for #1 above.
+    This will fetch from `ASL.source_repo` and build the `ASL.source_ref`
+    branch, if necessary.
 
-    This has three output streams: stdout and stderr from this program
-    and any programs it calls to do the setup (fetch, build and
-    install), and the "configuration output," which prints Bash
-    commands to configure the caller to use what it's set up.
-
-    If file descriptor 3 is open when this is started, the
-    configuration commands will be printed to that. The caller is
-    expected to execute these, while passing through stdout and
-    stderr, with the following Bash magic incantation:
-
-        . <($tool_path 3>&1 1>/proc/$$/fd/1)
-
-    If file descriptor 3 is not open, the configuration commands will
-    be printed to stdout, prefixed by ``CONFIG: ``. (The caller can
-    copy these and execute them by hand if he likes.)
-
-    TODO:
-    - Add ability to force fetch/build/use of local tool version even
-      when one is available from the environment.
-
+    See the module documentation for `setup` for more details.
 '''
 
-####################################################################
-#   Configuration
+from    os.path  import abspath, dirname
+import  shutil, subprocess, sys, traceback
 
-TOOLSET_NAME = 'asl'
-SOURCE_REPO = 'https://github.com/KubaO/asl.git'
-SOURCE_REF  = 'dev/cjs/current'
+sys.path.insert(0, abspath(dirname(dirname(__file__)))) # setup.py location
+from setup import *
 
-####################################################################
-#   Globals
+class ASL(Setup):
 
-from    pathlib import Path
-import  os, shutil, subprocess, sys, traceback
+    def toolset_name(self):
+        return 'asl'
 
-class ASL:
+    def source_repo(self):
+        return 'https://github.com/KubaO/asl.git'
 
-    def __init__(self):
-        #   Project build directory under which we put our tool/ directory.
-        self.builddir = None
-
-    def pdir(self, dir, *subdirs, create=True):
-        ''' Return an absolute path to a subdirectory under the prefix
-            ($builddir/tools) we use for toolsets. The first level `dir`
-            must be a member of `PREFIX_SUBDIRS`.
-
-            If `create` is `True`, this will create the directory, if
-            necessary.
-        '''
-        if not dir in PREFIX_SUBDIRS:
-            raise ValueError('Internal error: {} not in PREFIX_SUBDIRS'.format(dir))
-
-        d = self.builddir.joinpath('tool', dir, *subdirs)
-        if create:
-            d.mkdir(parents=True, exist_ok=True)
-        d = d.resolve()   # strict=False not available in Python ≤3.5, so we
-                          # must have created the directories before we resolve.
-        return d
-
-    def srcdir(self, resolve=False):
-        if not resolve:
-            return self.builddir.joinpath('tool', 'src', TOOLSET_NAME)
-        else:
-            #   Work around not having ``strict=True`` option to
-            #   `Path.resolve()` in Python ≤3.5 by resolving `BUILDDIR`
-            #   instead, which will always exist if we've reached the point
-            #   of needing the target dir.
-            return self.builddir.joinpath('tool', 'src').resolve().joinpath(TOOLSET_NAME)
-
-    def setbuilddir(self):
-        ''' Locate build and target directories.
-
-            If the ``BUILDDIR`` environment variable is set, we use that,
-            creating that directory if necessary. Otherwise if ``.build/``
-            exists in the current working directory, we use that.
-        '''
-        if os.environ.get('BUILDDIR', None):
-            self.builddir = Path(os.environ['BUILDDIR'])
-            for d in PREFIX_SUBDIRS:
-                self.builddir.joinpath('tool', d) \
-                    .mkdir(parents=True, exist_ok=True)
-            return
-
-        if Path('.build').is_dir():
-            self.builddir = Path('.build')
-            return
-
-    def setpath(self):
-        ''' Update ``PATH`` to include the tools we're building.
-
-            XXX This does not work on Windows.
-        '''
-        if not self.builddir:
-            #   Cannot build; must rely on the environment providing the tool.
-            return
-
-        path = os.environ.get('PATH', None)
-        if path is None:
-            errexit(EX_CONFIG, 'ERROR: No PATH variable in environment')
-        separator = ':'                     # XXX not right for Windows
-        td = str(self.pdir('bin'))
-        if td in path:                      # XXX mismatches if substring
-            return
-        path = td + separator + path
-        os.environ['PATH'] = path
-        printconfig("PATH='{}'".format(path))
-
-    ####################################################################
-    #   Fetch/build/install routines
+    def source_ref(self):
+        return 'dev/cjs/current'
 
     def check_installed(self):
         ''' *Silently* determine if the toolset is currently available or
@@ -136,11 +44,13 @@ class ASL:
             print('----- Using existing source in {}'.format(self.srcdir()))
             return
 
-        print('----- Cloning {} from {}'.format(TOOLSET_NAME, SOURCE_REPO))
-        runcmd([ 'git', 'clone', str(SOURCE_REPO), str(self.srcdir()) ])
+        print('----- Cloning {} from {}'.format(
+            self.toolset_name(), self.source_repo()))
+        runcmd([ 'git', 'clone', str(self.source_repo()), str(self.srcdir()) ])
 
-        print('----- Switching to ref or branch {}'.format(SOURCE_REF))
-        runcmd([ 'git', '-C', str(self.srcdir()), 'checkout', str(SOURCE_REF) ])
+        print('----- Switching to ref or branch {}'.format(self.source_ref()))
+        runcmd([ 'git', '-C', str(self.srcdir()),
+            'checkout', str(self.source_ref()) ])
 
     def configure(self):
         ''' Configure build, if not already done. '''
@@ -223,8 +133,6 @@ class ASL:
 
 if (__name__) == '__main__':
     try:
-        sys.path.insert(0, str(Path(__file__).parent.parent.resolve()))
-        from setup import *
         ASL().main()
     except Exception as ex:
         printconfig('return', EX_SOFTWARE)

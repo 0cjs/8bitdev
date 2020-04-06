@@ -1,5 +1,44 @@
-from    pathlib import Path
-import  os, shutil, subprocess, sys, traceback
+'''
+    Configure use of toolsets, installing if necessary.
+
+    The abstract `Setup` class here contains support code for checking
+    whether or not the environment provides a toolset (e.g., an assembler)
+    and, if not, doing any of fetching, configuring, building and
+    installing (all in the local project build dir) that toolset.
+
+    A subclass of `Setup` should be generated for every toolset. The
+    subclass has considerable control over how the process works. It's
+    usually in a file that can be run from the command line, so that
+    non-Python build tools and humans can easily use it.
+
+    Generally the subclass will prefer to:
+      1. Use an already-built version local to the project under .build/.
+      2. Use a version provided by the environment.
+      3. Fetch, build and install a local version for #1 above.
+
+    Any program importing this file has three output streams: stdout and
+    stderr from the program (and any programs it calls) and the
+    "configuration output," which prints Bash commands to configure the
+    caller to use what it's set up.
+
+    If file descriptor 3 is open when the program is started, the
+    configuration commands will be printed to that. The caller is expected
+    to execute these, while passing through stdout and stderr, with the
+    following Bash magic incantation:
+
+        . <($tool_path 3>&1 1>/proc/$$/fd/1)
+
+    If file descriptor 3 is not open, the configuration commands will be
+    printed to stdout, prefixed by ``CONFIG: ``. (The caller can copy these
+    and execute them by hand if he likes.)
+
+    TODO:
+    - Add ability to force fetch/build/use of local tool version even
+      when one is available from the environment.
+'''
+
+from    pathlib  import Path
+import  abc, os, pathlib, shutil, subprocess, sys, traceback
 
 ####################################################################
 #   Globals
@@ -65,4 +104,86 @@ def runcmd(command, *, cwd=None):
     c = subprocess.run(command, cwd=cwd, stdout=sys.stderr)
     if c.returncode != 0:
         errexit(c.returncode, 'Command failed: {}'.format(command))
+
+####################################################################
+#   Setup class
+
+class Setup(metaclass=abc.ABCMeta):
+
+    @abc.abstractmethod
+    def toolset_name():
+        ''' Return the name of the toolset we're setting up. This will
+            be the name of its subdirectory under $basedir/tools/src/.
+        '''
+
+    def __init__(self):
+        #   Project build directory under which we put our tool/ directory.
+        self.builddir = None
+
+    def pdir(self, dir, *subdirs, create=True):
+        ''' Return an absolute path to a subdirectory under the prefix
+            ($builddir/tools) we use for toolsets. The first level `dir`
+            must be a member of `PREFIX_SUBDIRS`.
+
+            If `create` is `True`, this will create the directory, if
+            necessary.
+        '''
+        if not dir in PREFIX_SUBDIRS:
+            raise ValueError('Internal error: {} not in PREFIX_SUBDIRS'.format(dir))
+
+        d = self.builddir.joinpath('tool', dir, *subdirs)
+        if create:
+            d.mkdir(parents=True, exist_ok=True)
+        d = d.resolve()   # strict=False not available in Python ≤3.5, so we
+                          # must have created the directories before we resolve.
+        return d
+
+    def srcdir(self, resolve=False):
+        if not resolve:
+            return self.builddir.joinpath('tool', 'src', self.toolset_name())
+        else:
+            #   Work around not having ``strict=True`` option to
+            #   `Path.resolve()` in Python ≤3.5 by resolving `BUILDDIR`
+            #   instead, which will always exist if we've reached the point
+            #   of needing the target dir.
+            return self.builddir.joinpath('tool', 'src') \
+                .resolve().joinpath(self.toolset_name())
+
+    def setbuilddir(self):
+        ''' Locate build and target directories.
+
+            If the ``BUILDDIR`` environment variable is set, we use that,
+            creating that directory if necessary. Otherwise if ``.build/``
+            exists in the current working directory, we use that.
+        '''
+        if os.environ.get('BUILDDIR', None):
+            self.builddir = Path(os.environ['BUILDDIR'])
+            for d in PREFIX_SUBDIRS:
+                self.builddir.joinpath('tool', d) \
+                    .mkdir(parents=True, exist_ok=True)
+            return
+
+        if Path('.build').is_dir():
+            self.builddir = Path('.build')
+            return
+
+    def setpath(self):
+        ''' Update ``PATH`` to include the tools we're building.
+
+            XXX This does not work on Windows.
+        '''
+        if not self.builddir:
+            #   Cannot build; must rely on the environment providing the tool.
+            return
+
+        path = os.environ.get('PATH', None)
+        if path is None:
+            errexit(EX_CONFIG, 'ERROR: No PATH variable in environment')
+        separator = ':'                     # XXX not right for Windows
+        td = str(self.pdir('bin'))
+        if td in path:                      # XXX mismatches if substring
+            return
+        path = td + separator + path
+        os.environ['PATH'] = path
+        printconfig("PATH='{}'".format(path))
 

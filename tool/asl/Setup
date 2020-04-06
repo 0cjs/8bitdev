@@ -42,189 +42,190 @@ SOURCE_REF  = 'dev/cjs/current'
 from    pathlib import Path
 import  os, shutil, subprocess, sys, traceback
 
-BUILDDIR = None  # Project build directory for tool source and executables
+class ASL:
 
-def pdir(dir, *subdirs, create=True):
-    ''' Return an absolute path to a subdirectory under the prefix
-        (`BUILDDIR`/tools) we use for toolsets. The first level `dir`
-        must be a member of `PREFIX_SUBDIRS`.
+    def __init__(self):
+        #   Project build directory under which we put our tool/ directory.
+        self.builddir = None
 
-        If `create` is `True`, this will create the directory, if
-        necessary.
-    '''
-    if not dir in PREFIX_SUBDIRS:
-        raise ValueError('Internal error: {} not in PREFIX_SUBDIRS'.format(dir))
+    def pdir(self, dir, *subdirs, create=True):
+        ''' Return an absolute path to a subdirectory under the prefix
+            ($builddir/tools) we use for toolsets. The first level `dir`
+            must be a member of `PREFIX_SUBDIRS`.
 
-    d = BUILDDIR.joinpath('tool', dir, *subdirs)
-    if create:
-        d.mkdir(parents=True, exist_ok=True)
-    #   We do not have strict=False in which means we must
-    #   create the directories _before_
-    d = d.resolve()     # strict=False not available in Python ≤3.5, so we
-                        # must have created the directories before we resolve.
-    return d
+            If `create` is `True`, this will create the directory, if
+            necessary.
+        '''
+        if not dir in PREFIX_SUBDIRS:
+            raise ValueError('Internal error: {} not in PREFIX_SUBDIRS'.format(dir))
 
+        d = self.builddir.joinpath('tool', dir, *subdirs)
+        if create:
+            d.mkdir(parents=True, exist_ok=True)
+        d = d.resolve()   # strict=False not available in Python ≤3.5, so we
+                          # must have created the directories before we resolve.
+        return d
 
-def srcdir(resolve=False):
-    if not resolve:
-        return BUILDDIR.joinpath('tool', 'src', TOOLSET_NAME)
-    else:
-        #   Work around not having ``strict=True`` option to `Path.resolve()`
-        #   in Python ≤3.5 by resolving `BUILDDIR` instead, which will
-        #   always exist if we've reached the point of needing the target dir.
-        return BUILDDIR.joinpath('tool', 'src').resolve().joinpath(TOOLSET_NAME)
+    def srcdir(self, resolve=False):
+        if not resolve:
+            return self.builddir.joinpath('tool', 'src', TOOLSET_NAME)
+        else:
+            #   Work around not having ``strict=True`` option to
+            #   `Path.resolve()` in Python ≤3.5 by resolving `BUILDDIR`
+            #   instead, which will always exist if we've reached the point
+            #   of needing the target dir.
+            return self.builddir.joinpath('tool', 'src').resolve().joinpath(TOOLSET_NAME)
 
-####################################################################
-#   Fetch/build/install routines
+    def setbuilddir(self):
+        ''' Locate build and target directories.
 
-def check_installed():
-    ''' *Silently* determine if the toolset is currently available or
-        not and exit with success if it is.
-    '''
-    #   XXX Start with shutil.which, first?
-    try:
-        c = subprocess.run(['asl', '-this-is-not-an-option'],
-            stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
-    except FileNotFoundError:
-        return
-    if c.returncode == 4 and b'Invalid option' in c.stdout:
-        successexit()
+            If the ``BUILDDIR`` environment variable is set, we use that,
+            creating that directory if necessary. Otherwise if ``.build/``
+            exists in the current working directory, we use that.
+        '''
+        if os.environ.get('BUILDDIR', None):
+            self.builddir = Path(os.environ['BUILDDIR'])
+            for d in PREFIX_SUBDIRS:
+                self.builddir.joinpath('tool', d) \
+                    .mkdir(parents=True, exist_ok=True)
+            return
 
-def setbuilddir():
-    ''' Locate build and target directories.
+        if Path('.build').is_dir():
+            self.builddir = Path('.build')
+            return
 
-        If the ``BUILDDIR`` environment variable is set, we use that,
-        creating that directory if necessary. Otherwise if ``.build/``
-        exists in the current working directory, we use that.
-    '''
-    global BUILDDIR
+    def setpath(self):
+        ''' Update ``PATH`` to include the tools we're building.
 
-    if os.environ.get('BUILDDIR', None):
-        BUILDDIR = Path(os.environ['BUILDDIR'])
-        for d in PREFIX_SUBDIRS:
-            BUILDDIR.joinpath('tool', d).mkdir(parents=True, exist_ok=True)
-        return
+            XXX This does not work on Windows.
+        '''
+        if not self.builddir:
+            #   Cannot build; must rely on the environment providing the tool.
+            return
 
-    if Path('.build').is_dir():
-        BUILDDIR = Path('.build')
-        return
+        path = os.environ.get('PATH', None)
+        if path is None:
+            errexit(EX_CONFIG, 'ERROR: No PATH variable in environment')
+        separator = ':'                     # XXX not right for Windows
+        td = str(self.pdir('bin'))
+        if td in path:                      # XXX mismatches if substring
+            return
+        path = td + separator + path
+        os.environ['PATH'] = path
+        printconfig("PATH='{}'".format(path))
 
-def setpath():
-    ''' Update ``PATH`` to include the tools we're building.
+    ####################################################################
+    #   Fetch/build/install routines
 
-        XXX This does not work on Windows.
-    '''
-    if not BUILDDIR:
-        #   Cannot build, so must rely on the environment providing the tool.
-        return
+    def check_installed(self):
+        ''' *Silently* determine if the toolset is currently available or
+            not and exit with success if it is.
+        '''
+        #   XXX Start with shutil.which, first?
+        try:
+            c = subprocess.run(['asl', '-this-is-not-an-option'],
+                stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
+        except FileNotFoundError:
+            return
+        if c.returncode == 4 and b'Invalid option' in c.stdout:
+            successexit()
 
-    path = os.environ.get('PATH', None)
-    if path is None:
-        errexit(EX_CONFIG, 'ERROR: No PATH variable in environment')
-    separator = ':'     # XXX not right for Windows
-    td = str(pdir('bin'))
-    if td in path:                      # XXX mismatches if substring
-        return
-    path = td + separator + path
-    os.environ['PATH'] = path
-    printconfig("PATH='{}'".format(path))
+    def fetch(self):
+        ''' Fetch the tool if not already present in TARGET. '''
+        if self.srcdir().is_dir():
+            print('----- Using existing source in {}'.format(self.srcdir()))
+            return
 
-def fetch():
-    ''' Fetch the tool if not already present in TARGET. '''
-    if srcdir().is_dir():
-        print('----- Using existing source in {}'.format(srcdir()))
-        return
+        print('----- Cloning {} from {}'.format(TOOLSET_NAME, SOURCE_REPO))
+        runcmd([ 'git', 'clone', str(SOURCE_REPO), str(self.srcdir()) ])
 
-    print('----- Cloning {} from {}'.format(TOOLSET_NAME, SOURCE_REPO))
-    runcmd([ 'git', 'clone', str(SOURCE_REPO), str(srcdir()) ])
+        print('----- Switching to ref or branch {}'.format(SOURCE_REF))
+        runcmd([ 'git', '-C', str(self.srcdir()), 'checkout', str(SOURCE_REF) ])
 
-    print('----- Switching to ref or branch {}'.format(SOURCE_REF))
-    runcmd([ 'git', '-C', str(srcdir()), 'checkout', str(SOURCE_REF) ])
+    def configure(self):
+        ''' Configure build, if not already done. '''
+        if self.srcdir().joinpath('Makefile.def').exists():
+            print('----- Using existing build configuration')
+            return
 
-def configure():
-    ''' Configure build, if not already done. '''
-    if srcdir().joinpath('Makefile.def').exists():
-        print('----- Using existing build configuration')
-        return
+        print('----- Configuring {}'.format(self.srcdir()))
 
-    print('----- Configuring {}'.format(srcdir()))
+        shutil.copyfile(
+            str(Path(__file__).parent.joinpath('gitignore')),
+            str(self.srcdir().joinpath('.gitignore')))
+        shutil.copyfile(
+            str(self.srcdir().joinpath(
+                'Makefile.def-samples', 'Makefile.def-x86_64-unknown-linux')),
+            str(self.srcdir().joinpath('Makefile.def')))
 
-    shutil.copyfile(
-        str(Path(__file__).parent.joinpath('gitignore')),
-        str(srcdir().joinpath('.gitignore')))
-    shutil.copyfile(
-        str(srcdir().joinpath(
-            'Makefile.def-samples', 'Makefile.def-x86_64-unknown-linux')),
-        str(srcdir().joinpath('Makefile.def')))
+    def build(self):
+        ''' Build  the tool.
 
-def build():
-    ''' Build  the tool.
+            This is generally expected to rebuild the tool if any files have
+            changed in the local source copy.
+        '''
+        #   Note we avoid building the documentation here.
+        runcmd(['make', '-j8'], cwd=self.srcdir())
 
-        This is generally expected to rebuild the tool if any files
-        have changed in the local source copy.
-    '''
-    #   Note we avoid building the documentation here.
-    runcmd(['make', '-j8'], cwd=srcdir())
+    def install(self):
+        ''' For ASL we don't use `make install` because that wants to build the
+            documentation, which requires LaTeX and even then tends to drop to
+            interactive prompts about missing `german.sty` etc.
 
-def install():
-    ''' For ASL we don't use `make install` because that wants to build the
-        documentation, which requires LaTeX and even then tends to drop to
-        interactive prompts about missing `german.sty` etc.
+            As well, it's nicer four our purposes to use symlinks back to the
+            build directory because then a developer tweaking AS can just
+            `make` in the source directory to make the new version available to
+            the build system.
 
-        As well, it's nicer four our purposes to use symlinks back to the
-        build directory because then a developer tweaking AS can just
-        `make` in the source directory to make the new version available to
-        the build system.
+            So instead we emulate the parts of install.{bat,cmd,sh} we want,
+            which is bin/, lib/ (the message files are required) and include/.
+        '''
 
-        So instead we emulate the parts of install.{bat,cmd,sh} we want,
-        which is bin/, lib/ (the message files are required) and include/.
-    '''
+        binfiles = ('asl', 'plist', 'alink', 'pbind', 'p2hex', 'p2bin',)
+        for f in binfiles:
+            dest = self.pdir('bin').joinpath(f)
+            if not dest.exists(): dest.symlink_to(self.srcdir().joinpath(f))
 
-    binfiles = ('asl', 'plist', 'alink', 'pbind', 'p2hex', 'p2bin',)
-    for f in binfiles:
-        dest = pdir('bin').joinpath(f)
-        if not dest.exists(): dest.symlink_to(srcdir().joinpath(f))
+        #   The localization message files normally go in lib/asl/, but the
+        #   programs don't find them there by default (unless perhaps the
+        #   prefix is /usr/local/). We could emit a setting for the AS_MSGPATH
+        #   environment variable to indicate where they are, but to allow use
+        #   of these tools from the command line without running the Setup
+        #   script, it seems better to just drop the files into bin/, where the
+        #   programs can automatically find them.
+        #
+        for path in self.srcdir().glob('*.msg'):
+            dest = self.pdir('bin').joinpath(path.name)
+            if not dest.exists(): dest.symlink_to(path)
 
-    #   The localization message files normally go in lib/asl/, but the
-    #   programs don't find them there by default (unless perhaps the
-    #   prefix is /usr/local/). We could emit a setting for the AS_MSGPATH
-    #   environment variable to indicate where they are, but to allow use
-    #   of these tools from the command line without running the Setup
-    #   script, it seems better to just drop the files into bin/, where the
-    #   programs can automatically find them.
-    #
-    for path in srcdir().glob('*.msg'):
-        dest = pdir('bin').joinpath(path.name)
-        if not dest.exists(): dest.symlink_to(path)
+        srcs = self.srcdir().joinpath('include')
+        for src in srcs.glob('**/*'):
+            if src.is_dir(): continue
+            dest = self.pdir('include', 'asl').joinpath(src.relative_to(srcs))
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            if not dest.exists(): dest.symlink_to(src)
 
-    srcs = srcdir().joinpath('include')
-    for src in srcs.glob('**/*'):
-        if src.is_dir(): continue
-        dest = pdir('include', 'asl').joinpath(src.relative_to(srcs))
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        if not dest.exists(): dest.symlink_to(src)
+    def main(self):
+        self.setbuilddir()
+        self.setpath()
+        self.check_installed()
+        if not self.builddir:
+            errexit(EX_USAGE,
+                'BUILDDIR not set and {} is not a directory.'.format(BUILDDIR))
+        else:
+            self.fetch()
+            self.configure()
+            self.build()
+            self.install()
 
 ####################################################################
 #   Main program
-
-def main():
-    setbuilddir()
-    setpath()
-    check_installed()
-    if not BUILDDIR:
-        errexit(EX_USAGE,
-            'BUILDDIR not set and {} is not a directory.'.format(BUILDDIR))
-    else:
-        fetch()
-        configure()
-        build()
-        install()
 
 if (__name__) == '__main__':
     try:
         sys.path.insert(0, str(Path(__file__).parent.parent.resolve()))
         from setup import *
-        main()
+        ASL().main()
     except Exception as ex:
         printconfig('return', EX_SOFTWARE)
         errprint('INTERNAL ERROR in', sys.argv[0])

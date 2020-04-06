@@ -25,35 +25,6 @@ tool_setup() {
     . <($tool_path 3>&1 1>/proc/$$/fd/1)
 }
 
-setup_asxxxx() {
-    local archive=5p31_exe_linux.zip
-    local dldir="$basedir/.download"
-    local instdir="$BUILDDIR/bin"
-    local url='http://shop-pdp.net/_ftp/asxxxx'
-    local sha=648a11d48daab3b67e97d82221315b074e874ea30b3f0ead2836baec211940c7
-
-    PATH="$BUILDDIR/bin:$PATH"
-
-    [[ -x $instdir/aslink && -x $instdir/as6500 ]] && return
-
-    sha256sum --version >/dev/null || die 3
-    local shacheck=$(sha256sum "$dldir/$archive" 2>/dev/null)
-    [[ ${shacheck%% *} = $sha ]] || {
-        echo "----- Downloading ASxxxx from $archive"
-        curl --create-dirs -o "$dldir/$archive" -L "$url/$archive"
-    }
-
-    echo '----- Installing ASxxxx'
-    unzip -h >/dev/null || die 3
-    mkdir -p "$instdir"
-    (cd "$instdir" && unzip -qo "$dldir/$archive" && chmod +x as* s19os9*)
-
-    #   Here it would be nice to run "$instdir"/aslink and print out
-    #   what went wrong if it fails (usually because we can't run
-    #   32-bit executables), but that's difficult because getting the
-    #   help message returns an error exit code.
-}
-
 ####################################################################
 #   Main
 
@@ -73,7 +44,7 @@ esac; done
 cd "$basedir"
 
 . ./activate -q
-setup_asxxxx
+tool_setup tool/asxxxx/Setup
 tool_setup tool/asl/Setup
 
 mkdir -p "$BUILDDIR/obj"

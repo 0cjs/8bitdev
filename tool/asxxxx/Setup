@@ -1,0 +1,133 @@
+#!/usr/bin/env python3
+'''
+    Configure for use of the ASxxxx assembler suite.
+
+    This fetches the binaries and extracts them, if necessary. The binaries
+    are for 32-bit Linux; on 64-bit systems these will error out with "No
+    such file or directory" when run unless the 32-bit dynamic linker
+    (`ld-linux.so.2`) and libraries are installed. To do this on a 64-bit
+    Debian 9 system:
+
+        dpkg --add-architecture i386
+        apt update
+        apt install libc6-i386
+
+    See the module documentation for `setup` for more details.
+'''
+
+import  hashlib, requests, sys, zipfile
+from    os.path  import abspath, dirname
+
+sys.path.insert(0, abspath(dirname(dirname(__file__)))) # setup.py location
+from setup import *
+
+class ASxxxx(Setup):
+
+    def toolset_name(self):
+        return 'asxxxx'
+
+    ####################################################################
+    #   XXX stuff to move up
+
+    def printaction(self, *args, **kwargs):
+        ' Note to stdout an action that is starting. '
+        print('-----', self.toolset_name() + ':', *args, **kwargs)
+
+    def downloaddir(self):
+        ''' Return the cache directory for downloaded software. It will be
+            created if it does not exist.
+
+            This is at the same level as `builddir`, not underneath it,
+            because we don't normally want to re-download these when
+            doing a clean build.
+        '''
+        dir = self.builddir.parent.joinpath('.download')
+        #   This should fail if builddir doesn't exist because that
+        #   indicates that something likely went wrong earlier in our
+        #   setup.
+        dir.mkdir(exist_ok=True)
+        return dir
+
+    def checkrun(self, cmdargs, exitcode=0, banner=b''):
+        ''' Attempt to execute the given `cmdargs`, a sequence of the
+            command name followed by its arguments. If it successfully
+            runs, the exit code is `exitcode`, and stdout or stderr contains
+            the byte string `banner`, return `True`. Othewrise return `False`.
+        '''
+        try:
+            c = subprocess.run(cmdargs,
+                stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
+        except FileNotFoundError:
+            return False
+        if c.returncode != exitcode or banner not in c.stdout:
+            return False
+        return True
+
+    ####################################################################
+
+    def check_installed(self):
+        ''' *Silently* determine if the toolset is currently available or
+            not and exit with success if it is.
+
+            XXX This does not handle the case where the executables have
+            been installed but we can't run them because we don't have
+            32-bit support installed. Not sure how best to deal with this,
+            but maybe checkrun() will throw a useful exception?
+        '''
+        #   Don't ask why, after displaying the usage message,
+        #   the linker exits with 3 but the assemblers exit with 1.
+        found = self.checkrun(['aslink'], 3, b'ASxxxx Linker') \
+            and self.checkrun(['as6500'], 1, b'ASxxxx Assembler')
+        if found: successexit()
+
+    def fetch(self):
+        archive = '5p31_exe_linux.zip'
+        url = 'http://shop-pdp.net/_ftp/asxxxx'
+        sha = '648a11d48daab3b67e97d82221315b074e874ea30b3f0ead2836baec211940c7'
+
+        self.dlfile = self.downloaddir().joinpath(archive)
+        if not self.dlfile.exists():
+            self.printaction('Downloading {} from {}'.format(archive, url))
+            r = requests.get(url + '/' + archive)
+            with open(str(self.dlfile), 'wb') as fd:
+                for data in r.iter_content(chunk_size=65536):
+                    fd.write(data)
+
+        hash = hashlib.sha256()
+        hash.update(self.dlfile.read_bytes())
+        if hash.hexdigest() != sha:
+            raise RuntimeError(
+                'Bad {} hash for {}:\n expected: {}\n   actual: {}'.format(
+                    hash.name, archive, sha, hash.hexdigest()))
+
+    def configure(self):
+        pass
+
+    def build(self):
+        pass
+
+    def install(self):
+        self.printaction('Installing from {}'.format(self.dlfile.name))
+        bindir = self.pdir('bin')
+        with zipfile.ZipFile(self.dlfile.open('rb')) as zip:
+            zip.extractall(str(bindir))
+            for filename in zip.namelist():
+                #   Make writable by user so subsequent unzip can overwrite
+                #   anything that was removed.
+                bindir.joinpath(filename).chmod(0o755)
+
+    def setup(self):
+        self.setbuilddir()
+        self.setpath()
+        self.check_installed()
+        if not self.builddir:
+            errexit(EX_USAGE,
+                'BUILDDIR not set and {} is not a directory.'.format(BUILDDIR))
+        else:
+            self.fetch()
+            self.configure()
+            self.build()
+            self.install()
+
+if (__name__) == '__main__':
+    ASxxxx().main()

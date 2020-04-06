@@ -29,36 +29,32 @@ class ASL(Setup):
         ''' *Silently* determine if the toolset is currently available or
             not and exit with success if it is.
         '''
-        #   XXX Start with shutil.which, first?
-        try:
-            c = subprocess.run(['asl', '-this-is-not-an-option'],
-                stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
-        except FileNotFoundError:
-            return
-        if c.returncode == 4 and b'Invalid option' in c.stdout:
+        if checkrun(['asl', '-this-is-not-an-option'], 4, b'Invalid option'):
             successexit()
 
     def fetch(self):
         ''' Fetch the tool if not already present in TARGET. '''
         if self.srcdir().is_dir():
-            print('----- Using existing source in {}'.format(self.srcdir()))
+            self.printaction(
+                'Using existing source in {}'.format(self.srcdir()))
             return
 
-        print('----- Cloning {} from {}'.format(
+        self.printaction('Cloning {} from {}'.format(
             self.toolset_name(), self.source_repo()))
         runcmd([ 'git', 'clone', str(self.source_repo()), str(self.srcdir()) ])
 
-        print('----- Switching to ref or branch {}'.format(self.source_ref()))
+        self.printaction(
+            'Switching to ref or branch {}'.format(self.source_ref()))
         runcmd([ 'git', '-C', str(self.srcdir()),
             'checkout', str(self.source_ref()) ])
 
     def configure(self):
         ''' Configure build, if not already done. '''
         if self.srcdir().joinpath('Makefile.def').exists():
-            print('----- Using existing build configuration')
+            self.printaction('Using existing build configuration')
             return
 
-        print('----- Configuring {}'.format(self.srcdir()))
+        self.printaction('Configuring {}'.format(self.srcdir()))
 
         shutil.copyfile(
             str(Path(__file__).parent.joinpath('gitignore')),
@@ -114,19 +110,6 @@ class ASL(Setup):
             dest = self.pdir('include', 'asl').joinpath(src.relative_to(srcs))
             dest.parent.mkdir(parents=True, exist_ok=True)
             if not dest.exists(): dest.symlink_to(src)
-
-    def setup(self):
-        self.setbuilddir()
-        self.setpath()
-        self.check_installed()
-        if not self.builddir:
-            errexit(EX_USAGE,
-                'BUILDDIR not set and {} is not a directory.'.format(BUILDDIR))
-        else:
-            self.fetch()
-            self.configure()
-            self.build()
-            self.install()
 
 if (__name__) == '__main__':
     ASL().main()

@@ -105,6 +105,21 @@ def runcmd(command, *, cwd=None):
     if c.returncode != 0:
         errexit(c.returncode, 'Command failed: {}'.format(command))
 
+def checkrun(cmdargs, exitcode=0, banner=b''):
+    ''' Attempt to execute the given `cmdargs`, a sequence of the
+        command name followed by its arguments. If it successfully
+        runs, the exit code is `exitcode`, and stdout or stderr contains
+        the byte string `banner`, return `True`. Othewrise return `False`.
+    '''
+    try:
+        c = subprocess.run(cmdargs,
+            stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
+    except FileNotFoundError:
+        return False
+    if c.returncode != exitcode or banner not in c.stdout:
+        return False
+    return True
+
 ####################################################################
 #   Setup class
 
@@ -139,6 +154,10 @@ class Setup(metaclass=abc.ABCMeta):
             traceback.print_exc()
             sys.exit(EX_SOFTWARE)
 
+    def printaction(self, *args, **kwargs):
+        ' Note to stdout an action that is starting. '
+        print('-----', self.toolset_name() + ':', *args, **kwargs)
+
     def pdir(self, dir, *subdirs, create=True):
         ''' Return an absolute path to a subdirectory under the prefix
             ($builddir/tools) we use for toolsets. The first level `dir`
@@ -167,6 +186,21 @@ class Setup(metaclass=abc.ABCMeta):
             #   of needing the target dir.
             return self.builddir.joinpath('tool', 'src') \
                 .resolve().joinpath(self.toolset_name())
+
+    def downloaddir(self):
+        ''' Return the cache directory for downloaded software. It will be
+            created if it does not exist.
+
+            This is at the same level as `builddir`, not underneath it,
+            because we don't normally want to re-download these when
+            doing a clean build.
+        '''
+        dir = self.builddir.parent.joinpath('.download')
+        #   This should fail if builddir doesn't exist because that
+        #   indicates that something likely went wrong earlier in our
+        #   setup.
+        dir.mkdir(exist_ok=True)
+        return dir
 
     def setbuilddir(self):
         ''' Locate build and target directories.
@@ -205,3 +239,21 @@ class Setup(metaclass=abc.ABCMeta):
         path = td + separator + path
         os.environ['PATH'] = path
         printconfig("PATH='{}'".format(path))
+
+    def fetch(self):        pass
+    def configure(self):    pass
+    def build(self):        pass
+    def install(self):      pass
+
+    def setup(self):
+        self.setbuilddir()
+        self.setpath()
+        self.check_installed()
+        if not self.builddir:
+            errexit(EX_USAGE,
+                'BUILDDIR not set and {} is not a directory.'.format(BUILDDIR))
+        else:
+            self.fetch()
+            self.configure()
+            self.build()
+            self.install()

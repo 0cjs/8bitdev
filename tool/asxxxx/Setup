@@ -26,45 +26,6 @@ class ASxxxx(Setup):
     def toolset_name(self):
         return 'asxxxx'
 
-    ####################################################################
-    #   XXX stuff to move up
-
-    def printaction(self, *args, **kwargs):
-        ' Note to stdout an action that is starting. '
-        print('-----', self.toolset_name() + ':', *args, **kwargs)
-
-    def downloaddir(self):
-        ''' Return the cache directory for downloaded software. It will be
-            created if it does not exist.
-
-            This is at the same level as `builddir`, not underneath it,
-            because we don't normally want to re-download these when
-            doing a clean build.
-        '''
-        dir = self.builddir.parent.joinpath('.download')
-        #   This should fail if builddir doesn't exist because that
-        #   indicates that something likely went wrong earlier in our
-        #   setup.
-        dir.mkdir(exist_ok=True)
-        return dir
-
-    def checkrun(self, cmdargs, exitcode=0, banner=b''):
-        ''' Attempt to execute the given `cmdargs`, a sequence of the
-            command name followed by its arguments. If it successfully
-            runs, the exit code is `exitcode`, and stdout or stderr contains
-            the byte string `banner`, return `True`. Othewrise return `False`.
-        '''
-        try:
-            c = subprocess.run(cmdargs,
-                stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
-        except FileNotFoundError:
-            return False
-        if c.returncode != exitcode or banner not in c.stdout:
-            return False
-        return True
-
-    ####################################################################
-
     def check_installed(self):
         ''' *Silently* determine if the toolset is currently available or
             not and exit with success if it is.
@@ -76,8 +37,8 @@ class ASxxxx(Setup):
         '''
         #   Don't ask why, after displaying the usage message,
         #   the linker exits with 3 but the assemblers exit with 1.
-        found = self.checkrun(['aslink'], 3, b'ASxxxx Linker') \
-            and self.checkrun(['as6500'], 1, b'ASxxxx Assembler')
+        found = checkrun(['aslink'], 3, b'ASxxxx Linker') \
+            and checkrun(['as6500'], 1, b'ASxxxx Assembler')
         if found: successexit()
 
     def fetch(self):
@@ -100,12 +61,6 @@ class ASxxxx(Setup):
                 'Bad {} hash for {}:\n expected: {}\n   actual: {}'.format(
                     hash.name, archive, sha, hash.hexdigest()))
 
-    def configure(self):
-        pass
-
-    def build(self):
-        pass
-
     def install(self):
         self.printaction('Installing from {}'.format(self.dlfile.name))
         bindir = self.pdir('bin')
@@ -115,19 +70,6 @@ class ASxxxx(Setup):
                 #   Make writable by user so subsequent unzip can overwrite
                 #   anything that was removed.
                 bindir.joinpath(filename).chmod(0o755)
-
-    def setup(self):
-        self.setbuilddir()
-        self.setpath()
-        self.check_installed()
-        if not self.builddir:
-            errexit(EX_USAGE,
-                'BUILDDIR not set and {} is not a directory.'.format(BUILDDIR))
-        else:
-            self.fetch()
-            self.configure()
-            self.build()
-            self.install()
 
 if (__name__) == '__main__':
     ASxxxx().main()

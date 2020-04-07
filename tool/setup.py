@@ -317,10 +317,20 @@ class Setup(metaclass=abc.ABCMeta):
     ####################################################################
     #   High-level setup description
 
-    def fetch(self):        pass
-    def configure(self):    pass
-    def build(self):        pass
-    def install(self):      pass
+    def fetch(self):
+        if getattr(self, 'source_repo', None):
+            self.fetch_git()
+
+    def configure(self):
+        pass
+
+    def build(self):
+        ' Build the tool, rebuilding if any dependencies have changed. '
+        pass
+
+    def install(self):
+        ''' Install executables in ``pdir('bin')`` etc. '''
+        pass
 
     def setup(self):
         self.setbuilddir()

@@ -19,11 +19,10 @@ class ASL(Setup):
     def toolset_name(self):
         return 'asl'
 
-    def source_repo(self):
-        return 'https://github.com/KubaO/asl.git'
-
-    def source_ref(self):
-        return 'dev/cjs/current'
+    def __init__(self):
+        super().__init__()
+        self.source_repo = 'https://github.com/KubaO/asl.git'
+        self.source_ref  = 'dev/cjs/current'
 
     def check_installed(self):
         ''' *Silently* determine if the toolset is currently available or
@@ -31,22 +30,6 @@ class ASL(Setup):
         '''
         if checkrun(['asl', '-this-is-not-an-option'], 4, b'Invalid option'):
             successexit()
-
-    def fetch(self):
-        ''' Fetch the tool if not already present in TARGET. '''
-        if self.srcdir().is_dir():
-            self.printaction(
-                'Using existing source in {}'.format(self.srcdir()))
-            return
-
-        self.printaction('Cloning {} from {}'.format(
-            self.toolset_name(), self.source_repo()))
-        runcmd([ 'git', 'clone', str(self.source_repo()), str(self.srcdir()) ])
-
-        self.printaction(
-            'Switching to ref or branch {}'.format(self.source_ref()))
-        runcmd([ 'git', '-C', str(self.srcdir()),
-            'checkout', str(self.source_ref()) ])
 
     def configure(self):
         ''' Configure build, if not already done. '''
@@ -72,13 +55,8 @@ class ASL(Setup):
             print('INCDIR =', self.pdir('include', 'asl'), file=fd)
 
     def build(self):
-        ''' Build  the tool.
-
-            This is generally expected to rebuild the tool if any files have
-            changed in the local source copy.
-        '''
         #   Note we avoid building the documentation here.
-        runcmd(['make', '-j8'], cwd=self.srcdir())
+        self.make_src()
 
     def install(self):
         ''' For ASL we don't use `make install` because that wants to build the

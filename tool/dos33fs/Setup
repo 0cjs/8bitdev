@@ -1,0 +1,60 @@
+#!/usr/bin/env python3
+'''
+    Configure for use of the linapple Apple II simulator (emulator).
+
+    This will fetch from `source_repo` and build the `source_ref`
+    branch, if necessary.
+
+    See the module documentation for `setup` for more details.
+'''
+
+from    os.path  import abspath, dirname
+import  sys
+
+sys.path.insert(0, abspath(dirname(dirname(__file__)))) # setup.py location
+from setup import *
+
+class DOS33FS(Setup):
+
+    def toolset_name(self):
+        ''' The toolset name, used among other things for the directory
+            name under src/, defaults to the name of the class in lower
+            case. Override this if necessary.
+        '''
+        return type(self).__name__.lower()
+
+    def __init__(self):
+        super().__init__()
+        self.source_repo = 'https://github.com/deater/dos33fsprogs.git'
+
+    def check_installed(self):
+        ''' *Silently* determine if the toolset is currently available or
+            not and exit with success if it is.
+        '''
+        if checkrun(['dos33', '-h'], 0, b'by Vince Weaver <vince@deater.net>'):
+            successexit()
+
+    def build(self):
+        self.make_src()
+
+    def install(self):
+        bins = (
+            ('dos33fs-utils', 'char2hex'),
+            ('dos33fs-utils', 'dos33'),
+            ('dos33fs-utils', 'dos33_text2ascii'),
+            ('dos33fs-utils', 'make_b'),
+            ('dos33fs-utils', 'mkdos33fs'),
+            ('asoft_basic-utils', 'asoft_compact'),
+            ('asoft_basic-utils', 'asoft_detoken'),
+            ('asoft_basic-utils', 'bin2data'),
+            ('asoft_basic-utils', 'integer_detoken'),
+            ('asoft_basic-utils', 'tokenize_asoft'),
+            ('bmp2dhr', 'b2d'),
+            )
+        for subdir, file in bins:
+            dest = self.pdir('bin').joinpath(file)
+            if not dest.exists():
+                dest.symlink_to(self.srcdir().joinpath(subdir, file))
+
+if (__name__) == '__main__':
+    DOS33FS().main()

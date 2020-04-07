@@ -93,32 +93,45 @@ def successexit():
     printconfig('return 0')
     sys.exit(0)
 
-def runcmd(command, *, cwd=None):
+def runcmd(command, *, cwd=None, suppress_stdout=False):
     ''' Run a command, failing the program with an error message if the
         command fails.
 
         Stdout is being used for shell commands to be executed by our
         caller, so the subprocess' stdout is sent to stderr.
     '''
+    if suppress_stdout:
+        stdout = subprocess.DEVNULL
+    else:
+        stdout = sys.stderr
     if cwd: cwd = str(cwd)  # Convert Path object for Python ≤3.5
-    c = subprocess.run(command, cwd=cwd, stdout=sys.stderr)
+    c = subprocess.run(command, cwd=cwd, stdout=stdout)
     if c.returncode != 0:
         errexit(c.returncode, 'Command failed: {}'.format(command))
 
-def checkrun(cmdargs, exitcode=0, banner=b''):
+def checkrun(cmdargs, exitcode=0, banner=b'', suppress_stdout=False):
     ''' Attempt to execute the given `cmdargs`, a sequence of the
         command name followed by its arguments. If it successfully
         runs, the exit code is `exitcode`, and stdout or stderr contains
         the byte string `banner`, return `True`. Othewrise return `False`.
+
+        Stdout and stderr will be captured together unless
+        `suppress_stdout` is set to `True`.
     '''
+    if suppress_stdout:
+        stdout = subprocess.DEVNULL
+        stderr = subprocess.PIPE
+    else:
+        stdout = subprocess.PIPE
+        stderr = subprocess.STDOUT
     try:
-        c = subprocess.run(cmdargs,
-            stderr=subprocess.STDOUT, stdout=subprocess.PIPE)
+        c = subprocess.run(cmdargs, stderr=stderr, stdout=stdout)
     except FileNotFoundError:
         return False
     if c.returncode != exitcode or banner not in c.stdout:
         return False
     return True
+
 
 ####################################################################
 #   Setup class
@@ -154,22 +167,32 @@ class Setup(metaclass=abc.ABCMeta):
             traceback.print_exc()
             sys.exit(EX_SOFTWARE)
 
+    ####################################################################
+    #   Output and printing
+
     def printaction(self, *args, **kwargs):
         ' Note to stdout an action that is starting. '
         print('-----', self.toolset_name() + ':', *args, **kwargs)
 
-    def pdir(self, dir, *subdirs, create=True):
-        ''' Return an absolute path to a subdirectory under the prefix
-            ($builddir/tools) we use for toolsets. The first level `dir`
+    ####################################################################
+    #   Directory and file handling
+
+    def pdir(self, dir=None, *subdirs, create=True):
+        ''' Return an absolute path to the prefix ($builddir/tools) we use
+            for toolsets, or a subdirectory under it if `dir` set. `dir`
             must be a member of `PREFIX_SUBDIRS`.
 
             If `create` is `True`, this will create the directory, if
             necessary.
         '''
-        if not dir in PREFIX_SUBDIRS:
-            raise ValueError('Internal error: {} not in PREFIX_SUBDIRS'.format(dir))
+        if not dir in (None,) + PREFIX_SUBDIRS:
+            raise ValueError(
+                'Internal error: {} not in PREFIX_SUBDIRS'.format(dir))
 
-        d = self.builddir.joinpath('tool', dir, *subdirs)
+        d = self.builddir.joinpath('tool')
+        if dir is not None:
+            d = d.joinpath(dir)
+        d = d.joinpath(*subdirs)
         if create:
             d.mkdir(parents=True, exist_ok=True)
         d = d.resolve()   # strict=False not available in Python ≤3.5, so we
@@ -239,6 +262,60 @@ class Setup(metaclass=abc.ABCMeta):
         path = td + separator + path
         os.environ['PATH'] = path
         printconfig("PATH='{}'".format(path))
+
+    ####################################################################
+    #   Implementations of various parts of the setup/config/build/install
+    #   process, normally used by the core setup routines defined in
+    #   sublcasses.
+
+    def fetch_git(self):
+        ''' Clone the source if necessary.
+
+            If `srcdir` does not exist, clone into it from the `source_repo`
+            URL. If `source_ref` is set, switch to that branch.
+        '''
+        if self.srcdir().is_dir():
+            self.printaction(
+                'Using existing source in {}'.format(self.srcdir()))
+            return
+
+        self.printaction('Cloning {} from {}'.format(
+            self.toolset_name(), self.source_repo))
+        runcmd([ 'git', 'clone', str(self.source_repo), str(self.srcdir()) ])
+
+        if getattr(self, 'source_ref', None):
+            self.printaction(
+                'Switching to ref or branch {}'.format(self.source_ref))
+            runcmd([ 'git', '-C', str(self.srcdir()),
+                'checkout', str(self.source_ref) ])
+
+
+    def check_packages(self, *, debian=[], redhat=[]):
+        ''' Check that the given packages are present. This is usually
+            used to confirm that we have what we need to build from source.
+        '''
+        if redhat:
+            raise NotImplementedError(
+                "I don't know how to check redhat packages yet.")
+        if not debian:
+            return
+
+        self.printaction('Checking dependencies:', ' '.join(debian))
+        runcmd(['dpkg', '-s'] + debian, suppress_stdout=True)
+
+    def make_src(self, *makeargs):
+        ''' Run ``make`` in the source directory.
+
+            This provides some standard arguments, including a PREFIX
+            definition. Further arguments may be passed as `*makeargs`.
+        '''
+        prefix = 'PREFIX=' + str(self.pdir())
+        cmd = ('make', '-j8', prefix) + makeargs
+        self.printaction(*cmd)
+        runcmd(cmd, cwd=self.srcdir())
+
+    ####################################################################
+    #   High-level setup description
 
     def fetch(self):        pass
     def configure(self):    pass

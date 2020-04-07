@@ -1,0 +1,94 @@
+#!/usr/bin/env python3
+'''
+    Configure for use of the linapple Apple II simulator (emulator).
+
+    This will fetch from `source_repo` and build the `source_ref`
+    branch, if necessary.
+
+    See the module documentation for `setup` for more details.
+'''
+
+from    os.path  import abspath, dirname
+import  sys
+
+sys.path.insert(0, abspath(dirname(dirname(__file__)))) # setup.py location
+from setup import *
+
+class LinApple(Setup):
+    pass
+
+    def toolset_name(self):
+        ''' The toolset name, used among other things for the directory
+            name under src/, defaults to the name of the class in lower
+            case. Override this if necessary.
+        '''
+        return type(self).__name__.lower()
+
+    def __init__(self):
+        super().__init__()
+        self.source_repo = 'https://github.com/linappleii/linapple.git'
+        #self.source_repo = 'https://github.com/0cjs/linapple.git'
+        #self.source_ref = 'fork/cjs/master'
+
+    def check_installed(self):
+        ''' *Silently* determine if the toolset is currently available or
+            not and exit with success if it is.
+        '''
+        if checkrun(['linapple', '--help'], 0, b'show this help message'):
+            successexit()
+
+    def fetch(self):
+        if getattr(self, 'source_repo', None):
+            self.fetch_git()
+
+    def configure(self):
+        deps = [ 'git', 'libzip-dev', 'libsdl1.2-dev',
+            'libsdl-image1.2-dev', 'libcurl4-openssl-dev', 'zlib1g-dev', ]
+        self.check_packages(debian=deps)
+
+    def build(self):
+        ''' Build  the tool.
+
+            This is generally expected to rebuild the tool if any files have
+            changed in the local source copy.
+        '''
+
+        #   Some source files depend on the following object files but
+        #   that's not in the dependency graph. Build them first to
+        #   ensure that parallel builds don't randomly break.
+        broken_deps = (
+            'res/charset40_british.xpm',
+            'res/charset40_german.xpm',
+            'res/splash.xpm',
+            'res/charset40_french.xpm',
+            'res/charset40.xpm',
+            'res/charset40_IIplus.xpm',
+        )
+        if self.srcdir().is_dir():
+            self.make_src(*broken_deps)
+            self.make_src()
+
+    def install(self):
+        ''' We need to do the install "by hand" because the Makefile
+            ``install`` target must be run as root and changes the
+            ownership of the installed files to root.
+        '''
+        #self.make_src('install')
+
+        dest = self.pdir('bin').joinpath('linapple')
+        if not dest.exists():
+            dest.symlink_to(self.srcdir().joinpath('bin', 'linapple'))
+
+        #   The only other non-documentation things that get installed are
+        #   linapple.conf and Master.dsk, neither of which we need. (The
+        #   config and disk iamge will generally be supplied by the test
+        #   framework.)
+
+        #   Most of the stuff under res/ in the source directory seems to
+        #   be either included in the binary (like font.xpm) or used for
+        #   packaging or other non-runtime purposes. The one exception
+        #   is the .SYM symbol tables for the debugger, which seem to be
+        #   searched for only in the current working directory, anyway.
+
+if (__name__) == '__main__':
+    LinApple().main()

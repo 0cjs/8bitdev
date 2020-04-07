@@ -46,6 +46,7 @@ cd "$basedir"
 . ./activate -q
 tool_setup tool/asxxxx/Setup
 tool_setup tool/asl/Setup
+tool_setup tool/linapple/Setup
 
 mkdir -p "$BUILDDIR/obj"
 

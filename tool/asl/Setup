@@ -9,7 +9,7 @@
 '''
 
 from    os.path  import abspath, dirname
-import  shutil, subprocess, sys, traceback
+import  shutil, sys
 
 sys.path.insert(0, abspath(dirname(dirname(__file__)))) # setup.py location
 from setup import *

@@ -340,12 +340,12 @@ class Setup(metaclass=abc.ABCMeta):
         self.setbuilddir()
         self.setpath()
         if self.check_installed():
-            successexit()
+            successexit()               # Already built or system-supplied
+
         if not self.builddir:
             errexit(EX_USAGE,
                 'BUILDDIR not set and {} is not a directory.'.format(BUILDDIR))
-        else:
-            self.fetch()
-            self.configure()
-            self.build()
-            self.install()
+        self.fetch()
+        self.configure()
+        self.build()
+        self.install()

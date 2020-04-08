@@ -34,6 +34,10 @@ class DOS33FS(Setup):
         if checkrun(['dos33', '-h'], 0, b'by Vince Weaver <vince@deater.net>'):
             successexit()
 
+    def configure(self):
+        deps = [ 'libpng-dev', ]
+        self.check_packages(debian=deps)
+
     def build(self):
         self.make_src()
 

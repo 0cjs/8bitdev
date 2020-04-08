@@ -25,11 +25,8 @@ class ASL(Setup):
         self.source_ref  = 'dev/cjs/current'
 
     def check_installed(self):
-        ''' *Silently* determine if the toolset is currently available or
-            not and exit with success if it is.
-        '''
-        if checkrun(['asl', '-this-is-not-an-option'], 4, b'Invalid option'):
-            successexit()
+        return checkrun(['asl', '-this-is-not-an-option'], 4,
+            b'Invalid option')
 
     def configure(self):
         ''' Configure build, if not already done. '''

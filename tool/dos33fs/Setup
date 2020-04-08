@@ -28,11 +28,8 @@ class DOS33FS(Setup):
         self.source_repo = 'https://github.com/deater/dos33fsprogs.git'
 
     def check_installed(self):
-        ''' *Silently* determine if the toolset is currently available or
-            not and exit with success if it is.
-        '''
-        if checkrun(['dos33', '-h'], 0, b'by Vince Weaver <vince@deater.net>'):
-            successexit()
+        return checkrun( ['dos33', '-h'], 0,
+            b'by Vince Weaver <vince@deater.net>')
 
     def configure(self):
         deps = [ 'libpng-dev', ]

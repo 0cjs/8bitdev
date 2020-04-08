@@ -31,11 +31,8 @@ class LinApple(Setup):
         #self.source_ref = 'fork/cjs/master'
 
     def check_installed(self):
-        ''' *Silently* determine if the toolset is currently available or
-            not and exit with success if it is.
-        '''
-        if checkrun(['linapple', '--help'], 0, b'show this help message'):
-            successexit()
+        return checkrun(['linapple', '--help'], 0,
+            b'show this help message')
 
     def configure(self):
         #   XXX This should add the `imagemagick` package to the list only

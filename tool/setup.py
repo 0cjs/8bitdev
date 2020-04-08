@@ -317,6 +317,10 @@ class Setup(metaclass=abc.ABCMeta):
     ####################################################################
     #   High-level setup description
 
+    @abc.abstractmethod
+    def check_installed(self):
+        ' Return true if the toolset is available in the current path. '
+
     def fetch(self):
         if getattr(self, 'source_repo', None):
             self.fetch_git()
@@ -335,7 +339,8 @@ class Setup(metaclass=abc.ABCMeta):
     def setup(self):
         self.setbuilddir()
         self.setpath()
-        self.check_installed()
+        if self.check_installed():
+            successexit()
         if not self.builddir:
             errexit(EX_USAGE,
                 'BUILDDIR not set and {} is not a directory.'.format(BUILDDIR))

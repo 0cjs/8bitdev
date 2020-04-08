@@ -16,9 +16,6 @@ from setup import *
 
 class ASL(Setup):
 
-    def toolset_name(self):
-        return 'asl'
-
     def __init__(self):
         super().__init__()
         self.source_repo = 'https://github.com/KubaO/asl.git'

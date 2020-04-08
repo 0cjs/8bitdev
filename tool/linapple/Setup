@@ -17,13 +17,6 @@ from setup import *
 class LinApple(Setup):
     pass
 
-    def toolset_name(self):
-        ''' The toolset name, used among other things for the directory
-            name under src/, defaults to the name of the class in lower
-            case. Override this if necessary.
-        '''
-        return type(self).__name__.lower()
-
     def __init__(self):
         super().__init__()
         self.source_repo = 'https://github.com/linappleii/linapple.git'

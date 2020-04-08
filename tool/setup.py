@@ -138,12 +138,6 @@ def checkrun(cmdargs, exitcode=0, banner=b'', suppress_stdout=False):
 
 class Setup(metaclass=abc.ABCMeta):
 
-    @abc.abstractmethod
-    def toolset_name():
-        ''' Return the name of the toolset we're setting up. This will
-            be the name of its subdirectory under $basedir/tools/src/.
-        '''
-
     def __init__(self):
         #   Project build directory under which we put our tool/ directory.
         self.builddir = None
@@ -173,6 +167,16 @@ class Setup(metaclass=abc.ABCMeta):
     def printaction(self, *args, **kwargs):
         ' Note to stdout an action that is starting. '
         print('-----', self.toolset_name() + ':', *args, **kwargs)
+
+    ####################################################################
+    #   Configuration
+
+    def toolset_name(self):
+        ''' The toolset name, used among other things for the directory
+            name under $basedir/tool/src/, defaults to the name of the
+            class in lower case. Override this if necessary.
+        '''
+        return type(self).__name__.lower()
 
     ####################################################################
     #   Directory and file handling

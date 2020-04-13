@@ -16,6 +16,8 @@ usage() {
 }
 
 [[ ${#@} -lt 2 ]] && usage
+yes=; [[ $1 = -y ]] && { yes=-y; shift; }
+[[ ${#@} -lt 2 ]] && usage
 image="$1"; shift
 
 mydir=$(cd "$(dirname "$0")" && pwd -P)
@@ -31,5 +33,5 @@ trap "rm -f \"$a2text\"" 0
 
 for file in "$@"; do
     ascii2a2t "$file" >"$a2text" || die 1 "Can't convert $file"
-    dos33 "$image" save t "$a2text" "$(basename "$file")"
+    dos33 $yes "$image" save t "$a2text" "$(basename "$file")"
 done

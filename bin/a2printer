@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+#
+#  a2printer - emulate a printer for an Apple II
+#
+set -eu -o pipefail
+
+EX_USAGE=64     # /usr/include/sysexits.h
+
+die() { local ec=$1; shift; echo 1>&2 "$@"; exit $ec; }
+
+tty=/dev/ttyUSB0
+bps=19200           # XXX if changed, Ctrl-A command below will be wrong
+log=printer.out
+while true; do case "${1:-}" in
+    -t)     shift; tty="$1"; shift;;                # tty to read
+    -l)     shift; log="$1"; shift;;                # logfile
+    -*)     die $EX_USAGE "Unknown option: $1";;
+    *)      break;;
+esac; done
+[[ ${#@} -eq 0 ]] || die $EX_USAGE "Extra arguments" "$@"
+
+#   XXX should check and use tty lock file
+echo 1>&2 "$bps" 'bps: send `<Ctrl-A>15B` on Apple IIc'
+stty <"$tty" $bps min 1 -parenb istrip icrnl
+cat "$tty" | tee -a "$log"

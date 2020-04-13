@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+#
+#   t2a2dsk - convert and copy ASCII text files to an Apple II .dsk image
+#
+#   This assumes that dos33fs-utils and ascii2a2t are in $PATH.
+#
+set -eu -o pipefail
+
+EX_USAGE=64     # /usr/include/sysexits.h
+
+die() { local exitcode=$1; shift; echo 1>&2 "$@"; exit $exitcode; }
+
+usage() {
+    echo 1>&2 "Usage: $(basename "$0") image.dsk file ..."
+    exit $EX_USAGE
+}
+
+[[ ${#@} -lt 2 ]] && usage
+image="$1"; shift
+
+mydir=$(cd "$(dirname "$0")" && pwd -P)
+PATH="$mydir:$PATH"
+
+vol=$(dos33 "$image" catalog | sed -n -e 's/^DISK VOLUME //p')
+[[ $vol -gt 0 ]] || die 1 "Bad image: $image"
+
+#   We cannot use a `<(...)` descriptor because `dos33 save` causes
+#   the generating process to produce "broken pipe".
+a2text=$(mktemp tmp.t2a2dsk.XXX)
+trap "rm -f \"$a2text\"" 0
+
+for file in "$@"; do
+    ascii2a2t "$file" >"$a2text" || die 1 "Can't convert $file"
+    dos33 "$image" save t "$a2text" "$(basename "$file")"
+done

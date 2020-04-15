@@ -1,5 +1,5 @@
 from    collections   import namedtuple as ntup
-from    struct   import unpack_from
+import  pytest
 from    testmc.memimage   import MemImage
 
 def test_memimage_entrypoint():
@@ -37,3 +37,35 @@ def test_memimage_memrec_alternate():
     for addr, data in mi:
         assert testaddr == addr
         assert testdata == data
+
+def test_memimage_contig():
+    def byterange(s, e):
+        return bytes(range(s, e))
+    assert b'\x02\x03\x04' == byterange(2, 5)
+
+    mi = MemImage()
+    mi.addrec(1008, byterange(8, 12))
+    mi.addrec(1000, byterange(0, 4))
+    mi.addrec( 100, b'')                # Ensure we ignore empty records...
+    mi.addrec(1002, b'')                # ...even when overlapping.
+    mi.addrec(2000, b'')
+
+    assert 12 == mi.contiglen()
+    assert 12 == mi.contiglen()     # cached value
+    assert [0, 1, 2, 3, 255, 255, 255, 255, 8, 9, 10, 11] \
+        == list(mi.contigbytes())
+    assert [0, 1, 2, 3, 0, 0, 0, 0, 8, 9, 10, 11] \
+        == list(mi.contigbytes(fill=0))
+
+@pytest.mark.parametrize('overlap_start, overlap_pos', [
+    (0xFF,  r'\$0100'),
+    (0x101, r'\$0101'),
+    (0x103, r'\$0103'),
+])
+def test_memimage_overlap(overlap_start, overlap_pos):
+    mi = MemImage()
+    mi.addrec(0x100, b'0123')
+    mi.addrec(overlap_start, b'AB')
+    with pytest.raises(MemImage.OverlapError) as ex:
+        mi.contigbytes()
+    assert ex.match(overlap_pos)

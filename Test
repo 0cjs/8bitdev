@@ -144,6 +144,22 @@ a2exebuild() {
     local objdir=$(objdir "$1")
     asbuild "$@"
     p2a2bin "$objdir/$exe.p" > "$objdir/$exe"
+
+    #   Build a disk image that will run the program when booted.
+    local baseimg="$BUILDDIR/tool/src/dskimg/a2/EMPTY-DOS33-48K-V254.dsk"
+    local img="$objdir/$exe.dsk"
+    cp "$baseimg" "$img"
+    dos33 -y "$img" SAVE B "$objdir/$exe" "${exe^^}"
+    echo '10 PRINT CHR$(4);"BRUN' "${exe^^}" '"' \
+        | tokenize_asoft > "$objdir/$exe.HELLO"
+    dos33 -y "$img" DELETE HELLO    # Avoids annoying SAVE overwrite warning
+    dos33 -y "$img" SAVE A "$objdir/$exe.HELLO" HELLO
+    dos33 -y "$img" HELLO HELLO     # Ensure HELLO is run on boot
+
+    #   The above can be run with:
+    #       linapple --conf tool/linapple/linapple.conf \
+    #           --d1 .build/obj/exe/a2/charset.dsk
+    #   We should work out an option to do this automatically.
 }
 
 asbuild src/asl-nomacro.a65

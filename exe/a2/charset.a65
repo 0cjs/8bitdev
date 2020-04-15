@@ -1,0 +1,32 @@
+;   Apple II: Print the charset used by COUT
+
+            cpu     6502
+            include "src/a2def.a65"
+
+BEL         equ     $88         ; bell character
+LF          equ     $8A         ; line feed
+CR          equ     $8D         ; carriage return
+SPACE       equ     $A0         ; space
+
+            org     $800
+
+            ldx #0
+nextchar    txa
+            and #$1F            ; divisible by 32?
+            bne +               ; no, don't print a CR
+            jsr CROUT
++           txa
+            cmp #CR             ; skip chars that COUT processes as an
+            beq skipchar        ;   action instead of printing
+            cmp #LF
+            beq skipchar
+            cmp #BEL
+            beq skipchar
+out         jsr COUT
+            inx
+            bne nextchar
+            jsr CROUT
+            jmp $3D0            ; return to DOS
+
+skipchar    lda #SPACE
+            jmp out

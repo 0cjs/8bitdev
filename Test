@@ -137,6 +137,14 @@ asbuild() {
     )
 }
 
+a2exebuild() {
+    local exe=$(basename "$1")
+          exe=${exe%.*}             # Remove extension
+    local objdir=$(objdir "$1")
+    asbuild "$@"
+    p2a2bin "$objdir/$exe.p" > "$objdir/$exe"
+}
+
 asbuild src/asl-nomacro.a65
 asbuild src/simple-asl.a65  ';  Unit Test Assembly' '   org $240'
 asbuild src/stdtest.a65     \
@@ -150,6 +158,8 @@ asbuild src/a1replica.a65
 asbuild src/a2.a65
 asbuild src/c64.a65
 asbuild src/fm7.a69
+
+a2exebuild  exe/a2/charset.a65
 
 ####################################################################
 #   Tests

@@ -48,7 +48,8 @@ tool_setup tool/asxxxx/Setup
 tool_setup tool/asl/Setup
 tool_setup tool/dos33fs/Setup
 tool_setup tool/linapple/Setup
-
+[[ $PATH =~ ^$basedir/bin:|:$basedir/bin:|:$basedir/bin$ ]] \
+    || export PATH="$basedir/bin:$PATH"
 mkdir -p "$BUILDDIR/obj"
 
 ####################################################################

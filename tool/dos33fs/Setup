@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 '''
-    Configure for use of the linapple Apple II simulator (emulator).
+    Configure for use of dos33fs-utils used for manipulating
+    Apple II files and DOS 3.3 disk images.
 
     This will fetch from `source_repo` and build the `source_ref`
     branch, if necessary.

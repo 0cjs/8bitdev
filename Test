@@ -104,11 +104,17 @@ sed -i -e 's/\f/\n/' "$BUILDDIR"/obj/*.{lst,rst,map}
 ####################################################################
 #   AS builds
 
+objdir() {
+    #   The object directory for built files is the source path
+    #   relative to the base, but under .build/obj/.
+    local d=$(dirname "$1")         # Source file directory
+          d=${d#$basedir/}          # Remove $basedir prefix if present
+    echo "$basedir/.build/obj/$d"
+}
+
 asbuild() {
     local srcpath="$1"; shift
-    local objsubdir=$(dirname "$srcpath")
-          objsubdir=${objsubdir#$basedir/}  # Remove $basedir prefix if present
-    local objdir="$basedir/.build/obj/$objsubdir"
+    local objdir=$(objdir "$srcpath")
     local src=$(basename "$srcpath")
     #   AS has some poor behaviour we need to work around here.
     #   • We set CWD to output dir because AS can't specify other output

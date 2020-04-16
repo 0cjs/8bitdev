@@ -438,10 +438,15 @@ class Instructions():
     JSR     = 0x20
     SEC     = 0x38
     EOR     = 0x49
+    JMP     = 0x4C
     RTS     = 0x60
     ADC     = 0x69
+    STYa    = 0x8C
+    STAzy   = 0x91
+    STAay   = 0x99
     LDXz    = 0xA6
     LDA     = 0xA9
+    LDYa    = 0xAC
     INY     = 0xC8
     CMP     = 0xC9
     INX     = 0xE8

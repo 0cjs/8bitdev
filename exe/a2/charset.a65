@@ -3,30 +3,35 @@
             cpu     6502
             include "src/a2def.a65"
 
-BEL         equ     $88         ; bell character
-LF          equ     $8A         ; line feed
-CR          equ     $8D         ; carriage return
-SPACE       equ     $A0         ; space
+SPACE       equ     AA(' ')
 
             org     $800
 
             ldx #0
 nextchar    txa
             and #$1F            ; divisible by 32?
-            bne +               ; no, don't print a CR
+            bne +               ; no, just print the char
+
+            ;   Start new line prefixed with first value in hex.
             jsr CROUT
-+           txa
-            cmp #CR             ; skip chars that COUT processes as an
-            beq skipchar        ;   action instead of printing
-            cmp #LF
-            beq skipchar
-            cmp #BEL
-            beq skipchar
-out         jsr COUT
+            txa
+            jsr PRBYTE
+            lda #AA(':')
+            jsr COUT
+
++           ;   COUT prints nothing for most control codes ($80-$9F), and a
+            ;   few generate actions such as beeping or cursor movement.
+            ;   Skip the entire row since we get nothing useful from it.
+            txa
+            cmp #$80            ; <$80?
+            bcc +               ; yes, print it
+            cmp #SPACE          ; ≥SPACE?
+            bcs +               ; yes, print it
+            ldx #SPACE          ; skip to space
+            bmi nextchar        ; BRA because SPACE has high bit set
+
++           jsr COUT
             inx
             bne nextchar
             jsr CROUT
             jmp $3D0            ; return to DOS
-
-skipchar    lda #SPACE
-            jmp out

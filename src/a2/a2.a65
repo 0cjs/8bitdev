@@ -4,7 +4,7 @@
 ;
 
             cpu     6502
-            include "src/a2def.a65"
+            include "src/a2/def.a65"
 
 ;---------------------------------------------------------------------
 ;   The following routines are designed to extend the Monitor via the

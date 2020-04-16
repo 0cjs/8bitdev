@@ -1,0 +1,29 @@
+;   Apple II monitor extension for doing hex+ASCII dumps.
+;
+;   The following routines are designed to extend the Monitor via the
+;   Ctrl-Y command. To connect code starting at $HHLL to Ctrl-Y, enter a
+;   JMP to its start point $HHLL at $3F8: `3F8: 4C LL HH`.
+;
+;   Most of the routines are PIC (Position-Independent Code) and may be
+;   loaded anywhere. The $300-$3CF area is a common place for these. (Note
+;   that EDASM claims to use this entire page, though I've seen it use only
+;   the first dozen or so bytes of it.)
+;
+;   For more details on how the Monitor works, see:
+;   https://github.com/0cjs/sedoc/blob/master/8bit/apple2/monitor.md
+
+            cpu     6502
+            include "src/a2/def.a65"
+
+            org     $300        ; suggested; it's location-independent
+
+;---------------------------------------------------------------------
+;   Memory dump in hexadecimal and characters.
+;   For use instead of the standard monitor `D` command.
+;   Store start location at $3F8 to execute with Ctrl-Y in the monitor.
+
+hexdump     rts
+
+            jsr PRBYTE
+            ;jsr CROUT1
+            rts

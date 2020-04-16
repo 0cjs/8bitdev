@@ -4,7 +4,7 @@ import  pytest
 @pytest.fixture
 def M():
     M = Machine()
-    M.load('.build/obj/src/a2/a2.p')
+    M.load('.build/obj/src/a2/mondump.p')
     return M
 
 def test_dump(M):

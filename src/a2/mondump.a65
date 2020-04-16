@@ -15,7 +15,10 @@
             cpu     6502
             include "src/a2/def.a65"
 
-            org     $300        ; suggested; it's location-independent
+            ;   The routine is location independent; we do not specify
+            ;   the location here because we want to let the framework
+            ;   that loads it do that. But here's a suggestion:
+            ;org     $300
 
 ;   Argument and temporary address storage. See
 ;   https://github.com/0cjs/sedoc/blob/master/8bit/apple2/monitor.md

@@ -1,0 +1,31 @@
+;   mondump: Program to set up mondump routine
+
+            cpu     6502
+
+            org $300
+            include "src/a2/mondump.a65"
+
+            ;   We place our setup routine at the end of the page 2
+            ;   input buffer, since we the code only immediately after
+            ;   load and it can be safely stomped after that.
+            ;
+            ;   Our setup code happens to fit exactly into $2F0-$2FF, just
+            ;   before the hexdump routine itself. The assembler will
+            ;   happily allow overlap, but since it generates overlapping
+            ;   records in that case, p2a2bin will generate a data overlap
+            ;   error when creating the Apple II binary file.
+            ;
+            org $2F0
+
+mondump_setup
+            lda #$4C            ; JMP instruction
+            sta USRADR
+            lda # $FF & hexdump
+            sta USRADR+1
+            lda # $FF & (hexdump >> 8)
+            sta USRADR+2
+            rts
+
+            ;   Rather than rolling our own code to extract the
+            ;   MSB and LSB of `hexdump`, we should consider using
+            ;   `include/bitfuncs.inc` included with ASL.

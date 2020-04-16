@@ -37,6 +37,7 @@ A5H         equ     $45
 ;   Misc. locations
 
 IN          equ     $200        ; input buffer, to $2FF
+USRADR      equ     $3F8        ; monitor Ctrl-Y "user" command JMPs here
 
 ;---------------------------------------------------------------------
 ;   Monitor routines

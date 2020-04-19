@@ -41,6 +41,35 @@ mdest       equ A3L         ; Dest address copied from mnext by `<` command;
 ;PCL        equ PCL         ; Current PC set by `L` and `G` commands.
 
 ;---------------------------------------------------------------------
+;   (PIC) Ctrl-Y entry: call one of our user commands
+;
+;   This should be entered via the Monitor user command, Ctrl-Y. On entry,
+;   YSAV will have been set by the Monitor to point to the current position
+;   in the input buffer.
+;
+;   Note that we must consume the char after the Ctrl-Y command if we take
+;   it as a valid option for us, otherwise we must leave it so the Monitor
+;   can carry on executing commands from that point in the line. (If it's a
+;   CR that's no issue; the monitor executes that as a command to dump
+;   memory only if it's the first char on the line.)
+;
+;   Not always consuming the following char is a convenient way to let us
+;   have a "default" command and also ensure that the Monitor has a CR to
+;   "execute" as termination of command-line parsing, but to avoid user
+;   confusion it's best if the option char is never also a valid command to
+;   the monitor.
+;
+;   This performs only relative branches to the selected subroutine, which
+;   returns directly to the monitor with its RTS.
+
+usrcmd      ; Ctrl-Y command entry point
+            ldy YSAV
+            lda IN,y        ; next char after the Ctrl-Y that got us here
+            cmp #AA('A')
+            beq dumpmonvar1
+            bne hexdump     ; (BRA) nothing above matched
+
+;---------------------------------------------------------------------
 ;   (PIC) dumpmonvar: print monitor UI variables
 ;
 ;   This prints the saved PC and the addresses/16-bit values stored in  A1
@@ -50,6 +79,14 @@ mdest       equ A3L         ; Dest address copied from mnext by `<` command;
 ;   This depends on COUT preserving X and Y. This is true for the screen
 ;   (PR#0), but may not be for other char switch (CSW) routines.
 ;
+
+dumpmonvar1 ;   Entry point from usrcmd command dispatcher.
+            ;   It matched the char following Ctrl-Y telling us to run this
+            ;   routine, leaving the offset in Y, so we must skip past that
+            ;   in the input buffer to have the Monitor start processing at
+            ;   the following chars after we return.
+            inc YSAV
+
 dumpmonvar  jsr CROUT
             ldy #6              ; 6 words to display (PC, A1, ..., A5)
             ldx #PCL            ; first word to display

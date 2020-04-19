@@ -18,12 +18,12 @@
             ;
             org $2F0
 
-hexdump_setup
+setup
             lda #$4C            ; JMP instruction
             sta USRADR
-            lda # $FF & hexdump
+            lda # $FF & usrcmd
             sta USRADR+1
-            lda # $FF & (hexdump >> 8)
+            lda # $FF & (usrcmd >> 8)
             sta USRADR+2
             rts
 

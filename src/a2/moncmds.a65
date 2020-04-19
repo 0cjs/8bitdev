@@ -9,6 +9,14 @@
 ;   that EDASM claims to use this entire page, though I've seen it use only
 ;   the first dozen or so bytes of it.)
 ;
+;   __Output from the monitor.__ The Monitor prompts and gets an input line
+;   with GETLNZ, which always prints a newline before prompting, and not
+;   after input. Therefore commands generating output always print a
+;   newline first and do not print one after, and we follow this
+;   convention. While this annoyingly generates a blank line after every
+;   monitor input command, it ensures that multiple commands on an input
+;   line generate output on their own lines.
+;
 ;   For more details on how the Monitor works, see:
 ;   https://github.com/0cjs/sedoc/blob/master/8bit/apple2/monitor.md
 
@@ -42,8 +50,8 @@ mdest       equ A3L         ; Dest address copied from mnext by `<` command;
 ;   This depends on COUT preserving X and Y. This is true for the screen
 ;   (PR#0), but may not be for other char switch (CSW) routines.
 ;
-dumpmonvar  ;   Print PC, A1, ..., A5
-            ldy #6              ; 6 words to display
+dumpmonvar  jsr CROUT
+            ldy #6              ; 6 words to display (PC, A1, ..., A5)
             ldx #PCL            ; first word to display
 .nextA      lda #AA(' ')
             jsr COUT
@@ -55,7 +63,6 @@ dumpmonvar  ;   Print PC, A1, ..., A5
             inx
             dey                 ; decrement count
             bne .nextA
-            jsr CROUT1
             rts
 
 ;---------------------------------------------------------------------
@@ -89,7 +96,7 @@ hexdump
 
             ;   Print current address (followed by hyphen) and hex bytes
             ;   up to mod-8 boundary.
-.nextline   jsr PRA1
+.nextline   jsr PRA1        ; generates required newline
 .nexthex    lda #AA(' ')    ; space before every hex byte
             jsr COUT
             lda (mnext),y   ; and the data itself

@@ -186,13 +186,12 @@ asbuild src/bigint.a65      \
     '   cpu 6502' '   include "src/std.a65"' '   org $1000'
 
 asbuild src/a1replica.a65
-asbuild src/a2/misc.a65
-asbuild src/a2/mondump.a65  '   org $0A00'
+asbuild src/a2/moncmds.a65  '   org $0A00'
 asbuild src/c64.a65
 asbuild src/fm7.a69
 
 a2exebuild  exe/a2/charset.a65
-a2exebuild  exe/a2/mondump.a65
+a2exebuild  exe/a2/moncmds.a65
 
 ####################################################################
 #   Tests

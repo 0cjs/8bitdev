@@ -2,7 +2,7 @@ from    numbers import Number
 from    testmc.m6502 import  Machine, Registers as R, Instructions as I
 from    pytest import fixture, mark
 
-object_file = 'src/a2/mondump.p'
+object_file = 'src/a2/moncmds.p'
 
 ####################################################################
 #   Utility routines

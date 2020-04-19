@@ -33,6 +33,32 @@ mdest       equ A3L         ; Dest address copied from mnext by `<` command;
 ;PCL        equ PCL         ; Current PC set by `L` and `G` commands.
 
 ;---------------------------------------------------------------------
+;   (PIC) dumpmonvar: print monitor UI variables
+;
+;   This prints the saved PC and the addresses/16-bit values stored in  A1
+;   through A5. These are variables used by the monitor user interface for
+;   command handling and "remembered" addresses.
+;
+;   This depends on COUT preserving X and Y. This is true for the screen
+;   (PR#0), but may not be for other char switch (CSW) routines.
+;
+dumpmonvar  ;   Print PC, A1, ..., A5
+            ldy #6              ; 6 words to display
+            ldx #PCL            ; first word to display
+.nextA      lda #AA(' ')
+            jsr COUT
+            lda 1,x             ; high byte
+            jsr PRBYTE
+            lda 0,x             ; low byte
+            jsr PRBYTE
+            inx                 ; next word
+            inx
+            dey                 ; decrement count
+            bne .nextA
+            jsr CROUT1
+            rts
+
+;---------------------------------------------------------------------
 ;   (PIC) Memory dump in hexadecimal and characters.
 ;
 ;   In order to make life a bit more convenient, this differs from the

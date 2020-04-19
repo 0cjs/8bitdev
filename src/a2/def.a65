@@ -15,6 +15,7 @@ AA          function c,(c|$80)
 
 MODE        equ     $31         ; monitor mode: 0 or converted `:+-.` char
 YSAV        equ     $34         ; saved Y input pointer in monitor
+YSAV1       equ     $35         ; temp for COUTZ (COUT1); otherwise unused
 PROMPT      equ     $33         ; prompt char for GETLN
 CSWL        equ     $36         ; vector for current char out routine
 

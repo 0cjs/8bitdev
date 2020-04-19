@@ -52,6 +52,8 @@ CROUT       equ     $FD8E       ; print CR using CSW
 CROUT1      equ     $FD8B       ; clear from cursor to right edge of text
                                 ;   window and call CROUT
 PRBYTE      equ     $FDDA       ; print A register in hex; ♣A
+PRHEX       equ     $FDE3       ; print lower nybble of A register in hex; ♣A
+PRNTAX      equ     $F941       ; print A followed by X registers in hex: ♣A
 PERR        equ     $FF2D       ; print "ERR" and BEL using CSW
 
 PRA1        equ     $FD92       ; print CR (A1H) (A1L) '-'

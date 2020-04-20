@@ -11,7 +11,14 @@ To-do List
   register values and the memory change for each step) of a call.
   Probably also want a tool that can dump arbitrary memory at any step.
 
-#### Third-party Tools
+#### Third-party Tool Support
+
+- Figure out a convenient but quiet way to somehow inform the user of
+  which tools he's using, particularly system-supplied vs. .build/.
+- Allow configuring tools as "dontuse," w/no build or install, and
+  code that needs the tools simply not being built.
+
+#### Third-party Tools to Consider Using
 
 - Use [omni8bit](https://github.com/robmcmullen/omni8bit) (`pip
   install omni8bit`) front end for emulator startup/run here?

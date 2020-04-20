@@ -41,8 +41,8 @@ determine the type.
      MSB  LSBs  Type
      $00  %00   Fixed constant; type and value determined by bits 7-2
     ≠$00  %00   Pointer to a cons cell or object data
+     any  %01   (unused)
      any  %10   Smallint: 14-bit signed integer
-     any  %01   unused
      any  %11   Obdata header; never an object reference
 
 Notes:
@@ -57,9 +57,11 @@ Notes:
 - A pointer may point to either a cons cell or obdata; the type of the
   pointer's target is determined by whether or not the first two bytes
   of the target are tagged as an obdata header.
-- The char/unsigned byte type (MSB=value, LSBs=%10) is not strictly
-  necessary; it may be replaced with something else if need arises.
 - Details of the smallint type are given below.
+
+It's not clear what the best use of the unused tag is. Options include:
+- A second cons-cell-only heap (presumably in a separate bank).
+- A char/unsigned-byte type.
 
 ### Tag Format and Reference Data Types
 

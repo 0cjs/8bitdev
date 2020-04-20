@@ -103,7 +103,7 @@ cons cells and obdata are dynamically allocated.
 
 Unlike arbitrary areas of memory, every address in a heap is part of
 an object. Space available for allocation is indicated by "free space"
-obdata objects (_FSO_s) of type `HDT_FREE` (see below).
+obdata objects (_FSOs_) of type `HDT_FREE` (see below).
 
 All objects on the heap have an allocation size or _asize_, given in
 bytes, that is a multiple of four and 256 bytes or less. The next

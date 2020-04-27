@@ -1,0 +1,16 @@
+;   Confirmation that Macroassembler AS handles non-ASCII symbols.
+;
+;   This file uses UTF-8 encoding. It's assumed that the environment and
+;   assembler are configured appropriately for this, but this should be
+;   checked.
+
+            cpu 6502
+            org $123        ; offset to catch errors in symtab parsing
+
+test        jsr gerät
+            rts
+
+gerät       rts
+
+;   Invalid symbol name. :-(
+;συσκευή     rts

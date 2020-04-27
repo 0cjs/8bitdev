@@ -163,6 +163,7 @@ a2exebuild() {
 }
 
 asbuild src/asl-nomacro.a65
+asbuild src/asl-sym.a65
 asbuild src/simple-asl.a65  ';  Unit Test Assembly' '   org $240'
 asbuild src/stdtest.a65     \
     '   cpu 6502' '   include "src/std.a65"' '   org $240'

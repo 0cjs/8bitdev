@@ -175,8 +175,16 @@ class PFile(MemImage):
 #   However, this documentation is not actually correct; see below.
 
 def parse_symtab_fromfile(path):
-    ' Given the path to a ``.map`` file, run `parse_symtab` on it. '
-    with open(path, 'r', encoding='ascii') as stream:
+    ''' Given the path to a ``.map`` file, run `parse_symtab` on it.
+
+        The .p files use the same encoding as the input files.
+
+        This assumes that the assembler is configured to use UTF-8
+        encoding. This is preferably done explicitly with the
+        ``-codepage utf-8`` option rather than relying on the
+        environment's locale.
+    '''
+    with open(path, 'r', encoding='utf-8') as stream:
         return parse_symtab(stream)
 
 class ParseError(RuntimeError):

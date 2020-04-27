@@ -133,7 +133,7 @@ asbuild() {
         && echo  >"$src" '   page 0' \
         && for line in "$@"; do echo >>"$src" "$line"; done \
         && echo >>"$src" "   include $srcpath" \
-        && asl </dev/null -qxx -U \
+        && asl </dev/null -codepage utf-8 -qxx -U \
             -i "$basedir" "$src" -L -s -g
     )
 }

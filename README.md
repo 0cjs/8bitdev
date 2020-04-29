@@ -1,47 +1,125 @@
 8bitdev
 =======
 
+This repo is used by cjs for development of programs in 8-bit assembly
+languages (for a variety of platforms) and tools to aid this development.
+It includes:
 
-This demonstrates unit testing of machine-language code using pytest.
-The code is built and linked with [ASxxxx]. We then bring up an
-instance of a [py65] CPU within our test framework, load the binary
-file into its memory, run a bit of code, and then check that the
-registers and memory are correct. (The APIs for doing this still need
-a _lot_ of work.)
+- A Python framework (under `lib/`) for running unit tests on 6502 machine
+  code in the [py65] 6502 simulator. Unit tests use [pytest] and are in
+  `.pt` files, generally with the same base name as the source file
+  containing the code under test.
+- Scripts (under `tool/`) for downloading and building development tools,
+  including assemblers, binary file and disk image tools, and 8-bit PC
+  simulators.
 
-Run the top-level `./Test` script to see everything go.
+Run the top-level `./Test` script to see everything go. Adding `-C` as the
+first flag will do a fully clean build, including re-installation of all
+tools, which may be necessary if the third-party tools have been updated.
 
-#### 32-bit Support for ASxxxx
+This currently has been tested only under Linux (Debian 9), but is likely
+to work under MacOS and other Unices. It likely can be made to work under
+Windows as well, if there's demand; contact <cjs@cynic.net> if you're
+interested in getting support for this.
 
-The ASxxxx binaries installed by the build system are 32-bit Linux
-binaries. On 64-bit systems these will error out with "No such file or
-directory" when run unless the 32-bit dynamic linker (`ld-linux.so.2`)
-and libraries are installed. To do this on a 64-bit Debian 9 system:
+
+File and Directory Organization
+-------------------------------
+
+Here is an overview of the major files and directories in this repo.
+
+Files:
+- [`README.md`]: This file.
+- [`Test`]: Installs third-party tools where necessary, builds the code and
+  runs the unit tests. (Bash.)
+- [`activate`]: When sourced in Bash (`. ./activate`) activates the Python
+  virtual environment, building a new one (and installing the packages
+  listed in [`requirements.txt`], such as py65 and pytest) if necessary. You
+  can also directly run programs in the virtual environment without
+  separately starting it by running them from `.build/virtualenv/bin/`.
+  Deactivate the virtual environment with `deactivate`.
+
+Directories:
+- [`bin/`]: Development tools/scripts.
+- [`tool/`]: Third-party tool installation.
+- [`lib/testmc/`]: Unit test library Python module.
+- [`src/`]: Assembly source code, unit tests and documentation. These are
+  generally modules used by full programs under `exe/`.
+- [`exe/`]: "Top-level" assembly files for full executable program builds,
+  usually just doing configuration and including code from `src/`.
+- [`tmp/`]: Ignored; used to keep developer's random files out of the way.
+
+
+Third-party Development Tools
+-----------------------------
+
+Most of the development tools used for code in this repo are downloaded and
+built by the scripts under the `tool/` directory. Tools already available
+in the path will be used instead; see the `check_installed()` functions in
+the setup scripts for details.
+
+__Assemblers__:
+- [The Macroassembler AS][asl] is the primary assembler, and supports a
+  wide variety of CPUs and microcontrollers.
+- The [ASxxxx Cross Assemblers][asxxxx] are optionally available (see
+  below), though little used.
+
+__Development Tools__:
+- Vince Weaver's [dos33fsprogs] provides tools for handling Apple II DOS
+  3.3 disk images and files.
+- [retroabandon/diskimg] supplies disk images used as a base for building
+  test images.
+
+__Simulators and Emulators__:
+- The [py65] 6502 microprocessor simulator ([source][py65-src]) is used to
+  run unit tests.
+- The [LinApple] Apple II emulator can be used to run Apple II programs.
+
+#### ASxxxx Notes
+
+The Linux binaries provided for ASxxxx are 32-bit, and on 64-bit systems
+will error out with "No such file or directory" when run unless the 32-bit
+dynamic linker (`ld-linux.so.2`) and libraries are installed.
+
+For this reason, by default ASxxxx is not installed and used. Use `./Test
+-A` to enable assembly and testing of code using ASxxxx. This is a
+persistent flag (even across fully clean `./Test -C` builds); remove
+`.all-tools` from the top level repository directory to disable it.
+
+To install the 32-bit libraries on a 64-bit Debian 9 system:
 
     dpkg --add-architecture i386
     apt update
     apt install libc6-i386
 
-#### MAME Support
 
-As well as using the Python emulators for unit tests, you may wish to
-do functional testing on more realistic platforms supplied by MAME.
-You can install or build the latest version from `mamedev.org` or just
-use your system packages; on Debian 9 they'd be installed with:
+Additional Third-party Tools
+----------------------------
+
+The following tools do not currently have any specific support in this
+repo, but can be useful for testing.
+
+### VICE: The Versatile Commodore Emulator
+
+[VICE] is a suite of simulators for various CBM computers, including PET
+models, the VIC-20 and the Commodore 64.
+
+### MAME Multi-system Emulators
+
+You can install or build the latest version from `mamedev.org` or just use
+your system packages; on Debian 9 they'd be installed with:
 
     sudo apt-get install mame mame-tools mame-doc
 
 The documentation installed by `mame-doc`, under
-<file:///usr/share/doc/mame-doc/singlehtml/index.html>, is just an
-older version of what's found at <https://docs.mamedev.org>
+<file:///usr/share/doc/mame-doc/singlehtml/index.html>, is just an older
+version of what's found at <https://docs.mamedev.org>
 
 
-py65
-----
+Additional Tool Information
+---------------------------
 
-[py65][] ([source][py65src]) is a Python-based 6502 emulator.
-
-### py65 Monitor
+### The py65 Monitor
 
 py65 includes a monitor, `py65mon`, that can be run from the command
 line. With no options it drops directly into the monitor on a
@@ -58,7 +136,7 @@ Addresses given on the command line use C/Python base notation (`10`,
 `0xa`, `012`) rather than the `+$` notation used with monitor
 commands.
 
-#### [Command][py65-cmds] summary (similar to [VICE monitor][vice-mon]):
+__[Command][py65-cmds] summary__ (similar to [VICE monitor][vice-mon]):
 
 General:
 - Readline command line editing available.
@@ -94,8 +172,24 @@ Execution:
 
 <!-------------------------------------------------------------------->
 [ASxxxx]: http://shop-pdp.net/ashtml/asxxxx.htm
-
-[py65-cmds]: https://py65.readthedocs.io/en/latest/index.html#command-reference
+[asl]: http://john.ccac.rwth-aachen.de:8000/as/
+[dos33fsprogs]: https://github.com/deater/dos33fsprogs
 [py65]: http://py65.readthedocs.org/
-[py65src]: https://github.com/mnaberez/py65
+[pytest]: https://github.com/0cjs/sedoc/blob/master/lang/python/test/pytest.md
+[retroabandon/diskimg]: https://gitlab.com/retroabandon/diskimg.git
+
+[`README.md`]: README.md
+[`Test`]: Test
+[`activate`]: activate
+[`bin/`]: bin/
+[`exe/`]: exe/
+[`lib/testmc/`]: lib/testmc/
+[`requirements.txt`]: requirements.txt
+[`src/`]: src/
+[`tmp/`]: tmp/
+[`tool/`]: tool/
+
+[VICE]: https://vice-emu.sourceforge.io/
+[py65-cmds]: https://py65.readthedocs.io/en/latest/index.html#command-reference
+[py65-src]: https://github.com/mnaberez/py65
 [vice-mon]: http://vice-emu.sourceforge.net/vice_12.html

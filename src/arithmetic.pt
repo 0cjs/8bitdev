@@ -20,6 +20,7 @@ import  pytest
 
 @pytest.fixture
 def M():
+    #   We do not use the shared M fixture because here we load no object file.
     return Machine()
 
 def add(M, a, b):

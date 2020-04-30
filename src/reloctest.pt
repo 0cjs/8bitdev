@@ -5,11 +5,7 @@ import  pytest
 if not exists('.all-tools'):
     pytest.skip("skipping ASxxxx tests", allow_module_level=True)
 
-@pytest.fixture
-def M():
-    M = Machine()
-    M.load('.build/obj/reloctest')
-    return M
+object_file = 'reloctest'
 
 def test_relocaddr(M):
     S = M.symtab

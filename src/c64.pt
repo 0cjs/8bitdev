@@ -1,11 +1,7 @@
 from    testmc.m6502 import  Machine, Registers as R, Instructions as I
 import  pytest
 
-@pytest.fixture
-def M():
-    M = Machine()
-    M.load('.build/obj/src/c64.p')
-    return M
+object_file = 'src/c64.p'
 
 def test_invscr(M):
     S = M.symtab

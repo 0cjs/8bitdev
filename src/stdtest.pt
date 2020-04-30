@@ -1,11 +1,7 @@
 from    testmc.m6502 import  Machine, Registers as R, Instructions as I
 import  pytest
 
-@pytest.fixture
-def M():
-    M = Machine()
-    M.load('.build/obj/src/stdtest.p')
-    return M
+object_file = 'src/stdtest.p'
 
 def test_ds_db_dw(M):
     S = M.symtab

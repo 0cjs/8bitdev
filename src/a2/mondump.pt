@@ -1,11 +1,7 @@
 from    testmc.m6502 import  Machine, Registers as R, Instructions as I
 import  pytest
 
-@pytest.fixture
-def M():
-    M = Machine()
-    M.load('.build/obj/src/a2/mondump.p')
-    return M
+object_file = 'src/a2/mondump.p'
 
 def test_dump(M):
     S = M.symtab

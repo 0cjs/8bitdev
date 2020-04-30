@@ -5,13 +5,7 @@ import  pytest
 if not exists('.all-tools'):
     pytest.skip("skipping ASxxxx tests", allow_module_level=True)
 
-@pytest.fixture
-def M():
-    M = Machine()
-    #   XXX Not the best way to find this file: duplicates definition
-    #   of $buildir in Test and dependent on CWD.
-    M.load('.build/obj/simple-asx')
-    return M
+object_file = 'simple-asx'
 
 def test_loaded_object_file(M):
     ' Confirm that the correct object file was loaded. '

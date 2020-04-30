@@ -1,11 +1,7 @@
 from    testmc.m6502 import  Machine, Registers as R
 import  pytest
 
-@pytest.fixture
-def M():
-    M = Machine()
-    M.load('.build/obj/src/asl-sym.p')
-    return M
+object_file = 'src/asl-sym.p'
 
 def test_eurosym(M):
     ' Test a symbol using a non-ASCII char from a western European language. '

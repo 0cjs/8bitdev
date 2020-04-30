@@ -1,12 +1,7 @@
 from    testmc.m6502 import  Machine, Registers as R
 import  pytest
 
-
-@pytest.fixture
-def M():
-    M = Machine()
-    M.load('.build/obj/src/a1replica.p')
-    return M
+object_file = 'src/a1replica.p'
 
 ####################################################################
 #   Utility routines

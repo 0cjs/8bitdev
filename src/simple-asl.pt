@@ -1,14 +1,7 @@
 from    testmc.m6502 import  Machine, Registers as R
 import  pytest
 
-
-@pytest.fixture
-def M():
-    M = Machine()
-    #   XXX Not the best way to find this file: duplicates definition
-    #   of $buildir in Test and dependent on CWD.
-    M.load('.build/obj/src/simple-asl.p')
-    return M
+object_file = 'src/simple-asl.p'
 
 def test_loaded_object_file(M):
     ' Confirm that the correct object file was loaded. '

@@ -5,18 +5,17 @@ import  pytest
 @pytest.fixture
 def M():
     M = Machine()
-
     #   XXX Not the best way to find this file: duplicates definition
     #   of $buildir in Test and dependent on CWD.
     M.load('.build/obj/src/simple-asl.p')
+    return M
 
-    #   Confirm correct file is loaded
+def test_loaded_object_file(M):
+    ' Confirm that the correct object file was loaded. '
     ident = M.symtab.ident
-    assert 0x240 == ident
     ident_str = "simple-asl.a65"
     assert ident_str == M.str(ident, len(ident_str))
-
-    return M
+    assert 0x240 == ident
 
 def test_brk(M):
     S = M.symtab

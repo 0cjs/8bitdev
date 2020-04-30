@@ -87,7 +87,12 @@ linkopts="-numwt"
 asm() {
     local srcfile="$1"; shift
     #   `.rel` output extension is replaced/added automatically
-    as6500 $asmopts "$BUILDDIR/obj/"$(basename "$srcfile") "$srcfile" "$@"
+    as6500 $asmopts "$BUILDDIR/obj/"$(basename "$srcfile") "$srcfile" "$@" || {
+        local exitcode=$?
+        [[ $exitcode -eq 127 ]] && echo 1>&2 \
+            "as6500 exited with 127: do you support 32-bit executables?"
+        return $exitcode
+    }
 }
 
 link() {

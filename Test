@@ -46,7 +46,7 @@ esac; done
 
 cd "$basedir"
 
-. ./activate -q
+. ./activate -q -p python3
 
 [[ -f $all_tools ]] && tool_setup tool/asxxxx/Setup
 tool_setup tool/asl/Setup

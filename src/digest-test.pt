@@ -1,0 +1,82 @@
+from    testmc.m6502 import  Machine, Registers as R, Instructions as I
+import  pytest
+
+from    math  import ceil
+from    binascii  import crc_hqx
+
+object_file = 'src/digest-test.p'
+
+####################################################################
+#   crc16_s
+
+@pytest.mark.parametrize('crc, iv, data', (
+    #   According to the docs, "With a starting CRC of $FFFF, the
+    #   binary string $01 $02 $03 $04 should evaluate to $89C3."
+    (0x89C3, 0xFFFF, [1, 2, 3, 4]),
+    #   Various values calculated by Radare2's `rahash2 -a crc16citt`.
+    (0xE1F0, 0xFFFF, [0]),
+    (0x1D0F, 0xFFFF, [0, 0]),
+))
+def test_crc16s(M, crc, iv, data):
+    S = M.symtab
+    M.depword(S.crc16, iv)
+    for i in data:
+        M.call(S.crc16_s, R(a=i))
+    assert crc == M.word(S.crc16)
+    #   We derived the expected CRC values above from independent sources;
+    #   this serves to check that another library agrees with them.
+    assert crc == crc_hqx(bytes(data), iv)
+
+def test_crc16s_noncontig(M):
+    S = M.symtab
+    M.deposit(S.crc16lo, 0xFF)
+    M.deposit(S.crc16hi, 0xFF)
+    for i in [1, 2, 3, 4]:
+        M.call(S.crc16_s_noncontig, R(a=i))
+    assert 0xC3 == M.byte(S.crc16lo)
+    assert 0x89 == M.byte(S.crc16hi)
+
+
+####################################################################
+#   check256
+
+@pytest.mark.parametrize('x, s, datum', (
+    (0x5B, 0x5A, 0x07),     # this one carefully hand checked
+    (0x55, 0x54, 0x00),
+    (0xAA, 0xA9, 0xFF),
+))
+def test_check256_oneloop(M, x, s, datum):
+    S = M.symtab
+    block = 0x6600
+    M.deposit(block, datum)
+    M.depword(S.blkaddr, block)
+    M.deposit(S.chkX, 0xAA); M.deposit(S.chkS, 0xFF)
+
+    with pytest.raises(M.Abort):
+        M.call(S['check256.loop'], R(a=0, y=0, C=1), aborts=[I.BNE])
+    assert (x, s) == (M.byte(S.chkX), M.byte(S.chkS)), datum
+
+@pytest.mark.xfail
+@pytest.mark.parametrize('x, s, data', (
+    (  -1,   -1, [0]*256),
+))
+def test_check256_oneblock(M, x, s, data):
+    S = M.symtab
+    block = 0x7000
+    M.deposit(block, data)
+    M.depword(S.blkaddr, block)     # start of first block
+    M.depword(2, 1)                 # count of blocks
+
+    M.deposit(S.chkX, 0xFE)         # trash initial values
+    M.deposit(S.chkS, 0xFD)
+    M.call(S.check256)
+
+    assert (x, s) == (M.byte(S.chkX), M.byte(S.chkS)), \
+        str(data[0:7]) + ' ... ' + str(data[-8:])
+
+def test_check256_multiblock(M):
+    S = M.symtab
+    block = 0x6C00
+    M.deposit(block + 0x000, [0x00] * 0x300)
+    M.depword(0, block)         # start of first block
+    M.depword(2, 3)             # count of blocks to hash

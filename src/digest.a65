@@ -1,0 +1,101 @@
+            save            ; This file contains only macros.
+            listing off
+;   Digest (or check value) routines for memory contents or other data.
+
+;   These are used in many different ways (subroutines, inline) and
+;   typically only one or a few of these will be used. Thus, this file
+;   makes the code available as macros, allowing the including program to
+;   configure the code as it wishes. For examples of how to do this, see
+;   the code in digest-test.a65 that is run by the unit tests.
+;
+;   Because listing is disabled in this file, all macros should set
+;   explicitly set {EXPAND} to avoid their code never being listed at all
+;   if the caller has defaulted to not listing expansions. (It's expected
+;   that callers will rarely use any macro more than once, and will
+;   generally use only some of these macros, so this avoids bloating
+;   listings with unused code.)
+
+; ----------------------------------------------------------------------
+;   CRC algorithms. "Official" algorithm names are from:
+;     https://en.wikipedia.org/wiki/Cyclic_redundancy_check
+
+;   Short table-free 16-bit CRC by Greg Cook.
+;   Derived from CRC table generation code by Paul Guertin.
+;   LICENSE: Unknown.
+;
+;   From:       http://www.6502.org/source/integers/crc-more.html
+;   See also:   http://www.6502.org/source/integers/crc.htm
+;
+;   This is the CRC-16-CCITT algorithm, x¹⁶ + x¹² + x⁵ + 1 with a standard
+;   IV of $FFFF, as tested against Radare2's `rahash2 -a crc16citt`.
+;
+;   XXX Is this slower because it's shorter?
+;
+;   Create the code by calling the macro with the address of the LSB of the
+;   accumulated CRC. The MSB will be the following byte unless explicitly
+;   specified to be otherwise (it need not be contiguous).
+;
+;   Before the first call CRCLO,CRCHI must be initialized (the standard
+;   value is given above). Enter the code with A containing the next byte
+;   to fold into the CRC value.
+;
+crc16_s_inline macro CRCLO,CRCHI,{EXPAND},{NOEXPIF}
+    if "CRCHI" = ""
+            crc16_s_inline CRCLO,CRCLO+1
+    elseif
+            ldx #8
+            ;   A contains the data. As we now have the high byte in A,
+            ;   things are the other way round from MAKECRCTABLE
+            eor CRCHI
+.bitloop    asl CRCLO
+            rol
+            bcc .noadd
+            eor #$10        ; high byte of polynomial
+            pha
+            lda CRCLO
+            eor #$21        ; low byte of polynomial
+            sta CRCLO
+            pla
+.noadd      dex
+            bne .bitloop
+            sta CRCHI
+    endif
+            endm
+
+; ----------------------------------------------------------------------
+;   check256 - a hacky but small check
+;
+;   This is designed to be as small as possible, to make it easy to type in
+;   to a monitor by hand, while still producing a better digest than a
+;   straight checksum or similar. Generally it's probably better to use
+;   a standard CRC.
+
+;   The caller must define the following:
+;
+;PRHEX      equ $????       ; print A register in hex, may destroy A
+;PRSPC      equ $????       ; print a space
+
+blkaddr     equ 0           ; address of first block to check
+blkcount    equ 2           ; count of 256-byte blocks to check
+chkX        equ 3           ; check value X
+chkS        equ 4           ; check value S
+
+check256    lda #$AA
+            sta chkX
+            ldy #0
+            sty chkS
+.loop       lda (blkaddr),y
+            eor chkX
+            rol
+            and #$FE        ; clear low bit
+            adc #0          ; move carry bit to low bit
+                            ;   guaranteed to leave the carry clear
+            sta chkX
+            adc chkS
+            sta chkS
+            iny
+            bne .loop
+            ;   XXX here we should print and go on to next block
+            rts
+
+            restore

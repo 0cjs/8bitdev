@@ -1,0 +1,18 @@
+;   Unit test wrapper for digest.a65
+
+            cpu 6502
+            org $300
+            include "src/digest.a65"
+
+;   Contiguous storage with default parameter.
+crc16       equ $06
+crc16_s     crc16_s_inline crc16
+            rts
+
+;   Non-contiguous storage with second parameter explicitly specified.
+;   This also confirms that non-zero-page locations work.
+crc16lo     equ $4000
+crc16hi     equ $3FFF
+crc16_s_noncontig
+            crc16_s_inline crc16lo,crc16hi
+            rts

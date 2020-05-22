@@ -1,0 +1,55 @@
+;   a1/def.a65 - Apple I definitions
+;
+;   These use the labels from the Apple I Monitor ROM listing in the
+;   manual, where relevant.
+;
+
+;---------------------------------------------------------------------
+;   Macros and functions
+
+;   AA: "Apple ASCII". Set high bit on char _c_ to print properly.
+AA          function c,(c|$80)
+
+;---------------------------------------------------------------------
+;   Zero-page locations
+
+XAML        equ     $24     ; examine index ("last opened" location?)
+XAMH        equ     $25
+STL         equ     $26     ; store address
+STH         equ     $27
+L           equ     $28     ; hex value parsing
+H           equ     $29
+YSAV        equ     $2A     ; temporary save location for Y register
+MODE        equ     $2B     ; $00=XAM, $7B=STOR, $AE=BLOCK XAM
+
+;---------------------------------------------------------------------
+;   Misc. locations
+
+IN          equ     $200    ; input buffer, up to $27F
+
+;---------------------------------------------------------------------
+;   I/O Addresses
+
+KBD         equ     $D010   ; PIA.A keyboard input
+KBDCR       equ     $D011   ; PIA.A control register
+DSP         equ     $D012   ; PIA.B display output register
+DSPCR       equ     $D013   ; PIA.B control register
+;   The above are mirrored at $D030, $D050, ...
+
+;---------------------------------------------------------------------
+;   Monitor routines
+;
+;   `♣` followed by registers indicates registers destroyed by call
+
+RESET       equ     $FF00   ; Reset vector entry point; init keyboard/display
+GETLINE     equ     $FF1F   ; Woz monitor entry point
+wozmon      equ     GETLINE
+
+PRBYTE      equ     $FFDC   ; Print A as two hex digits ♣A
+PRHEX       equ     $FFE5   ; Print lower nybble of A as hex digit ♣A
+ECHO        equ     $FFEF   ; print char in A to terminal
+
+;---------------------------------------------------------------------
+;   Reset vector:   $FF00 (RESET)
+;   NMI vector:     $0F00
+;   IRQ vector:     $0000 (or $0100 in my incorrectly burned ROM?)

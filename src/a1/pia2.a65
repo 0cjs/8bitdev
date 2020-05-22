@@ -5,17 +5,9 @@
 
             cpu 6502
             include "src/std.a65"
+            include "src/a1/def.a65"
 
             org $400
-
-KBD         equ     $D010   ; PIA.A keyboard input
-KBDCR       equ     $D011   ; PIA.A control register
-DSP         equ     $D012   ; PIA.B display output register
-DSPCR       equ     $D013   ; PIA.B control register
-wozmon      equ     $FF1F   ; Woz monitor entry point (GETLINE)
-echo        equ     $FFEF   ; print char in A to terminal
-prbyte      equ     $FFDC   ; print value in A as two hex digits
-prhex       equ     $FFE5   ; print lower nybble of A as a hex digit
 
 ;----------------------------------------------------------------------
 ;   Utility routines
@@ -113,9 +105,9 @@ mancount:   ;   Manual count triggered via keyboard input
 .loop       sty PIA2_DB
             sty PIA2_DA
             lda #' '
-            jsr echo
+            jsr ECHO
             tya
-            jsr prbyte
+            jsr PRBYTE
             jsr getkey
             iny
             bne .loop

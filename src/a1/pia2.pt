@@ -1,7 +1,7 @@
 from    testmc.m6502 import  Machine, Registers as R
 import  pytest
 
-object_file = 'src/a1replica.p'
+object_file = 'src/a1/pia2.p'
 
 ####################################################################
 #   Utility routines
@@ -19,4 +19,4 @@ def test_humdly(M, x, cycles):
 @pytest.mark.skip(reason='Slow test')
 def test_humdlymax(M):
     M.call(M.symtab.loopdlymax, R(x=3), maxops=1000000000)
-    assert 457987 == M.mpu.processorCycles  # about half a second at 1 MHz
+    assert 458005 == M.mpu.processorCycles  # about half a second at 1 MHz

@@ -432,8 +432,10 @@ class Instructions():
         gain from that at the moment.
     '''
 
+    BEQ = 0xF0; BNE = 0xD0; BMI = 0x30; BPL = 0x10
+    BCS = 0xB0; BCC = 0x90; BVS = 0x70; BVC = 0x50
+
     BRK     = 0x00
-    BPL     = 0x10
     CLC     = 0x18
     JSR     = 0x20
     SEC     = 0x38

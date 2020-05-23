@@ -53,10 +53,10 @@ class LinApple(Setup):
 
         dest = self.pdir('bin').joinpath('linapple')
         if not dest.exists():
-            target = self.srcdir().joinpath('bin', 'linapple')
+            #   This is $src/bin/linapple in older versions
+            target = self.srcdir().joinpath('build', 'bin', 'linapple')
             assert target.exists(), \
                 'Cannot find linapple binary: {}'.format(target)
-
             dest.symlink_to(target)
 
         #   The only other non-documentation things that get installed are

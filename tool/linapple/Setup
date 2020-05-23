@@ -20,6 +20,8 @@ class LinApple(Setup):
     def __init__(self):
         super().__init__()
         self.source_repo = 'https://github.com/linappleii/linapple.git'
+        #   Versions before 2e787e97b (2020-05-22) have a broken
+        #   dependency graph; you may need to build twice.
         #self.source_repo = 'https://github.com/0cjs/linapple.git'
         #self.source_ref = 'fork/cjs/master'
 
@@ -40,21 +42,7 @@ class LinApple(Setup):
             This is generally expected to rebuild the tool if any files have
             changed in the local source copy.
         '''
-
-        #   Some source files depend on the following object files but
-        #   that's not in the dependency graph. Build them first to
-        #   ensure that parallel builds don't randomly break.
-        broken_deps = (
-            'res/charset40_british.xpm',
-            'res/charset40_german.xpm',
-            'res/splash.xpm',
-            'res/charset40_french.xpm',
-            'res/charset40.xpm',
-            'res/charset40_IIplus.xpm',
-        )
-        if self.srcdir().is_dir():
-            self.make_src(*broken_deps)
-            self.make_src()
+        self.make_src()
 
     def install(self):
         ''' We need to do the install "by hand" because the Makefile

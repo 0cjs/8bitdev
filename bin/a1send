@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
-TTY=/dev/ttyUSB0
-
+: ${A1TTY:=/dev/ttyUSB0}
 basedir=$(dirname "$(dirname "$0")")
 
 errecho() { echo 1>&2 "$@"; }
@@ -10,7 +9,7 @@ for file in "$@"; do
     errecho "Sending $file"
     #   We'd like to use wozmon-deposit -c here to avoid the extra
     #   blank lines, but ascii-xfr uses line pause only on \n, not \r.
-    ascii-xfr  -s >"$TTY" -l 100 -c 35 \
+    ascii-xfr  -s >"$A1TTY" -l 100 -c 35 \
         <("$basedir/bin/wozmon-deposit" -n "$file")
 done
 

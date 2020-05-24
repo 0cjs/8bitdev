@@ -1,0 +1,17 @@
+;   Print the Apple 1 charset.
+;
+;   This is mainly useful to test the toolset, especially sending the
+;   code to an emulator or real machine and running it there.
+
+            cpu 6502
+            include "src/a1/def.a65"
+
+            org $300
+
+            ldx #$A0        ; just printable ASCII chars, to avoid screen mess
+                            ;   in terminal emulators that interpret esc codes
+.loop       txa
+            jsr ECHO
+            inx
+            bne .loop
+            jmp wozmon

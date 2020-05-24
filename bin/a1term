@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+#
+#   a1term - connect to an RC6502 Apple 1 Replica
+#
+#   This finds a QinHeng Electronics HL-340 USB-Serial adapter
+#   (vendor:product = 1a86:7523), which is what's used by my clone
+#   Arduino Nano, under /dev/serial/ and connects to it using mincom.
+#
+#   Override the tty it uses by setting A1TTY in the environment.
+#
+
+: ${A1TTY:=/dev/serial/by-id/usb-1a86_USB2.0-Serial-if00-port0}
+
+#   Use realpath(1) in the hope this will work on MacOS as well. If
+#   not, or issues arise with older Linux systems, it may be better to
+#   switch back to readlink(1).
+tty=$(realpath -e "$A1TTY")
+
+minicom -w -8 -b 115200 -D $tty

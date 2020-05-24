@@ -2,13 +2,36 @@
 #
 #   a1term - connect to an RC6502 Apple 1 Replica
 #
-#   This finds a QinHeng Electronics HL-340 USB-Serial adapter
-#   (vendor:product = 1a86:7523), which is what's used by my clone
-#   Arduino Nano, under /dev/serial/ and connects to it using mincom.
+#   With no arguments, this initiates an interactive connection (using
+#   minicom) to an attached RC6502 Apple 1 system. Given the `-s
+#   FILENAME` option (which can be used multiple times), it uses
+#   `bin/wozmon-deposit` to generate Woz monitor commands that will
+#   load the binary data from FILENAME into RC6502 memory and then
+#   sends those commands to the RC6502.
 #
-#   Override the tty it uses by setting A1TTY in the environment.
+#   This finds the RC6502 by looking for a a QinHeng Electronics
+#   HL-340 USB-Serial adapter (vendor:product = 1a86:7523), which is
+#   what's used by my clone Arduino Nano, under /dev/serial/.
+#
+#   You can force it to use a particular tty device by setting the
+#   environment variable `A1TTY`.
 #
 
+die() { local exitcode="$1"; shift; echo 1>&2 "$@"; exit $exitcode; }
+errecho() { echo 1>&2 "$@"; }
+
+sendfiles() {
+    for file in "$@"; do
+        errecho "Sending $file"
+        #   We'd like to use wozmon-deposit -c here to avoid the extra
+        #   blank lines, but ascii-xfr uses line pause only on \n, not \r.
+        ascii-xfr  -s >"$A1TTY" -l 100 -c 35 \
+            <("$basedir/bin/wozmon-deposit" -n "$file")
+    done
+}
+
+EX_USAGE=64     # /usr/include/sysexits.h
+basedir=$(dirname "$(dirname "$0")")
 : ${A1TTY:=/dev/serial/by-id/usb-1a86_USB2.0-Serial-if00-port0}
 
 #   Use realpath(1) in the hope this will work on MacOS as well. If
@@ -16,4 +39,14 @@
 #   switch back to readlink(1).
 tty=$(realpath -e "$A1TTY")
 
-minicom -w -8 -b 115200 -D $tty
+sendfiles=()
+while [[ ${#@} -gt 0 ]]; do case "$1" in
+    -s)     shift; sendfiles+=("$1"); shift;;
+    *)      die $EX_USAGE "Unknown argument: $1"
+esac; done
+
+if [[ ${#sendfiles} -gt 0 ]]; then
+    sendfiles "${sendfiles[@]}"
+else
+    minicom -w -8 -b 115200 -D $tty
+fi

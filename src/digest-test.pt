@@ -36,7 +36,6 @@ def test_crc16s_noncontig(M):
     assert 0xC3 == M.byte(S.crc16lo)
     assert 0x89 == M.byte(S.crc16hi)
 
-
 ####################################################################
 #   check256
 
@@ -80,3 +79,29 @@ def test_check256_multiblock(M):
     M.deposit(block + 0x000, [0x00] * 0x300)
     M.depword(0, block)         # start of first block
     M.depword(2, 3)             # count of blocks to hash
+
+####################################################################
+#   Routines that run digests over a range of memory
+
+#   The crc values here were confirmed with `rahash2 -a crc16citt`.
+@pytest.mark.parametrize('crc, iv, start, end, data', (
+    (0x89c3, 0xFFFF, 0x7FE, 0x801, [1, 2, 3, 4]),
+    #   This can help confirm the test is properly extending the test data.
+    (0xAFCC, 0xFFFF, 0x1000, 0x1010, [0x80, 0x81, 0x82]),
+    #   Test a large range of memory
+    (0x2A31, 0xFFFF, 0x3FF0, 0x47F0, [x for x in range(0,0x100) ]),
+))
+def test_digrange(M, crc, iv, start, end, data):
+    S = M.symtab
+    M.depword(S.crc16, iv)
+    M.depword(S.digstart, start)
+    M.depword(S.digend, end)
+
+    memlen = end - start
+    #print(data * ceil(memlen/len(data))) # XXX
+    memdata = (data * ceil(memlen/len(data)))[0:memlen]
+    #print(memdata) # XXX
+    M.deposit(start, memdata)
+
+    M.call(S.digrange)
+    assert crc == M.word(S.crc16)

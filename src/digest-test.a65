@@ -4,6 +4,8 @@
             org $300
             include "src/digest.a65"
 
+; ----------------------------------------------------------------------
+
 ;   Contiguous storage with default parameter.
 crc16       equ $06
 crc16_s     crc16_s_inline crc16
@@ -15,4 +17,16 @@ crc16lo     equ $4000
 crc16hi     equ $3FFF
 crc16_s_noncontig
             crc16_s_inline crc16lo,crc16hi
+            rts
+
+; ----------------------------------------------------------------------
+
+; ----------------------------------------------------------------------
+
+digstart    equ $00     ; pointer to start address of range to digest
+digend      equ $02     ; pointer one past end of range to digest
+            ;   XXX document params: start, end, algo macro, algo macro params
+digrange    ;digrange_inline digstart,digend,crc16_s_inline,crc16
+            ;   Here you might insert a routine to print
+            ;   or otherwise use the result.
             rts

@@ -141,6 +141,7 @@ asbuild() {
     #     path relative to include dir, but then AS will crash.
     #   Also, We make symbols case sensitive here; this can be done only
     #   with a command-line option.
+    [[ -r $srcpath ]] || die 2 "Test: asbuild cannot read $srcpath"
     mkdir -p "$objdir"
     (cd "$objdir" \
         && echo  >"$src" '   page 0' \

@@ -1,0 +1,15 @@
+;   6800 code to be tested on Panasonic/National JR-200
+
+            cpu 6800
+
+            org $7000
+
+;   Sample routine to write a number into memory.
+;   From: https://github.com/0cjs/sedoc/blob/master/8bit/jr200.md
+;
+;   In monitor (`MON`), `M7000` and type in assembled data, `G7000`
+;   to run, then `D7000` to see the result changed at $7010.
+;
+writeEE     ldaa #$EE
+            staa $7010
+            rts

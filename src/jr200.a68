@@ -16,14 +16,20 @@ writeEE         ldaa #$EE
 
 ;   Cycle the border colour
                 org $7020
-bclr_reg        equ  $CA00       ; border color register
+bclr_reg        equ  $CA00      ; border color register
 
-bclr_cyc        ldaa #7
+bclr_cyc        ldab #0          ; do this 256 times
+                subb #1
+                beq .exit
+
+                ldaa #7
 .nextclr        staa bclr_reg
-                ldx #$80FF
+                ldx #$01FF      ; delay between changing colors
 -               dex
                 bne  -
+
                 suba #1
-                bmi  +
+                bmi  .exit
                 bra  .nextclr
-+               rts
+
+.exit           rts

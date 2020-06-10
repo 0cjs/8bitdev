@@ -1,0 +1,39 @@
+from    mc6800sim  import MC6800
+import  pytest
+
+@pytest.fixture
+def m():
+    return MC6800()
+
+def test_init(m):
+    assert 0 == m.a == m.b == m.x == m.sp == m.pc
+    assert False == m.H == m.I == m.N == m.Z == m.V == m.C
+    assert 65536 == len(m.mem)
+    assert 0 == m.mem[0]
+    assert 0 == m.mem[65535]
+
+def test_set_reg8(m):
+    m.a = 1;    assert 1 == m.a
+    m.a = 0;    assert 0 == m.a
+    m.a = 0xFF; assert 0xFF == m.a
+
+    with pytest.raises(ValueError): m.a = -1
+
+    with pytest.raises(ValueError) as ex:
+        m.a = 0x100
+    assert ex.match("^Register/flag 'a' value 0x100 exceeds range 0-0xFF")
+    assert 0xFF == m.a
+
+def test_set_reg16(m):
+    m.sp = 0xFFFF
+    with pytest.raises(ValueError) as ex:
+        m.sp = 0x10000
+    assert ex.match("^Register/flag 'sp' value 0x10000 exceeds range 0-0xFFFF")
+
+def test_set_flag(m):
+    m.C = True;  assert True  is m.C
+    m.C = False; assert False is m.C
+
+    with pytest.raises(ValueError) as ex:
+        m.Z = 2
+    assert ex.match("^Register/flag 'Z' value 0x2 exceeds range 0-0x1")

@@ -5,6 +5,9 @@ import  pytest
 def m():
     return MC6800()
 
+####################################################################
+#   State
+
 def test_init(m):
     assert 0 == m.a == m.b == m.x == m.sp == m.pc
     assert False == m.H == m.I == m.N == m.Z == m.V == m.C
@@ -37,3 +40,27 @@ def test_set_flag(m):
     with pytest.raises(ValueError) as ex:
         m.Z = 2
     assert ex.match("^Register/flag 'Z' value 0x2 exceeds range 0-0x1")
+
+def test_mem(m):
+    assert 0x00 == m.mem[0]
+    m.mem[0] = 0xFF
+    assert 0xFF == m.mem[0]
+
+    with pytest.raises(ValueError): m.mem[0] = 0x100
+    with pytest.raises(ValueError): m.mem[0] = -1
+
+    with pytest.raises(IndexError): m.mem[0x10000] = 0
+
+def test_mem_read(m):
+    assert 0                == m.byte(0x0005)
+    assert b'\0\0\0\0'      == m.bytes(0x0004, 4)
+
+    m.mem[5] = 0xCA
+    assert 0xCA             == m.byte(0x0005)
+    assert b'\0\xCA\0\0'    == m.bytes(0x0004, 4)
+
+    m.mem[6] = 0xFE
+    assert b'\0\xCA\xFE\0'  == m.bytes(0x0004, 4)
+    assert 0xCAFE           == m.word(0x0005)
+
+    assert (0xCA, 0xFE00)   == m.words(0x0004, 2)

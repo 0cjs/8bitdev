@@ -35,3 +35,24 @@ class MC6800:
     Z  = property(get('_Z'),  setmax(1, '_Z'),       None, 'Zero')
     V  = property(get('_V'),  setmax(1, '_V'),       None, 'Overflow')
     C  = property(get('_C'),  setmax(1, '_C'),       None, 'Carry')
+
+    ####################################################################
+    #   More convenient methods to read memory.
+
+    def byte(self, addr):
+        ' Return the byte at `addr`. '
+        return self.mem[addr]
+
+    def bytes(self, addr, n):
+        ' Return `n` `bytes` starting at `addr`. '
+        return self.mem[addr:addr+n]
+
+    def word(self, addr):
+        ' Return the word (decoding native endianness) at `addr`. '
+        return self.mem[addr] * 0x100 + self.mem[addr+1]
+
+    def words(self, addr, n):
+        ''' Return a sequence of `n` words (decoding native endianness)
+            starting `addr`. '
+        '''
+        return tuple( self.word(i) for i in range(addr, addr+n*2, 2) )

@@ -142,7 +142,7 @@ class Machine():
             else:
                 err('invalid argument {}', repr(value))
 
-        if addr + len(data) > 0xFFFF:
+        if addr + len(data) - 1 > 0xFFFF:
             err('data length {} exceeds memory', len(data))
 
         self.mpu.memory[addr:addr+len(data)] = data

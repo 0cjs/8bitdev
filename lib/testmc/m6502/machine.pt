@@ -96,6 +96,10 @@ def test_Machine_depword_badvalue(M):
         M.depword(0xFFFF, 0x1234)
     assert e.match(r'^deposit @\$FFFF: data length 2 exceeds memory')
 
+def test_Machine_depword_rangecheck(M):
+    M.depword(0xFFFE, 0)
+    M.depword(0xFFFA, 0, 1, 2)
+
 def test_Machine_examine(M):
     M.mpu.memory[0x180:0x190] = range(0xE0, 0xF0)
 

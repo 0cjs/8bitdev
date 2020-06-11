@@ -1,0 +1,70 @@
+from    mc6800sim.memory  import Memory
+import  pytest
+
+@pytest.fixture
+def m():
+    return Memory()
+
+def test_mem(m):
+    assert 0x00 == m.mem[0]
+    m.mem[0] = 0xFF
+    assert 0xFF == m.mem[0]
+
+    with pytest.raises(ValueError): m.mem[0] = 0x100
+    with pytest.raises(ValueError): m.mem[0] = -1
+
+    with pytest.raises(IndexError): m.mem[0x10000] = 0
+
+def test_mem_examine(m):
+    assert 0                == m.byte(0x0005)
+    assert b'\0\0\0\0'      == m.bytes(0x0004, 4)
+
+    m.mem[5] = 0xCA
+    assert 0xCA             == m.byte(0x0005)
+    assert b'\0\xCA\0\0'    == m.bytes(0x0004, 4)
+    assert bytes            is type(m.bytes(0x0004, 4))
+
+    m.mem[6] = 0xFE
+    assert b'\0\xCA\xFE\0'  == m.bytes(0x0004, 4)
+    assert 0xCAFE           == m.word(0x0005)
+
+    assert (0xCA, 0xFE00)   == m.words(0x0004, 2)
+
+    with pytest.raises(IndexError): m.byte(0x10000)
+    with pytest.raises(IndexError) as ex:
+        m.bytes(0xFFFF, 3)
+    assert ex.match('^Last address 0x10001 out of range$')
+
+    with pytest.raises(IndexError): m.word(0xFFFF)
+    with pytest.raises(IndexError): m.words(0xFFFD, 2)
+
+def test_mem_deposit(m):
+    assert b'\x01'              == m.deposit(0x800, 1)
+    assert b'\x02\x03\x04'      == m.deposit(0x802, 2, 3, 4)
+    assert b'\x05\x06\x07\x08'  == m.deposit(0x806, [5, 6], 7, b'\x08')
+    assert b'\x01\x00\x02\x03\x04\x00\x05\x06\x07\x08\x00' == m.bytes(0x800, 11)
+
+    with pytest.raises(IndexError) as ex:
+        m.deposit(0xFFFF, (0, 0))
+    assert ex.match('^Last address 0x10000 out of range$')
+
+def test_mem_depword(m):
+    b = m.depword(0x0200, [0xFFFF, 0x8384], 0x8586)
+    assert b'\xFF\xFF\x83\x84\x85\x86' == b
+    assert bytes is type(b)
+
+    with pytest.raises(ValueError) as ex:
+        m.depword(0x0012, 2, [1, -1, 0], 0)
+    assert ex.match('^deposit @\\$0012: invalid word value \\$-1$')
+    with pytest.raises(ValueError): m.depword(0x0014, 0, 0x10000)
+
+def test_mem_depword_range(m):
+    m.depword(0xFFFE, 0)
+    with pytest.raises(IndexError) as ex:
+        m.depword(0xFFFF, 0)
+    assert ex.match('^Last address 0x10000 out of range$')
+
+    m.depword(0xFFFC, 0, 0)
+    with pytest.raises(IndexError) as ex:
+        m.depword(0xFFFD, 0, 0)
+    assert ex.match('^Last address 0x10000 out of range$')

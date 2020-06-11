@@ -13,7 +13,7 @@ from    testmc import symtab
 from    testmc import asl, asxxxx
 from    testmc.m6502.registers  import Registers
 
-__all__ = ['Registers', 'Machine']
+__all__ = ['Registers', 'Machine', 'Instructions']
 
 class Machine():
 

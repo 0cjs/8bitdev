@@ -4,8 +4,17 @@
     simulation.
 '''
 
+from    mc6800sim.opcodes  import OPCODES, Instructions
+
 from    collections.abc  import Sequence
+from    itertools  import repeat
 from    numbers  import Integral
+
+
+class NotImplementedError(Exception):
+    ''' Get rid of this once we're more complete. ''' # XXX
+def raiseNI(msg):
+    raise NotImplementedError(msg)
 
 class MC6800:
 
@@ -134,3 +143,14 @@ class MC6800:
         self.deposit(addr, data)
 
         return self.bytes(addr, len(words)*2)
+
+    ####################################################################
+    #   Instruction Execution
+
+    def step(self, count=1):
+        ''' Execute `count` instructions (default 1).
+        '''
+        for _ in repeat(None, count):       # no tail call optimization; sigh
+            opcode = self.mem[self.pc]
+            _, f = OPCODES.get(opcode, lambda m: raiseNI(opcode))
+            f(self)

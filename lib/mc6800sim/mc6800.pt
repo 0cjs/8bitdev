@@ -1,4 +1,4 @@
-from    mc6800sim  import MC6800
+from    mc6800sim  import MC6800, Instructions as I
 import  pytest
 
 @pytest.fixture
@@ -117,3 +117,29 @@ def test_mem_depword_range(m):
     with pytest.raises(IndexError) as ex:
         m.depword(0xFFFD, 0, 0)
     assert ex.match('^Last address 0x10000 out of range$')
+
+####################################################################
+#   Instruction Execution
+
+def test_step_LDAA(m):
+    ''' This is testing both `step()` and the implementation of the `LDAA`
+        opcode. Possibly this should be split up somehow.
+    '''
+
+    start = 0x200
+    m.deposit(start, [I.LDAA, 0xEA, I.LDAA, 0x00])
+
+    mem = m.mem.copy();
+    m.a = 0x00; m.N = False; m.Z = True; m.V = True;
+    m.pc = start; m.step(1)
+    #   XXX We should have a `Regs` structure like testmc.6502 for
+    #   comparing registers and flags against values and don't-care.
+    assert 0xEA == m.a
+    assert (True, False, False) == (m.N, m.Z, m.V)
+    assert start + 2 == m.pc
+    assert mem == m.mem
+
+    m.pc = start; m.step(2)
+    assert 0x00 == m.a
+    assert (False, True, False) == (m.N, m.Z, m.V)
+    assert start + 4 == m.pc

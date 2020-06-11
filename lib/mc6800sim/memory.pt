@@ -1,30 +1,51 @@
-from    mc6800sim.memory  import Memory
+from    mc6800sim.memory  import MemoryAccess
 import  pytest
+
+class RAM(MemoryAccess):
+    def __init__(self):
+        self.tmem = bytearray(65536)
+    def get_memory_seq(self):
+        return self.tmem
 
 @pytest.fixture
 def m():
-    return Memory()
+    return RAM()
 
-def test_mem(m):
-    assert 0x00 == m.mem[0]
-    m.mem[0] = 0xFF
-    assert 0xFF == m.mem[0]
+def test_memory_direct_access(m):
+    ''' We ascertain here that direct access to the memory provided by
+        the hosting class works.
+    '''
 
-    with pytest.raises(ValueError): m.mem[0] = 0x100
-    with pytest.raises(ValueError): m.mem[0] = -1
+    #   Here always call get_memory_seq() every time to ascertain it's
+    #   working. This is actually testing our RAM class, but we should
+    #   perhaps find a way to do these sorts of checks on the actual
+    #   hosting classes.
+    assert 0x00 == m.get_memory_seq()[0]
+    m.get_memory_seq()[0] = 0xFF
+    assert 0xFF == m.get_memory_seq()[0]
 
-    with pytest.raises(IndexError): m.mem[0x10000] = 0
+    mem = m.get_memory_seq()
+    with pytest.raises(IndexError): mem[0x10000] = 0
 
-def test_mem_examine(m):
+    #   XXX These tests rely on the underlying memory storage object (here
+    #   a `bytearray`) imposing limits on the values of an individual
+    #   memory cell. We shouldn't be testing this, but should have the
+    #   access functions do the range checks, at which point we can remove
+    #   this (and perhaps test again with underlying storage that does not
+    #   itself impose these limits.)
+    with pytest.raises(ValueError): mem[0] = 0x100
+    with pytest.raises(ValueError): mem[0] = -1
+
+def test_examine(m):
     assert 0                == m.byte(0x0005)
     assert b'\0\0\0\0'      == m.bytes(0x0004, 4)
 
-    m.mem[5] = 0xCA
+    m.get_memory_seq()[5] = 0xCA
     assert 0xCA             == m.byte(0x0005)
     assert b'\0\xCA\0\0'    == m.bytes(0x0004, 4)
     assert bytes            is type(m.bytes(0x0004, 4))
 
-    m.mem[6] = 0xFE
+    m.get_memory_seq()[6] = 0xFE
     assert b'\0\xCA\xFE\0'  == m.bytes(0x0004, 4)
     assert 0xCAFE           == m.word(0x0005)
 
@@ -38,7 +59,7 @@ def test_mem_examine(m):
     with pytest.raises(IndexError): m.word(0xFFFF)
     with pytest.raises(IndexError): m.words(0xFFFD, 2)
 
-def test_mem_deposit(m):
+def test_deposit(m):
     assert b'\x01'              == m.deposit(0x800, 1)
     assert b'\x02\x03\x04'      == m.deposit(0x802, 2, 3, 4)
     assert b'\x05\x06\x07\x08'  == m.deposit(0x806, [5, 6], 7, b'\x08')
@@ -48,7 +69,7 @@ def test_mem_deposit(m):
         m.deposit(0xFFFF, (0, 0))
     assert ex.match('^Last address \\$10000 out of range$')
 
-def test_mem_depword(m):
+def test_depword(m):
     b = m.depword(0x0200, [0xFFFF, 0x8384], 0x8586)
     assert b'\xFF\xFF\x83\x84\x85\x86' == b
     assert bytes is type(b)
@@ -58,7 +79,7 @@ def test_mem_depword(m):
     assert ex.match('^deposit @\\$0012: invalid word value \\$-1$')
     with pytest.raises(ValueError): m.depword(0x0014, 0, 0x10000)
 
-def test_mem_depword_range(m):
+def test_depword_range(m):
     m.depword(0xFFFE, 0)
     with pytest.raises(IndexError) as ex:
         m.depword(0xFFFF, 0)

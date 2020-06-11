@@ -1,23 +1,34 @@
+from    abc  import ABC, abstractmethod
 from    collections.abc  import Sequence
 from    numbers  import Integral
 
-class Memory:
-    ''' A random-access memory and its access methods.
+class MemoryAccess(ABC):
+    ''' Access methods for a random-access memory stored as a mutable
+        sequence of values.
 
         This handles reading and depositing of bytes and words (in
         big-endian format) with error checking.
+
+        XXX this needs to be extended to be configurable for big-
+        or little-endian access.
     '''
 
-    def __init__(self, memsize=65536):
-        self.mem = bytearray(memsize)
+    @abstractmethod
+    def get_memory_seq(self):
+        ''' Return the mutable sequence representing the memory that we access.
+
+            In normal circumstances this should be a `bytearray`, but
+            depending on the simulator you may need to use another type,
+            such as py65's list of Integer.
+        '''
 
     def byte(self, addr):
         ' Return the byte at `addr`. '
-        return self.mem[addr]
+        return self.get_memory_seq()[addr]
 
     def bytes(self, addr, n):
         ' Return `n` `bytes` starting at `addr`. '
-        bs = self.mem[addr:addr+n]
+        bs = self.get_memory_seq()[addr:addr+n]
         if len(bs) < n:
             raise IndexError(
                 'Last address ${:4X} out of range'.format(addr+n-1))
@@ -25,7 +36,8 @@ class Memory:
 
     def word(self, addr):
         ' Return the word (decoding native endianness) at `addr`. '
-        return self.mem[addr] * 0x100 + self.mem[addr+1]
+        mem = self.get_memory_seq()
+        return mem[addr] * 0x100 + mem[addr+1]
 
     def words(self, addr, n):
         ''' Return a sequence of `n` words (decoding native endianness)
@@ -62,7 +74,7 @@ class Memory:
         if lastaddr > 0xFFFF:
             raise IndexError(
                 'Last address ${:X} out of range'.format(lastaddr))
-        self.mem[addr:lastaddr+1] = vlist
+        self.get_memory_seq()[addr:lastaddr+1] = vlist
         return bytes(vlist)
 
     def _deperr(self, addr, message, *errvalues):

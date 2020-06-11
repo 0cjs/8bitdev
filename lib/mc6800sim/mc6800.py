@@ -1,4 +1,4 @@
-from    mc6800sim.memory  import Memory
+from    mc6800sim.memory  import MemoryAccess
 from    mc6800sim.opcodes  import OPCODES, Instructions
 
 from    itertools  import repeat
@@ -9,12 +9,15 @@ class NotImplementedError(Exception):
 def raiseNI(msg):
     raise NotImplementedError(msg)
 
-class MC6800(Memory):
+class MC6800(MemoryAccess):
 
     def __init__(self):
-        Memory.__init__(self)
+        self.mem = bytearray(65536)
         self._a = self._b = self._x = self._sp = self._pc = 0
         self._H = self._I = self._N = self._Z = self._V = self._C = False
+
+    def get_memory_seq(self):
+        return self.mem
 
     def get(propname):
         return lambda self: getattr(self, propname);

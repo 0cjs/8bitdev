@@ -33,7 +33,7 @@ def test_mem_examine(m):
     with pytest.raises(IndexError): m.byte(0x10000)
     with pytest.raises(IndexError) as ex:
         m.bytes(0xFFFF, 3)
-    assert ex.match('^Last address 0x10001 out of range$')
+    assert ex.match('^Last address \\$10001 out of range$')
 
     with pytest.raises(IndexError): m.word(0xFFFF)
     with pytest.raises(IndexError): m.words(0xFFFD, 2)
@@ -46,7 +46,7 @@ def test_mem_deposit(m):
 
     with pytest.raises(IndexError) as ex:
         m.deposit(0xFFFF, (0, 0))
-    assert ex.match('^Last address 0x10000 out of range$')
+    assert ex.match('^Last address \\$10000 out of range$')
 
 def test_mem_depword(m):
     b = m.depword(0x0200, [0xFFFF, 0x8384], 0x8586)
@@ -62,9 +62,9 @@ def test_mem_depword_range(m):
     m.depword(0xFFFE, 0)
     with pytest.raises(IndexError) as ex:
         m.depword(0xFFFF, 0)
-    assert ex.match('^Last address 0x10000 out of range$')
+    assert ex.match('^Last address \\$10000 out of range$')
 
     m.depword(0xFFFC, 0, 0)
     with pytest.raises(IndexError) as ex:
         m.depword(0xFFFD, 0, 0)
-    assert ex.match('^Last address 0x10000 out of range$')
+    assert ex.match('^Last address \\$10000 out of range$')

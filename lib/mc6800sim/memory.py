@@ -20,7 +20,7 @@ class Memory:
         bs = self.mem[addr:addr+n]
         if len(bs) < n:
             raise IndexError(
-                'Last address 0x{:X} out of range'.format(addr+n-1))
+                'Last address ${:4X} out of range'.format(addr+n-1))
         return bytes(bs)
 
     def word(self, addr):
@@ -61,7 +61,7 @@ class Memory:
         lastaddr = addr + len(vlist) - 1
         if lastaddr > 0xFFFF:
             raise IndexError(
-                'Last address 0x{:X} out of range'.format(lastaddr))
+                'Last address ${:X} out of range'.format(lastaddr))
         self.mem[addr:lastaddr+1] = vlist
         return bytes(vlist)
 

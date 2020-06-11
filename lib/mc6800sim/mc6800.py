@@ -23,7 +23,7 @@ class MC6800(Memory):
         def set(self, value):
             if value < 0 or value > maxval:
                 raise ValueError(
-                    "Register/flag '{}' value 0x{:X} exceeds range 0-0x{:X}"
+                    "Register/flag '{}' value ${:X} exceeds range 0-${:X}"
                     .format(propname[1:], value, maxval))
             setattr(self, propname, value)
         return set

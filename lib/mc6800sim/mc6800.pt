@@ -24,14 +24,14 @@ def test_set_reg8(m):
 
     with pytest.raises(ValueError) as ex:
         m.a = 0x100
-    assert ex.match("^Register/flag 'a' value 0x100 exceeds range 0-0xFF")
+    assert ex.match("^Register/flag 'a' value \\$100 exceeds range 0-\\$FF")
     assert 0xFF == m.a
 
 def test_set_reg16(m):
     m.sp = 0xFFFF
     with pytest.raises(ValueError) as ex:
         m.sp = 0x10000
-    assert ex.match("^Register/flag 'sp' value 0x10000 exceeds range 0-0xFFFF")
+    assert ex.match("^Register/flag 'sp' value \\$10000 exceeds range 0-\\$FFFF")
 
 def test_set_flag(m):
     m.C = True;  assert True  is m.C
@@ -39,7 +39,7 @@ def test_set_flag(m):
 
     with pytest.raises(ValueError) as ex:
         m.Z = 2
-    assert ex.match("^Register/flag 'Z' value 0x2 exceeds range 0-0x1")
+    assert ex.match("^Register/flag 'Z' value \\$2 exceeds range 0-\\$1")
 
 ####################################################################
 #   Instruction Execution

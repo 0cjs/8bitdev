@@ -2,6 +2,7 @@ from    abc  import ABC, abstractmethod
 from    collections.abc  import Sequence
 from    numbers  import Integral
 
+
 class MemoryAccess(ABC):
     ''' Access methods for a random-access memory stored as a mutable
         sequence of values.
@@ -53,14 +54,11 @@ class MemoryAccess(ABC):
 
             Returns a `bytes` of the deposited data.
         '''
-        def err(s, *errvalues):
-            msg = 'deposit @${:04X}: ' + s
-            raise ValueError(msg.format(addr, *errvalues))
         def assertvalue(x):
             if not isinstance(x, Integral):
-                err('non-integral value {}', repr(x))
+                _deperr(addr, 'non-integral value {}', repr(x))
             if x < 0x00 or x > 0xFF:
-                err('invalid byte value ${:02X}', x)
+                _deperr(addr, 'invalid byte value ${:02X}', x)
 
         vlist = []
         for value in values:
@@ -71,7 +69,7 @@ class MemoryAccess(ABC):
                 list(map(assertvalue, value))
                 vlist += list(value)
             else:
-                err('invalid argument {}', repr(value))
+                _deperr(addr, 'invalid argument {}', repr(value))
 
         lastaddr = addr + len(vlist) - 1
         if lastaddr > 0xFFFF:
@@ -79,10 +77,6 @@ class MemoryAccess(ABC):
                 'Last address ${:X} out of range'.format(lastaddr))
         self.get_memory_seq()[addr:lastaddr+1] = vlist
         return bytes(vlist)
-
-    def _deperr(self, addr, message, *errvalues):
-        s = 'deposit @${:04X}: ' + message
-        raise ValueError(s.format(addr, *errvalues))
 
     def depword(self, addr, *values):
         ''' Deposit 16-bit words to memory at `addr` in native endian
@@ -95,9 +89,9 @@ class MemoryAccess(ABC):
         '''
         def assertvalue(x):
             if not isinstance(x, Integral):
-                self._deperr(addr, 'non-integral value {}', repr(x))
+                _deperr(addr, 'non-integral value {}', repr(x))
             if x < 0x00 or x > 0xFFFF:
-                self._deperr(addr, 'invalid word value ${:02X}', x)
+                _deperr(addr, 'invalid word value ${:02X}', x)
 
         words = []
         for value in values:
@@ -108,7 +102,7 @@ class MemoryAccess(ABC):
                 list(map(assertvalue, value))
                 words += list(value)
             else:
-                self._deperr(addr, 'invalid argument {}', repr(value))
+                _deperr(addr, 'invalid argument {}', repr(value))
 
         data = []
         for word in words:
@@ -117,4 +111,14 @@ class MemoryAccess(ABC):
         self.deposit(addr, data)
 
         return self.bytes(addr, len(words)*2)
+
+####################################################################
+#   "Static" methods; external to class for easier calling
+
+def _deperr(addr, message, *errvalues):
+    #   The argument list couldwbe shortened a bit more, and this possibly
+    #   generalized slightly, by using dynamic scoping--reaching up the
+    #   stack to find the name of the caller and the value of `addr`.
+    s = 'deposit @${:04X}: ' + message
+    raise ValueError(s.format(addr, *errvalues))
 

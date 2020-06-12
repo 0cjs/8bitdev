@@ -10,8 +10,8 @@ object_file = 'simple-asx'
 def test_loaded_object_file(M):
     ' Confirm that the correct object file was loaded. '
     ident = M.symtab.ident
-    ident_str = "simple-asx.a65"
-    assert ident_str == M.str(ident, len(ident_str))
+    ident_str = b'simple-asx.a65'
+    assert ident_str == M.bytes(ident, len(ident_str))
     assert 0x400 == ident
 
 ####################################################################

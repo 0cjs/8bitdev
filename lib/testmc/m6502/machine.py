@@ -80,14 +80,6 @@ class Machine(MemoryAccess):
     def spword(self, depth=0):
         return self.word(self._stackaddr(depth, 2))
 
-    def str(self, addr, len):
-        ' Examine a string from memory. '
-        #   This currently throws an exception if any of the bytes
-        #   in the memory range are >0x7f. It's not clear how we
-        #   should be decoding those. Possibly we want an option to
-        #   clear the high bit on all chars before decoding.
-        return bytes(self.mpu.memory[addr:addr+len]).decode('ASCII')
-
     def load(self, path):
         ''' Load the given ``.bin`` file and, if available, the
             symbols from a ``.rst`` (ASxxxx linker listing file)

@@ -13,10 +13,10 @@ def test_relocaddr(M):
     assert 0x40D == S.ident
 
 def test_global(M):
-    s = "@[reloctest]@"
-    assert s == M.str(M.symtab.reloctest, len(s))
+    s = b'@[reloctest]@'
+    assert s == M.bytes(M.symtab.reloctest, len(s))
 
 def test_ident(M):
     S = M.symtab
-    ident_str = "reloctest.a65"
-    assert ident_str == M.str(S.ident, len(ident_str))
+    ident_str = b'reloctest.a65'
+    assert ident_str == M.bytes(S.ident, len(ident_str))

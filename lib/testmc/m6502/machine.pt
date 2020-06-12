@@ -115,10 +115,9 @@ def test_Machine_examine(M):
     assert (0xE2E1, 0xE4E3, 0xE6E5, )   == M.words(0x181, 3)
 
 def test_Machine_str(M):
+    ' Demonstrate how to do comparsion of ASCII strings. '
     M.deposit(0x100, [0x40, 0x41, 0x42, 0x63, 0x64])
-    assert '@ABcd' == M.str(0x100, 5)
-    #   Test chars with high bit set here,
-    #   once we figure out how to handle them.
+    assert b'@ABcd' == M.bytes(0x100, 5)
 
 def test_Machine_setregs(M):
     M.setregs(R(y=4, a=2))

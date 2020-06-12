@@ -1,4 +1,4 @@
-from    mc6800sim.memory  import MemoryAccess
+from    testmc.memory  import MemoryAccess
 import  pytest
 
 class RAM(MemoryAccess):

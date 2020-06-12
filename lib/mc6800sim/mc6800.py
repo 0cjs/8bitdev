@@ -1,4 +1,4 @@
-from    mc6800sim.memory  import MemoryAccess
+from    testmc.memory  import MemoryAccess
 from    mc6800sim.opcodes  import OPCODES, Instructions
 
 from    itertools  import repeat

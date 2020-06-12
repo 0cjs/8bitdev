@@ -7,9 +7,22 @@ class RAM(MemoryAccess):
     def get_memory_seq(self):
         return self.tmem
 
-@pytest.fixture(params=[ bytearray(65536), [0]*65536 ])
+@pytest.fixture(params=[
+    lambda: bytearray(65536),
+    lambda: [0]*65536
+])
 def m(request):
-    return RAM(request.param)
+    return RAM(request.param())
+
+@pytest.mark.parametrize('n', range(0, 3))   # 3 runs for each fixture.
+def test_fixture_returns_fresh_memory_every_time(m, n):
+    mem = m.get_memory_seq()
+    #   Different types cause pytest to take a _long_ time to generate
+    #   the comparison, so always convert the backing store to `bytes`.
+    assert bytes(len(mem)) == bytes(mem)
+    mem[3] = 0xFF
+
+####################################################################
 
 def test_memory_direct_access(m):
     ''' We ascertain here that direct access to the memory provided by

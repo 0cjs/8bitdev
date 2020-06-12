@@ -159,7 +159,7 @@ class LERAM(MemoryAccess):
         return True
 
 @pytest.fixture
-def lem(request):
+def lem():
     return LERAM()
 
 def test_examine_little_endian(lem):

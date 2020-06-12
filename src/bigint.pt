@@ -122,6 +122,14 @@ TOUT_ADDR = 0x71FE
 TSCR_ADDR = 0x73FE
 TTMP_ADDR = 0x74FE
 
+def bi_x10_testid(val):
+    ' Add clarity to test names and avoid very long ones. '
+    if type(val) is int:
+        return 'U' if val == 0 else 'S'     # unsigned == 0
+    if type(val) is bytes:
+        h = val.hex()
+        return h if len(h) < 16 else h[0:16] + '...'
+
 @pytest.mark.parametrize('signed, value', [
     ( 0, b'\x03'), (-1, b'\xFD'),
     (-1, b'\xF4'),                      # min 1 byte input
@@ -136,7 +144,7 @@ TTMP_ADDR = 0x74FE
     (-1, b'\xF4' + bytes(254)),         # max length, approaching min value
     (-1, b'\x0B' + bytes([0xFF]*254)),  # max length, approaching max value
     ( 0, b'\x18' + bytes([0xFF]*254)),  # max length, (unsigned)
-])
+], ids=bi_x10_testid)
 def test_bi_x10(M, signed, value):
     S = M.symtab
 

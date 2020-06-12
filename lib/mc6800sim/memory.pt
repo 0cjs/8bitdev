@@ -6,6 +6,8 @@ class RAM(MemoryAccess):
         self.tmem = store
     def get_memory_seq(self):
         return self.tmem
+    def is_little_endian(self):
+        return False
 
 @pytest.fixture(params=[
     lambda: bytearray(65536),
@@ -25,6 +27,7 @@ def test_fixture_returns_fresh_memory_every_time(m, n):
     mem[3] = 0xFF
 
 ####################################################################
+#   Tests for multiple backing stores and memory sizes (all big-endian).
 
 def test_memory_direct_access(m):
     ''' We ascertain here that direct access to the memory provided by
@@ -100,14 +103,19 @@ def test_deposit_index(m):
     assert ex.match('^Last address \\${:04X} out of range$'.format(memlen))
 
 def test_depword(m):
-    b = m.depword(0x000A, [0xFFFF, 0x8384], 0x8586)
-    assert b'\xFF\xFF\x83\x84\x85\x86' == b
+    b = m.depword(0x0001, [0xFFFF, 0x8384], 0x8586)
+    expected = b'\xFF\xFF\x83\x84\x85\x86' 
+    assert expected == b
     assert bytes is type(b)
+    assert b'\x00' + expected + b'\x00' == m.bytes(0x0000, len(expected)+2)
 
+    assert bytes(8) == m.bytes(0x0008, 8)
     with pytest.raises(ValueError) as ex:
-        m.depword(0x0006, 2, [1, -1, 0], 0)
-    assert ex.match('^deposit @\\$0006: invalid word value \\$-1$')
-    with pytest.raises(ValueError): m.depword(0x0014, 0, 0x10000)
+        m.depword(0x0008, 2, [1, -1], 0)
+    assert ex.match('^deposit @\\$0008: invalid word value \\$-1$')
+    assert bytes(8) == m.bytes(0x0008, 8)   # did not change memory
+
+    with pytest.raises(ValueError): m.depword(0x000B, 0, 0x10000)
 
 def test_depword_value(m):
     m.depword(0, 0x0)
@@ -134,3 +142,35 @@ def test_depword_index(m):
     with pytest.raises(IndexError) as ex:
         m.depword(memlen-3, 0, 0)
     assert ex.match('^Last address \\${:04X} out of range$'.format(memlen))
+
+####################################################################
+#   Tests for little-endian access.
+
+class LERAM(MemoryAccess):
+    def __init__(self):
+        self.lmem = bytearray(64)
+    def get_memory_seq(self):
+        return self.lmem
+    def is_little_endian(self):
+        return True
+
+@pytest.fixture
+def lem(request):
+    return LERAM()
+
+def test_examine_little_endian(lem):
+    lem.get_memory_seq()[3:7] = b'\x12\x34\x56\x78'
+
+    assert b'\0\x12\x34\x56\x78\0'  == lem.bytes(0x0002, 6)
+    assert 0x3412                   == lem.word(0x0003)
+    assert (0x3412, 0x7856)         == lem.words(0x0003, 2)
+
+def test_deposit_little_endian(lem):
+    b = lem.depword(0x0005, [0xFFFF, 0x8384], 0x8586)
+    assert b'\xFF\xFF\x84\x83\x86\x85' == b
+    assert bytes is type(b)
+
+    with pytest.raises(ValueError) as ex:
+        lem.depword(0x0006, 2, [1, -1, 0], 0)
+    assert ex.match('^deposit @\\$0006: invalid word value \\$-1$')
+    with pytest.raises(ValueError): lem.depword(0x0014, 0, 0x10000)

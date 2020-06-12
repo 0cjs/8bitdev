@@ -19,6 +19,9 @@ class MC6800(MemoryAccess):
     def get_memory_seq(self):
         return self.mem
 
+    def is_little_endian(self):
+        return False
+
     def get(propname):
         return lambda self: getattr(self, propname);
 

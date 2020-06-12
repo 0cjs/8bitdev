@@ -1,0 +1,30 @@
+from    testmc.registerset  import RegisterSet
+
+def test_a_register():
+    class Machine(RegisterSet):
+        register('a')
+
+    m = Machine();  assert    0 == m.a
+    m.a = 0xFF;     assert 0xFF == m.a
+
+def test_init_preserved():
+    class Machine(RegisterSet):
+        def __init__(self, val0, *, val1=None):
+            ' Setup should insure that this is called with args and kwargs. '
+            self.val0 = val0
+            self.val1 = val1
+        register('a')
+
+    m = Machine(33, val1=44)
+    assert (33, 44) == (m.val0, m.val1)
+    assert 0 == m.a
+
+def test_two_registers():
+
+    class Machine(RegisterSet):
+        register('pc')
+        register('a')
+
+    m = Machine()
+    assert 0 == m.pc
+    assert 0 == m.a

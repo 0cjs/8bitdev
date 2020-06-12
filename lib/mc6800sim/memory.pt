@@ -2,14 +2,14 @@ from    mc6800sim.memory  import MemoryAccess
 import  pytest
 
 class RAM(MemoryAccess):
-    def __init__(self):
-        self.tmem = bytearray(65536)
+    def __init__(self, store):
+        self.tmem = store
     def get_memory_seq(self):
         return self.tmem
 
-@pytest.fixture
-def m():
-    return RAM()
+@pytest.fixture(params=[bytearray(65536)])
+def m(request):
+    return RAM(request.param)
 
 def test_memory_direct_access(m):
     ''' We ascertain here that direct access to the memory provided by

@@ -42,7 +42,7 @@ class MemoryAccess(ABC):
         '''
 
     @abstractmethod
-    def is_little_endian():
+    def is_little_endian(self):
         ''' Return `True` if this is used with a little-endian
             architecture, otherwise `False` if it's used with a big-endian
             architecture. 

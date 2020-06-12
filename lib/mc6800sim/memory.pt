@@ -9,7 +9,9 @@ class RAM(MemoryAccess):
 
 @pytest.fixture(params=[
     lambda: bytearray(65536),
-    lambda: [0]*65536
+    lambda: [0]*65536,              # different type
+    lambda: bytearray(16),          # different sizes
+    lambda: bytearray(256*1024),
 ])
 def m(request):
     return RAM(request.param())
@@ -37,7 +39,7 @@ def test_memory_direct_access(m):
     assert 0xFF == m.get_memory_seq()[0]
 
     mem = m.get_memory_seq()
-    with pytest.raises(IndexError): mem[0x10000] = 0
+    with pytest.raises(IndexError): mem[len(mem)] = 0
 
 def test_examine(m):
     assert 0                == m.byte(0x0005)
@@ -54,19 +56,28 @@ def test_examine(m):
 
     assert (0xCA, 0xFE00)   == m.words(0x0004, 2)
 
-    with pytest.raises(IndexError): m.byte(0x10000)
-    with pytest.raises(IndexError) as ex:
-        m.bytes(0xFFFF, 3)
-    assert ex.match('^Last address \\$10001 out of range$')
+    memlen = len(m.get_memory_seq())
 
-    with pytest.raises(IndexError): m.word(0xFFFF)
-    with pytest.raises(IndexError): m.words(0xFFFD, 2)
+    assert 0 == m.byte(memlen-1)
+    with pytest.raises(IndexError) as ex:
+        m.byte(memlen)
+    assert ex.match('^Last address \\${:04X} out of range$'.format(memlen))
+
+    with pytest.raises(IndexError) as ex:
+        m.bytes(memlen-1, 3)
+    assert ex.match('^Last address \\${:04X} out of range$'.format(memlen+1))
+
+    with pytest.raises(IndexError): m.word(memlen-1)
+    with pytest.raises(IndexError): m.words(memlen-3, 2)
 
 def test_deposit(m):
-    assert b'\x01'              == m.deposit(0x800, 1)
-    assert b'\x02\x03\x04'      == m.deposit(0x802, 2, 3, 4)
-    assert b'\x05\x06\x07\x08'  == m.deposit(0x806, [5, 6], 7, b'\x08')
-    assert b'\x01\x00\x02\x03\x04\x00\x05\x06\x07\x08\x00' == m.bytes(0x800, 11)
+    addr = 0x800
+    if len(m.get_memory_seq()) < 0x810: addr = 0    # for small memories
+
+    assert b'\x01'              == m.deposit(addr, 1)
+    assert b'\x02\x03\x04'      == m.deposit(addr+2, 2, 3, 4)
+    assert b'\x05\x06\x07\x08'  == m.deposit(addr+6, [5, 6], 7, b'\x08')
+    assert b'\x01\x00\x02\x03\x04\x00\x05\x06\x07\x08\x00' == m.bytes(addr, 11)
 
 def test_deposit_value(m):
     m.deposit(0, 0x0)
@@ -81,18 +92,19 @@ def test_deposit_value(m):
     assert ex.match(r'^deposit @\$F00F: invalid byte value \$100$')
 
 def test_deposit_index(m):
+    memlen = len(m.get_memory_seq())
     with pytest.raises(IndexError) as ex:
-        m.deposit(0xFFFF, (0, 0))
-    assert ex.match('^Last address \\$10000 out of range$')
+        m.deposit(memlen-1, (0, 0))
+    assert ex.match('^Last address \\${:04X} out of range$'.format(memlen))
 
 def test_depword(m):
-    b = m.depword(0x0200, [0xFFFF, 0x8384], 0x8586)
+    b = m.depword(0x000A, [0xFFFF, 0x8384], 0x8586)
     assert b'\xFF\xFF\x83\x84\x85\x86' == b
     assert bytes is type(b)
 
     with pytest.raises(ValueError) as ex:
-        m.depword(0x0012, 2, [1, -1, 0], 0)
-    assert ex.match('^deposit @\\$0012: invalid word value \\$-1$')
+        m.depword(0x0006, 2, [1, -1, 0], 0)
+    assert ex.match('^deposit @\\$0006: invalid word value \\$-1$')
     with pytest.raises(ValueError): m.depword(0x0014, 0, 0x10000)
 
 def test_depword_value(m):
@@ -108,12 +120,15 @@ def test_depword_value(m):
     assert ex.match(r'^deposit @\$1234: invalid word value \$10000$')
 
 def test_depword_index(m):
-    m.depword(0xFFFE, 0)
-    with pytest.raises(IndexError) as ex:
-        m.depword(0xFFFF, 0)
-    assert ex.match('^Last address \\$10000 out of range$')
+    memlen = len(m.get_memory_seq())
 
-    m.depword(0xFFFC, 0, 0)
+    m.depword(memlen-2, 0)
     with pytest.raises(IndexError) as ex:
-        m.depword(0xFFFD, 0, 0)
-    assert ex.match('^Last address \\$10000 out of range$')
+        print('{:04X} {:04X}'.format(memlen, memlen-1))
+        m.depword(memlen-1, 0)
+    assert ex.match('^Last address \\${:04X} out of range$'.format(memlen))
+
+    m.depword(memlen-4, 0, 0)
+    with pytest.raises(IndexError) as ex:
+        m.depword(memlen-3, 0, 0)
+    assert ex.match('^Last address \\${:04X} out of range$'.format(memlen))

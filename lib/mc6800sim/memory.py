@@ -43,6 +43,10 @@ class MemoryAccess(ABC):
 
     def byte(self, addr):
         ' Return the byte at `addr`. '
+        mem = self.get_memory_seq()
+        if addr >= len(mem):
+            raise IndexError(
+                'Last address ${:04X} out of range'.format(addr))
         return self.get_memory_seq()[addr]
 
     def bytes(self, addr, n):
@@ -50,7 +54,7 @@ class MemoryAccess(ABC):
         bs = self.get_memory_seq()[addr:addr+n]
         if len(bs) < n:
             raise IndexError(
-                'Last address ${:4X} out of range'.format(addr+n-1))
+                'Last address ${:04X} out of range'.format(addr+n-1))
         return bytes(bs)
 
     def word(self, addr):
@@ -89,11 +93,13 @@ class MemoryAccess(ABC):
             else:
                 _deperr(addr, 'invalid argument {}', repr(value))
 
+        mem = self.get_memory_seq()
+
         lastaddr = addr + len(vlist) - 1
-        if lastaddr > 0xFFFF:
+        if lastaddr >= len(mem):
             raise IndexError(
-                'Last address ${:X} out of range'.format(lastaddr))
-        self.get_memory_seq()[addr:lastaddr+1] = vlist
+                'Last address ${:04X} out of range'.format(lastaddr))
+        mem[addr:lastaddr+1] = vlist
         return bytes(vlist)
 
     def depword(self, addr, *values):

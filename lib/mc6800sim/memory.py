@@ -42,15 +42,15 @@ class MemoryAccess(ABC):
         '''
 
     def byte(self, addr):
-        ' Return the byte at `addr`. '
+        ' Return the byte value at `addr` as an `int`. '
         mem = self.get_memory_seq()
         if addr >= len(mem):
             raise IndexError(
                 'Last address ${:04X} out of range'.format(addr))
-        return self.get_memory_seq()[addr]
+        return int(self.get_memory_seq()[addr])
 
     def bytes(self, addr, n):
-        ' Return `n` `bytes` starting at `addr`. '
+        ' Return `n` byte values starting at `addr` as a `bytes`. '
         bs = self.get_memory_seq()[addr:addr+n]
         if len(bs) < n:
             raise IndexError(

@@ -42,13 +42,15 @@ def test_memory_direct_access(m):
     with pytest.raises(IndexError): mem[len(mem)] = 0
 
 def test_examine(m):
-    assert 0                == m.byte(0x0005)
-    assert b'\0\0\0\0'      == m.bytes(0x0004, 4)
+    v = m.byte(0x0005)
+    assert (0, int) == (v, type(v))
+
+    v = m.bytes(0x0004, 4)
+    assert (b'\0\0\0\0', bytes) == (v, type(v))
 
     m.get_memory_seq()[5] = 0xCA
     assert 0xCA             == m.byte(0x0005)
     assert b'\0\xCA\0\0'    == m.bytes(0x0004, 4)
-    assert bytes            is type(m.bytes(0x0004, 4))
 
     m.get_memory_seq()[6] = 0xFE
     assert b'\0\xCA\xFE\0'  == m.bytes(0x0004, 4)

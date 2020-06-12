@@ -8,7 +8,13 @@ class MemoryAccess(ABC):
         sequence of values.
 
         This handles reading and depositing of bytes and words (in
-        big-endian format) with error checking.
+        big-endian format) with error checking of both addresses and values
+        on deposits, but only addresses on examines (i.e., if the memory
+        contains non-byte values deposited through another method, this
+        will return them).
+
+        `get_memory_seq()` must be overridden to return the backing store;
+        see the documentation for that function for details.
 
         XXX this needs to be extended to be configurable for big-
         or little-endian access.
@@ -16,11 +22,23 @@ class MemoryAccess(ABC):
 
     @abstractmethod
     def get_memory_seq(self):
-        ''' Return the mutable sequence representing the memory that we access.
+        ''' Return the mutable sequence storing the memory that we access.
 
-            In normal circumstances this should be a `bytearray`, but
-            depending on the simulator you may need to use another type,
-            such as py65's list of Integer.
+            The store must (as with all sequences) support two-parameter
+            slice indexing, but need not support three-parameter (i.e., a
+            "step" parameter). It must support all values that can be held
+            in a byte, integers 0..255
+
+            If you are creating the store yourself, a `bytearray` is a good
+            choice:
+
+                def __init__(self):
+                    self.memory = bytearray(65536)
+                def get_memory_seq(self):
+                    return self.memory
+
+            You may also use stores created by other systems, such as a
+            `py65.memory.ObservableMemory` instance.
         '''
 
     def byte(self, addr):

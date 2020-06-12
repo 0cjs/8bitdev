@@ -7,7 +7,7 @@ class RAM(MemoryAccess):
     def get_memory_seq(self):
         return self.tmem
 
-@pytest.fixture(params=[bytearray(65536)])
+@pytest.fixture(params=[ bytearray(65536), [0]*65536 ])
 def m(request):
     return RAM(request.param)
 
@@ -15,7 +15,6 @@ def test_memory_direct_access(m):
     ''' We ascertain here that direct access to the memory provided by
         the hosting class works.
     '''
-
     #   Here always call get_memory_seq() every time to ascertain it's
     #   working. This is actually testing our RAM class, but we should
     #   perhaps find a way to do these sorts of checks on the actual
@@ -26,15 +25,6 @@ def test_memory_direct_access(m):
 
     mem = m.get_memory_seq()
     with pytest.raises(IndexError): mem[0x10000] = 0
-
-    #   XXX These tests rely on the underlying memory storage object (here
-    #   a `bytearray`) imposing limits on the values of an individual
-    #   memory cell. We shouldn't be testing this, but should have the
-    #   access functions do the range checks, at which point we can remove
-    #   this (and perhaps test again with underlying storage that does not
-    #   itself impose these limits.)
-    with pytest.raises(ValueError): mem[0] = 0x100
-    with pytest.raises(ValueError): mem[0] = -1
 
 def test_examine(m):
     assert 0                == m.byte(0x0005)

@@ -1,6 +1,6 @@
 ''' Mixin for adding registers and flags to a test machine.
 
-    Inheriting `RegisterSet` this enables the `RegisterSetup` functions
+    Inheriting `HasRegisters` this enables the `RegistersSetup` functions
     during class definition that let you define registers and flags that
     will be attributes on instantiations of your class. The attributes that
     are added will not allow users to set them to invalid values.
@@ -30,9 +30,7 @@
 #   XXX The naming here is still kind of awkward; we need to find a way to
 #   clearly distinguish:
 #   1. The class you inherit to get Register functionality. Currently,
-#      RegisterSet. "Registers" seems clearer, but could be confused with
-#      #3 below, even though namespace separation will prevent any
-#      conflict. Maybe "HasRegisters"?
+#      HasRegisters.
 #   2. The class that has this Register functionality (along with
 #      additional information and functionality) and holds the current
 #      values of the registers. Currently often called Machine.
@@ -47,9 +45,9 @@
 #   `self.pc` or whatever than create a new Registers object and pass it
 #   to setregs(). Or is it?
 
-__all__ = ['RegisterSet']
+__all__ = ['HasRegisters']
 
-class RegisterSetup:
+class RegistersSetup:
     ''' During class definition collects information about the registers
         and flags that the class should have, and then sets up the
         register/flag attributes.
@@ -121,12 +119,12 @@ class RegisterDescriptor:
         self.value = value
 
 
-class RegisterSetMeta(type):
+class HasRegistersMeta(type):
 
     @classmethod
     def __prepare__(metacls, name, bases, **kwds):
         namespace = super().__prepare__(name, bases, **kwds)
-        return RegisterSetup()._class_def_namespace()
+        return RegistersSetup()._class_def_namespace()
 
     def __new__(thisclass, name, bases, classdict):
         ''' After class definition has completed executing, create the
@@ -139,12 +137,12 @@ class RegisterSetMeta(type):
         setup._setup_class(newclass)
         return newclass
 
-class RegisterSet(metaclass=RegisterSetMeta):
+class HasRegisters(metaclass=HasRegistersMeta):
     ''' Inherit from this class to gain functions for use at class
         definition time to define in that class registers and flags, their
         accessors and an appropriate __init__ function.
 
-        See the `RegisterSetup` instance methods for details about the
+        See the `RegistersSetup` instance methods for details about the
         functions provided.
     '''
     # XXX document this better

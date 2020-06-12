@@ -32,14 +32,14 @@ def test_fill(M, len):
     S = M.symtab
     base = 0x1234       # Fill does not include base address
 
-    guard = [0xFF] * 2
+    guard = b'\xFF\xFF'
     M.deposit(base-2, [0xFF]*260)
 
     #   There's also a temporary symbol in here but we currently have
     #   neither a reliable way to access it or any good use for it.
     M.depword(S.fillbase, base)
     M.call(S.fill, R(y=len))
-    assert guard + [0xFF] + [0]*len + guard == M.bytes(base-2, len+5)
+    assert guard + b'\xFF' + bytes(len) + guard == M.bytes(base-2, len+5)
 
 def test_negoff(M):
     S = M.symtab

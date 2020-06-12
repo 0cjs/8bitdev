@@ -85,31 +85,31 @@ def test_bi_readhex_error(M, input):
     #   Length is invalid, whatever it is.
     assert 222 == M.byte(OUTBUF+1)  # nothing further written
 
-@pytest.mark.parametrize('input, bytes', [
-    (b"5",               [0x05]),
-    (b'67',              [0x067]),
-    (b'89A',             [0x08, 0x9A]),
-    (b'fedc',            [0xFE, 0xDC]),
-    (b'fedcb',           [0x0F, 0xED, 0xCB]),
-    (b"80000",           [0x08, 0x00, 0x00]),
-    (b"0",               [0x00]),
-    (b"00000000",        [0x00]),
-    (b"087",             [0x87]),
-    (b"00000087",        [0x87]),
+@pytest.mark.parametrize('input, output', [
+    (b'5',               b'\x05'),
+    (b'67',              b'\x67'),
+    (b'89A',             b'\x08\x9A'),
+    (b'fedc',            b'\xFE\xDC'),
+    (b'fedcb',           b'\x0F\xED\xCB'),
+    (b'80000',           b'\x08\x00\x00'),
+    (b'0',               b'\x00'),
+    (b'00000000',        b'\x00'),
+    (b'087',             b'\x87'),
+    (b'00000087',        b'\x87'),
 ])
-def test_bi_readhex(M, input, bytes):
-    print('bi_readhex:', input, type(input), bytes)
+def test_bi_readhex(M, input, output):
+    print('bi_readhex:', input, type(input), output)
     S = M.symtab
 
     M.deposit(INBUF, input)
     M.depword(S.buf0ptr, INBUF)
     M.depword(S.buf1ptr, OUTBUF)
-    size = len(bytes) + 2               # length byte + value + guard byte
+    size = len(output) + 2               # length byte + value + guard byte
     M.deposit(OUTBUF, [222] * size)     # 222 ensures any 0s really were written
 
     M.call(S.bi_readhex, R(a=len(input)))
-    bvalue = M.bytes(OUTBUF+1, len(bytes))
-    assert (len(bytes),     bytes,  222,) \
+    bvalue = M.bytes(OUTBUF+1, len(output))
+    assert (len(output),    output,  222,) \
         == (M.byte(OUTBUF), bvalue, M.byte(OUTBUF+size-1))
 
 ####################################################################
@@ -123,19 +123,19 @@ TSCR_ADDR = 0x73FE
 TTMP_ADDR = 0x74FE
 
 @pytest.mark.parametrize('signed, value', [
-    ( 0, [0x03]), (-1, [0xFD]),
-    (-1, [0xF4]),                         # min 1 byte input
-    (-1, [0x0C]),                         # max 1 byte input
-    ( 0, [0x19]),                         # max 1 byte input (unsigned)
-    (-1, [0xFF, 0xF3]),
-    (-1, [0xF3, 0x34]),                   # min 2 byte input
-    (-1, [0x0C, 0xCC]),                   # max 2 byte input
-    ( 0, [0x19, 0x99]),                   # max 2 byte input (unsigned)
-    (-1, [0xFF, 0x87, 0x65, 0x43, 0x21]), # -20 million and a bit
-    (-1, [0x02, 0xab, 0xcd, 0xef, 0x10]), # 11 billion or so
-    (-1, [0xF4] + [0x00]*254),            # max length, approaching min value
-    (-1, [0x0B] + [0xFF]*254),            # max length, approaching max value
-    ( 0, [0x18] + [0xFF]*254),            # max length, (unsigned)
+    ( 0, b'\x03'), (-1, b'\xFD'),
+    (-1, b'\xF4'),                      # min 1 byte input
+    (-1, b'\x0C'),                      # max 1 byte input
+    ( 0, b'\x19'),                      # max 1 byte input (unsigned)
+    (-1, b'\xFF\xF3'),
+    (-1, b'\xF3\x34'),                  # min 2 byte input
+    (-1, b'\x0C\xCC'),                  # max 2 byte input
+    ( 0, b'\x19\x99'),                  # max 2 byte input (unsigned)
+    (-1, b'\xFF\x87\x65\x43\x21'),      # -20 million and a bit
+    (-1, b'\x02\xab\xcd\xef\x10'),      # 11 billion or so
+    (-1, b'\xF4' + bytes(254)),         # max length, approaching min value
+    (-1, b'\x0B' + bytes([0xFF]*254)),  # max length, approaching max value
+    ( 0, b'\x18' + bytes([0xFF]*254)),  # max length, (unsigned)
 ])
 def test_bi_x10(M, signed, value):
     S = M.symtab
@@ -144,23 +144,22 @@ def test_bi_x10(M, signed, value):
     decval10 = decval * 10
     print('bi_x10: {} = {}'.format(list(map(hex, value)), decval))
     expected = decval10.to_bytes(len(value), byteorder='big', signed=signed)
-    expected = list(expected)
     print('     -> {} = {}'.format(list(map(hex, expected)), decval10))
     buflen = len(value)
 
     #   Guard bytes around scratch buffer show we're not writing outside it.
-    M.depword(TSCR_ADDR-1, 211)
-    M.depword(TSCR_ADDR+buflen, 212)
+    M.depword(TSCR_ADDR-1, 0xD3)
+    M.depword(TSCR_ADDR+buflen, 0xD4)
     M.depword(S.bufSptr, TSCR_ADDR-1)
 
-    M.deposit(TOUT_ADDR-1, 221, value, 222)     # guard bytes
+    M.deposit(TOUT_ADDR-1, 0xDD, value, 0xDE)     # guard bytes
     M.depword(S.buf0ptr, TOUT_ADDR-1)
 
     M.deposit(S.buf0len, buflen)
     M.call(S.bi_x10, R(C=1))
-    assert [211] == M.bytes(TSCR_ADDR-1, 1)
-    assert [212] == M.bytes(TSCR_ADDR+buflen, 1)
-    assert [221] + expected + [222] == M.bytes(TOUT_ADDR-1, len(value)+2)
+    assert b'\xD3' == M.bytes(TSCR_ADDR-1, 1)
+    assert b'\xD4' == M.bytes(TSCR_ADDR+buflen, 1)
+    assert b'\xDD' + expected + b'\xDE' == M.bytes(TOUT_ADDR-1, len(value)+2)
 
     #   Turn this on to get a sense of how fast/slow this is.
     #assert not M.mpu.processorCycles
@@ -210,17 +209,18 @@ def test_bi_read_decdigits(M, sign, input, buf):
     if sign != 0: sign = 0xFF
     M.deposit(S.sign, sign)
 
+    buf = bytes(buf)
     osize = len(buf)
     M.deposit(S.buf0len, osize)
-    M.deposit(TOUT_ADDR-1, 240, [241]*osize, 242)
+    M.deposit(TOUT_ADDR-1, 0xF0, [0xF1]*osize, 0xF2)
     M.depword(S.buf0ptr, TOUT_ADDR-1)
 
-    M.deposit(TIN_ADDR-1, 0xDD, input, 0xDF)            # guard bytes
+    M.deposit(TIN_ADDR-1, 0xDD, input, 0xDF)    # guard bytes
     M.depword(S.buf1ptr, TIN_ADDR)
     M.deposit(S.buf1len, len(input))
 
-    M.deposit(TSCR_ADDR-1, 250)                         # guard bytes
-    M.deposit(TSCR_ADDR+osize, 251)
+    M.deposit(TSCR_ADDR-1, 0xFA)                # guard bytes
+    M.deposit(TSCR_ADDR+osize, 0xFB)
     M.depword(S.bufSptr, TSCR_ADDR-1)
 
     #   This value should be moderately different for many tests.
@@ -233,9 +233,9 @@ def test_bi_read_decdigits(M, sign, input, buf):
         print(M.regs)
         print('di={} buf0={}'.format(M.byte(S.curdigit),
             list(map(hex, M.bytes(TOUT_ADDR-1, osize+2)))))
-    assert [240] + buf + [242] == M.bytes(TOUT_ADDR-1, osize+2)
-    assert [250] == M.bytes(TSCR_ADDR-1, 1)
-    assert [251] == M.bytes(TSCR_ADDR+osize, 1)
+    assert b'\xF0' + buf + b'\xF2' == M.bytes(TOUT_ADDR-1, osize+2)
+    assert b'\xFA' == M.bytes(TSCR_ADDR-1, 1)
+    assert b'\xFB' == M.bytes(TSCR_ADDR+osize, 1)
     assert R(x=xpreserved) == M.regs
 
 @pytest.mark.skip(msg='These tests can take up to 10 seconds each to run')
@@ -270,7 +270,7 @@ def test_bi_read_decdigits_max(M, sign):
     #   Uncommit to show number of cycles taken.
     #assert not M.mpu.processorCycles
 
-@pytest.mark.parametrize('input, bytes', [
+@pytest.mark.parametrize('input, output', [
     #   Zero uses special-case code
     (b'0',              [0x00]),
     (b'+0',             [0x00]),
@@ -308,10 +308,9 @@ def test_bi_read_decdigits_max(M, sign):
     (b'999999999999',   [0x00, 0xE8, 0xD4, 0xA5, 0x0F, 0xFF]),
     (b'-999999999999',  [0XFF, 0X17, 0X2B, 0X5A, 0XF0, 0X01]),
 ])
-def test_bi_read_dec(M, input, bytes):
-    print('bi_read_dec:', input, bytes)
+def test_bi_read_dec(M, input, output):
+    print('bi_read_dec:', input, output)
     S = M.symtab
-    input = list(input)
 
     #   Allocate temp/scratch buffers. We do this here until we have an alloc
     #   system that will let bi_read_dec alloc its own temp/scratch buffers.
@@ -325,10 +324,10 @@ def test_bi_read_dec(M, input, bytes):
     M.deposit(TTMP_ADDR-1, 121, [122]*scratchlen, 123)
 
     M.depword(S.buf1ptr, TIN_ADDR)
-    M.deposit(TIN_ADDR-1, 211, input, 213)
+    M.deposit(TIN_ADDR-1, 0xD3, input, 0xD5)
     M.depword(S.buf2ptr, TOUT_ADDR)
     #   guard, output length, output value, guard
-    M.deposit(TOUT_ADDR-1, 221, 222, [223] * len(bytes), 224)
+    M.deposit(TOUT_ADDR-1, 0xDD, 222, [223] * len(output), 0xE0)
 
     try:
         M.call(S.bi_read_dec, R(y=len(input)))
@@ -351,11 +350,11 @@ def test_bi_read_dec(M, input, bytes):
     assert 123 == M.byte(TTMP_ADDR+scratchlen)
 
     #   Assert input buffer is unchanged
-    assert [211] + input + [213] == M.bytes(TIN_ADDR-1, len(input)+2)
+    assert b'\xD3' + input + b'\xD5' == M.bytes(TIN_ADDR-1, len(input)+2)
 
     #   Assert output buffer is correct and without out-of-bounds writes.
-    assert [221, len(bytes)] + bytes + [224] \
-        == M.bytes(TOUT_ADDR-1, len(bytes)+3)
+    assert b'\xDD' + bytes([len(output)]) + bytes(output) + b'\xE0' \
+        == M.bytes(TOUT_ADDR-1, len(output)+3)
 
 @pytest.mark.parametrize('bufstart', (0x70FD, 0x70FE, 0x70FF, 0x7100))
 def test_bi_read_dec_bufstart(M, bufstart):
@@ -371,4 +370,4 @@ def test_bi_read_dec_bufstart(M, bufstart):
     M.depword(S.buf2ptr, outbuf)
 
     M.call(S.bi_read_dec, R(y=len(input)))
-    assert [0, 1, 3, 0] == M.bytes(outbuf-1, 4)
+    assert b'\x00\x01\x03\x00' == M.bytes(outbuf-1, 4)

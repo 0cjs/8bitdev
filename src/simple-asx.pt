@@ -129,7 +129,7 @@ def test_stk(M):
     #   No return address was pushed or popped by our call() above
     #   because it executes up to, but not including the final RTS.
     #            $1FB  $1FC  $1FD  $1FE  $1FF  guard
-    expected = [ 0x24, 0x23, 0x22, 0x21, 0x20, 0x00 ]
+    expected = b'\x24\x23\x22\x21\x20\x00'
     assert expected == M.bytes(0x1FB, len(expected))
     assert 0x25 != M.byte(0x1FA)    # Didn't stack too much
 

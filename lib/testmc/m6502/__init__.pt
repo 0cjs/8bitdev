@@ -10,4 +10,4 @@ def test_module_interface():
 
     m = Machine()
     m.depword(0xFFFC, 0x1234, 0xABCD)
-    assert [0x34, 0x12, 0xCD, 0xAB] == m.bytes(0xFFFC, 4)
+    assert b'\x34\x12\xCD\xAB' == m.bytes(0xFFFC, 4)

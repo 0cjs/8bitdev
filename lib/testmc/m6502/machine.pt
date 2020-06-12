@@ -14,87 +14,88 @@ def test_Machine_deposit_byte_single(M):
         data = M.deposit(6, i)
         assert [0, i, 0] == M.mpu.memory[5:8]
         assert 0x10000 == len(M.mpu.memory)
-        assert data == [i]
+        assert bytes([i]) == data
 
 def test_Machine_deposit_byte_multi(M):
     data = M.deposit(12, 0x61, [0x62, 0x63], (0x64,), b'ef', 0x67)
-    assert b'\x00abcdefg\x00' == bytes(M.mpu.memory[11:20])
+    expected = b'abcdefg'
+    assert b'\x00' + expected + b'\x00' == bytes(M.mpu.memory[11:20])
     #   We must not change the size of the memory array.
     assert 0x10000 == len(M.mpu.memory)
-    assert data == list(range(0x61, 0x68))
+    assert expected == M.bytes(12, len(expected))
 
 def test_Machine_deposit_byte_badaddr(M):
-    with pytest.raises(ValueError) as e:
+    with pytest.raises(IndexError) as e:
         M.deposit(-1, 0)
-    assert e.match(r'^deposit @\$-001: address out of range$')
+    assert e.match(r'^memory @\$-001: bad location$')
 
-    with pytest.raises(ValueError) as e:
+    with pytest.raises(IndexError) as e:
         M.deposit(0x10000, 0)
-    assert e.match(r'^deposit @\$10000: address out of range$')
+    assert e.match(r'^memory @\$10000: bad location$')
 
 def test_Machine_deposit_byte_toomuchdata(M):
     # XXX check list of values too long
-    with pytest.raises(ValueError) as e:
+    with pytest.raises(IndexError) as e:
         M.deposit(0xFFFE, b'EF0')
-    assert e.match(r'^deposit @\$FFFE: data length 3 exceeds memory$')
+    assert e.match(r'^memory @\$10000: bad location$')
 
 def test_Machine_deposit_byte_badvalue(M):
     with pytest.raises(ValueError) as e:
         M.deposit(6, -1)
-    assert e.match(r'^deposit @\$0006: invalid byte value \$-1$')
+    assert e.match(r'^memory @\$0006: invalid byte value \$-1$')
 
     with pytest.raises(ValueError) as e:
         M.deposit(0xFEDC, 0x100)
-    assert e.match(r'^deposit @\$FEDC: invalid byte value \$100$')
+    assert e.match(r'^memory @\$FEDC: invalid byte value \$100$')
 
     with pytest.raises(ValueError) as e:
         M.deposit(0xA0, [1.5])
-    assert e.match(r'^deposit @\$00A0: non-integral value 1.5$')
+    assert e.match(r'^memory @\$00A0: non-integral value 1.5$')
 
     with pytest.raises(ValueError) as e:
         M.deposit(0xB0, {1:2})
-    assert e.match(r'^deposit @\$00B0: invalid argument {1: 2}$')
+    assert e.match(r'^memory @\$00B0: invalid argument {1: 2}$')
 
 def test_Machine_depword_single(M):
-    words = M.depword(0x152, 0x1234)
+    data = M.depword(0x152, 0x1234)
     assert 0x0000 == M.word(0x150)
     assert 0x1234 == M.word(0x152)
     assert 0x0000 == M.word(0x154)
-    assert [ 0x1234 ] == words
+    assert b'\x34\x12' == data
 
 def test_Machine_depword_oddaddr(M):
-    words = M.depword(0x163, 0x5678)
+    data = M.depword(0x163, 0x5678)
     assert 0x0000 == M.word(0x161)
     assert 0x5678 == M.word(0x163)
     assert 0x0000 == M.word(0x165)
-    assert [ 0x5678 ] == words
+    assert b'\x78\x56' == data
 
 def test_Machine_depword_multi(M):
     addr = 0x1111   # Odd, just to be weird
-    words = M.depword(addr, [0x1234, 0xFEDC], 0x1001)
+    data = M.depword(addr, [0x1234, 0xFEDC], 0x1001)
     assert      0 == M.word(addr-2)
     assert 0x1234 == M.word(addr+0)
     assert 0xFEDC == M.word(addr+2)
     assert 0x1001 == M.word(addr+4)
     assert      0 == M.word(addr+6)
-    assert [0x1234, 0xFEDC, 0x1001] == words
+    assert b'\x34\x12\xdc\xfe\x01\x10' == data
 
 def test_Machine_depword_badvalue(M):
     with pytest.raises(ValueError) as e:
         M.depword(0x3, -1)
-    assert e.match(r'^deposit @\$0003: invalid word value \$-1$')
+    assert e.match(r'^memory @\$0003: invalid word value \$-1$')
 
     with pytest.raises(ValueError) as e:
         M.depword(0xF0F0, 0x10000)
-    assert e.match(r'^deposit @\$F0F0: invalid word value \$10000$')
+    assert e.match(r'^memory @\$F0F0: invalid word value \$10000$')
 
     with pytest.raises(ValueError) as e:
         M.depword(0xA0, set([13]))
-    assert e.match(r'^deposit @\$00A0: invalid argument \{13}$')
+    assert e.match(r'^memory @\$00A0: invalid argument \{13}$')
 
-    with pytest.raises(ValueError) as e:
+    with pytest.raises(IndexError) as e:
         M.depword(0xFFFF, 0x1234)
-    assert e.match(r'^deposit @\$FFFF: data length 2 exceeds memory')
+    assert e.match(r'^memory @\$10000: bad location')
 
 def test_Machine_depword_rangecheck(M):
     M.depword(0xFFFE, 0)
@@ -108,10 +109,10 @@ def test_Machine_examine(M):
     assert   0xE8 == M.byte(0x188)
     assert 0xE9E8 == M.word(0x188)
 
-    assert []                           == M.bytes(0x181, 0)
-    assert [0xE1, 0xE2, 0xE3]           == M.bytes(0x181, 3)
-    assert []                           == M.words(0x181, 0)
-    assert [0xE2E1, 0xE4E3, 0xE6E5 ]    == M.words(0x181, 3)
+    assert b''                          == M.bytes(0x181, 0)
+    assert b'\xE1\xE2\xE3'              == M.bytes(0x181, 3)
+    assert ()                           == M.words(0x181, 0)
+    assert (0xE2E1, 0xE4E3, 0xE6E5, )   == M.words(0x181, 3)
 
 def test_Machine_str(M):
     M.deposit(0x100, [0x40, 0x41, 0x42, 0x63, 0x64])

@@ -66,11 +66,11 @@ def test_examine(m):
     assert 0 == m.byte(memlen-1)
     with pytest.raises(IndexError) as ex:
         m.byte(memlen)
-    assert ex.match('^Last address \\${:04X} out of range$'.format(memlen))
+    assert ex.match(r'^memory @\${:04X}: bad location$'.format(memlen))
 
     with pytest.raises(IndexError) as ex:
         m.bytes(memlen-1, 3)
-    assert ex.match('^Last address \\${:04X} out of range$'.format(memlen+1))
+    assert ex.match(r'^memory @\${:04X}: bad location$'.format(memlen+1))
 
     with pytest.raises(IndexError): m.word(memlen-1)
     with pytest.raises(IndexError): m.words(memlen-3, 2)
@@ -90,21 +90,21 @@ def test_deposit_value(m):
 
     with pytest.raises(ValueError) as ex:
         m.deposit(3, -1)
-    assert ex.match(r'^deposit @\$0003: invalid byte value \$-1$')
+    assert ex.match(r'^memory @\$0003: invalid byte value \$-1$')
 
     with pytest.raises(ValueError) as ex:
         m.deposit(0xF00F, 256)
-    assert ex.match(r'^deposit @\$F00F: invalid byte value \$100$')
+    assert ex.match(r'^memory @\$F00F: invalid byte value \$100$')
 
 def test_deposit_index(m):
     with pytest.raises(IndexError) as ex:
         m.deposit(-1, 0)
-    assert ex.match(r'^Address \$-001 out of range$')
+    assert ex.match(r'^memory @\$-001: bad location$')
 
     memlen = len(m.get_memory_seq())
     with pytest.raises(IndexError) as ex:
         m.deposit(memlen-1, (0, 0))
-    assert ex.match('^Last address \\${:04X} out of range$'.format(memlen))
+    assert ex.match(r'^memory @\${:04X}: bad location$'.format(memlen))
 
 def test_depword(m):
     b = m.depword(0x0001, [0xFFFF, 0x8384], 0x8586)
@@ -116,7 +116,7 @@ def test_depword(m):
     assert bytes(8) == m.bytes(0x0008, 8)
     with pytest.raises(ValueError) as ex:
         m.depword(0x0008, 2, [1, -1], 0)
-    assert ex.match('^deposit @\\$0008: invalid word value \\$-1$')
+    assert ex.match(r'^memory @\$0008: invalid word value \$-1$')
     assert bytes(8) == m.bytes(0x0008, 8)   # did not change memory
 
     with pytest.raises(ValueError): m.depword(0x000B, 0, 0x10000)
@@ -127,11 +127,11 @@ def test_depword_value(m):
 
     with pytest.raises(ValueError) as ex:
         m.depword(0xF, -1)
-    assert ex.match(r'^deposit @\$000F: invalid word value \$-1$')
+    assert ex.match(r'^memory @\$000F: invalid word value \$-1$')
 
     with pytest.raises(ValueError) as ex:
         m.depword(0x1234, 65536)
-    assert ex.match(r'^deposit @\$1234: invalid word value \$10000$')
+    assert ex.match(r'^memory @\$1234: invalid word value \$10000$')
 
 def test_depword_index(m):
     memlen = len(m.get_memory_seq())
@@ -140,12 +140,12 @@ def test_depword_index(m):
     with pytest.raises(IndexError) as ex:
         print('{:04X} {:04X}'.format(memlen, memlen-1))
         m.depword(memlen-1, 0)
-    assert ex.match('^Last address \\${:04X} out of range$'.format(memlen))
+    assert ex.match(r'^memory @\${:04X}: bad location$'.format(memlen))
 
     m.depword(memlen-4, 0, 0)
     with pytest.raises(IndexError) as ex:
         m.depword(memlen-3, 0, 0)
-    assert ex.match('^Last address \\${:04X} out of range$'.format(memlen))
+    assert ex.match(r'^memory @\${:04X}: bad location$'.format(memlen))
 
 ####################################################################
 #   Tests for little-endian access.
@@ -176,5 +176,5 @@ def test_deposit_little_endian(lem):
 
     with pytest.raises(ValueError) as ex:
         lem.depword(0x0006, 2, [1, -1, 0], 0)
-    assert ex.match('^deposit @\\$0006: invalid word value \\$-1$')
+    assert ex.match('^memory @\\$0006: invalid word value \\$-1$')
     with pytest.raises(ValueError): lem.depword(0x0014, 0, 0x10000)

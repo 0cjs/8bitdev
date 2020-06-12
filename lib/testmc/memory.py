@@ -45,7 +45,7 @@ class MemoryAccess(ABC):
     def is_little_endian(self):
         ''' Return `True` if this is used with a little-endian
             architecture, otherwise `False` if it's used with a big-endian
-            architecture. 
+            architecture.
 
             This is used by the word-access methods.
         '''
@@ -54,16 +54,14 @@ class MemoryAccess(ABC):
         ' Return the byte value at `addr` as an `int`. '
         mem = self.get_memory_seq()
         if addr >= len(mem):
-            raise IndexError(
-                'Last address ${:04X} out of range'.format(addr))
+            _memerr(addr, "bad location", ex=IndexError)
         return int(self.get_memory_seq()[addr])
 
     def bytes(self, addr, n):
         ' Return `n` byte values starting at `addr` as a `bytes`. '
         bs = self.get_memory_seq()[addr:addr+n]
         if len(bs) < n:
-            raise IndexError(
-                'Last address ${:04X} out of range'.format(addr+n-1))
+            _memerr(addr+n-1, "bad location", ex=IndexError)
         return bytes(bs)
 
     def word(self, addr):
@@ -91,13 +89,12 @@ class MemoryAccess(ABC):
         '''
         def assertvalue(x):
             if not isinstance(x, Integral):
-                _deperr(addr, 'non-integral value {}', repr(x))
+                _memerr(addr, 'non-integral value {}', repr(x))
             if x < 0x00 or x > 0xFF:
-                _deperr(addr, 'invalid byte value ${:02X}', x)
+                _memerr(addr, 'invalid byte value ${:02X}', x)
 
         if addr < 0:
-            raise IndexError(
-                'Address ${:04X} out of range'.format(addr))
+            _memerr(addr, "bad location", ex=IndexError)
 
         vlist = []
         for value in values:
@@ -108,14 +105,13 @@ class MemoryAccess(ABC):
                 list(map(assertvalue, value))
                 vlist += list(value)
             else:
-                _deperr(addr, 'invalid argument {}', repr(value))
+                _memerr(addr, 'invalid argument {}', repr(value))
 
         mem = self.get_memory_seq()
 
         lastaddr = addr + len(vlist) - 1
         if lastaddr >= len(mem):
-            raise IndexError(
-                'Last address ${:04X} out of range'.format(lastaddr))
+            _memerr(lastaddr, "bad location", ex=IndexError)
         mem[addr:lastaddr+1] = vlist
         return bytes(vlist)
 
@@ -130,9 +126,9 @@ class MemoryAccess(ABC):
         '''
         def assertvalue(x):
             if not isinstance(x, Integral):
-                _deperr(addr, 'non-integral value {}', repr(x))
+                _memerr(addr, 'non-integral value {}', repr(x))
             if x < 0x00 or x > 0xFFFF:
-                _deperr(addr, 'invalid word value ${:02X}', x)
+                _memerr(addr, 'invalid word value ${:02X}', x)
 
         words = []
         for value in values:
@@ -143,7 +139,7 @@ class MemoryAccess(ABC):
                 list(map(assertvalue, value))
                 words += list(value)
             else:
-                _deperr(addr, 'invalid argument {}', repr(value))
+                _memerr(addr, 'invalid argument {}', repr(value))
 
         data = []
         for word in words:
@@ -160,10 +156,10 @@ class MemoryAccess(ABC):
 ####################################################################
 #   "Static" methods; external to class for easier calling
 
-def _deperr(addr, message, *errvalues):
+def _memerr(addr, message, *errvalues, ex=ValueError):
     #   The argument list couldwbe shortened a bit more, and this possibly
     #   generalized slightly, by using dynamic scoping--reaching up the
     #   stack to find the name of the caller and the value of `addr`.
-    s = 'deposit @${:04X}: ' + message
-    raise ValueError(s.format(addr, *errvalues))
+    s = 'memory @${:04X}: ' + message
+    raise ex(s.format(addr, *errvalues))
 

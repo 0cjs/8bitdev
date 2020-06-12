@@ -65,6 +65,19 @@ def test_deposit(m):
     assert b'\x05\x06\x07\x08'  == m.deposit(0x806, [5, 6], 7, b'\x08')
     assert b'\x01\x00\x02\x03\x04\x00\x05\x06\x07\x08\x00' == m.bytes(0x800, 11)
 
+def test_deposit_value(m):
+    m.deposit(0, 0x0)
+    m.deposit(0, 0xFF)
+
+    with pytest.raises(ValueError) as ex:
+        m.deposit(3, -1)
+    assert ex.match(r'^deposit @\$0003: invalid byte value \$-1$')
+
+    with pytest.raises(ValueError) as ex:
+        m.deposit(0xF00F, 256)
+    assert ex.match(r'^deposit @\$F00F: invalid byte value \$100$')
+
+def test_deposit_index(m):
     with pytest.raises(IndexError) as ex:
         m.deposit(0xFFFF, (0, 0))
     assert ex.match('^Last address \\$10000 out of range$')
@@ -79,7 +92,19 @@ def test_depword(m):
     assert ex.match('^deposit @\\$0012: invalid word value \\$-1$')
     with pytest.raises(ValueError): m.depword(0x0014, 0, 0x10000)
 
-def test_depword_range(m):
+def test_depword_value(m):
+    m.depword(0, 0x0)
+    m.depword(0, 0xFFFF)
+
+    with pytest.raises(ValueError) as ex:
+        m.depword(0xF, -1)
+    assert ex.match(r'^deposit @\$000F: invalid word value \$-1$')
+
+    with pytest.raises(ValueError) as ex:
+        m.depword(0x1234, 65536)
+    assert ex.match(r'^deposit @\$1234: invalid word value \$10000$')
+
+def test_depword_index(m):
     m.depword(0xFFFE, 0)
     with pytest.raises(IndexError) as ex:
         m.depword(0xFFFF, 0)

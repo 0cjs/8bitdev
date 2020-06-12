@@ -53,6 +53,9 @@ class MemoryAccess(ABC):
 
             Returns a `bytes` of the deposited data.
         '''
+        def err(s, *errvalues):
+            msg = 'deposit @${:04X}: ' + s
+            raise ValueError(msg.format(addr, *errvalues))
         def assertvalue(x):
             if not isinstance(x, Integral):
                 err('non-integral value {}', repr(x))

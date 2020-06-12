@@ -97,6 +97,10 @@ def test_deposit_value(m):
     assert ex.match(r'^deposit @\$F00F: invalid byte value \$100$')
 
 def test_deposit_index(m):
+    with pytest.raises(IndexError) as ex:
+        m.deposit(-1, 0)
+    assert ex.match(r'^Address \$-001 out of range$')
+
     memlen = len(m.get_memory_seq())
     with pytest.raises(IndexError) as ex:
         m.deposit(memlen-1, (0, 0))

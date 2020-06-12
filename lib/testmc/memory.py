@@ -95,6 +95,10 @@ class MemoryAccess(ABC):
             if x < 0x00 or x > 0xFF:
                 _deperr(addr, 'invalid byte value ${:02X}', x)
 
+        if addr < 0:
+            raise IndexError(
+                'Address ${:04X} out of range'.format(addr))
+
         vlist = []
         for value in values:
             if isinstance(value, Integral):

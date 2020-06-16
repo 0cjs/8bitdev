@@ -56,10 +56,10 @@ class RegistersSetup:
     ####################################################################
     #   Functions for use during class definition.
 
-    def register(self, name):
-        ''' Define a register with the given `name`.
+    def register(self, name, width=8):
+        ''' Define a register with the given `name` and `width` in bits.
         '''
-        self.registers.append(name)
+        self.registers.append((name, width))
 
     ####################################################################
     #   The machinery that implments the class setup.
@@ -89,10 +89,10 @@ class RegistersSetup:
         #   do-nothing one or, importantly, the user-defined one).
         classinit = cls.__init__
         def init(obj, *args, **kwargs):
-            for regname in self.registers:
-                setattr(obj, regname, 0)
             classinit(obj, *args, **kwargs)
         cls.__init__ = init
+        for (name, width) in self.registers:
+            setattr(cls, name, RegisterDescriptor(name, width))
 
         cls.Registers = None        # XXX the Registers class, read-only
         cls.regs = None             # regs(self) function
@@ -103,19 +103,36 @@ class RegisterDescriptor:
         and access to a register.
     '''
 
-    #   XXX this is not currently used, but will implement the error
-    #   checking of values in __set__.
+    #   N.B.: The descriptor protocol to access instance attributes is:
+    #
+    #       type(o).__dict__['x'].__get__(o, type(o))
+    #
+    #   Thus you must bind **the class attribute** to an object
+    #   implementing the descriptor protocol, not the instance attribute.
+    #
+    #   The docs say that the default lookup order for instance attributes
+    #   is `a.__dict__['x']` then `type(a).__dict__['x']` but this is not
+    #   the case when a descriptor is set as above; perhaps this is
+    #   actually describing the default descriptor implementation. This
+    #   should probably be worked out at some point; maybe start out with
+    #   PEP 252.
 
-    def __init__(self):
+    def __init__(self, name, width):
+        self.name = name
         self.value = 0
+        self.width = width; self.minval = 0; self.maxval = (1 << width) - 1
 
     #   We ignore the obj on which we're an attribute because we handle our
     #   values entirely internally. XXX is this correct?
 
-    def __get__(self, obj):
+    def __get__(self, instance, owner=None):
         return self.value
 
-    def __set__(self, obj, value):
+    def __set__(self, instance, value):
+        if value < self.minval or value > self.maxval:
+            raise ValueError(
+                '{} value out of range ${:02X}-${:02X}: ${:02X}'
+                .format(self.name, self.minval, self.maxval, value))
         self.value = value
 
 

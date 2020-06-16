@@ -1,11 +1,31 @@
 from    testmc.registers  import HasRegisters
+import  pytest
 
-def test_a_register():
+def test_register_def_read_set():
     class Machine(HasRegisters):
         register('a')
+        register('b')
 
-    m = Machine();  assert    0 == m.a
-    m.a = 0xFF;     assert 0xFF == m.a
+    m = Machine();  assert (0x00, 0x00) == (m.a, m.b)
+    m.a  = 0xFF;    assert (0xFF, 0x00) == (m.a, m.b)
+    m.b  = 0x80;    assert (0xFF, 0x80) == (m.a, m.b)
+
+@pytest.mark.parametrize('regname, maxvalue, badvalue', (
+    ('pc',  'FFFF', -1),
+    ('pc',  'FFFF', 0x10000),
+    ('a',   'FF',   -1),
+    ('a',   'FF',   0x100),
+))
+def test_width_checks(regname, maxvalue, badvalue):
+    class Machine(HasRegisters):
+        register('pc', 16)
+        register('a')
+
+    m = Machine()
+    with pytest.raises(ValueError) as ex:
+        setattr(m, regname, badvalue)
+    assert ex.match(r'{} value out of range \$00-\${}: \${:02X}$'
+        .format(regname, maxvalue, badvalue))
 
 def test_init_preserved():
     class Machine(HasRegisters):
@@ -17,14 +37,4 @@ def test_init_preserved():
 
     m = Machine(33, val1=44)
     assert (33, 44) == (m.val0, m.val1)
-    assert 0 == m.a
-
-def test_two_registers():
-
-    class Machine(HasRegisters):
-        register('pc')
-        register('a')
-
-    m = Machine()
-    assert 0 == m.pc
     assert 0 == m.a

@@ -1,0 +1,242 @@
+from    testmc.registers  import *
+import  pytest
+
+@pytest.fixture
+def R():
+    ''' Return a test registers class derived from the GenericRegisters
+        class. We define the class in this function because if defining the
+        class fails, we want it to do so at runtime, not collection time.
+    '''
+    class Regs(GenericRegisters):
+        registers = ( Reg('pc', 16), Reg('a'), )
+        srbits = (Bit(1), Flag('B', True), Bit(0), Flag('C'))
+        srname = 'sr'
+    return Regs
+
+####################################################################
+#   Instantiation
+
+def test_bad_definition():
+    class BadRegs(GenericRegisters):
+        def __init__(self):
+            ''' This __init__() demonstrates that we cannot check for
+                missing attributes (typcially class attributes, but they
+                need not be) until instantiation, since they might be set
+                even by __init__() itself.
+            '''
+            print('BRINIT')
+            self.registers = ()
+            super().__init__()
+
+    #   And of course the class attributes might be set after creation
+    #   of the class object.
+    BadRegs.srname = None
+
+    #   So it's only at instantiation time where we can really know that
+    #   we do not have a complete definition.
+    with pytest.raises(AttributeError) as ex:
+        BadRegs()
+    assert ex.match(r"'BadRegs' object has no attribute 'srbits'")
+
+def test_instantiation_goodargs(R):
+    print(R)
+    R()
+    R(pc=1)
+    R(a=1)
+    R(B=False)
+    R(C=True)
+    R(pc=0xFFFF, a=0xFF, B=True, C=False)
+
+def test_instantiation_badname(R):
+    ''' We can test with only one bad keyword since, emulating CPython, we
+        give an error only for one. With two, which one gives the error
+        would be implementation dependent.
+    '''
+    with pytest.raises(TypeError) as ex:
+        R(xy=1, a=0, B=False)
+    assert ex.match(r"^__init__\(\) got an unexpected keyword argument 'xy'$")
+
+@pytest.mark.parametrize('name, maxval, badval', (
+    ('a',   0xFF,       -1      ),
+    ('a',   0xFF,       0x100   ),
+    ('pc',  0xFFFF,     0x10000 ),
+))
+def test_instantiation_badregval(R, name, maxval, badval):
+    kwargs = {}; kwargs[name] = badval
+    with pytest.raises(ValueError) as ex:
+        R(**kwargs)
+    assert ex.match(
+        r"^Register '{}' value \${:02X} exceeds range \$00-\${:02X}$"
+        .format(name, badval, maxval))
+
+@pytest.mark.parametrize('name, badval', (
+    ('B', -1),
+    ('B',  2),
+))
+def test_instantiation_badflagval(R, name, badval):
+    kwargs = {}; kwargs[name] = badval
+    with pytest.raises(ValueError) as ex:
+        R(**kwargs)
+    assert ex.match(
+        r"^Status bit '{}' value {} not in set \(None, False, True\)$"
+        .format(name, badval))
+
+####################################################################
+#   Register and flag values
+
+def test_default_values(R):
+    r = R()
+    assert (None, None, None, None) == (r.pc, r.a, r.B, r.C)
+    assert 0b1100   == r.sr
+
+def test_specified_values(R):
+    r = R(pc=0xFFFF, a=0xFF, B=False, C=True)
+    assert 0xFFFF   == r.pc
+    assert 0xFF     == r.a
+    assert False    is r.B
+    assert True     is r.C
+    assert 0b1001   == r.sr
+
+####################################################################
+#   Instantiation with a status register value
+
+def test_cons_with_good_sr(R):
+    r = R(sr=0b0011)
+    assert     (None, None) == (r.pc, r.a)
+    assert    (False, True) == (r.B, r.C)
+    assert           0b0011 == r.sr
+
+    r = R(pc=0x1234, a=0x56, sr=0b1100)
+    assert   (0x1234, 0x56) == (r.pc, r.a)
+    assert    (True, False) == (r.B, r.C)
+    assert           0b1100 == r.sr
+
+def test_cons_with_bad_sr(R):
+    badbits = 0b10000
+    with pytest.raises(ValueError) as ex:
+        R(sr=badbits)
+    assert ex.match(r'^Too many status bit values: \${:2X}'.format(badbits))
+
+def test_cons_cannot_mix_sr_and_flags(R):
+    with pytest.raises(ValueError) as ex:
+        R(C=1, sr=0)
+    assert ex.match(r"^Cannot specify status bit values for both 'sr' and 'C'$")
+
+def test_renamed_sr(R):
+    R.srname = 'psr'
+
+    r = R()
+    assert not hasattr(r, 'sr')
+    assert 0b1100 == r.psr
+
+    r = R(psr=0b0101)
+    assert 0b0101 == r.psr
+
+####################################################################
+#   Immutability
+
+def test_immutability(R):
+    r = R()
+    msg = r"^'Regs' object is immutable$"
+
+    with pytest.raises(TypeError) as ex:  r.pc = 13;      assert ex.match(msg)
+    with pytest.raises(TypeError) as ex:  r.B = True;     assert ex.match(msg)
+    with pytest.raises(TypeError) as ex:  r.sr = 0b1111;  assert ex.match(msg)
+    with pytest.raises(TypeError) as ex:  del r.pc;       assert ex.match(msg)
+
+    for name in ('pc', 'a', 'B', 'C', 'sr'):
+        with pytest.raises(TypeError) as ex:
+            setattr(r, name, 1)
+        assert ex.match(msg)
+        with pytest.raises(TypeError) as ex:
+            r.__setattr__(name, 1)
+        assert ex.match(msg)
+
+    with pytest.raises(AttributeError) as ex:
+        r.not_an_attribute = True
+    assert ex.match(r"'Regs' object has no attribute 'not_an_attribute'")
+
+def test_immutability_workaround(R):
+    r = R()
+    with pytest.raises(TypeError) as ex:    r.pc = 1234
+
+    object.__delattr__(r, 'immutable')
+    r.pc    = 1234; assert 1234 == r.pc
+    r.newat = True; assert True == r.newat
+
+####################################################################
+#   String representation
+
+@pytest.mark.parametrize('name, width, value, expected', (
+    ('a', 8,     None,  'a=--'      ),
+    ('a', 8,        0,  'a=00'      ),
+    ('a', 8,     0xFF,  'a=FF'      ),
+    ('b', 9,     None,  'b=---'     ),
+    ('b', 9,    0x1A3,  'b=1A3'     ),
+    ('cd', 16,   None,  'cd=----'   ),
+    ('cd', 16,      0,  'cd=0000'   ),
+    ('cd', 16,   0xA0,  'cd=00A0'   ),
+    ('cd', 16, 0xFFFF,  'cd=FFFF'   ),
+))
+def test_reg_format(name, width, value, expected):
+    reg = Reg(name, width)
+    assert expected == reg.formatvalue(value)
+
+def test_str_dontcares(R):
+    r = R()
+    expected = 'CPU pc=---- a=-- ----'
+    assert expected == str(r)
+    assert expected == repr(r)
+
+def test_str_allvalues(R):
+    class TR(R):
+        machname = 'TCPU'
+
+    r = TR(pc=0x1234, a=0x56, sr=0b0011)
+    expected = 'TCPU pc=1234 a=56 -b-C'
+    assert expected == str(r)
+    assert expected == repr(r)
+
+####################################################################
+#   Equality Comparisons
+
+@pytest.mark.parametrize('b', (
+    #(   pc,    a,    B,    C),
+    (0x1234, 0x56,    0,    1),
+    (  None, 0x56,    0,    1),
+    (0x1234, None,    0,    1),
+    (0x1234, 0x56, None,    1),
+    (0x1234, 0x56,    0, None),
+    (  None, None, None, None),
+))
+def test_eq(R, b):
+    ra = R(pc=0x1234, a=0x56, B=0, C=1)
+    rb = R(pc=b[0], a=b[1], B=b[2], C=b[3])
+    assert ra == rb
+    assert rb == ra
+
+@pytest.mark.parametrize('b', (
+    #(   pc,    a,    B,    C),
+    (0xF234, 0x56,    0,    1),
+    (0x1234, 0xF6,    0,    1),
+    (0x1234, 0x56,    1,    1),
+    (0x1234, 0x56,    0,    0),
+    (0xF234, None, None, None),
+    (  None, 0xF6, None, None),
+    (  None, None,    1, None),
+    (  None, None, None,    0),
+))
+def test_neq(R, b):
+    ra = R(pc=0x1234, a=0x56, B=0, C=1)
+    rb = R(pc=b[0], a=b[1], B=b[2], C=b[3])
+    assert ra != rb
+    assert rb != ra
+
+def test_neq_types(R):
+    class DifferentType(GenericRegisters):
+        registers = R.registers
+        srbits = R.srbits
+        srname = R.srname
+
+    assert R() != DifferentType()
+    assert DifferentType() != R()

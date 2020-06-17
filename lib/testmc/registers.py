@@ -89,14 +89,34 @@ class RegistersSetup:
         #   do-nothing one or, importantly, the user-defined one).
         classinit = cls.__init__
         def init(obj, *args, **kwargs):
+            #   If there is a user
+            #   _register_values
+
             classinit(obj, *args, **kwargs)
+            #   Create an object for register value storage if not done
+            #   by subclass's init function. This must be done _after_
+            #   calling it, since it may be this function if the class
+            #   did not define its own __init__().
+            if getattr(obj, '_register_values', None) is None:
+                obj._register_values = RegisterValues()
+            for name, _ in self.registers:
+                setattr(obj._register_values, name, 0)
+
         cls.__init__ = init
+        print('old init: {}.\nnew init: {}'.format(classinit, init))
+        raise RuntimeError()
         for (name, width) in self.registers:
             setattr(cls, name, RegisterDescriptor(name, width))
 
         cls.Registers = None        # XXX the Registers class, read-only
         cls.regs = None             # regs(self) function
         cls.setregs = None          # setregs(self, registers) function
+
+class RegisterValues:
+    ''' XXX may be replaced by user-supplied object in __init__
+       of class inheriting HasRegisters....
+    '''
+
 
 class RegisterDescriptor:
     ''' Using the descriptor protocol, implement value storage for
@@ -126,14 +146,14 @@ class RegisterDescriptor:
     #   values entirely internally. XXX is this correct?
 
     def __get__(self, instance, owner=None):
-        return self.value
+        return getattr(instance._register_values, self.name)
 
     def __set__(self, instance, value):
         if value < self.minval or value > self.maxval:
             raise ValueError(
                 '{} value out of range ${:02X}-${:02X}: ${:02X}'
                 .format(self.name, self.minval, self.maxval, value))
-        self.value = value
+        return setattr(instance._register_values, self.name, value)
 
 
 class HasRegistersMeta(type):

@@ -116,9 +116,12 @@ Calculations and saved values:
   useful at command prompt.
 
 Stack:
-* `=`: Word currently at top of stack. (Stack pointer unchanged.)
+* `)`: Stack pointer register value.
+* `(`: Word currently at top of stack. (Stack pointer unchanged.)
 * `<`: Word popped from stack.
-* `>`: Push _cur_ on to stack.
+* `>`: Push _cur_ on to stack and evaluate to _cur_. (Usable only in word
+  expression parsing mode; in command mode the `>` command, which does the
+  same thing, will be interpreted instead.)
 
 
 Commands
@@ -139,7 +142,8 @@ to make things easier to read.
   expression _e_. _v_ may be a letter indicating a user variable or a
   punctuation symbol indicating a special variable. Spaces are not allowed
   in the expression; the expression is terminated by a CR, space or
-  command.
+  command. (XXX Use `=` instead? `#` as the advantage of being in the same
+  place on Selectric and TTY keyboard layouts.)
 - `?` (_wordlist_): Evaluate a list of word expressions and print each
   result separated by a space.
 
@@ -175,14 +179,14 @@ _cur_ with, e.g., `80 #/100 X` or `80#/100X`.
 - `!`: Assemble following args as instruction and deposit at _next_, then
   set _next_ to the last location deposited + 1.
 - `M`:  Move memory.
-- `>`: Push _cur_ on to the stack. (Typically used with `<` and `=` special
-  variables.)
+- `>`: Push _cur_ on to the stack. Equivalant to `#>*` except it does not
+  generate a value. (Typically used with `<` and `(` special variables.)
 - `<`: Pop a word from the stack and set _cur_ and _next_ to that word.
   (Not actually a real command; it's just evaluating the special variable
   and interpreting the word as normal.)
 - `RD` (_bytelist_): Read into memory from currently selected device,
-  starting at the "default load location" saved in the file, if present.
-  If a default load location is not present, generate an error.
+  starting at the "default load location" saved in the file, if present. If
+  a default load location is not present, generate an error.
 - `RN` (_bytelist_): Read into memory starting at _next_ from currently
   selected device.
 
@@ -193,10 +197,12 @@ _cur_ with, e.g., `80 #/100 X` or `80#/100X`.
 
 XXX how to display and set registers?
 - Maybe use vars for it (making some vars 8-bit):
-  - common: `$p` saved program counter, `$s` stack, `$f` flags
+  - common: `$p` saved program counter, `)` stack register, `$s` status
+    register (flags).
   - 6502: `$a $x $y`
   - 6800: `$a $b $x`
   - 8080: `$a`, `$b`=BC, `$d`=DE, `$h`=HL `$m`=\[HL] (kinda special)
+  - Set LSB of 16-bit reg with `#h$h-%h+FF`?
 - Special var prefix, but running out of chars and how to set?
 - Ctrl-R:
   - displays as special char, prints regs/flags in nice format
@@ -232,11 +238,12 @@ from the CBM graphics set, with all inverse chars shown as `█`.
 
     ---------1---------2---------3---------4
 
-Start with _cur_ = _next_ = 0x0400, _defsize_ = 0x10.
+Start with _cur_ = _next_ = 0x0400.
 
-Examine _defsize_ bytes at _cur_ as hex, then text, then screen codes
-(CBM lower-case set, in this case). (Vars unchanged.)
+Set _defsize_ to 16 bytes. Examine _defsize_ bytes at _cur_ as hex, then
+text, then screen codes (CBM lower-case set, in this case).
 
+    .#@10
     .xts
     0400: 0001 0203 0405 0607 ........
     0408: 2021 3031 4041 6061  !01@A`a

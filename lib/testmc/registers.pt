@@ -82,6 +82,17 @@ def test_instantiation_badflagval(R, name, badval):
         r"^Status bit '{}' value {} not in set \(None, False, True\)$"
         .format(name, badval))
 
+def test_instantiation_without_srname(R):
+    R(sr=0)         # confirm name of status register
+    del R.srname
+
+    with pytest.raises(TypeError) as ex:
+        R(sr=0)
+    assert ex.match(r"^__init__\(\) got an unexpected keyword argument 'sr'$")
+
+    #   Confirm we instantiate with srname unset
+    R(pc=1, a=2, B=True, C=True)
+
 ####################################################################
 #   Register and flag values
 
@@ -281,3 +292,16 @@ def test_set_attrs_on_setsr(R, bflag, cflag, res0, res1):
 
     assert (res0, res1) == (m0.sr, m1.sr), \
         '{:04b} == {:04b},  {:04b} == {:04b}'.format(res0, m0.sr, res1, m1.sr)
+
+def test_set_attrs_on_no_sr(R):
+    del R.srname
+    m = Machine(); assert not hasattr(m, 'sr')
+    r  = R(pc=1234, a=56, B=False, C=True)
+
+    r.set_attrs_on(m, setsr=False)
+    assert (1234, 56, False, True) == (m.pc, m.a, m.B, m.C)
+    assert not hasattr(m, 'sr')
+
+    with pytest.raises(AttributeError) as ex:
+        r.set_attrs_on(m, setsr=True)
+    assert ex.match(r"^Regs for CPU has no status register$")

@@ -101,7 +101,7 @@ class GenericRegisters:
 
         Subclass this and define the following class attributes:
 
-        * `machname`: (Optional; default is ``CPU``.) Defines a machine
+        * `machname` (optional; default ``CPU``): Defines a machine
           name (typically the CPU name) to be printed in front of the
           string representation.
         * `registers`: A tuple (or sequence) of `Reg` objects defining
@@ -116,8 +116,9 @@ class GenericRegisters:
           lower case for unset and upper case for set in the string
           representation. You must use `Bit(1)` or `Bit(0)` values for bits
           in the status register that do not correspond to flags.
-        * `srname`: The name of the status register, if present. Typically
-          ``sr`` or ``psr`` (Program Status Register).
+        * `srname` (optional): The name of the status register, if present
+          in the simulated machine. Typically ``sr`` or ``psr`` (Program
+          Status Register).
 
         By convention, register names are lower case and flag names are
         upper case.
@@ -133,12 +134,21 @@ class GenericRegisters:
 
     machname = 'CPU'
 
+    def _srname(self):
+        ''' Return value of optional `srname` property if present,
+            otherwise `None`.
+        '''
+        #   This is not a class method since an instance property would
+        #   override the class property when accessed in the normal way,
+        #   as it is in various places. Clients without an instance may
+        #   just instantiate an "empty" instance to use this.
+        return getattr(self, 'srname', None)
+
     def __init__(self, **kwargs):
         #   Assert that sublcass was correctly defined or configured.
         self.machname
         self.registers
         self.srbits
-        self.srname
 
         initvals = kwargs.copy()
 
@@ -146,7 +156,7 @@ class GenericRegisters:
             self.__setattr__(regspec.name,
                 regspec.checkvalue(initvals.pop(regspec.name, None)))
 
-        if self.srname and self.srname in initvals:
+        if self._srname() in initvals:
             self._init_with_sr(initvals)
         else:
             self._init_with_flags(initvals)
@@ -166,7 +176,7 @@ class GenericRegisters:
             if srbit.name:
                 self.__setattr__(srbit.name,
                     srbit.checkvalue(initvals.pop(srbit.name, None)))
-        if self.srname:
+        if self._srname():
             #   Generate status register
             srval = 0
             for srbit in self.srbits:
@@ -178,6 +188,7 @@ class GenericRegisters:
 
 
     def _init_with_sr(self, initvals):
+        #   If this is called, the class must have an `srname` property.
         initsr = initvals.pop(self.srname, None)
         setattr(self, self.srname, initsr)
 
@@ -295,6 +306,9 @@ class GenericRegisters:
                     if val is not None:
                         setattr(o, flag.name, bool(val))
         else:
+            if not self._srname():
+                raise AttributeError('{} for {} has no status register'
+                    .format(type(self).__name__, self.machname))
             sr = getattr(o, self.srname)
             for i, srbit in enumerate(self.srbits[::-1]):
                 if srbit.name is not None:

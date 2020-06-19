@@ -1,0 +1,116 @@
+from    testmc.machine  import GenericMachine
+from    testmc.registers  import GenericRegisters, Reg, Flag, Bit
+import  pytest
+
+@pytest.fixture
+def M():
+    class Machine(GenericMachine):
+
+        class Registers(GenericRegisters):
+            registers = (Reg('a'), )
+            srbits = (Bit(1), Bit(0), Flag('B'), Bit(1))
+
+        def __init__(self, a=0):
+            self.mem = [0] * 16
+            self.a = a
+            #   This must still have either attribute B or a status
+            #   resgister defined.
+
+        def get_memory_seq(self):   return self.mem
+        def is_little_endian(self): return False
+
+    return Machine
+
+@pytest.fixture
+def R(M):
+    ''' Registers class of the Machine created by the `M()` fixture.
+
+        This assumes that the default for the Machine class has not
+        been overridden in an instance. If you do override it, you must
+        use the `Registers` attribute from that instance.
+    '''
+    return M.Registers
+
+####################################################################
+#   Instantiation
+
+def test_abc():
+    class M(GenericMachine):
+        def get_memory_seq(): pass
+        def is_little_endian(): pass
+    with pytest.raises(TypeError) as ex:
+        M()
+    assert ex.match(r"Can't instantiate abstract class M")
+    assert ex.match(r'Registers')
+
+def test_instantiation(M):
+    assert type is type(M.Registers)
+    r = M.Registers(a=3);   assert    3 == r.a
+    r = M().Registers();    assert None is r.a
+
+####################################################################
+#   Usage
+
+def test_memory(M):
+    ' Smoke test: make sure the functions are there. '
+    m = M()
+    assert  0 == m.byte(3)
+    m.deposit(3, 42)
+    assert 42 == m.byte(3)
+
+def test_regs_flag_attributes(M, R):
+    m = M(); m.B = False
+    assert R() == m.regs
+    assert R(a=0, B=0) == m.regs
+
+    m.a = 3; m.B = True
+    assert R(a=3, B=1) == m.regs
+
+def test_regs_status_register(M, R):
+    R.srname = 'psr'
+
+    m = M(); m.psr = 0b1001
+    assert R() == m.regs
+    assert R(a=0, psr=0b1001) == m.regs
+    assert R(B=False) == m.regs
+
+    m.a = 4; m.psr = 0b1011
+    assert R(a=4, psr=0b1011) == m.regs
+    assert R(B=True) == m.regs
+
+def test_setregs_flag_attributes(M, R):
+    m = M(); m.B = False;       assert (0, False) == (m.a, m.B)
+    m.setregs(R(a=3));          assert (3, False) == (m.a, m.B)
+    m.setregs(R(B=1));          assert (3,  True) == (m.a, m.B)
+    m.setregs(R(a=4, B=0));     assert (4, False) == (m.a, m.B)
+
+def test_setregs_status_register(M, R):
+    R.srname = 'psr'
+
+    m = M(); m.psr = 0b1001;    assert (0, 0b1001) == (m.a, m.psr)
+    m.setregs(R(a=6));          assert (6, 0b1001) == (m.a, m.psr)
+    m.setregs(R(B=1));          assert (6, 0b1011) == (m.a, m.psr)
+    m.setregs(R(a=7, B=0));     assert (7, 0b1001) == (m.a, m.psr)
+
+    #   setregs() (really, R.set_attrs_on()) ignores any PSR bits defined
+    #   as constant bits rather than flags.
+    m.setregs(R(psr=0b0110));   assert (7, 0b1011) == (m.a, m.psr)
+
+def test_regs_setregs_regsattr(M, R):
+    ' Test using a separate object to hold the register values. '
+    class SubMachine(): pass
+    sm = SubMachine()
+    sm.a = 99;  sm.B = True
+
+    m = M();  del m.a;  m.regsobj = sm
+    assert not hasattr(m, 'a')
+    assert not hasattr(m, 'B')
+    assert not hasattr(m, 'srname')
+
+    assert R(a=99, B=1) == m.regs
+
+    m.setregs(R(a=201, B=0))
+    assert R(a=201, B=0) == m.regs
+    assert (201, False) == (sm.a, sm.B)
+    assert not hasattr(m, 'a')
+    assert not hasattr(m, 'B')

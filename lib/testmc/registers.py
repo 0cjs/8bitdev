@@ -258,3 +258,51 @@ class GenericRegisters:
                 return False
 
         return True
+
+    ####################################################################
+    #   Setting and retrieving register/flag values on other objects
+
+    def set_attrs_on(self, o, setsr, *, regtype=None):
+        ''' Set our register and flag values, excepting don't-care values,
+            on another object.
+
+            All non-`None` register values will have same-named attributes
+            on `o` set to those values. The values will first be passed
+            to the function `regtype` for conversion, if it's not `None`.
+
+            If `setsr` is false, non-`None` flag values will be set as
+            individual attributes (always converted with `bool()`) in the
+            same way.
+
+            If `setsr` is true, instead the attribute named by `srname`
+            will be read, the bits for non-`None` flags set and cleared in
+            it, and the attribute set to that new value. There is currently
+            no way to have it set the unused or constant bits in the status
+            register (defined with `Bit()`).
+        '''
+        if regtype is None:
+            regtype = lambda x: x
+
+        for reg in self.registers:
+            val = getattr(self, reg.name)
+            if val is not None:
+                setattr(o, reg.name, regtype(val))
+
+        if not setsr:
+            for flag in self.srbits:
+                if flag.name is not None:
+                    val = getattr(self, flag.name)
+                    if val is not None:
+                        setattr(o, flag.name, bool(val))
+        else:
+            sr = getattr(o, self.srname)
+            for i, srbit in enumerate(self.srbits[::-1]):
+                if srbit.name is not None:
+                    val = getattr(self, srbit.name)
+                    if val is None:
+                        continue
+                    elif val:
+                        sr |= 1 << i
+                    else:
+                        sr &= ~(1 << i)
+            setattr(o, self.srname, sr)

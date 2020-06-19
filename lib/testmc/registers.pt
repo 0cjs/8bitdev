@@ -1,4 +1,5 @@
 from    testmc.registers  import *
+from    collections  import namedtuple as ntup
 import  pytest
 
 @pytest.fixture
@@ -240,3 +241,43 @@ def test_neq_types(R):
 
     assert R() != DifferentType()
     assert DifferentType() != R()
+
+####################################################################
+#   Setting and retrieving register/flag values on other objects
+
+class Machine: pass
+
+def test_set_attrs_on_flags(R):
+    m = Machine()
+    assert 0 == len(m.__dict__)
+
+    R().set_attrs_on(m, setsr=False)
+    assert 0 == len(m.__dict__)
+
+    R(a=33, C=1).set_attrs_on(m, setsr=False)
+    assert (33, True) == (m.a, m.C)
+    with pytest.raises(AttributeError):  m.pc
+    with pytest.raises(AttributeError):  m.B
+    with pytest.raises(AttributeError):  m.sr
+
+    R(a=True, C=0).set_attrs_on(m, setsr=False, regtype=int)
+    assert int is type(m.a)
+    assert bool is type(m.C)
+
+@pytest.mark.parametrize('bflag, cflag, res0, res1', (
+    ( None,  None,  0b0000, 0b1111),
+    (False,  None,  0b0000, 0b1011),
+    ( True,  None,  0b0100, 0b1111),
+    ( None, False,  0b0000, 0b1110),
+    ( None,  True,  0b0001, 0b1111),
+))
+def test_set_attrs_on_setsr(R, bflag, cflag, res0, res1):
+    m0 = Machine(); m0.sr = 0b0000
+    m1 = Machine(); m1.sr = 0b1111
+
+    r  = R(B=bflag, C=cflag)
+    r.set_attrs_on(m0, setsr=True)
+    r.set_attrs_on(m1, setsr=True)
+
+    assert (res0, res1) == (m0.sr, m1.sr), \
+        '{:04b} == {:04b},  {:04b} == {:04b}'.format(res0, m0.sr, res1, m1.sr)

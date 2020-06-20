@@ -1,0 +1,57 @@
+#!/usr/bin/env python3
+'''
+    Convert binary data to National JR-200 tape audio.
+'''
+
+from    __future__ import print_function
+from    os.path  import abspath, dirname, join
+import  sys
+from    site  import addsitedir
+from    pydub import AudioSegment
+
+
+BASEDIR = dirname(dirname(abspath(__file__)))
+addsitedir(join(BASEDIR, 'lib'))
+
+from cmtconv.jr200 import \
+    info, debug, err, cjr_to_file, FileEncoder, \
+    checksums_valid, edges_to_samples
+
+if len(sys.argv) < 3:
+    err('Convert binary data to JR-200 tape output\n' +
+        'Usage: %s data_file output_file' % sys.argv[0])
+    sys.exit(-1)
+
+fname = sys.argv[1]
+outfile = sys.argv[2]
+
+# Convert cjr file to File
+with open(fname, 'rb') as f:
+    data = f.read()
+    cjr_file = cjr_to_file(data)
+
+if not checksums_valid(cjr_file.blocks):
+    raise Exception( 'Invalid checksum' )
+
+
+# Convert File to edges
+encoder = FileEncoder()
+edges = encoder.encode_file(cjr_file)
+
+debug(len(edges))
+# Convert edges to samples
+rate        = 44100
+sample_dur  = 1.0 / rate
+samples     = edges_to_samples(edges, sample_dur, 0, -127, +127)
+
+debug(len(samples))
+
+# Convert samples to audio file
+audio = AudioSegment(
+        data            = bytearray(127 + x for x in samples),
+        sample_width    = 1,
+        frame_rate      = rate,
+        channels        = 1,
+)
+audio.export(outfile, format="wav")
+exit(0)

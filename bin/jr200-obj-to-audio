@@ -1,0 +1,64 @@
+#!/usr/bin/env python3
+'''
+    Convert as output to JR-200 tape audio
+'''
+
+import  sys
+from    os.path  import abspath, dirname, join
+from    site  import addsitedir
+from    pydub import AudioSegment
+
+BASEDIR = dirname(dirname(abspath(__file__)))
+
+if __name__ == '__main__':
+    addsitedir(join(BASEDIR, 'lib'))
+
+    from cmtconv.jr200 import \
+        info, debug, err, FileType, BaudRate, bytes_to_file, \
+        FileEncoder, edges_to_samples
+
+    from testmc.tool import asl
+
+    if len(sys.argv) < 4:
+        err('Convert binary data to JR-200 tape output\n' +
+            'Usage: %s object_file output_file file_name' % sys.argv[0])
+        sys.exit(-1)
+
+    obj_fname = sys.argv[1]
+    outfile = sys.argv[2]
+    fname = sys.argv[3]
+
+    image = asl.parse_obj_fromfile(obj_fname)
+    length = image.contiglen()
+    start = image.startaddr
+    data = image.contigbytes()
+
+    info('Start address: {}'.format(hex(start)))
+    info('Contiguous length: {}'.format(length))
+
+    f = bytes_to_file(fname, data, start, FileType.BINARY, BaudRate.BAUD_2400)
+    info(f.header)
+    for b in f.blocks:
+        info(b)
+
+    # Convert File to edges
+    encoder = FileEncoder()
+    edges = encoder.encode_file(f)
+
+    debug(len(edges))
+    # Convert edges to samples
+    rate        = 44100
+    sample_dur  = 1.0 / rate
+    samples     = edges_to_samples(edges, sample_dur, 0, -127, +127)
+
+    debug(len(samples))
+
+    # Convert samples to audio file
+    audio = AudioSegment(
+        data            = bytearray(127 + x for x in samples),
+        sample_width    = 1,
+        frame_rate      = rate,
+        channels        = 1,
+    )
+    audio.export(outfile, format="wav")
+    exit(0)

@@ -1,0 +1,66 @@
+#!/usr/bin/env python3
+'''
+    Dump binary data from National JR-200 tape output.
+'''
+
+from    __future__ import print_function
+from    os.path  import abspath, dirname, join
+import  sys
+from    site  import addsitedir
+from    pydub import AudioSegment
+
+
+BASEDIR = dirname(dirname(abspath(__file__)))
+addsitedir(join(BASEDIR, 'lib'))
+
+from cmtconv.jr200 import \
+    info, debug, err, samples_to_levels, levels_to_timed_edges, FileReader, \
+    checksums_valid, blocks_to_bytes
+
+if len(sys.argv) < 3:
+    err('Dumps binary data from JR-200 cassette output\n' +
+        'Usage: %s audio_file output_file' % sys.argv[0])
+    sys.exit(-1)
+
+fname = sys.argv[1]
+outfile = sys.argv[2]
+
+audio = AudioSegment.from_file(fname)
+rate = audio.frame_rate
+sample_dur = 1.0 / rate
+samples = audio.get_array_of_samples()
+
+info('Input file: %s' % fname)
+info('Channels: %d ' % audio.channels)
+info('Sample width: %d' % audio.sample_width)
+info('Frame rate: %d' % audio.frame_rate)
+info('Max: %d' % audio.max)
+info('Duration: %d' % audio.duration_seconds)
+debug('Sample duration: %f microseconds' % (1000000 * sample_dur))
+debug('Samples: %d' % len(samples))
+
+levels = samples_to_levels(samples)
+edges = levels_to_timed_edges(levels, sample_dur)
+
+info('Number of edges: %d ' % len(edges))
+cycle_lengths = [dur for (_,_,dur) in edges]
+info('Min cycle length: %f' % min(cycle_lengths))
+info('Max cycle length: %f' % max(cycle_lengths))
+
+# fig, ax = plt.subplots()
+# n, bins, patches = ax.hist(cycle_lengths, 100, range = (0, 0.0005))
+# fig.tight_layout()
+# plt.show()
+
+freader = FileReader()
+(i_next, f) = freader.read_file(edges, 0)
+
+if checksums_valid(f.blocks):
+    data = blocks_to_bytes(f.blocks)
+    info('Ouput file: %s' % outfile)
+    f = open(outfile, 'w+b')
+    f.write(data)
+    f.close()
+    sys.exit(0)
+else:
+    sys.exit(1)

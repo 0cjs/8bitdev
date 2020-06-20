@@ -8,18 +8,14 @@ from    numbers  import Integral
 from    py65.devices.mpu6502  import MPU
 from    sys import stderr
 
-from    testmc.memory  import MemoryAccess
+from    testmc.machine  import GenericMachine
+from    testmc.registers  import GenericRegisters, Reg, Flag, Bit
 from    testmc.m6502.instructions  import Instructions
-from    testmc.m6502.registers  import Registers
 
 from    testmc import symtab
 from    testmc import asl, asxxxx
 
-class Machine(MemoryAccess):
-
-    class Timeout(RuntimeError):
-        ' The emulator ran longer than requested. '
-        pass
+class Machine(GenericMachine):
 
     def is_little_endian(self):
         return True
@@ -27,45 +23,29 @@ class Machine(MemoryAccess):
     def get_memory_seq(self):
         return self.mpu.memory
 
+    class Registers(GenericRegisters):
+        machname = '6502'
+        registers = (Reg('pc', 16), Reg('a'), Reg('x'), Reg('y'), Reg('sp'))
+        #   No "B flag" here; it's not actually a flag in the PSR, it's
+        #   merely set in the value pushed on to the stack on IRQ or `BRK`.
+        srbits = (  Flag('N'), Flag('V'),   Bit(1),     Bit(1),
+                    Flag('D'), Flag('I'), Flag('Z'), Flag('C'), )
+        srname = 'p'
+
+    ####################################################################
+
+    class Timeout(RuntimeError):
+        ' The emulator ran longer than requested. '
+        pass
+
     class Abort(RuntimeError):
         ' The emulator encoutered an instruction on which to abort.'
         pass
 
     def __init__(self):
         self.mpu = MPU()
+        self.regsobj = self.mpu
         self.symtab = symtab.SymTab([])     # symtab initially empty
-
-    @property
-    def regs(self):
-        m = self.mpu
-        return Registers(m.pc, m.a, m.x, m.y, m.sp, psr=m.p)
-
-    def setregs(self, r):
-        m = self.mpu
-        if r.pc is not None:  m.pc = r.pc
-        if r.a  is not None:  m.a  = r.a
-        if r.x  is not None:  m.x  = r.x
-        if r.y  is not None:  m.y  = r.y
-        if r.sp is not None:  m.sp = r.sp
-
-        flags_masks = (
-            ('N', 0b10000000),
-            ('V', 0b01000000),
-            ('D', 0b00001000),
-            ('I', 0b00000100),
-            ('Z', 0b00000010),
-            ('C', 0b00000001),
-            )
-        for (flagname, mask) in flags_masks:
-            flag = getattr(r, flagname)
-            if flag is None:
-                continue
-            elif flag == 0:
-                m.p &= ~mask
-            elif flag == 1:
-                m.p |= mask
-            else:
-                raise ValueError('Bad {} flag value: {}'.format(flagname, flag))
 
     def _stackaddr(self, depth, size):
         addr = 0x100 + self.mpu.sp + 1 + depth
@@ -150,7 +130,7 @@ class Machine(MemoryAccess):
                     'Timeout after {} instructions: {} opcode={}' \
                     .format(maxops, self.regs, self.byte(self.regs.pc)))
 
-    def call(self, addr, regs=Registers(), *,
+    def call(self, addr, regs=None, *,
             maxops=MAXOPS, aborts=(0x00,), trace=False):
         ''' Simulate a JSR to `addr`, after setting any `registers`
             specified, returning when its corresponding RTS is
@@ -172,9 +152,13 @@ class Machine(MemoryAccess):
             corresponding JSR) will confuse this routine and may
             cause it to terminate early or not at all.
         '''
+        if regs is None:
+            regs = self.Registers()
         self.setregs(regs)
+
         if addr is not None:
-            self.setregs(Registers(pc=addr))    # Overrides regs
+            self.setregs(self.Registers(pc=addr))   # Overrides regs
+
         I = Instructions
         stopon = (I.JSR, I.RTS) + tuple(aborts)
         depth = 0

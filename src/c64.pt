@@ -1,4 +1,4 @@
-from    testmc.m6502 import  Machine, Registers as R, Instructions as I
+from    testmc.m6502 import  Machine, Instructions as I
 import  pytest
 
 object_file = 'src/c64.p'

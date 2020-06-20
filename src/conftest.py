@@ -13,12 +13,22 @@ def M(request):
     M.load('.build/obj/' + getattr(request.module, 'object_file'))
     return M
 
+#   These rely on pytest running the M() fixture only once per test, even
+#   though both these fixtures and the test itself use it. I'm not sure if
+#   this behaviour is documented, but it makes sense given that pytest
+#   maintains careful control over the scope (test/module/etc.) in which a
+#   fixture is used.
+
 @pytest.fixture
 def S(M):
-    ''' The `Machine.symtab` of the machine object produced by the
-        `M` fixture.
+    ''' The `Machine.symtab` attribute of the machine object produced by
+        the `M` fixture.
     '''
-    #   This relies on pytest running the M() fixture only once per test,
-    #   even though both this fixture and the test itself use it. I'm not
-    #   sure if this behaviour is documented, but it makes sense.
     return M.symtab
+
+@pytest.fixture
+def R(M):
+    ''' The `Machine.registers` attribute of the machine object produced by
+        the `M` fixture.
+    '''
+    return M.Registers

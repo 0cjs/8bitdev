@@ -1,4 +1,4 @@
-from    testmc.m6502 import  Machine, Registers as R, Instructions as I
+from    testmc.m6502 import  Machine, Instructions as I
 from    testmc.asxxxx import  MemImage
 import  pytest
 
@@ -6,22 +6,26 @@ import  pytest
 def M():
     return Machine()
 
+@pytest.fixture
+def R(M):
+    return M.Registers
+
 def test_Machine_memory_zeroed(M):
     assert [0]*0x10000 == M.mpu.memory
 
-def test_Machine_setregs(M):
+def test_Machine_setregs(M, R):
     M.setregs(R(y=4, a=2))
     assert  R(y=4, a=2) == M.regs
 
     M.mpu.p = 0b01010101
-    M.setregs(R(0x1234, 0x56, 0x78, 0x9a, 0xbc))
-    r     = R(0x1234, 0x56, 0x78, 0x9a, 0xbc, psr=0b01010101)
+    M.setregs(R(pc=0x1234, a=0x56, x=0x78, y=0x9a, sp=0xbc))
+    r     = R(pc=0x1234, a=0x56, x=0x78, y=0x9a, sp=0xbc, p=0b01010101)
     assert r == M.regs
 
-def test_Machine_setregs_flags(M):
+def test_Machine_setregs_flags(M, R):
     initflags = 0b00110000  # Emulator has unused/how stacked flags set to 1.
     assert       initflags  == M.mpu.p     # emulator internal status register
-    assert R(psr=initflags) == M.regs      # make sure we read the same
+    assert R(p=initflags) == M.regs      # make sure we read the same
 
     M.setregs(R(N=1, V=0, D=1, I=0, Z=1, C=0))
     assert R(N=1, V=0, D=1, I=0, Z=1, C=0) == M.regs
@@ -32,17 +36,17 @@ def test_Machine_setregs_flags(M):
     M.setregs(R(D=0))
     assert R(N=1, V=0, D=0, I=0, Z=1, C=1) == M.regs
 
-    M.setregs(R(psr=0b11111111))
+    M.setregs(R(p=0b11111111))
     assert R(N=1, V=1, D=1, I=1, Z=1, C=1) == M.regs
 
-    M.setregs(R(psr=0))
+    M.setregs(R(p=0))
     assert R(N=0, V=0, D=0, I=0, Z=0, C=0) == M.regs
 
     with pytest.raises(ValueError) as ex:
         M.setregs(R(C=2))
-    assert ex.match('Bad C flag value: 2')
+    assert ex.match(r"^Status bit 'C' value 2 not in set")
 
-def test_Machine_examine_stack(M):
+def test_Machine_examine_stack(M, R):
     #   Confirm the emulator's internal format is the bottom 8 bits of the SP.
     assert 0xff == M.mpu.sp
 
@@ -69,7 +73,7 @@ def test_Machine_examine_stack(M):
     with pytest.raises(IndexError): M.spbyte(0xFFFF)
     with pytest.raises(IndexError): M.spword(0xFFFF)
 
-def test_Machine_load_memimage(M):
+def test_Machine_load_memimage(M, R):
     mi = MemImage()
     rec1data = (0x8a, 0x8c, 0x09, 0x04, 0x18, 0x6d, 0x09, 0x04, 0x60)
     mi.append(mi.MemRecord(0x400, rec1data))
@@ -90,7 +94,7 @@ def test_Machine_load_memimage(M):
 ####################################################################
 #   Machine execution
 
-def test_Machine_step(M):
+def test_Machine_step(M, R):
     ''' Test a little program we've hand assembled here to show
         that we're using the MPU API correctly.
     '''
@@ -104,24 +108,24 @@ def test_Machine_step(M):
     assert   0x07 == M.byte(0x403)
     assert 0xEEA9 == M.word(0x400)  # LSB, MSB
 
-    assert R(0, 0, 0, 0) == M.regs
+    assert R(pc=0, a=0, x=0, y=0) == M.regs
     M.setregs(R(pc=0x400))
 
-    M.step(); assert R(0x402, a=0xEE) == M.regs
-    M.step(); assert R(0x404, x=0x7E) == M.regs
-    M.step(); assert R(0x405, 0xEE, 0x7E, 0x00) == M.regs
+    M.step(); assert R(pc=0x402, a=0xEE) == M.regs
+    M.step(); assert R(pc=0x404, x=0x7E) == M.regs
+    M.step(); assert R(pc=0x405, a=0xEE, x=0x7E, y=0x00) == M.regs
 
-def test_Machine_stepto(M):
+def test_Machine_stepto(M, R):
     M.deposit(0x300, [I.NOP, I.LDA, 2, I.NOP, I.RTS, I.BRK])
 
     M.setregs(R(pc=0x300))
     M.stepto(I.NOP)                 # Always executes at least one instruction
-    assert R(0x303) == M.regs
+    assert R(pc=0x303) == M.regs
     assert M.mpu.processorCycles == 4
 
     M.setregs(R(pc=0x300))
     M.stepto(I.RTS)
-    assert R(0x304) == M.regs
+    assert R(pc=0x304) == M.regs
 
     M.setregs(R(pc=0x300))
     with pytest.raises(M.Timeout):
@@ -130,44 +134,44 @@ def test_Machine_stepto(M):
         #   but it's still >100 ms.
         M.stepto(0x02, maxops=10000)
 
-def test_Machine_stepto_multi(M):
+def test_Machine_stepto_multi(M, R):
     M.deposit(0x700, [I.NOP, I.INX, I.NOP, I.INY, I.RTS, I.BRK])
 
     M.setregs(R(pc=0x700))
     M.stepto([I.INY])
-    assert R(0x703) == M.regs
+    assert R(pc=0x703) == M.regs
 
     M.setregs(R(pc=0x700))
     M.stepto((I.INY, I.INX))
-    assert R(0x701) == M.regs
+    assert R(pc=0x701) == M.regs
 
-def test_machine_stepto_brk(M):
+def test_machine_stepto_brk(M, R):
     M.deposit(0x710, [I.NOP, I.INX, I.BRK])
     M.setregs(R(pc=0x710))
     M.stepto((I.BRK,))
-    assert R(0x712) == M.regs
+    assert R(pc=0x712) == M.regs
 
-def test_Machine_call_rts(M):
+def test_Machine_call_rts(M, R):
     M.deposit(0x580, [I.RTS])
     assert R(          a=0,    x=0) == M.regs
-    M.call(   0x580, R(a=0xFE, x=8))
-    assert R( 0x580,   a=0xFE, x=8) == M.regs
+    M.call(     0x580, R(a=0xFE, x=8))
+    assert R(pc=0x580,   a=0xFE, x=8) == M.regs
 
-def test_Machine_call_shallow(M):
+def test_Machine_call_shallow(M, R):
     M.deposit(0x590, [I.INX, I.RTS])
     M.call(0x590, R(x=3))
-    assert R(0x591, x=4) == M.regs
+    assert R(pc=0x591, x=4) == M.regs
 
-def test_Machine_call_deep(M):
+def test_Machine_call_deep(M, R):
     M.deposit(0x500, [I.JSR, 0x20, 0x05, I.JSR, 0x10, 0x05, I.RTS])
     M.deposit(0x510, [I.INY, I.JSR, 0x20, 0x05, I.RTS])
     M.deposit(0x520, [I.INX, I.RTS])
 
-    M.call(  0x500, R(x=0x03, y=0x13))
-    assert R(0x506,   x=0x05, y=0x14) == M.regs
+    M.call(     0x500, R(x=0x03, y=0x13))
+    assert R(pc=0x506,   x=0x05, y=0x14) == M.regs
 
-def test_Machine_call_aborts(M):
+def test_Machine_call_aborts(M, R):
     M.deposit(0x570, [I.NOP, I.NOP, I.BRK, I.NOP, I.RTS])
     with pytest.raises(M.Abort):
         M.call(0x570)
-    assert R(0x572) == M.regs
+    assert R(pc=0x572) == M.regs

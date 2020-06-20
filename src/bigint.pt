@@ -1,4 +1,4 @@
-from    testmc.m6502 import  Machine, Registers as R, Instructions as I
+from    testmc.m6502 import  Machine, Instructions as I
 import  pytest
 from    itertools import chain, count
 
@@ -13,7 +13,7 @@ object_file = 'src/bigint.p'
     ('G',16),  ('g',16),    ('Z',35),  ('z',35),
     ('_', 40), ('\x7F', 40)
 ])
-def test_convascdigit_good(M, char, num):
+def test_convascdigit_good(M, R, char, num):
     M.call(M.symtab.convascdigit, R(a=ord(char), N=1))
     assert R(a=num, N=0) == M.regs
 
@@ -23,11 +23,11 @@ def test_convascdigit_good(M, char, num):
     '\xAF', '\xB0', '\xB9', '\xBa',     # MSb set: '/', '0', '9', ':'
     '\xDA', '\xFa', '\xFF',             # MSb set: 'Z', 'z'
     ])
-def test_convascdigit_error(M, char):
+def test_convascdigit_error(M, R, char):
     M.call(M.symtab.convascdigit, R(a=ord(char), N=0))
     assert R(N=1) == M.regs
 
-def test_convascdigit_good_exhaustive(M):
+def test_convascdigit_good_exhaustive(M, R):
     ''' Exhaustive test of all good values. Because we're nervous types.
         But the parametertized tests are easier for debugging errors.
     '''
@@ -45,7 +45,7 @@ def test_convascdigit_good_exhaustive(M):
     for num,char in zip(count(10), ordrange('a', '\x7F')):
         assert R(a=num, N=0) == readasc(char), '{} ??? char {}'.format(num, char)
 
-def test_convascdigit_error_exhaustive(M):
+def test_convascdigit_error_exhaustive(M, R):
     ''' Exhaustive test of all bad values. Because we're nervous types.
         But the parametertized tests are easier for debugging errors.
     '''
@@ -71,7 +71,7 @@ OUTBUF = 0x71FE
     (b":"),
     (b"@"),
 ])
-def test_bi_readhex_error(M, S, input):
+def test_bi_readhex_error(M, R, S, input):
     print('readhex_error:', input)
 
     M.deposit(INBUF, input)
@@ -96,7 +96,7 @@ def test_bi_readhex_error(M, S, input):
     (b'087',             b'\x87'),
     (b'00000087',        b'\x87'),
 ])
-def test_bi_readhex(M, S, input, output):
+def test_bi_readhex(M, R, S, input, output):
     print('bi_readhex:', input, type(input), output)
 
     M.deposit(INBUF, input)
@@ -143,7 +143,7 @@ def bi_x10_testid(val):
     (-1, b'\x0B' + bytes([0xFF]*254)),  # max length, approaching max value
     ( 0, b'\x18' + bytes([0xFF]*254)),  # max length, (unsigned)
 ], ids=bi_x10_testid)
-def test_bi_x10(M, S, signed, value):
+def test_bi_x10(M, R, S, signed, value):
     decval   = int.from_bytes(value, byteorder='big', signed=signed)
     decval10 = decval * 10
     print('bi_x10: {} = {}'.format(list(map(hex, value)), decval))
@@ -206,7 +206,7 @@ def test_bi_x10(M, S, signed, value):
     (-1, b'78912345678901', [      0xB8, 0x3A, 0xC9, 0xAA, 0xDB, 0xCB]),
     (-1, b'78912345678901', [0xFF, 0xB8, 0x3A, 0xC9, 0xAA, 0xDB, 0xCB]),
 ])
-def test_bi_read_decdigits(M, S, sign, input, buf):
+def test_bi_read_decdigits(M, R, S, sign, input, buf):
     print('bi_read_decdigits:', input, buf)
 
     if sign != 0: sign = 0xFF
@@ -309,7 +309,7 @@ def test_bi_read_decdigits_max(M, S, sign):
     (b'999999999999',   [0x00, 0xE8, 0xD4, 0xA5, 0x0F, 0xFF]),
     (b'-999999999999',  [0XFF, 0X17, 0X2B, 0X5A, 0XF0, 0X01]),
 ])
-def test_bi_read_dec(M, S, input, output):
+def test_bi_read_dec(M, R, S, input, output):
     print('bi_read_dec:', input, output)
 
     #   Allocate temp/scratch buffers. We do this here until we have an alloc
@@ -357,7 +357,7 @@ def test_bi_read_dec(M, S, input, output):
         == M.bytes(TOUT_ADDR-1, len(output)+3)
 
 @pytest.mark.parametrize('bufstart', (0x70FD, 0x70FE, 0x70FF, 0x7100))
-def test_bi_read_dec_bufstart(M, S, bufstart):
+def test_bi_read_dec_bufstart(M, R, S, bufstart):
     ' Edge case where the sign char is on the last byte of a page, etc. '
     scratch, temp, inbuf, outbuf \
         = bufstart, bufstart+0x100, bufstart+0x200, bufstart+0x300

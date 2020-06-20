@@ -1,5 +1,7 @@
-from    testmc.m6502.registers  import Registers as R
+from    testmc.m6502.machine  import Machine
 import  pytest
+
+R = Machine.Registers
 
 def test_Regs_cons_default():
     r = R()
@@ -22,39 +24,38 @@ def test_Regs_cons():
 
 def test_Regs_immutable():
     r = R()
-    with pytest.raises(AttributeError) as e:
+    with pytest.raises(TypeError) as e:
         r.I = 1
-    assert e.match("can't set attribute")
+    assert e.match(r"^'Registers' object is immutable")
 
 def test_Regs_cons_badvalue():
+    with pytest.raises(TypeError):
+        R(pc='hello')
     with pytest.raises(ValueError) as e:
-        R('hello')
-    assert e.match('bad value: hello')
-    with pytest.raises(ValueError) as e:
-        R(-1)
-    assert e.match('bad value: -1')
+        R(pc=-1)
+    assert e.match(r"Register 'pc' value \$-1 exceeds range \$00-\$FFFF$")
 
 def test_Regs_conspsr():
     ' Construction with a program status register byte as pushed on stack. '
 
-    with pytest.raises(AttributeError) as e:
-        R(psr=0xff, V=0)
-    assert e.match("must not give both psr and flag values")
+    with pytest.raises(ValueError) as e:
+        R(p=0xff, V=0)
+    assert e.match(r"^Cannot specify status bit values for both 'p' and 'V'$")
 
-    with pytest.raises(AttributeError) as e:
-        R(psr=0x123)
-    assert e.match('invalid psr: 0x123')
+    with pytest.raises(ValueError) as e:
+        R(p=0x123)
+    assert e.match(r'^Too many status bit values: \$123$')
 
-    r = R(psr=0xff)
+    r = R(p=0xff)
     assert (  1,   1, 1,   1,   1,   1) \
         == (r.N, r.V, r.D, r.I, r.Z, r.C)
 
-    r = R(psr=0)
+    r = R(p=0)
     assert (  0,   0, 0,   0,   0,   0) \
         == (r.N, r.V, r.D, r.I, r.Z, r.C)
 
 def test_Regs_repr_1():
-    r = R(1, 2, 0xa0, sp=0xfe, psr=0b10101010)
+    r = R(pc=1, a=2, x=0xa0, sp=0xfe, p=0b10101010)
     rs = '6502 pc=0001 a=02 x=A0 y=-- sp=FE Nv--DiZc'
     assert rs == repr(r)
     assert rs == str(r)
@@ -72,26 +73,26 @@ def test_Regs_repr_3():
     assert rs == str(r)
 
 def test_Regs_eq_pc_only():
-    assert R(1234) != 1234
-    assert      1234  != R(1234)
-    assert R(1234) == R(1234)
-    assert R(None) == R(1234)
-    assert R(1234) == R(None)
-    assert R(None) == R(None)
-    assert R(1234) != R(1235)
+    assert R(pc=1234) != 1234
+    assert      1234  != R(pc=1234)
+    assert R(pc=1234) == R(pc=1234)
+    assert R(pc=None) == R(pc=1234)
+    assert R(pc=1234) == R(pc=None)
+    assert R(pc=None) == R(pc=None)
+    assert R(pc=1234) != R(pc=1235)
 
 def test_Regs_eq():
-    all     = R(0x1234, 0x56, 0x78, 0x9a, 0xbc, psr=0b01010101)
-    again   = R(0x1234, 0x56, 0x78, 0x9a, 0xbc, psr=0b01010101)
+    all     = R(pc=0x1234, a=0x56, x=0x78, y=0x9a, sp=0xbc, p=0b01010101)
+    again   = R(pc=0x1234, a=0x56, x=0x78, y=0x9a, sp=0xbc, p=0b01010101)
 
     assert      all == all
     assert not (all != all)     # Were we seeing __ne__() delgation problems?
     assert      all == again
     assert not (all != again)
 
-    assert all != R(0)
-    assert all != R(1)
-    assert all == R(0x1234)
+    assert all != R(pc=0)
+    assert all != R(pc=1)
+    assert all == R(pc=0x1234)
 
     assert all != R(a=0)
     assert all != R(a=1)
@@ -102,11 +103,10 @@ def test_Regs_eq():
     assert all == R(y=0x9a, sp=0xbc, N=0, V=1, D=0, I=1, Z=0)
 
 def test_Regs_eq_flags():
-    r = R(psr=0xFF)
+    r = R(p=0xFF)
     assert R(N=1) == r;  assert R(N=0) != r
     assert R(V=1) == r;  assert R(V=0) != r
     assert R(D=1) == r;  assert R(D=0) != r
     assert R(I=1) == r;  assert R(I=0) != r
     assert R(Z=1) == r;  assert R(Z=0) != r
     assert R(C=1) == r;  assert R(C=0) != r
-

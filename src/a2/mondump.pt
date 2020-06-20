@@ -1,8 +1,8 @@
-from    testmc.m6502 import  Machine, Registers as R, Instructions as I
+from    testmc.m6502 import  Machine, Instructions as I
 import  pytest
 
 object_file = 'src/a2/mondump.p'
 
-def test_dump(M, S):
+def test_dump(M, R, S):
     M.call(S.hexdump, R(a=0))
     assert R(a=0) == M.regs

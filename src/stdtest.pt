@@ -1,4 +1,4 @@
-from    testmc.m6502 import  Machine, Registers as R, Instructions as I
+from    testmc.m6502 import  Machine, Instructions as I
 import  pytest
 
 object_file = 'src/stdtest.p'
@@ -34,7 +34,7 @@ def test_zds(M, S):
     (0xFF00, 0xFF01),
     (0xFFFF, 0x0000),
 ))
-def test_incw(M, input, expected):
+def test_incw(M, R, input, expected):
     incw = M.symtab.incwtest
     data = M.symtab.incwdata
     r    = R(a=0x12, x=0x34, y=0x56)
@@ -49,7 +49,7 @@ def test_incw(M, input, expected):
     (0x1FD, 0x200), (0x1FE, 0x200), (0x1FF, 0x200), (0x200, 0x200),
     (0xFFFF, 0x0000), (0x0000, 0x0000),
 ))
-def test_dwalign(M, inp, exp):
+def test_dwalign(M, R, inp, exp):
     dwaligntest, data = M.symtab.dwaligntest, M.symtab.dwaladdr
     preservedregs = R(x=87, y=65)
     M.depword(data, inp)

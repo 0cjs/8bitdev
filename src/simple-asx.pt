@@ -1,4 +1,4 @@
-from    testmc.m6502 import  Machine, Registers as R, Instructions as I
+from    testmc.m6502 import  Machine, Instructions as I
 from    os.path import exists
 import  pytest
 
@@ -17,7 +17,7 @@ def test_loaded_object_file(M):
 ####################################################################
 #   Add X and Y, storing the result in xybuf and returning it in A
 
-def test_addxy(M, S):
+def test_addxy(M, R, S):
     M.deposit(0x8000,
         I.JSR, S.addxy & 0xff, (S.addxy & 0xff00) >> 8,
         I.NOP, I.NOP, I.NOP, I.NOP)
@@ -40,7 +40,7 @@ signeq_neg = [0x80, 0x81, 0xFE, 0xFF]
     + [ (False, a, b) for a in signeq_pos for b in signeq_neg ] \
     + [ (False, a, b) for a in signeq_neg for b in signeq_pos ] \
 )
-def test_signeq(M, S, match, a, b):
+def test_signeq(M, R, S, match, a, b):
     M.deposit(S.signeq_a, a)
     M.deposit(S.signeq_b, b)
     print('[a,b] = {}'.format(list(map(hex, (M.bytes(S.signeq_a, 2))))))
@@ -50,7 +50,7 @@ def test_signeq(M, S, match, a, b):
 ####################################################################
 #   JMP [addr] vs PHA/RTS
 
-def test_jmpptr(M, S):
+def test_jmpptr(M, R, S):
     #   Step by step testing, to make _really_ sure the instructions
     #   are doing what I intend. Maybe overkill?
     M.setregs(R(pc=S.jmpabs, a=2))
@@ -68,7 +68,7 @@ def test_jmpptr(M, S):
     assert R(pc=0x9ABC) == M.regs
     #print(hex(M.mpu.pc), hex(M.mpu.a), hex(M.mpu.x))
 
-def test_jmpabsrts(M, S):
+def test_jmpabsrts(M, R, S):
     M.setregs(R(pc=S.jmpabsrts, a=1))
     M.stepto(I.RTS)
     assert 0x5678-1 == M.spword()
@@ -78,7 +78,7 @@ def test_jmpabsrts(M, S):
 ####################################################################
 #   bsread: A source stream of bytes
 
-def test_bytesource(M, S):
+def test_bytesource(M, R, S):
     addr  = 0x1ffe          # Set so we cross a page boundary
     bytes = b'A\0B\xffC'
     M.deposit(addr, bytes)
@@ -92,14 +92,14 @@ def test_bytesource(M, S):
 ####################################################################
 #   Read (using bsread) a pair of ASCII chars representing a printable...
 
-def test_rab_decode(M):
+def test_rab_decode(M, R):
     decode = M.symtab.rab_decode
     for inp, exp in [ ('0',0), ('5', 5), ('9',9), ('A',0xA), ('F',0xF), ]:
         print("inp='{}' exp={:02X}".format(inp, exp))
         M.call(decode, R(a=ord(inp)))
         assert R(a=exp) == M.regs
 
-def test_read_ascii_byte(M, S):
+def test_read_ascii_byte(M, R, S):
     input = 0x8000
     M.deposit(input, b'FF0012ED')
     M.depword(S.bytesource, input)
@@ -111,7 +111,7 @@ def test_read_ascii_byte(M, S):
 ####################################################################
 #   Stack addressing
 
-def test_stk(M, S):
+def test_stk(M, R, S):
     M.deposit(S.stkval_i1, 0xDE)    # sentinel to ensure overwrite
     M.deposit(S.stkval_i3, 0xDE)
     M.call(S.stk_main, R(a=0xFF, sp=0xFF), maxops=100, trace=0)

@@ -1,4 +1,4 @@
-from    testmc.m6502 import  Machine, Registers as R
+from    testmc.m6502  import Machine
 import  pytest
 
 object_file = 'src/asl-sym.p'

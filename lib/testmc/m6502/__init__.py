@@ -5,6 +5,5 @@
 
 from    testmc.m6502.instructions  import Instructions
 from    testmc.m6502.machine  import Machine
-from    testmc.m6502.registers  import Registers
 
-__all__ = ['Registers', 'Machine', 'Instructions']
+__all__ = ['Machine', 'Instructions']

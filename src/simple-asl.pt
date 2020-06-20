@@ -1,4 +1,4 @@
-from    testmc.m6502 import  Machine, Registers as R
+from    testmc.m6502 import  Machine
 import  pytest
 
 object_file = 'src/simple-asl.p'
@@ -19,14 +19,14 @@ def test_brk(M, S):
     assert 0x38 == M.byte(S.testbrkarg+1)
     assert 0xFE == M.byte(S.testbrkarg+2)
 
-def test_addxy(M, S):
+def test_addxy(M, R, S):
     M.call(S.addxy, R(x=0x2A, y=0x33, C=1))
     expected = 0x2A + 0x33
     assert expected == M.byte(S.xybuf)
     assert R(a=expected, x=0x2A, y=0x33) == M.regs
 
 @pytest.mark.parametrize('len', (1, 2, 16, 255))    # len must be at least 1
-def test_fill(M, S, len):
+def test_fill(M, R, S, len):
     base = 0x1234       # Fill does not include base address
 
     guard = b'\xFF\xFF'
@@ -38,7 +38,7 @@ def test_fill(M, S, len):
     M.call(S.fill, R(y=len))
     assert guard + b'\xFF' + bytes(len) + guard == M.bytes(base-2, len+5)
 
-def test_negoff(M, S):
+def test_negoff(M, R, S):
     #   Show what negoff() calculates.
     M.call(S.negoffcalc)
     print('no_data=${:04X} negoff=${:04X}'
@@ -60,7 +60,7 @@ def test_negoff(M, S):
            ]
     assert R(x=0) == M.regs
 
-def test_chromatix_id(M):
+def test_chromatix_id(M, R):
     M.call(M.symtab.chromatix_id)
     expa = ord('S')             # 65C02, this emulator is, apparently
     assert R(a=expa) == M.regs

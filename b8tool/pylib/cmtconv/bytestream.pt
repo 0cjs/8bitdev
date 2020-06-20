@@ -1,0 +1,83 @@
+from    cmtconv.bytestream  import *
+from    io  import BytesIO
+
+
+def test_get_block_module():
+    m = get_block_module('JR-200')
+    assert 'National/Panasonic JR-200' \
+        == m.Block.platform == m.FileHeader.platform
+
+####################################################################
+#   The following tests are ordered such that any code under test that
+#   a test relies on is tested earlier. Fix the first errors first!
+#
+#   These currently use the JR-200 code, rather than testing with
+#   mock objects. We might as well get coverage for the JR-200 code
+#   if we're going to be running this anyway.
+
+JR200_BLOCK_BYTESTREAM = bytes([
+    # magic    blockno datalen   address
+    0x02, 0x2A,  0x00, 0x1A,   0xFF, 0xFF,              # FileHeader block
+        0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, # filename
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x01, 0x00,                                     # filetype, baudrate
+        0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, # padding
+        0x61,                                           # checksum
+    0x02, 0x2A,  0x01, 0x04,   0x78, 0x80,              # data block
+        0xaa, 0x55, 0xaa, 0x55,
+        0x27,
+    0x02, 0x2A,  0x02, 0x03,   0x78, 0x84,
+        0x63, 0x6A, 0x73,
+        0x6D,
+    0x02, 0x2A,  0xFF, 0xFF,   0x78, 0x87,              # tail block
+])
+#   Contents of file above.
+JR200_FILE_BYTESTREAM = b'\xAA\x55\xAA\x55cjs'
+
+def test_read_block_bytestream():
+    # input has guard data after tail block that should not be read
+    guard = b'\xDE\xAD\xBE\xEF'
+    input = JR200_BLOCK_BYTESTREAM + guard
+    stream = BytesIO(input)
+
+    blocks = read_block_bytestream('JR-200', stream)
+    assert          b'ABCDEFGH' == blocks[0].filename
+    filedata                     = JR200_FILE_BYTESTREAM
+    assert        filedata[0:4] == blocks[1].filedata
+    assert        filedata[4: ] == blocks[2].filedata
+    assert                         blocks[3].is_eof
+    assert                    4 == len(blocks)
+    assert                guard == stream.read()
+
+def test_get_block_bytestream():
+    assert JR200_BLOCK_BYTESTREAM == get_block_bytestream(
+        read_block_bytestream('JR-200', BytesIO(JR200_BLOCK_BYTESTREAM)))
+
+def test_get_file_bytestream():
+    #   This is easier than consing up a bunch of blocks by hand, and also
+    #   demonstrates that FileHeader blocks should have zero-length filedata.
+    blocks = read_block_bytestream('JR-200', BytesIO(JR200_BLOCK_BYTESTREAM))
+    bytestream = get_file_bytestream(blocks)
+    assert JR200_FILE_BYTESTREAM == bytestream
+    # XXX what about loadaddrs and, especially, non-contiguous blocks?
+
+def test_native_filename():
+    assert   None is native_filename(None)
+    assert b'abc' == native_filename(map(ord, 'abc'))
+    assert b'abc' == native_filename('abc')
+
+def test_blocks_from_bin():
+    filedata = bytes(range(0, 0x80)) * 5    # 0x280 bytes: 2.5 blocks
+    blocks = blocks_from_bin(
+        'JR-200', BytesIO(filedata), loadaddr=0x1234, filename='a file')
+
+    fh = blocks[0]
+    assert (fh.BINARY,   fh.B_2400,   b'a file'
+      ) == (fh.filetype, fh.baudrate, fh.filename )
+    assert filedata == get_file_bytestream(blocks)
+
+    addr = 0x1234
+    for n, b in enumerate(blocks[1:-1], 1):
+        assert (n, addr) == (b.blockno, b.addr)
+        addr += len(b.filedata)
+    assert blocks[-1].is_eof

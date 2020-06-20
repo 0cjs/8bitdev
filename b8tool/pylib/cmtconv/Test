@@ -1,0 +1,170 @@
+#!/usr/bin/env bash
+#
+#   Temporary integration tests for the commnand-line tape manipulation
+#   programs until we have unit test coverage for most of this.
+#
+#   This is fragile and noisy, and is not expected to be run as part
+#   of the regular top-level tests.
+#
+#   That output is often just the exit code; you need to test that to
+#   see if it passed or failed. E.g., `./cmt-test; echo EXITCODE $?`
+#
+
+set -eu -o pipefail
+
+die() { echo 2>&1 FAILURE: "$@"; exit 1; }
+
+test_ptowav() {
+    echo ====================================
+    #   XXX hello.p below needs to be committed as test data, rather than
+    #   relying on the project having built it from source.
+    "$cmtconv" -p jr200 -f hello -i obj $projdir/.build/obj/exe/jr200/hello.p \
+        $ttdir/hello.wav \
+        || die run jr-200-obj-to-audio
+    file $ttdir/hello.wav | grep -s 'mono 44100 Hz' || die ofile jr200-obj-to-audio
+}
+
+test_cjrtowav() {
+    echo ====================================
+    # header: magic, magic, block#, len, addrhi, addrlo
+    # data: indented, last line is checksum byte
+    # tail block has $FF blockno and len; contents ???
+    cat <<____ | xxd -r -p >$ttdir/2.cjr
+    02 2A 00 1A   FF FF
+        41 42 43 44 45 46 47 48 00 00 00 00 00 00 00 00
+        01
+        00
+        FF FF FF FF FF FF FF FF
+        61
+    02 2A 01 04   78 80
+        aa 55 aa 55
+        27
+    02 2A FF FF   00 00
+        00
+____
+    "$cmtconv" -p jr200 $ttdir/2.cjr $ttdir/2.wav \
+        || die run jr200-cjr-to-audio
+    file $ttdir/2.wav | grep -s 'mono 44100 Hz' \
+        || die ofile jr200-cjr-to-audio
+}
+
+test_wavtodump() {
+    echo ====================================
+    "$cmtconv" -p jr200 -o bin $ttdir/hello.wav $ttdir/hello.dump \
+        || die run jr-200-tape-dump
+    cat > $ttdir/hello.dump.expected <<_____
+00000000: bd f0 0f ce 70 1d 8d 1d bd e8 fe 81 03 27 09 81  ....p........'..
+00000010: 0d 27 ed bd eb e7 20 f0 bd f0 0f 02 39 48 65 6c  .'.... .....9Hel
+00000020: 6c 6f 3a 20 00 a6 00 27 06 bd eb e7 08 20 f6 39  lo: ...'..... .9
+_____
+    xxd -g1 $ttdir/hello.dump | diff -u $ttdir/hello.dump.expected - \
+        || die ofile jr-200-tape-dump
+}
+
+test_cmtconv_cas2bin() {
+    local ofile=$ttdir/5.cas.bin
+    echo ====================================
+    "$cmtconv" -o bin $ttdir/2.cjr $ofile
+    echo >$ofile.expected "aa55aa55"
+    xxd -ps $ofile | diff -u $ofile.expected -
+}
+
+test_cmtconv_bin2cas() {
+    local ofile=$ttdir/c.bin.cas
+    echo ====================================
+    echo 'ABCDEFGH' | "$cmtconv" -i bin -f PROG -l 0x8AA - $ofile
+    cat > $ofile.expected <<_____
+00000000: 02 2a 00 1a ff ff 50 52 4f 47 00 00 00 00 00 00  .*....PROG......
+00000010: 00 00 00 00 00 00 01 00 ff ff ff ff ff ff ff ff  ................
+00000020: 75 02 2a 01 09 08 aa 41 42 43 44 45 46 47 48 0a  u.*....ABCDEFGH.
+00000030: 16 02 2a ff ff 08 b3                             ..*....
+_____
+    xxd -g1 $ofile | diff -u $ofile.expected - \
+        || die cmtconv_bin2cas $ofile
+
+}
+
+test_mb_bin_to_audio() {
+    local ifile=$ttdir/mb_1_in.bin
+    local ofile=$ttdir/mb_1.wav
+    echo ====================================
+        cat <<____ | xxd -r -p >$ifile
+    00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F
+    F0 E0 D0 C0 B0 A0 90 80 70 60 50 40 30 20 10 00
+    AA AA AA AA AA AA AA AA AA AA AA AA AA AA AA AA
+    EE EE EE EE EE EE EE EE EE EE EE EE EE EE EE EE
+
+    AA AA AA AA AA AA AA AA AA AA AA AA AA AA AA AA
+    EE EE EE EE EE EE EE EE EE EE EE EE EE EE EE EE
+    AA AA AA AA AA AA AA AA AA AA AA AA AA AA AA AA
+    EE EE EE EE EE EE EE EE EE EE EE EE EE EE EE EE
+
+    AA AA AA AA AA AA AA AA AA AA AA AA AA AA AA AA
+    EE EE EE EE EE EE EE EE EE EE EE EE EE EE EE EE
+    AA AA AA AA AA AA AA AA AA AA AA AA AA AA AA AA
+    EE EE EE EE EE EE EE EE EE EE EE EE EE EE EE EE
+
+    AA AA AA AA AA AA AA AA AA AA AA AA AA AA AA AA
+    EE EE EE EE EE EE EE EE EE EE EE EE EE EE EE EE
+    AA AA AA AA AA AA AA AA AA AA AA AA AA AA AA AA
+    EE EE EE EE EE EE EE EE EE EE EE EE EE EE EE EE
+____
+    "$cmtconv" -p MB-6885 -f TEST.B -l 8192 $ifile $ofile \
+        || die run mb-bin-to-audio
+    file $ofile | grep -s 'mono 44100 Hz' \
+        || die ofile mb-bin-to-audio
+}
+
+test_mb_tape_dump() {
+    local ifile=$ttdir/mb_1.wav
+    local ofile=$ttdir/mb_1_out.bin
+    echo ====================================
+    "$cmtconv" -p MB-6885 $ifile $ofile \
+        || die run mb-tape-dump
+    cat >${ofile}.expected <<____
+00000000: 00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f  ................
+00000010: f0 e0 d0 c0 b0 a0 90 80 70 60 50 40 30 20 10 00  ........p\`P@0 ..
+00000020: aa aa aa aa aa aa aa aa aa aa aa aa aa aa aa aa  ................
+00000030: ee ee ee ee ee ee ee ee ee ee ee ee ee ee ee ee  ................
+00000040: aa aa aa aa aa aa aa aa aa aa aa aa aa aa aa aa  ................
+00000050: ee ee ee ee ee ee ee ee ee ee ee ee ee ee ee ee  ................
+00000060: aa aa aa aa aa aa aa aa aa aa aa aa aa aa aa aa  ................
+00000070: ee ee ee ee ee ee ee ee ee ee ee ee ee ee ee ee  ................
+00000080: aa aa aa aa aa aa aa aa aa aa aa aa aa aa aa aa  ................
+00000090: ee ee ee ee ee ee ee ee ee ee ee ee ee ee ee ee  ................
+000000a0: aa aa aa aa aa aa aa aa aa aa aa aa aa aa aa aa  ................
+000000b0: ee ee ee ee ee ee ee ee ee ee ee ee ee ee ee ee  ................
+000000c0: aa aa aa aa aa aa aa aa aa aa aa aa aa aa aa aa  ................
+000000d0: ee ee ee ee ee ee ee ee ee ee ee ee ee ee ee ee  ................
+000000e0: aa aa aa aa aa aa aa aa aa aa aa aa aa aa aa aa  ................
+000000f0: ee ee ee ee ee ee ee ee ee ee ee ee ee ee ee ee  ................
+____
+    xxd -g1 $ofile | diff -u ${ofile}.expected - \
+        || die mb_tape_dump $ofile
+}
+
+####################################################################
+
+basedir=$(cd "$(dirname "$0")/../.." && pwd -P)
+cmtconv="$basedir/bin/cmtconv"
+
+#   If b8tool appears to be a submodule, use the parent virtualenv.
+[[ -d $basedir/../.build/virtualenv/ ]] \
+    && projdir=$(cd "$basedir/.." && pwd -P) \
+    || projdir="$basedir"
+. "$projdir"/b8tool/pactivate -q -B "$projdir"
+
+ttdir="$projdir/.build/cmtconv-test"
+mkdir -p $ttdir
+cd $ttdir       # In case anything's trying to read or write random files.
+
+test_ptowav
+test_cjrtowav
+test_wavtodump
+test_cmtconv_cas2bin
+test_cmtconv_bin2cas
+test_mb_bin_to_audio
+test_mb_tape_dump
+
+echo ====================================
+echo SUCCESS?

@@ -1,0 +1,179 @@
+from    cmtconv.audio  import *
+import  pytest
+import  random
+
+LL  = -32768
+L   = -32600
+Z   = 0
+H   = 32600
+HH  = 32767
+
+@pytest.mark.parametrize('input, expected', (
+    ((),                                ()),
+    ((L, L, H, L),                      (0, 0, 1, 0)),
+))
+def test_samples_to_levels(input, expected):
+    assert expected == samples_to_levels(input)
+
+L = False
+H = True
+@pytest.mark.parametrize('input, expected', (
+      ( (),             () ),
+      ( (L, H),         ( (1, H, 1 ), ) ),
+      ( (L, L, H),      ( (2, H, 2), ) ),
+      ( (L, H, H, L),   ( (1, H, 1), (3, L, 2) ) ),
+))
+def test_levels_to_timed_edges(input, expected):
+    assert expected == levels_to_timed_edges(input, 1)
+
+
+# space is 300-500 microseconds
+s = 400.0 / 1.0e6
+m = 200.0 / 1.0e6
+
+baud600_decoder = PulseDecoder(2400, 8, 1200, 4, True, True, (1,), (0,0,0))
+baud2400_decoder = PulseDecoder(2400, 2, 1200, 1, True, True, (1,), (0,0,0))
+
+
+def test_classify_edge():
+    assert baud600_decoder.classify_edge((1, H, m)) == PULSE_MARK
+    assert baud600_decoder.classify_edge((1, H, s)) == PULSE_SPACE
+    e = baud600_decoder.classify_edge((1, H, 1000.0 / 1.0e6))
+    assert (e != PULSE_MARK) and (e != PULSE_SPACE)
+
+def test_next_space():
+    d = baud600_decoder
+    edges = ((1, H, m), (2, L, s), (4, H, s))
+    assert d.next_space(edges, 0, 1) == 1
+    with pytest.raises(Exception) as ex:
+        d.next_space((), 0, 1)
+    edges = ((2, H, s), (3, L, m), (5, H, s), (7, L, s), (8, H, m))
+    assert d.next_space(edges, 0, 1) == 0
+    assert d.next_space(edges, 0, 2) == 2
+
+def test_next_mark():
+    with pytest.raises(Exception) as ex:
+        baud600_decoder.next_mark((), 0)
+    edges = ((1, H, m),)
+    assert baud600_decoder.next_mark(edges, 0) == (0, 0)
+
+
+def alternate( x ):
+    if x % 2 == 0:
+        return L
+    else:
+        return H
+
+def mark( n ):
+    return (m,) * n
+
+def space( n ):
+    return (s,) * n
+
+def edges( pulses ):
+    res = []
+    for (i, p) in enumerate(pulses):
+        res.append((0, alternate( i ), p))
+    return tuple(res)
+
+
+def test_read_bit():
+    with pytest.raises(Exception) as ex:
+        baud2400_decoder.read_bit( (), 0 )
+    assert baud2400_decoder.read_bit(( (2, H, s), ), 0) == (1, 0)
+    assert baud2400_decoder.read_bit(( (2, L, s), ), 0) == (1, 0)
+    assert baud2400_decoder.read_bit(( (2, H, m), (4, L, m) ), 0) == (2, 1)
+    with pytest.raises(Exception) as ex:
+        baud2400_decoder.read_bit(( (2, H, m), (4, L, s) ), 0)
+
+    with pytest.raises(Exception) as ex:
+        baud600_decoder.read_bit((), 0)
+
+    edges0 = ((2, L, s), (4, H, s), (6, L, s), (8, H, s))
+    edges = tuple((2*(x+1), alternate(x), s) for x in range(4))
+    assert edges == edges0
+    assert baud600_decoder.read_bit(edges, 0) == (4, 0)
+    edges = tuple((2*(x+1), alternate(x), m) for x in range(8))
+    assert baud600_decoder.read_bit(edges, 0) == (8, 1)
+
+
+def test_read_bits():
+    baud2400_decoder.read_bits((), 0, 0) == (0, ())
+
+    with pytest.raises(Exception) as ex:
+        baud2400_decoder.read_bits((), 0, 1)
+
+    assert baud2400_decoder.read_bits(
+        edges(mark(2)), 0, 1) == (2, (1,))
+
+    assert baud2400_decoder.read_bits(
+        edges(mark(4)), 0, 2) == (4, (1, 1))
+
+    assert baud2400_decoder.read_bits(
+        edges(space(1)), 0, 1) == (1, (0,))
+
+    assert baud2400_decoder.read_bits(
+        edges(space(2)), 0, 2) == (2, (0, 0))
+
+    assert baud2400_decoder.read_bits(
+        edges(mark(2) + space(1) ), 0, 2) == (3, (1, 0))
+
+
+def test_start_bits():
+    with pytest.raises(Exception) as ex:
+        baud2400_decoder.expect_start_bits((), 0)
+
+    assert baud2400_decoder.expect_start_bits(edges(mark(2)), 0) == 2
+
+    with pytest.raises(Exception) as ex:
+        baud2400_decoder.expect_start_bits(edges(space(1)), 0)
+
+
+def test_stop_bits():
+    with pytest.raises(Exception) as ex:
+        baud2400_decoder.expect_stop_bits((), 0)
+
+    assert baud2400_decoder.expect_stop_bits(edges(space(3)), 0) == 3
+
+    with pytest.raises(Exception) as ex:
+        baud2400_decoder.expect_stop_bits(edges(mark(6)), 0)
+
+
+def test_read_raw_byte():
+    assert baud2400_decoder.read_raw_byte(
+        edges(mark(16)), 0) == (16, 0)
+    assert baud2400_decoder.read_raw_byte(
+        edges(space(8)), 0) == (8, 255)
+
+
+def test_read_bytes():
+    assert baud2400_decoder.read_bytes(
+        edges(mark(2) + mark(16) + space(3)), 0, 1) == (21, b'\x00')
+
+    assert baud2400_decoder.read_bytes(
+        edges(mark(2) + space(8) + space(3)), 0, 1) == (13, b'\xff')
+
+start_bits = (0,)
+stop_bits = (1,1,1)
+baud600_encoder = Encoder(2400, 8, 1200, 4, True, True, start_bits, stop_bits)
+baud2400_encoder = Encoder(2400, 2, 1200, 1, True, True, start_bits, stop_bits)
+
+def test_roundtrip():
+    rate        = 11025
+    sample_dur  = 1.0 / rate
+    amp         = 127
+    mid         = 128
+
+    for en, de in ((baud600_encoder, baud600_decoder),
+        (baud2400_encoder, baud2400_decoder)):
+        l = 3000
+        #bs = random.randbytes(l)
+        bs = bytearray(random.randint(0,255) for _ in range(l))
+        edges = en.encode_bytes( bs )
+        chunks = (sound(edges),)
+        samples = edges_to_samples(chunks, sample_dur,
+            mid, mid - amp, mid + amp)
+        edges2 = samples_to_timed_edges(samples, sample_dur)
+        (i_next, bs2) = de.read_bytes(edges2, 0, l)
+        bs3 = bytearray(bs2)
+        assert bs == bs3

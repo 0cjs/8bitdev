@@ -17,8 +17,7 @@ def test_loaded_object_file(M):
 ####################################################################
 #   Add X and Y, storing the result in xybuf and returning it in A
 
-def test_addxy(M):
-    S = M.symtab
+def test_addxy(M, S):
     M.deposit(0x8000,
         I.JSR, S.addxy & 0xff, (S.addxy & 0xff00) >> 8,
         I.NOP, I.NOP, I.NOP, I.NOP)
@@ -41,8 +40,7 @@ signeq_neg = [0x80, 0x81, 0xFE, 0xFF]
     + [ (False, a, b) for a in signeq_pos for b in signeq_neg ] \
     + [ (False, a, b) for a in signeq_neg for b in signeq_pos ] \
 )
-def test_signeq(M, match, a, b):
-    S = M.symtab
+def test_signeq(M, S, match, a, b):
     M.deposit(S.signeq_a, a)
     M.deposit(S.signeq_b, b)
     print('[a,b] = {}'.format(list(map(hex, (M.bytes(S.signeq_a, 2))))))
@@ -52,8 +50,7 @@ def test_signeq(M, match, a, b):
 ####################################################################
 #   JMP [addr] vs PHA/RTS
 
-def test_jmpptr(M):
-    S = M.symtab
+def test_jmpptr(M, S):
     #   Step by step testing, to make _really_ sure the instructions
     #   are doing what I intend. Maybe overkill?
     M.setregs(R(pc=S.jmpabs, a=2))
@@ -71,8 +68,7 @@ def test_jmpptr(M):
     assert R(pc=0x9ABC) == M.regs
     #print(hex(M.mpu.pc), hex(M.mpu.a), hex(M.mpu.x))
 
-def test_jmpabsrts(M):
-    S = M.symtab
+def test_jmpabsrts(M, S):
     M.setregs(R(pc=S.jmpabsrts, a=1))
     M.stepto(I.RTS)
     assert 0x5678-1 == M.spword()
@@ -82,8 +78,7 @@ def test_jmpabsrts(M):
 ####################################################################
 #   bsread: A source stream of bytes
 
-def test_bytesource(M):
-    S = M.symtab
+def test_bytesource(M, S):
     addr  = 0x1ffe          # Set so we cross a page boundary
     bytes = b'A\0B\xffC'
     M.deposit(addr, bytes)
@@ -104,9 +99,7 @@ def test_rab_decode(M):
         M.call(decode, R(a=ord(inp)))
         assert R(a=exp) == M.regs
 
-def test_read_ascii_byte(M):
-    S = M.symtab
-
+def test_read_ascii_byte(M, S):
     input = 0x8000
     M.deposit(input, b'FF0012ED')
     M.depword(S.bytesource, input)
@@ -118,9 +111,7 @@ def test_read_ascii_byte(M):
 ####################################################################
 #   Stack addressing
 
-def test_stk(M):
-    S = M.symtab
-
+def test_stk(M, S):
     M.deposit(S.stkval_i1, 0xDE)    # sentinel to ensure overwrite
     M.deposit(S.stkval_i3, 0xDE)
     M.call(S.stk_main, R(a=0xFF, sp=0xFF), maxops=100, trace=0)

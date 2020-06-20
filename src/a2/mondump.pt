@@ -3,8 +3,6 @@ import  pytest
 
 object_file = 'src/a2/mondump.p'
 
-def test_dump(M):
-    S = M.symtab
-
+def test_dump(M, S):
     M.call(S.hexdump, R(a=0))
     assert R(a=0) == M.regs

@@ -32,8 +32,7 @@ object_file = 'src/objects.p'
     (0xFF01,    (0xFF, 0xFF, 0xFF,     -1)),
     (0x3401,    (0xFF, 0xFF, 0x34,     -1)),
 ))
-def test_typedisp(M, obj, expected):
-    S = M.symtab
+def test_typedisp(M, S, obj, expected):
     M.deposit(S.obfmtid,    0xFF)   # set outputs to sentinel values
     M.deposit(S.oblen,      0xFF)
     M.deposit(S.unused,     0xFF)

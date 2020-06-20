@@ -71,9 +71,8 @@ OUTBUF = 0x71FE
     (b":"),
     (b"@"),
 ])
-def test_bi_readhex_error(M, input):
+def test_bi_readhex_error(M, S, input):
     print('readhex_error:', input)
-    S = M.symtab
 
     M.deposit(INBUF, input)
     M.depword(S.buf0ptr, INBUF)
@@ -97,9 +96,8 @@ def test_bi_readhex_error(M, input):
     (b'087',             b'\x87'),
     (b'00000087',        b'\x87'),
 ])
-def test_bi_readhex(M, input, output):
+def test_bi_readhex(M, S, input, output):
     print('bi_readhex:', input, type(input), output)
-    S = M.symtab
 
     M.deposit(INBUF, input)
     M.depword(S.buf0ptr, INBUF)
@@ -145,9 +143,7 @@ def bi_x10_testid(val):
     (-1, b'\x0B' + bytes([0xFF]*254)),  # max length, approaching max value
     ( 0, b'\x18' + bytes([0xFF]*254)),  # max length, (unsigned)
 ], ids=bi_x10_testid)
-def test_bi_x10(M, signed, value):
-    S = M.symtab
-
+def test_bi_x10(M, S, signed, value):
     decval   = int.from_bytes(value, byteorder='big', signed=signed)
     decval10 = decval * 10
     print('bi_x10: {} = {}'.format(list(map(hex, value)), decval))
@@ -210,9 +206,8 @@ def test_bi_x10(M, signed, value):
     (-1, b'78912345678901', [      0xB8, 0x3A, 0xC9, 0xAA, 0xDB, 0xCB]),
     (-1, b'78912345678901', [0xFF, 0xB8, 0x3A, 0xC9, 0xAA, 0xDB, 0xCB]),
 ])
-def test_bi_read_decdigits(M, sign, input, buf):
+def test_bi_read_decdigits(M, S, sign, input, buf):
     print('bi_read_decdigits:', input, buf)
-    S = M.symtab
 
     if sign != 0: sign = 0xFF
     M.deposit(S.sign, sign)
@@ -251,9 +246,7 @@ def test_bi_read_decdigits(M, sign, input, buf):
     0x00,   # 3,531,433 cyles, about 3.5 seconds on 1 MHz 6502
     0xFF,   # 3,791,023 cyles, almost 4 seconds on 1 MHz 6502
 ])
-def test_bi_read_decdigits_max(M, sign):
-    S = M.symtab
-
+def test_bi_read_decdigits_max(M, S, sign):
     M.deposit(S.sign, sign)
 
     input = b'9'*255
@@ -316,9 +309,8 @@ def test_bi_read_decdigits_max(M, sign):
     (b'999999999999',   [0x00, 0xE8, 0xD4, 0xA5, 0x0F, 0xFF]),
     (b'-999999999999',  [0XFF, 0X17, 0X2B, 0X5A, 0XF0, 0X01]),
 ])
-def test_bi_read_dec(M, input, output):
+def test_bi_read_dec(M, S, input, output):
     print('bi_read_dec:', input, output)
-    S = M.symtab
 
     #   Allocate temp/scratch buffers. We do this here until we have an alloc
     #   system that will let bi_read_dec alloc its own temp/scratch buffers.
@@ -365,9 +357,8 @@ def test_bi_read_dec(M, input, output):
         == M.bytes(TOUT_ADDR-1, len(output)+3)
 
 @pytest.mark.parametrize('bufstart', (0x70FD, 0x70FE, 0x70FF, 0x7100))
-def test_bi_read_dec_bufstart(M, bufstart):
+def test_bi_read_dec_bufstart(M, S, bufstart):
     ' Edge case where the sign char is on the last byte of a page, etc. '
-    S = M.symtab
     scratch, temp, inbuf, outbuf \
         = bufstart, bufstart+0x100, bufstart+0x200, bufstart+0x300
     input = b'+003'

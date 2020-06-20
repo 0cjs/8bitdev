@@ -3,8 +3,7 @@ import  pytest
 
 object_file = 'src/stdtest.p'
 
-def test_ds_db_dw(M):
-    S = M.symtab
+def test_ds_db_dw(M, S):
     start = S.defalloctest
     assert S.dstest0            == start
     assert S.dstest1            == start+3
@@ -14,9 +13,7 @@ def test_ds_db_dw(M):
     assert 0xABCD               == M.word(S.dwtest)
     assert (0xCD, 0xAB)         == (M.byte(S.dwtest), M.byte(S.dwtest+1))
 
-def test_zds(M):
-    S = M.symtab
-
+def test_zds(M, S):
     #   The initial value of __ZDS_loc at the zdstest0 label.
     #   This value $10 assumes that zdstest1 is the first ZDS in this assembly.
     zloc = 0x10

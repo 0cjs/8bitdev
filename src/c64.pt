@@ -3,9 +3,7 @@ import  pytest
 
 object_file = 'src/c64.p'
 
-def test_invscr(M):
-    S = M.symtab
-
+def test_invscr(M, S):
     M.deposit(0x3FF, [0]*1026)
     M.call(S.invscr)
 

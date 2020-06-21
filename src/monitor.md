@@ -129,7 +129,6 @@ Commands
 
 Command summary:
 
-        Fill memory
     !   Assemble
     #   Set variable
     :   Deposit
@@ -141,9 +140,11 @@ Command summary:
     L   List disassembly
     M   Move memory
     N   Compare memory ("not-equal")
+    O   Fill memory ("overwrite")
     R   Read from device into memory
     S   Examine screen codes
     T   Examine text
+    V   Print CRC-16 of current block, and set $V ("verify")
     W   Write memory to device
     X   Examine hex
     Z   User command
@@ -185,6 +186,8 @@ _cur_ with, e.g., `80 #/100 X` or `80#/100X`.
 - `W` (_bytelist_): Write memory from _cur_ to _end_-1 to currently
   selected device. Argument is name to write (may be blank), terminated by
   CR; typically given in `"name"` form.
+- `V`: Calculate CRC-16 of memory from _cur_ to _end_-1, printing it and
+  setting `$v` to that value.
 
 ### Memory Writes
 

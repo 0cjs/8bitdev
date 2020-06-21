@@ -127,6 +127,27 @@ Stack:
 Commands
 --------
 
+Command summary:
+
+        Fill memory
+    !   Assemble
+    #   Set variable
+    :   Deposit
+    <   Pop from stack
+    >   Push _cur_ on stack
+    ?   Evaluate expression
+    G   JSR ("gosub")
+    J   JMP
+    L   List disassembly
+    M   Move memory
+    N   Compare memory ("not-equal")
+    R   Read from device into memory
+    S   Examine screen codes
+    T   Examine text
+    W   Write memory to device
+    X   Examine hex
+    Z   User command
+
 CR will always terminate parsing.
 
 Space is a do-nothing comand. It can be useful to terminate parsing (e.g.,
@@ -167,7 +188,7 @@ _cur_ with, e.g., `80 #/100 X` or `80#/100X`.
 
 ### Memory Writes
 
-- `:` (_bytelist_): Deposit hex, starting at _next_ and leaving _next_ at
+- `:` (_bytelist_): Deposit data starting at _next_ and leaving _next_ at
   the last address deposited + 1. The following characters are the data to
   deposit; see _byte list_ above for details. A byte value in the list that
   is just the special variable `.`, meaning the contents of the location

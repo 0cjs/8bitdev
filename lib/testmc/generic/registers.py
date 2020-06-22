@@ -205,6 +205,41 @@ class GenericRegisters:
             raise ValueError('Too many status bit values: ${:X}'.format(initsr))
 
     ####################################################################
+    #   Copies and modifications
+
+    def dict(self):
+        ''' Produce a `dict` of the non-None registers and flags of
+            this object. This is suitable for use as the argument
+            list to the constructor.
+
+            This always produces flag entires, never a status register.
+            This isn't a limitation since it's trivial to generate
+            the status register value if necessary (and if the class
+            has one) by constructing an object with these parameters.
+        '''
+        d = {}
+        for reg in self.registers:
+            v = getattr(self, reg.name)
+            if v is not None:
+                d[reg.name] = v
+        for srbit in self.srbits:
+            if not srbit.name:  continue
+            v = getattr(self, srbit.name)
+            if v is not None:
+                d[srbit.name] = v
+        return d
+
+    def clone(self, **changes):
+        ''' Produce a clone of this Registers object. `changes` is an
+            optional list of registers and/or flags with new values to
+            replace in the clone current values from this object.
+
+            This does not allow a status register argument in `changes`;
+            you must use individual flags.
+        '''
+        return self.__class__(**dict(self.dict(), **changes))
+
+    ####################################################################
     #   Immutability support
 
     def _check_immutable(self, name):

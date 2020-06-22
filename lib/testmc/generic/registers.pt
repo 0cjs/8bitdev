@@ -145,6 +145,29 @@ def test_renamed_sr(R):
     assert 0b0101 == r.psr
 
 ####################################################################
+#   Copies and modifications
+
+def test_dict(R):
+    assert {}                           == R().dict()
+    assert { 'a': 3 }                   == R(a=3).dict()
+    assert { 'C': True }                == R(C=1).dict()
+    assert { 'pc': 0xA987, 'B': False } == R(pc=0xA987, B=0).dict()
+
+def test_clone(R):
+    def all(**changes):
+        defaults = { 'pc': 0x1000, 'a': 0x20, 'B': 0, 'C': 1, }
+        return R(**dict(defaults, **changes))
+
+    assert all()                == all().clone()
+    assert all(pc=0x8000)       == all().clone(pc=0x8000)
+    assert all(B=1)             == all().clone(B=1)
+    assert all(a=199, C=0)      == all().clone(C=0, a=199)
+
+    r = all().clone(C=None)
+    assert None is r.C
+    assert all() == r
+
+####################################################################
 #   Immutability
 
 def test_immutability(R):

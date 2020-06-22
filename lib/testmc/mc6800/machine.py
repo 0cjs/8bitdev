@@ -1,6 +1,6 @@
 from    testmc.machine  import GenericMachine
 from    testmc.registers  import GenericRegisters, Reg, Flag, Bit
-from    mc6800sim.opcodes  import OPCODES, Instructions
+from    testmc.mc6800.opcodes  import OPCODES, Instructions
 
 from    itertools  import repeat
 
@@ -10,7 +10,7 @@ class NotImplementedError(Exception):
 def raiseNI(msg):
     raise NotImplementedError(msg)
 
-class MC6800(GenericMachine):
+class Machine(GenericMachine):
 
     def __init__(self):
         ''' Initialize the machine, which zeros memory, regs and flags.

@@ -3,7 +3,7 @@
     This does not test the opcodes themselves.
 '''
 
-from    mc6800sim.opimpl  import isnegative, iszero
+from    testmc.mc6800.opimpl  import isnegative, iszero
 
 def test_isnegative():
     assert not isnegative(0)

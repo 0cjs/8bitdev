@@ -4,5 +4,7 @@
     simulation.
 '''
 
-from    mc6800sim.mc6800  import MC6800
-from    mc6800sim.opcodes  import Instructions
+from    testmc.mc6800.machine  import Machine
+from    testmc.mc6800.opcodes  import Instructions
+
+__all__ = ['Machine', 'Instructions']

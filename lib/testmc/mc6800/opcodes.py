@@ -1,7 +1,7 @@
 ''' Opcode and instruction mappings.
 '''
 
-from    mc6800sim.opimpl  import *
+from    testmc.mc6800.opimpl  import *
 
 ####################################################################
 #   Map opcodes to mnemonics and implementations.

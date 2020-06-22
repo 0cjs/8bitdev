@@ -1,9 +1,9 @@
-from    mc6800sim  import MC6800, Instructions as I
+from    testmc.mc6800  import Machine, Instructions as I
 import  pytest
 
 @pytest.fixture
 def m():
-    return MC6800()
+    return Machine()
 
 @pytest.fixture
 def R(m):

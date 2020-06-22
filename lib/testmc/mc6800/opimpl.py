@@ -4,7 +4,7 @@
     the program counter pointing to its opcode. The function is responsible
     for updating all machine state before returning.
 
-    See `mc6800sim.opcodes.Instructions` for details of the naming scheme.
+    See `testmc.mc6800.opcodes.Instructions` for details of the naming scheme.
 '''
 
 ####################################################################

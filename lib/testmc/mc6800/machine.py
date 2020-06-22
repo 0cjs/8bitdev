@@ -43,5 +43,6 @@ class Machine(GenericMachine):
         '''
         for _ in repeat(None, count):       # no tail call optimization; sigh
             opcode = self.mem[self.pc]
-            _, f = OPCODES.get(opcode, lambda m: raiseNI(opcode))
+            _, f = OPCODES.get(opcode,
+                ('NotImplemented', lambda m: raiseNI(opcode)))
             f(self)

@@ -1,8 +1,6 @@
 from    testmc.generic  import *
 from    testmc.mc6800.opcodes  import OPCODES, Instructions
 
-from    itertools  import repeat
-
 
 class NotImplementedError(Exception):
     ''' Get rid of this once we're more complete. ''' # XXX
@@ -45,11 +43,8 @@ class Machine(GenericMachine):
     ####################################################################
     #   Instruction Execution
 
-    def step(self, count=1):
-        ''' Execute `count` instructions (default 1).
-        '''
-        for _ in repeat(None, count):       # no tail call optimization; sigh
-            opcode = self.mem[self.pc]
-            _, f = OPCODES.get(opcode,
-                ('NotImplemented', lambda m: raiseNI(opcode)))
-            f(self)
+    def _step(self):
+        opcode = self.mem[self.pc]
+        _, f = OPCODES.get(opcode,
+            ('NotImplemented', lambda m: raiseNI(opcode)))
+        f(self)

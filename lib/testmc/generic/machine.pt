@@ -16,8 +16,14 @@ def M():
             #   This must still have either attribute B or a status
             #   resgister defined.
 
+            #   Test attributes
+            self._steps_taken = 0
+
         def get_memory_seq(self):   return self.mem
         def is_little_endian(self): return False
+
+        def _step(self):
+            self._steps_taken += 1
 
     return Machine
 
@@ -149,3 +155,11 @@ def test__load_memimage(M, R):
 ''')
 def test_load():
     assert 0 # XXX write me
+
+####################################################################
+#   Execution
+
+def test_step(M):
+    m = M();    assert 0 == m._steps_taken
+    m.step();   assert 1 == m._steps_taken
+    m.step(3);  assert 4 == m._steps_taken

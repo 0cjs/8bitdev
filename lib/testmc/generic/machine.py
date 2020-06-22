@@ -1,4 +1,5 @@
 from    abc  import abstractmethod, abstractproperty
+from    itertools  import repeat
 from    testmc.generic.memory  import MemoryAccess
 from    testmc.tool  import asl, asxxxx
 
@@ -101,3 +102,25 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
                 print('WARNING: could not read symbol table file from path ' \
                     + path, file=stderr)
                 print('FileNotFoundError: ' + str(err), file=stderr)
+
+    ####################################################################
+    #   Execution
+
+    @abstractmethod
+    def _step(self):
+        ' Execute current opcode (and its arguments), updating machine state. '
+
+    def step(self, count=1, *, trace=False):
+        ''' Execute `count` instructions (default 1).
+
+            If `trace` is `True`, the current machine state and
+            instruction about to be executed will be printed
+            before executing the step.
+
+            XXX This should check for stack under/overflow.
+        '''
+        for _ in repeat(None, count):
+            if trace:
+                print('{} opcode={:02X}' \
+                    .format(self.regs, self.byte(self.regs.pc)))
+            self._step()

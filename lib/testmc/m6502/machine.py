@@ -3,7 +3,6 @@
 '''
 
 from    collections.abc   import Container, Sequence
-from    itertools  import repeat
 from    numbers  import Integral
 from    py65.devices.mpu6502  import MPU
 from    sys import stderr
@@ -59,19 +58,7 @@ class Machine(GenericMachine):
     def spword(self, depth=0):
         return self.word(self._stackaddr(depth, 2))
 
-    def step(self, count=1, *, trace=False):
-        ''' Execute `count` instructions (default 1).
-
-            If `trace` is `True`, the current machine state and
-            instruction about to be executed will be printed
-            before executing the step.
-
-            XXX This should check for stack under/overflow.
-        '''
-        for _ in repeat(None, count):
-            if trace:
-                print('{} opcode={:02X}' \
-                    .format(self.regs, self.byte(self.regs.pc)))
+    def _step(self):
             self.mpu.step()
 
     #   Default maximum number of instructions to execute when using

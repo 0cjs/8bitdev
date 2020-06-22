@@ -1,0 +1,34 @@
+from    testmc.mc6800  import  Machine
+import  pytest
+
+object_file = 'src/simple-a68.p'
+
+def test_machine_type(M, R):
+    ' Confirm the framework loaded the correct machine '
+    print('Expected Machine =', Machine)
+    assert Machine is type(M)
+
+    #   Ensure we can set and read 6800 registers.
+    M.setregs(R(b=13, x=0xABCD, H=True))
+    assert R(a=0, b=13, x=0xABCD, H=1, I=0, N=0, Z=0, V=0, C=0)
+
+def test_loaded_object_file(M, S, R):
+    ' Confirm that the correct object file was loaded. '
+    ident_str = b'simple-a68.a68'
+    assert ident_str == M.bytes(S.ident, len(ident_str))
+    assert 0x180 == S.ident
+
+    #   Asert loader set `pc` to entry point specified by END directive.
+    assert R(pc=S.set_a_ff) == M.regs
+
+def test_step(M, S, R):
+    assert R(a=0) == M.regs
+    M.setregs(R(pc=S.set_a_ff))
+    M.step(1)
+    assert R(a=0xFF) == M.regs
+
+@pytest.mark.xfail(strict=True, reason='RTS and call() not yet implemented')
+def test_call(M, S, R):
+    assert R(a=0) == M.regs
+    M.call(S.set_a_ff)
+    assert R(a=0xFF) == M.regs

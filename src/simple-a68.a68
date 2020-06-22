@@ -1,0 +1,12 @@
+;   Simple 6800 routines to test our test framework and Macroassembler AS
+
+            cpu 6800
+            org $180
+
+ident       byt "simple-a68.a68"    ; we use this to check that we've loaded
+                                    ; the correct binary data and symbol table.
+
+set_a_ff    ldaa #$FF
+            rts
+
+            end set_a_ff

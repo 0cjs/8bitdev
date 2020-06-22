@@ -8,8 +8,7 @@ from    numbers  import Integral
 from    py65.devices.mpu6502  import MPU
 from    sys import stderr
 
-from    testmc.machine  import GenericMachine
-from    testmc.registers  import GenericRegisters, Reg, Flag, Bit
+from    testmc.generic  import *
 from    testmc.m6502.instructions  import Instructions
 
 from    testmc import symtab

@@ -1,5 +1,4 @@
-from    testmc.machine  import GenericMachine
-from    testmc.registers  import GenericRegisters, Reg, Flag, Bit
+from    testmc.generic   import *
 import  pytest
 
 @pytest.fixture

@@ -1,4 +1,4 @@
-from    testmc.registers  import *
+from    testmc.generic.registers  import *
 from    collections  import namedtuple as ntup
 import  pytest
 

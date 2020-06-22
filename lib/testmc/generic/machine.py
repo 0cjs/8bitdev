@@ -1,4 +1,4 @@
-from    testmc.memory  import MemoryAccess
+from    testmc.generic.memory  import MemoryAccess
 from    abc  import abstractmethod, abstractproperty
 
 class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC

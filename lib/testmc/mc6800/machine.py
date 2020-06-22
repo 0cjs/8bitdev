@@ -1,5 +1,4 @@
-from    testmc.machine  import GenericMachine
-from    testmc.registers  import GenericRegisters, Reg, Flag, Bit
+from    testmc.generic  import *
 from    testmc.mc6800.opcodes  import OPCODES, Instructions
 
 from    itertools  import repeat

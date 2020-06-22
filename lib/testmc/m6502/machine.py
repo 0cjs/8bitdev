@@ -61,50 +61,51 @@ class Machine(GenericMachine):
     def _step(self):
             self.mpu.step()
 
-    #   Default maximum number of instructions to execute when using
-    #   stepto(), call() and related functions. Even on a relatively
-    #   slow modern machine, 100,000 instructions should terminate
-    #   within a few seconds.
-    MAXOPS = 100000
+    #   Default maximum number of opcodes to execute when using stepto(),
+    #   call() and related functions. Even on a relatively slow modern
+    #   machine, 100,000 opcodes should terminate within a few seconds.
+    MAXSTEPS = 100000
 
-    def stepto(self, instrs, *, maxops=MAXOPS, trace=False):
-        ''' Step an instruction and then continue stepping until an
-            instruction in `instrs` is reached. Raise a `Timeout`
-            after `maxops`.
+    def stepto(self, stopat, *, maxsteps=MAXSTEPS, trace=False):
+        ''' Step an opcode and then, as long as the next opcode
+            is not `stopat` (if a single value) or in `stopat` (if a
+            container), continue stepping.
+
+            If a `stopat` opcode hasn't been reached after `maxsteps`
+            opcodes have been executed, raise a `Timeout` exception.
         '''
-        if not isinstance(instrs, Container):
-            instrs = (instrs,)
+        if not isinstance(stopat, Container):
+            stopat = (stopat,)
         self.step(trace=trace)
-        count = maxops - 1
-        while self.byte(self.mpu.pc) not in instrs:
+        count = maxsteps - 1
+        while self.byte(self.mpu.pc) not in stopat:
             self.step(trace=trace)
             count -= 1
             if count <= 0:
                 raise self.Timeout(
-                    'Timeout after {} instructions: {} opcode={}' \
-                    .format(maxops, self.regs, self.byte(self.regs.pc)))
+                    'Timeout after {} opcodes: {} opcode={}' \
+                    .format(maxsteps, self.regs, self.byte(self.regs.pc)))
 
     def call(self, addr, regs=None, *,
-            maxops=MAXOPS, aborts=(0x00,), trace=False):
+            maxsteps=MAXSTEPS, aborts=(0x00,), trace=False):
         ''' Simulate a JSR to `addr`, after setting any `registers`
-            specified, returning when its corresponding RTS is
-            reached.
+            specified, returning when its corresponding RTS is reached.
 
-            A `Timeout` will be raised if `maxops` instructions are
-            executed. An `Abort` will be raised if any instructions in
-            the `aborts` collection are about to be executed. (By
-            default this list contains ``BRK``.) `step()` tracing will
-            be enabled if `trace` is `True`.
+            A `Timeout` will be raised if `maxsteps` opcodes are executed.
+            An `Abort` will be raised if any opcodes in the `aborts`
+            collection are about to be executed. (By default this list
+            contains ``BRK``.) `step()` tracing will be enabled if `trace`
+            is `True`.
 
-            The PC will be left at the final (unexecuted) RTS
-            instruction. Thus, unlike `step()`, this may execute no
-            instructions if the PC is initially pointing to an RTS.
+            The PC will be left at the final (unexecuted) RTS opcode. Thus,
+            unlike `step()`, this may execute no opcodes if the PC is
+            initially pointing to an RTS.
 
-            JSR and RTS instructions will be tracked to allow the
-            routine to call subroutines, but tricks with the stack
-            (such as pushing an address and executing RTS, with no
-            corresponding JSR) will confuse this routine and may
-            cause it to terminate early or not at all.
+            JSR and RTS opcodes will be tracked to allow the routine to
+            call subroutines, but tricks with the stack (such as pushing an
+            address and executing RTS, with no corresponding JSR) will
+            confuse this routine and may cause it to terminate early or not
+            at all.
         '''
         if regs is None:
             regs = self.Registers()
@@ -114,7 +115,7 @@ class Machine(GenericMachine):
             self.setregs(self.Registers(pc=addr))   # Overrides regs
 
         I = Instructions
-        stopon = (I.JSR, I.RTS) + tuple(aborts)
+        stopat = (I.JSR, I.RTS) + tuple(aborts)
         depth = 0
         while True:
             opcode = self.byte(self.mpu.pc)
@@ -128,7 +129,7 @@ class Machine(GenericMachine):
             elif opcode == I.JSR:
                 #   Enter the new level with the next execution
                 depth += 1
-            elif opcode in stopon:   # Abort
+            elif opcode in stopat:   # Abort
                 raise self.Abort('Abort on opcode={}: {}' \
                     .format(self.byte(self.regs.pc), self.regs))
-            self.stepto(stopon, maxops=maxops, trace=trace)
+            self.stepto(stopat, maxsteps=maxsteps, trace=trace)

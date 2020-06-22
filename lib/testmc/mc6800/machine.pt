@@ -47,8 +47,9 @@ def test_step_notimplemented(m, R):
     with pytest.raises(NotImplementedError):  m.step(1)
 
 def test_step_LDAA(m):
-    ''' This is testing both `step()` and the implementation of the `LDAA`
-        opcode. Possibly this should be split up somehow.
+    ''' This test also covers a lot of the instruction definition itself
+        tested by `test_LDAA` in ``opcodes.pt``. This should be simplified
+        to do less of that.
     '''
 
     start = 0x200

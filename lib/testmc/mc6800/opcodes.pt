@@ -1,0 +1,39 @@
+''' Test individual opcode execution.
+
+    Each test covers both the opcode/instruction mapping in the `opcodes`
+    module and the implementation itself in the `opimpl` module.
+'''
+
+from    testmc.mc6800.machine  import Machine
+from    testmc.mc6800.opcodes  import Instructions as I
+import  pytest
+
+R = Machine.Registers
+
+def runop(opdata, *, changedregs=R(), changedmem=None):
+    startaddr = 0x0E
+    m = Machine(memsize=0x20)
+    m.deposit(startaddr, opdata)
+
+    m.pc = startaddr
+    prevregs = m.regs
+    prevmem = bytes(m.mem)
+
+    m.step(1)
+
+    if changedregs.pc is None:
+        changedregs = changedregs.clone(pc=startaddr + len(opdata))
+    print('changedregs:', changedregs)
+    assert prevregs.clone(**changedregs.dict()) == m.regs
+
+    #   XXX need to update with expected memory changes, here or above
+    assert prevmem == bytes(m.mem)
+
+@pytest.mark.parametrize(
+    'arg,  N, Z', (
+    (0x01, 0, 0),
+    (0x00, 0, 1),
+    (0xEA, 1, 0),
+))
+def test_LDAA(arg, N, Z):
+    runop([I.LDAA, arg], changedregs=R(a=arg, N=N, Z=Z))

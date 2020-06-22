@@ -11,7 +11,7 @@ def raiseNI(msg):
 
 class Machine(GenericMachine):
 
-    def __init__(self):
+    def __init__(self, *, memsize=65536):
         ''' Initialize the machine.
 
             To make life easier for unit test clients, we initialize the
@@ -24,7 +24,7 @@ class Machine(GenericMachine):
             registers and flags as well would all be left in a random state
             on power-up, but that doesn't seem worth emulating here.
         '''
-        self.mem = bytearray(65536)
+        self.mem = bytearray(memsize)
         self.pc = self.a = self.b = self.x = 0
         self.sp = 0xBFFF
         self.H = self.I = self.N = self.Z = self.V = self.C = False

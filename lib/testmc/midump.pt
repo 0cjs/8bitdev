@@ -1,5 +1,5 @@
 from testmc.midump import *
-from testmc.asxxxx import MemImage
+from testmc.memimage  import MemImage
 
 MR = MemImage.MemRecord
 

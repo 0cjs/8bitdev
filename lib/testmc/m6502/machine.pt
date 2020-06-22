@@ -1,5 +1,5 @@
-from    testmc.m6502 import  Machine, Instructions as I
-from    testmc.asxxxx import  MemImage
+from    testmc.m6502  import Machine, Instructions as I
+from    testmc.memimage  import  MemImage
 import  pytest
 
 @pytest.fixture

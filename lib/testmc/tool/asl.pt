@@ -1,4 +1,4 @@
-from    testmc.asl   import *
+from    testmc.tool.asl   import *
 
 from    io   import BytesIO, StringIO
 from    pathlib import Path

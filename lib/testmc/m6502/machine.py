@@ -13,7 +13,7 @@ from    testmc.registers  import GenericRegisters, Reg, Flag, Bit
 from    testmc.m6502.instructions  import Instructions
 
 from    testmc import symtab
-from    testmc import asl, asxxxx
+from    testmc.tool import asl, asxxxx
 
 class Machine(GenericMachine):
 

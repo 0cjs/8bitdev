@@ -35,7 +35,7 @@ def usage():
 
 if __name__ == '__main__':
     addsitedir(join(BASEDIR, 'lib'))
-    from testmc.asl import parse_obj_fromfile
+    from testmc.tool.asl import parse_obj_fromfile
     if len(argv) < 3: usage()
     if   argv[1] == '-c': eol = '\r'
     elif argv[1] == '-n': eol = '\n'

@@ -1,5 +1,6 @@
-from    testmc.generic.memory  import MemoryAccess
 from    abc  import abstractmethod, abstractproperty
+from    testmc.generic.memory  import MemoryAccess
+from    testmc.tool  import asl, asxxxx
 
 class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
     ''' Superclass for "Machines" that simulate a microprocessor system
@@ -64,3 +65,39 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
             flags to the value of any non-`None` values in the `Registers`.
         '''
         r.set_attrs_on(self._regsobj(), setsr=bool(r._srname()))
+
+    ####################################################################
+    #   Object code loading
+
+    def load_memimage(self, memimage):
+        for addr, data in memimage:
+            self.deposit(addr, data)
+        self.setregs(self.Registers(pc=memimage.entrypoint))
+
+    def load(self, path):
+        ''' Load the given ``.bin`` file and, if available, the
+            symbols from a ``.rst`` (ASxxxx linker listing file)
+            in the same directory. The Machine's ``pc`` register
+            will be set to the entry point of the loaded binary.
+        '''
+        if path.lower().endswith('.p'):
+            #   Assume it's Macro Assembler AS output.
+            self.load_memimage(asl.parse_obj_fromfile(path))
+            mapfile_path = path[0:-2] + '.map'
+            try:
+                self.symtab = asl.parse_symtab_fromfile(mapfile_path)
+            except FileNotFoundError as err:
+                print('WARNING: could not read symbol table file from path ' \
+                    + mapfile_path, file=stderr)
+                print('FileNotFoundError: ' + str(err), file=stderr)
+        else:
+            #   Assume it's the basename of ASxxxx toolchain output.
+            #   (This should probably be changed to require something
+            #   indicating this explicitly.)
+            self.load_memimage(asxxxx.parse_cocobin_fromfile(path + '.bin'))
+            try:
+                self.symtab = asxxxx.AxSymTab.readsymtabpath(path)
+            except FileNotFoundError as err:
+                print('WARNING: could not read symbol table file from path ' \
+                    + path, file=stderr)
+                print('FileNotFoundError: ' + str(err), file=stderr)

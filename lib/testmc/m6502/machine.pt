@@ -73,24 +73,6 @@ def test_Machine_examine_stack(M, R):
     with pytest.raises(IndexError): M.spbyte(0xFFFF)
     with pytest.raises(IndexError): M.spword(0xFFFF)
 
-def test_Machine_load_memimage(M, R):
-    mi = MemImage()
-    rec1data = (0x8a, 0x8c, 0x09, 0x04, 0x18, 0x6d, 0x09, 0x04, 0x60)
-    mi.append(mi.MemRecord(0x400, rec1data))
-    mi.append(mi.MemRecord(0x123, (0xee,)))
-    mi.entrypoint = 0x0403
-
-    expected_mem \
-        = [0] * 0x123 \
-        + [0xEE] \
-        + [0] * (0x400 - 0x124) \
-        + list(rec1data) \
-        + [0] * (0x10000 - 0x400 - 9)
-
-    M.load_memimage(mi)
-    assert R(pc=0x0403)    == M.regs
-    assert expected_mem    == M.mpu.memory
-
 ####################################################################
 #   Machine execution
 

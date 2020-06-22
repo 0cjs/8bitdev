@@ -1,4 +1,5 @@
 from    testmc.generic   import *
+from    testmc.memimage  import MemImage
 import  pytest
 
 @pytest.fixture
@@ -113,3 +114,38 @@ def test_regs_setregs_regsattr(M, R):
     assert (201, False) == (sm.pc, sm.B)
     assert not hasattr(m, 'pc')
     assert not hasattr(m, 'B')
+
+####################################################################
+#   Object code loading
+
+def test__load_memimage(M, R):
+    memlen = 0x800
+
+    m = M()
+    m.B = False
+    m.mem = [0] * memlen
+
+    mi = MemImage()
+    rec1data = (0x8a, 0x8c, 0x09, 0x04, 0x18, 0x6d, 0x09, 0x04, 0x60)
+    mi.append(mi.MemRecord(0x400, rec1data))
+    mi.append(mi.MemRecord(0x123, (0xee,)))
+    mi.entrypoint = 0x0403
+
+    expected_mem \
+        = [0] * 0x123 \
+        + [0xEE] \
+        + [0] * (0x400 - 0x124) \
+        + list(rec1data) \
+        + [0] * (memlen - 0x400 - 9)
+
+    m.load_memimage(mi)
+    assert R(pc=0x0403)    == m.regs
+    assert expected_mem    == m.mem
+
+@pytest.mark.xfail(strict=True, reason='''
+    Much of load() is calling code that's already unit-tested, but there's
+    still some complex logic in load() itself that's currently tested only
+    by clients of this library.
+''')
+def test_load():
+    assert 0 # XXX write me

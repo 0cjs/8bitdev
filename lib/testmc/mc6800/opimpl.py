@@ -16,6 +16,12 @@ def isnegative(b):
 def iszero(b):
     return b == 0
 
+def incword(word, addend):
+    ''' Return 16-bit `word` incremented by `addend` (which may be negative).
+        This returns a 16-bit unsigned result, wrapping at $FFFF/$0000.
+    '''
+    return (word + addend) & 0xFFFF
+
 ####################################################################
 #   Opcode implementations
 
@@ -24,4 +30,4 @@ def ldaa(m):
     m.N = isnegative(m.a)
     m.Z = iszero(m.a)
     m.V = False
-    m.pc += 2
+    m.pc = incword(m.pc, 2)

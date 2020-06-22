@@ -12,14 +12,21 @@ def raiseNI(msg):
 class Machine(GenericMachine):
 
     def __init__(self):
-        ''' Initialize the machine, which zeros memory, regs and flags.
+        ''' Initialize the machine.
 
-            On a real machine certainly the memory, and probaby the
+            To make life easier for unit test clients, we initialize the
+            stack pointer to $BFFF. (This assumes that the usual
+            configuration may involve using any of the lower 32K as RAM and
+            upper 16K as ROM and I/O.)
+
+            All other registers, and all of memory, are initialized to
+            zero. On a real machine certainly the memory, and probaby the
             registers and flags as well would all be left in a random state
             on power-up, but that doesn't seem worth emulating here.
         '''
         self.mem = bytearray(65536)
-        self.pc = self.a = self.b = self.x = self.sp = 0
+        self.pc = self.a = self.b = self.x = 0
+        self.sp = 0xBFFF
         self.H = self.I = self.N = self.Z = self.V = self.C = False
 
     def is_little_endian(self):

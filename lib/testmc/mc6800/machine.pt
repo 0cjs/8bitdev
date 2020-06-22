@@ -18,7 +18,7 @@ def test_mem(m, R):
     assert 0 == m.mem[65535]
 
 def test_regs(m, R):
-    r0 = R(pc=0, a=0, b=0, x=0, sp=0, H=0, I=0, N=0, Z=0, V=0, C=0)
+    r0 = R(pc=0, a=0, b=0, x=0, sp=0xBFFF, H=0, I=0, N=0, Z=0, V=0, C=0)
     assert r0 == m.regs
 
     m.setregs(R(b=0xF0, x=0xF000, sp=0x8000))

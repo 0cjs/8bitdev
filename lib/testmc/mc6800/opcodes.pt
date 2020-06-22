@@ -44,6 +44,10 @@ def runop(opdata, *, machine=None, changedregs=R(), changedmem=None):
 ####################################################################
 #   Opcode Tests
 
+def test_NOP():
+    #   The test framework will ensure that nothing but the PC has changed.
+    runop([I.NOP])
+
 def test_RTS():
     m = Machine(memsize=0x40)
     m.sp = 0x002D; m.depword(0x002E, 0x1234)

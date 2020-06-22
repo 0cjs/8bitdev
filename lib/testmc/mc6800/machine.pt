@@ -46,26 +46,14 @@ def test_step_notimplemented(m, R):
     m.setregs(R(pc=0x100))
     with pytest.raises(NotImplementedError):  m.step(1)
 
-def test_step_LDAA(m):
-    ''' This test also covers a lot of the instruction definition itself
-        tested by `test_LDAA` in ``opcodes.pt``. This should be simplified
-        to do less of that.
+def test_step(m, R):
+    ''' Smoke test; the detailed work of instruction execution is covered
+        by the mc6800.opcodes tests, which also use step().
     '''
-
     start = 0x200
-    m.deposit(start, [I.LDAA, 0xEA, I.LDAA, 0x00])
+    m.deposit(start, [I.NOP] * 4)
+    m.setregs(R(pc=start))
 
-    mem = m.mem.copy();
-    m.a = 0x00; m.N = False; m.Z = True; m.V = True;
-    m.pc = start; m.step(1)
-    #   XXX We should have a `Regs` structure like testmc.6502 for
-    #   comparing registers and flags against values and don't-care.
-    assert 0xEA == m.a
-    assert (True, False, False) == (m.N, m.Z, m.V)
-    assert start + 2 == m.pc
-    assert mem == m.mem
-
-    m.pc = start; m.step(2)
-    assert 0x00 == m.a
-    assert (False, True, False) == (m.N, m.Z, m.V)
-    assert start + 4 == m.pc
+    m.step();   assert R(pc=start+1) == m.regs
+    m.step(2);  assert R(pc=start+3) == m.regs
+    m.step();   assert R(pc=start+4) == m.regs

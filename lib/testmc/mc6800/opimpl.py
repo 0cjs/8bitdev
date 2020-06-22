@@ -32,6 +32,9 @@ def popword(m):
 ####################################################################
 #   Opcode implementations
 
+def nop(m):
+    m.pc = incword(m.pc, 1)
+
 def rts(m):
     m.pc = popword(m)
 

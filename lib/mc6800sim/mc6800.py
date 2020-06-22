@@ -1,4 +1,5 @@
-from    testmc.memory  import MemoryAccess
+from    testmc.machine  import GenericMachine
+from    testmc.registers  import GenericRegisters, Reg, Flag, Bit
 from    mc6800sim.opcodes  import OPCODES, Instructions
 
 from    itertools  import repeat
@@ -9,43 +10,31 @@ class NotImplementedError(Exception):
 def raiseNI(msg):
     raise NotImplementedError(msg)
 
-class MC6800(MemoryAccess):
+class MC6800(GenericMachine):
 
     def __init__(self):
-        self.mem = bytearray(65536)
-        self._a = self._b = self._x = self._sp = self._pc = 0
-        self._H = self._I = self._N = self._Z = self._V = self._C = False
+        ''' Initialize the machine, which zeros memory, regs and flags.
 
-    def get_memory_seq(self):
-        return self.mem
+            On a real machine certainly the memory, and probaby the
+            registers and flags as well would all be left in a random state
+            on power-up, but that doesn't seem worth emulating here.
+        '''
+        self.mem = bytearray(65536)
+        self.pc = self.a = self.b = self.x = self.sp = 0
+        self.H = self.I = self.N = self.Z = self.V = self.C = False
 
     def is_little_endian(self):
         return False
 
-    def get(propname):
-        return lambda self: getattr(self, propname);
+    def get_memory_seq(self):
+        return self.mem
 
-    def setmax(maxval, propname):
-        def set(self, value):
-            if value < 0 or value > maxval:
-                raise ValueError(
-                    "Register/flag '{}' value ${:X} exceeds range 0-${:X}"
-                    .format(propname[1:], value, maxval))
-            setattr(self, propname, value)
-        return set
-
-    a  = property(get('_a'),  setmax(0xFF,   '_a'),  None, 'Accumulator A')
-    b  = property(get('_b'),  setmax(0xFF,   '_b'),  None, 'Accumulator B')
-    x  = property(get('_x'),  setmax(0xFFFF, '_x'),  None, 'Index register X')
-    sp = property(get('_sp'), setmax(0xFFFF, '_sp'), None, 'Stack pointer')
-    pc = property(get('_pc'), setmax(0xFFFF, '_pc'), None, 'Program counter')
-
-    H  = property(get('_H'),  setmax(1, '_H'),       None, 'Half-carry')
-    I  = property(get('_I'),  setmax(1, '_I'),       None, 'Interrupt mask')
-    N  = property(get('_N'),  setmax(1, '_N'),       None, 'Negative')
-    Z  = property(get('_Z'),  setmax(1, '_Z'),       None, 'Zero')
-    V  = property(get('_V'),  setmax(1, '_V'),       None, 'Overflow')
-    C  = property(get('_C'),  setmax(1, '_C'),       None, 'Carry')
+    class Registers(GenericRegisters):
+        machname  = '6800'
+        registers = (
+            Reg('pc', 16), Reg('a'), Reg('b'), Reg('x', 16), Reg('sp', 16) )
+        srbits    = ( Bit(1), Bit(1),
+            Flag('H'), Flag('I'), Flag('N'), Flag('Z'), Flag('V'), Flag('C') )
 
     ####################################################################
     #   Instruction Execution

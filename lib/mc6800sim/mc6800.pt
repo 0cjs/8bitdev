@@ -5,41 +5,33 @@ import  pytest
 def m():
     return MC6800()
 
+@pytest.fixture
+def R(m):
+    return m.Registers
+
 ####################################################################
 #   Registers
 
-def test_init(m):
-    assert 0 == m.a == m.b == m.x == m.sp == m.pc
-    assert False == m.H == m.I == m.N == m.Z == m.V == m.C
+def test_mem(m, R):
     assert 65536 == len(m.mem)
     assert 0 == m.mem[0]
     assert 0 == m.mem[65535]
 
-def test_set_reg8(m):
-    m.a = 1;    assert 1 == m.a
-    m.a = 0;    assert 0 == m.a
-    m.a = 0xFF; assert 0xFF == m.a
+def test_regs(m, R):
+    r0 = R(pc=0, a=0, b=0, x=0, sp=0, H=0, I=0, N=0, Z=0, V=0, C=0)
+    assert r0 == m.regs
 
-    with pytest.raises(ValueError): m.a = -1
+    m.setregs(R(b=0xF0, x=0xF000, sp=0x8000))
+    assert (0, 0xF0, 0xF000, 0x8000) == (m.pc, m.b, m.x, m.sp)
 
-    with pytest.raises(ValueError) as ex:
-        m.a = 0x100
-    assert ex.match("^Register/flag 'a' value \\$100 exceeds range 0-\\$FF")
-    assert 0xFF == m.a
+    with pytest.raises(ValueError):  m.setregs(R(pc=0x10000))
+    with pytest.raises(ValueError):  m.setregs(R(a=0x100))
 
-def test_set_reg16(m):
-    m.sp = 0xFFFF
-    with pytest.raises(ValueError) as ex:
-        m.sp = 0x10000
-    assert ex.match("^Register/flag 'sp' value \\$10000 exceeds range 0-\\$FFFF")
+def test_flags(m, R):
+    assert R(H=0, I=0, N=0, Z=0, V=0, C=0) == m.regs
 
-def test_set_flag(m):
-    m.C = True;  assert True  is m.C
-    m.C = False; assert False is m.C
-
-    with pytest.raises(ValueError) as ex:
-        m.Z = 2
-    assert ex.match("^Register/flag 'Z' value \\$2 exceeds range 0-\\$1")
+    m.setregs(R(I=1, V=1))
+    assert R(H=0, I=1, N=0, Z=0, V=1, C=0) == m.regs
 
 ####################################################################
 #   Instruction Execution

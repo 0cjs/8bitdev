@@ -22,8 +22,18 @@ def incword(word, addend):
     '''
     return (word + addend) & 0xFFFF
 
+def popword(m):
+    m.sp = incword(m.sp, 1)
+    msb = m.byte(m.sp)
+    m.sp = incword(m.sp, 1)
+    lsb = m.byte(m.sp)
+    return (msb << 8) + lsb
+
 ####################################################################
 #   Opcode implementations
+
+def rts(m):
+    m.pc = popword(m)
 
 def ldaa(m):
     m.a = m.byte(m.pc+1)

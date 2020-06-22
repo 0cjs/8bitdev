@@ -6,8 +6,10 @@
 '''
 
 import  pytest
-from    testmc.mc6800.opimpl  import \
-    isnegative, iszero, incword
+from    testmc.mc6800  import Machine
+from    testmc.mc6800.opimpl  import (
+    isnegative, iszero, incword, popword,
+    )
 
 
 def test_isnegative():
@@ -37,3 +39,20 @@ def test_iszero():
 ))
 def test_incword(initial, addend, expected):
     assert expected == incword(initial, addend)
+
+@pytest.mark.parametrize(
+    'initsp,    word,  newsp', (
+    (     0,  0x4142,      2),
+    (     1,  0x4243,      3),
+    (0xFFFD,  0xCECF, 0xFFFF),
+    (0xFFFE,  0xCF40,      0),
+    (0xFFFF,  0x4041,      1),
+))
+def test_popword(initsp, word, newsp):
+    m = Machine()
+    m.deposit(0x0000, b'\x40\x41\x42\x43')
+    m.deposit(0xFFFC, b'\xCC\xCD\xCE\xCF')
+
+    m.sp = initsp
+    assert word == popword(m)
+    assert newsp == m.sp

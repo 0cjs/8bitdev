@@ -8,11 +8,17 @@ from    testmc.mc6800.machine  import Machine
 from    testmc.mc6800.opcodes  import Instructions as I
 import  pytest
 
+####################################################################
+#   Framework
+
 R = Machine.Registers
 
-def runop(opdata, *, changedregs=R(), changedmem=None):
+def runop(opdata, *, machine=None, changedregs=R(), changedmem=None):
+    m = machine
+    if m is None:
+        m = Machine(memsize=0x20)
+
     startaddr = 0x0E
-    m = Machine(memsize=0x20)
     m.deposit(startaddr, opdata)
 
     m.pc = startaddr
@@ -24,10 +30,24 @@ def runop(opdata, *, changedregs=R(), changedmem=None):
     if changedregs.pc is None:
         changedregs = changedregs.clone(pc=startaddr + len(opdata))
     print('changedregs:', changedregs)
-    assert prevregs.clone(**changedregs.dict()) == m.regs
+    #   First show that the registers and flags expected to change have
+    #   their correct values. This makes for easier reading on failure.
+    assert changedregs == m.regs, "expected register/flag changes"
+    #   Now show that the other registers and flags, which we did not
+    #   expect to change, are actually unchanged.
+    assert prevregs.clone(**changedregs.dict()) == m.regs, \
+        "unexpected register/flag changes"
 
     #   XXX need to update with expected memory changes, here or above
     assert prevmem == bytes(m.mem)
+
+####################################################################
+#   Opcode Tests
+
+def test_RTS():
+    m = Machine(memsize=0x40)
+    m.sp = 0x002D; m.depword(0x002E, 0x1234)
+    runop([I.RTS], machine=m, changedregs=R(pc=0x1234, sp=0x002F))
 
 @pytest.mark.parametrize(
     'arg,  N, Z', (

@@ -8,6 +8,7 @@ from    testmc.mc6800.opimpl  import *
 #   See `Instructions` below for mnemonic naming.
 
 OPCODES = {
+    0x39: ('RTS', rts),
     0x86: ('LDAA', ldaa),
 }
 

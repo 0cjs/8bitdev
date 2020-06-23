@@ -178,24 +178,29 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
     #   machine, 100,000 opcodes should terminate within a few seconds.
     MAXSTEPS = 100000
 
-    def stepto(self, *, stopon=set(), maxsteps=MAXSTEPS, trace=False):
-        ''' Step an opcode and then continue until a opcode in `stopon` is
-            reached or until we have done `maxsteps`. (At least one opcode
-            is always executed.)
+    def stepto(self, *, stopat=set(), stopon=set(), maxsteps=MAXSTEPS,
+        trace=False):
+        ''' Step an opcode and then continue until an address in `stopat`
+            or an opcode in `stopon` is reached, or until we have done
+            `maxsteps`. (At least one opcode is always executed.)
 
             An attempt to exceed `maxsteps` will raise a `Timeout`
             exception; if you want to run just a specific number of steps
             use `step()` instead. Any other stop condition simply returns.
 
-            `stopon` must be a `collections.abc.Container`.
+            `stopat` and `stopon` are checked to ensure that they are
+            `collections.abc.Container` instances.
         '''
+        assert isinstance(stopat, Container), \
+            "'stopat' must be a collections.abc.Container"
         assert isinstance(stopon, Container), \
             "'stopon' must be a collections.abc.Container"
 
         remaining = maxsteps - 1
         while True:
             self.step(trace=trace)
-            if self.byte(self._getpc()) in stopon:
+            pc = self._getpc()
+            if pc in stopat or self.byte(pc) in stopon:
                 break
             if remaining <= 0:
                 raise self.Timeout(

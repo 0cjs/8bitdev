@@ -215,6 +215,31 @@ def test_stepto_stopon(M, stopon, steps, pc):
     m.stepto(stopon=stopon)
     assert (steps, pc) == (m._steps_taken, m.pc)
 
+@pytest.mark.parametrize('initpc, steps, finalpc, stopat', (
+    #  init  st   fin   stopat
+    (  0x00,  1, 0x04,      (      0x04,     )),    # 1-tuple
+    (  0x00,  1, 0x04,      (0xFF, 0x04, 0x00)),    # tuple
+    (  0x00,  1, 0x04,      [0xFF, 0x04, 0x00]),    # list
+    (  0x00,  1, 0x04,  set([0xFF, 0x04, 0x00])),   # set
+    (  0x00,  2, 0x08,  [                        0x08,     ]),
+    (  0x00,  2, 0x08,  [0x03, 0x05, 0x06, 0x07, 0x08, 0x09]),
+    (  0x00,  2, 0x08,  range(0x05, 0x10)),
+))
+def test_stepto_stopat(M, R, initpc, steps, finalpc, stopat):
+    m = M(); m.B = False
+    m.deposit(0, b''.join([
+        b'\x03\xFF\xFF\xFF' * 2,    # 4-byte ops
+        b'\x01\xFF'         * 2,    # 2-byte ops
+        b'\x00'             * 2,    # 1-byte ops
+        b'\xFF'             * 2,    # "stop" ops
+        ]))
+    #   We configure stepto() to stop on $Ff, which always indicates an error.
+
+    print('start at {} stop at {} {}'.format(initpc, stopat, type(stopat)))
+    m.setregs(R(pc=initpc))
+    m.stepto(stopat=stopat, stopon=(0xFF,), trace=0)
+    assert (steps, finalpc) == (m._steps_taken, m.pc)
+
 ####################################################################
 #   Execution - call()
 

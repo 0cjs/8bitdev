@@ -90,11 +90,11 @@ def jmp(m):
     m.pc = readword(m)
 
 def ldaa(m):
-    m.a = m.byte(m.pc+1)
+    readbyte(m)
+    m.a = readbyte(m)
     m.N = isnegative(m.a)
     m.Z = iszero(m.a)
     m.V = False
-    m.pc = incword(m.pc, 2)
 
 def bsr(m):
     readbyte(m)

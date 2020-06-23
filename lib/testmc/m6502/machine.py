@@ -15,9 +15,7 @@ from    testmc.tool import asl, asxxxx
 
 class Machine(GenericMachine):
 
-    def is_little_endian(self):
-        return True
-
+    is_little_endian = True
     def get_memory_seq(self):
         return self.mpu.memory
 

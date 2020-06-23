@@ -27,9 +27,7 @@ class Machine(GenericMachine):
         self.sp = 0xBFFF
         self.H = self.I = self.N = self.Z = self.V = self.C = False
 
-    def is_little_endian(self):
-        return False
-
+    is_little_endian = False
     def get_memory_seq(self):
         return self.mem
 

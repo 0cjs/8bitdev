@@ -4,10 +4,9 @@ import  pytest
 class RAM(MemoryAccess):
     def __init__(self, store):
         self.tmem = store
+    is_little_endian = False
     def get_memory_seq(self):
         return self.tmem
-    def is_little_endian(self):
-        return False
 
 @pytest.fixture(params=[
     lambda: bytearray(65536),
@@ -153,10 +152,9 @@ def test_depword_index(m):
 class LERAM(MemoryAccess):
     def __init__(self):
         self.lmem = bytearray(64)
+    is_little_endian = True
     def get_memory_seq(self):
         return self.lmem
-    def is_little_endian(self):
-        return True
 
 @pytest.fixture
 def lem():

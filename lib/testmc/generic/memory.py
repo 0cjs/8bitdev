@@ -1,4 +1,4 @@
-from    abc  import ABC, abstractmethod
+from    abc  import ABC, abstractmethod, abstractproperty
 from    collections.abc  import Sequence
 from    numbers  import Integral
 
@@ -13,11 +13,8 @@ class MemoryAccess(ABC):
         contains non-byte values deposited through another method, this
         will return them).
 
-        `get_memory_seq()` and `is_little_endian()` must be overridden; see
-        the documentation for those functions for details.
-
-        XXX this needs to be extended to be configurable for big-
-        or little-endian access.
+        Subclasses must define attributes `is_little_endian` and
+        `get_memory_seq()`; see their docstrings below for details.
     '''
 
     @abstractmethod
@@ -41,11 +38,10 @@ class MemoryAccess(ABC):
             `py65.memory.ObservableMemory` instance.
         '''
 
-    @abstractmethod
+    @abstractproperty
     def is_little_endian(self):
-        ''' Return `True` if this is used with a little-endian
-            architecture, otherwise `False` if it's used with a big-endian
-            architecture.
+        ''' Set to `True` if this is used with a little-endian architecture,
+            otherwise `False` if it's used with a big-endian architecture.
 
             This is used by the word-access methods.
         '''
@@ -68,7 +64,7 @@ class MemoryAccess(ABC):
         ' Return the word (decoding native endianness) at `addr`. '
         mem = self.get_memory_seq()
         b0 = mem[addr]; b1 = mem[addr+1]
-        if self.is_little_endian():
+        if self.is_little_endian:
             return b0 + 0x100 * b1
         else:
             return b0 * 0x100 + b1
@@ -143,7 +139,7 @@ class MemoryAccess(ABC):
 
         data = []
         for word in words:
-            if self.is_little_endian():
+            if self.is_little_endian:
                 data.append(word & 0xFF)            # LSB first
                 data.append((word & 0xFF00) >> 8)   # MSB
             else:

@@ -27,7 +27,6 @@ def test_step(M, S, R):
     M.step(1)
     assert R(a=0xFF) == M.regs
 
-@pytest.mark.xfail(strict=True, reason='RTS and call() not yet implemented')
 def test_call(M, S, R):
     assert R(a=0) == M.regs
     M.call(S.set_a_ff)

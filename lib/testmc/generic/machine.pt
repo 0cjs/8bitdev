@@ -22,9 +22,9 @@ def M():
         is_little_endian            = False
         def get_memory_seq(self):   return self.mem
 
-        _JSR_opcodes    = set()
-        _RTS_opcodes    = set()
-        _ABORT_opcodes  = set()
+        _JSR_opcodes    = set([0x28, 0x29])
+        _RTS_opcodes    = set([0x20, 0x21])
+        _ABORT_opcodes  = set([0x80, 0x81])
 
         def _getpc(self):
             return self.pc
@@ -211,3 +211,65 @@ def test_stepto_empty_stopat_and_otherargs(M):
         m.stepto(set(), maxsteps=3, trace=True)
     assert (3, 5) == (m._steps_taken, m.pc)
     assert ex.match('after 3 opcodes: CPU pc=0005')
+
+def test_call_rts_regs(M, R):
+    m = M(); m.B = False
+    m.deposit(0x09, b'\x20')            # RTS
+
+    m.call(0x09, R(B=True))
+    assert R(pc=0x09, B=True) == m.regs # set regs but did not execute RTS
+
+    m.call(0x06, R(B=False))            # a few NOPS then RTS
+    assert R(pc=0x09, B=False) == m.regs
+
+def test_call_shallow(M, R):
+    m = M(); m.B = False
+    m.deposit(0x08, b'\x28\x20\x20')    # JSR, RTS, RTS
+    m.call(0x08)
+    assert R(pc=0x0A) == m.regs         # returned before 2nd RTS
+
+def test_call_deep(M, R):
+    m = M(); m.B = False
+    m.deposit(0x02, b''.join([
+        b'\x29\x00',                    # JSR w/1-byte operand
+        b'\x28\x28',                    # JSR, JSR
+        b'\x21\x00',                    # RTS w/1-byte operand
+        b'\x21\x00',                    # RTS w/1-byte operand
+        b'\x20\x20',                    # RTS, RTS
+        ]))
+    m.call(0x02, trace=True)
+    assert R(pc=0x0B) == m.regs
+
+def test_call_abort(M, R):
+    m = M(); m.B = False
+    #                    6   7   8   9   A   B
+    m.deposit(0x06, b'\x28\x20\x80\x81\x00\xC0')
+
+    with pytest.raises(m.Abort) as ex:
+        m.call(0x06, trace=True)                    # default abort opcode
+    assert R(pc=0x08) == m.regs
+    assert ex.match(r'^Abort on opcode=\$80: ')
+
+    with pytest.raises(m.Abort) as ex:
+        m.call(0x09, trace=True)                    # abort on first instruction
+    assert R(pc=0x09) == m.regs
+    assert ex.match(r'^Abort on opcode=\$81: ')
+
+    with pytest.raises(m.Abort) as ex:
+        m.call(0x06, aborts=0xC0, trace=True)       # non-default scalar abort
+    assert R(pc=0x0B) == m.regs
+    assert ex.match(r'^Abort on opcode=\$C0: ')
+
+    with pytest.raises(m.Abort) as ex:
+        m.call(0x06, aborts=(0xD0, 0xC0))           # non-default set abort
+    assert R(pc=0x0B) == m.regs
+
+def test_call_arg_overrides_R_pc(M, R):
+    m = M(); m.B = False
+    m.deposit(8, b'\x20')
+
+    with pytest.raises(m.Abort):
+        m.call(7, aborts=0)             # confirm abort works
+
+    m.call(8, R(pc=2), aborts=0)        # exception if R(pc) overrides arg
+    assert R(pc=8) == m.regs

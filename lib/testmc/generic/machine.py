@@ -222,7 +222,10 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
         if regs is None: regs = self.Registers()
         self.setregs(regs)
 
-        if aborts is None: aborts = self._ABORT_opcodes
+        if aborts is None:
+            aborts = self._ABORT_opcodes
+        if not isinstance(aborts, Container):
+            aborts = (aborts,)
 
         if addr is not None:
             self.setregs(self.Registers(pc=addr))   # Overrides regs
@@ -230,7 +233,7 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
         stopat = self._JSR_opcodes | self._RTS_opcodes | set(aborts)
         depth = 0
         while True:
-            opcode = self.byte(self.mpu.pc)
+            opcode = self.byte(self._getpc())
             if opcode in self._RTS_opcodes:
                 if depth > 0:
                     depth -=1
@@ -242,6 +245,6 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
                 #   Enter the new level with the next execution
                 depth += 1
             elif opcode in stopat:   # Abort
-                raise self.Abort('Abort on opcode={}: {}' \
+                raise self.Abort('Abort on opcode=${:02X}: {}' \
                     .format(self.byte(self.regs.pc), self.regs))
             self.stepto(stopat, maxsteps=maxsteps, trace=trace)

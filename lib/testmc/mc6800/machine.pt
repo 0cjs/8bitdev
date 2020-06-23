@@ -58,16 +58,16 @@ def test_step(m, R):
     m.step(2);  assert R(pc=start+3) == m.regs
     m.step();   assert R(pc=start+4) == m.regs
 
-def test_execution(m, R):
+def test_call(m, R):
     ' Integration test: multiple instruction execution. '
     start = 0x200
     m.deposit(start, [
-        I.NOP,                  # 0200:
-        I.BSR,     3,           # 0201: to LDAA below
-        I.JMP,  0x02, 0xFF,     # 0203:
+        I.BSR,     4,           # 0200: to LDAA below
+        I.NOP,                  # 0202:
+        I.JMP,  0x02, 0x08,     # 0203: to RTS below
         I.LDAA, 0xCC,           # 0206:
         I.RTS,                  # 0208:
         ])
     m.setregs(R(pc=start))
-    m.step(5, trace=True); print(m.regs)
-    assert R(pc=0x02FF, a=0xCC) == m.regs
+    m.call(start, trace=True); print(m.regs)
+    assert R(pc=0x0208, a=0xCC) == m.regs

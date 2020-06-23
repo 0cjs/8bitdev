@@ -37,7 +37,7 @@ def runop(opdata, *, machine=None, memsize=0x20,
     assert changedregs == m.regs, "expected register/flag changes"
     #   Now show that the other registers and flags, which we did not
     #   expect to change, are actually unchanged.
-    assert prevregs.clone(**changedregs.dict()) == m.regs, \
+    assert prevregs.clone(**changedregs.valued()) == m.regs, \
         "unexpected register/flag changes"
 
     if changedmem is None:

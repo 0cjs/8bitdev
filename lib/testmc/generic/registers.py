@@ -1,9 +1,11 @@
 ''' Classes of immutable objects containing register and flag values.
-    Values of `None` indicate "don't care" to comparisons and "don't
-    change" to update operations.
+
+    Each register and flag is *valued* (has a non-`None` value) or
+    *non-valued* (has a value of `None` meaning "don't care.") Non-valued
+    registers are not included in comparisons or update operations.
 
     Create a class for a specific machine's set of registers and
-    flags/status register bits by sublcassing `GenericRegisters` as
+    flags/status register bits by subclassing `GenericRegisters` as
     described in its docstring.
 '''
 
@@ -73,7 +75,7 @@ class Flag(Bit):
     ''' A flag with a name and default value.
 
         The default value is used when generating a status register
-        value if the flag is set to "don't-care" (`None`).
+        value if the flag non-valued (i.e., is `None`).
     '''
     def __init__(self, name, default=False):
         super().__init__(default)
@@ -96,8 +98,8 @@ class Flag(Bit):
 
 class GenericRegisters:
     ''' A superclass providing support for "Registers" objects that hold
-        register values, pretty-print them and allow comparisons including
-        "don't-care" values.
+        register and flag values, pretty-print them, and ignore non-valued
+        registers and flags in comparisions.
 
         Subclass this and define the following class attributes:
 
@@ -207,12 +209,12 @@ class GenericRegisters:
     ####################################################################
     #   Copies and modifications
 
-    def dict(self):
-        ''' Produce a `dict` of the non-None registers and flags of
-            this object. This is suitable for use as the argument
-            list to the constructor.
+    def valued(self):
+        ''' Produce a `dict` of the valued registers and flags of this
+            object. This is suitable for use as the argument list to the
+            constructor.
 
-            This always produces flag entires, never a status register.
+            This always produces flag entries, never a status register.
             This isn't a limitation since it's trivial to generate
             the status register value if necessary (and if the class
             has one) by constructing an object with these parameters.
@@ -229,6 +231,26 @@ class GenericRegisters:
                 d[srbit.name] = v
         return d
 
+    def all(self):
+        ''' Produce a `dict` of all the registers and flags (valued and
+            non-valued) of this object. This is suitable for use as the
+            argument list to the constructor.
+
+            This always produces flag entries, never a status register.
+            This isn't a limitation since it's trivial to generate
+            the status register value if necessary (and if the class
+            has one) by constructing an object with these parameters.
+        '''
+        d = {}
+        for reg in self.registers:
+            v = getattr(self, reg.name)
+            d[reg.name] = v
+        for srbit in self.srbits:
+            if not srbit.name:  continue
+            v = getattr(self, srbit.name)
+            d[srbit.name] = v
+        return d
+
     def clone(self, **changes):
         ''' Produce a clone of this Registers object. `changes` is an
             optional list of registers and/or flags with new values to
@@ -237,7 +259,7 @@ class GenericRegisters:
             This does not allow a status register argument in `changes`;
             you must use individual flags.
         '''
-        return self.__class__(**dict(self.dict(), **changes))
+        return self.__class__(**dict(self.valued(), **changes))
 
     ####################################################################
     #   Immutability support
@@ -309,21 +331,20 @@ class GenericRegisters:
     #   Setting and retrieving register/flag values on other objects
 
     def set_attrs_on(self, o, setsr, *, regtype=None):
-        ''' Set our register and flag values, excepting don't-care values,
-            on another object.
+        ''' Set our valued register and flag values as attributes on
+            another object.
 
-            All non-`None` register values will have same-named attributes
-            on `o` set to those values. The values will first be passed
-            to the function `regtype` for conversion, if it's not `None`.
+            All valued registers and flags will have same-named attributes
+            on `o` set to those values. The values will first be passed to
+            the function `regtype` for conversion, if `regtype` not `None`.
 
-            If `setsr` is false, non-`None` flag values will be set as
-            individual attributes (always converted with `bool()`) in the
-            same way.
+            If `setsr` is false, valued flags will be set as individual
+            attributes (always converted with `bool()`) in the same way.
 
             If `setsr` is true, instead the attribute named by `srname`
-            will be read, the bits for non-`None` flags set and cleared in
-            it, and the attribute set to that new value. There is currently
-            no way to have it set the unused or constant bits in the status
+            will be read, the bits for valued flags set and cleared in it,
+            and the attribute set to that new value. There is currently no
+            way to have it set the unused or constant bits in the status
             register (defined with `Bit()`).
         '''
         if regtype is None:

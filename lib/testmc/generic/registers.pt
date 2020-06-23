@@ -147,11 +147,18 @@ def test_renamed_sr(R):
 ####################################################################
 #   Copies and modifications
 
-def test_dict(R):
-    assert {}                           == R().dict()
-    assert { 'a': 3 }                   == R(a=3).dict()
-    assert { 'C': True }                == R(C=1).dict()
-    assert { 'pc': 0xA987, 'B': False } == R(pc=0xA987, B=0).dict()
+def test_valued(R):
+    assert {}                           == R().valued()
+    assert { 'a': 3 }                   == R(a=3).valued()
+    assert { 'C': True }                == R(C=1).valued()
+    assert { 'pc': 0xA987, 'B': False } == R(pc=0xA987, B=0).valued()
+
+def test_all(R):
+    none = { 'pc': None, 'a': None, 'B': None, 'C': None, }
+    assert dict(none)                   == R().all()
+    assert dict(none, a=3)              == R(a=3).all()
+    assert dict(none, C=1)              == R(C=1).all()
+    assert dict(none, pc=0xA987, B=0)   == R(pc=0xA987, B=0).all()
 
 def test_clone(R):
     def all(**changes):

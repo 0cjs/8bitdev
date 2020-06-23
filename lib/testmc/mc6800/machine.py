@@ -41,6 +41,9 @@ class Machine(GenericMachine):
     ####################################################################
     #   Instruction Execution
 
+    def _getpc(self):
+        return self.pc
+
     def _step(self):
         opcode = self.mem[self.pc]
         _, f = OPCODES.get(opcode,

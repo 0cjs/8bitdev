@@ -1,4 +1,5 @@
 from    abc  import abstractmethod, abstractproperty
+from    collections.abc   import Container
 from    itertools  import repeat
 from    testmc.generic.memory  import MemoryAccess
 from    testmc.tool  import asl, asxxxx
@@ -107,6 +108,17 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
     #   Execution
 
     @abstractmethod
+    def _getpc(self):
+        ''' Efficiently return the current program counter value.
+
+            The PC is checked very frequently by `stepto()`, `call()`, etc.
+            and checking it via `regs` (which generates a new a Registers
+            object each time it's called) slows down stepping by an order
+            of magnitude compared to returning the PC value as directly
+            as possible from the underlying simulator.
+        '''
+
+    @abstractmethod
     def _step(self):
         ' Execute current opcode (and its arguments), updating machine state. '
 
@@ -124,3 +136,32 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
                 print('{} opcode={:02X}' \
                     .format(self.regs, self.byte(self.regs.pc)))
             self._step()
+
+    class Timeout(RuntimeError):
+        ' The emulator ran longer than requested. '
+        pass
+
+    #   Default maximum number of opcodes to execute when using stepto(),
+    #   call() and related functions. Even on a relatively slow modern
+    #   machine, 100,000 opcodes should terminate within a few seconds.
+    MAXSTEPS = 100000
+
+    def stepto(self, stopat, *, maxsteps=MAXSTEPS, trace=False):
+        ''' Step an opcode and then, as long as the next opcode
+            is not `stopat` (if a single value) or in `stopat` (if a
+            container), continue stepping.
+
+            If a `stopat` opcode hasn't been reached after `maxsteps`
+            opcodes have been executed, raise a `Timeout` exception.
+        '''
+        if not isinstance(stopat, Container):
+            stopat = (stopat,)
+        self.step(trace=trace)
+        count = maxsteps - 1
+        while self.byte(self._getpc()) not in stopat:
+            self.step(trace=trace)
+            count -= 1
+            if count <= 0:
+                raise self.Timeout(
+                    'Timeout after {} opcodes: {} opcode={}' \
+                    .format(maxsteps, self.regs, self.byte(self.regs.pc)))

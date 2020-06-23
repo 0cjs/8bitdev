@@ -22,6 +22,9 @@ def M():
         is_little_endian            = False
         def get_memory_seq(self):   return self.mem
 
+        def _getpc(self):
+            return self.pc
+
         def _step(self):
             ''' In this test Machine, all opcodes are NOPs with the low two
                 bits indicating how many additional bytes should be
@@ -183,3 +186,24 @@ def test_step(M):
     m = M();    assert 0 == m._steps_taken
     m.step();   assert 1 == m._steps_taken
     m.step(3);  assert 4 == m._steps_taken
+
+@pytest.mark.parametrize('stopat, steps, pc', (
+    (                       0xFD,   2, 3),  # stopat scalar
+    (    [0x02, 0xFE, 0xFD, 0xFC],  2, 3),  # stopat collections
+    (set([0x02, 0xFE, 0xFD, 0xFC]), 2, 3),
+    (                       0x00,   3, 5),  # always execute first op
+))
+def test_stepto(M, stopat, steps, pc):
+    m = M(); m.B = False
+    m.deposit(m.pc, b'\x00\x01\xFD\xFD\x00\x00')
+    print('stop at', type(stopat), stopat)   # test name not obvious
+    m.stepto(stopat)
+    assert (steps, pc) == (m._steps_taken, m.pc)
+
+def test_stepto_empty_stopat_and_otherargs(M):
+    m = M(); m.B = False
+    m.deposit(m.pc, b'\x00\x01\xFD\xFD\x00\x00')
+    with pytest.raises(m.Timeout) as ex:
+        m.stepto(set(), maxsteps=3, trace=True)
+    assert (3, 5) == (m._steps_taken, m.pc)
+    assert ex.match('after 3 opcodes: CPU pc=0005')

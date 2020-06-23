@@ -2,7 +2,6 @@
     Wraps py65 in an API suitable for use in unit tests.
 '''
 
-from    collections.abc   import Container, Sequence
 from    numbers  import Integral
 from    py65.devices.mpu6502  import MPU
 from    sys import stderr
@@ -30,10 +29,6 @@ class Machine(GenericMachine):
 
     ####################################################################
 
-    class Timeout(RuntimeError):
-        ' The emulator ran longer than requested. '
-        pass
-
     class Abort(RuntimeError):
         ' The emulator encoutered an instruction on which to abort.'
         pass
@@ -56,6 +51,9 @@ class Machine(GenericMachine):
     def spword(self, depth=0):
         return self.word(self._stackaddr(depth, 2))
 
+    def _getpc(self):
+        return self.mpu.pc
+
     def _step(self):
             self.mpu.step()
 
@@ -63,26 +61,6 @@ class Machine(GenericMachine):
     #   call() and related functions. Even on a relatively slow modern
     #   machine, 100,000 opcodes should terminate within a few seconds.
     MAXSTEPS = 100000
-
-    def stepto(self, stopat, *, maxsteps=MAXSTEPS, trace=False):
-        ''' Step an opcode and then, as long as the next opcode
-            is not `stopat` (if a single value) or in `stopat` (if a
-            container), continue stepping.
-
-            If a `stopat` opcode hasn't been reached after `maxsteps`
-            opcodes have been executed, raise a `Timeout` exception.
-        '''
-        if not isinstance(stopat, Container):
-            stopat = (stopat,)
-        self.step(trace=trace)
-        count = maxsteps - 1
-        while self.byte(self.mpu.pc) not in stopat:
-            self.step(trace=trace)
-            count -= 1
-            if count <= 0:
-                raise self.Timeout(
-                    'Timeout after {} opcodes: {} opcode={}' \
-                    .format(maxsteps, self.regs, self.byte(self.regs.pc)))
 
     def call(self, addr, regs=None, *,
             maxsteps=MAXSTEPS, aborts=(0x00,), trace=False):

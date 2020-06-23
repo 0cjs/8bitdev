@@ -7,7 +7,7 @@ from    py65.devices.mpu6502  import MPU
 from    sys import stderr
 
 from    testmc.generic  import *
-from    testmc.m6502.instructions  import Instructions
+from    testmc.m6502.instructions  import Instructions as I
 
 from    testmc import symtab
 from    testmc.tool import asl, asxxxx
@@ -57,21 +57,44 @@ class Machine(GenericMachine):
     def _step(self):
             self.mpu.step()
 
+    #   Opcodes that execute an unconditional call. This must be a `set()`
+    #   or other object that supports the `|` operator for set union.
+    #
+    _JSR_opcodes = set([I.JSR])
+
+    #   Opcodes that execute an unconditional return from a called
+    #   subroutine. This must be a `set()` or other object that supports
+    #   the `|` operator for set union.
+    #
+    _RTS_opcodes = set([I.RTS])
+
+    #   The default set of opcodes that should abort the execution of
+    #   `call()`. This must be a `set()` or other object that supports the
+    #   `|` operator for set union.
+    #
+    #   Which opcode(s) you choose for this set will depend on both the CPU
+    #   and the conventions of programming on that CPU. For example `BRK`
+    #   is a reasonable abort default on 6502 because it's not often used
+    #   as a call mechanism in 6502 programs, but that is not true for the
+    #   very similar 6800 `SWI` instruction.
+    #
+    _ABORT_opcodes = set([I.BRK])
+
     #   Default maximum number of opcodes to execute when using stepto(),
     #   call() and related functions. Even on a relatively slow modern
     #   machine, 100,000 opcodes should terminate within a few seconds.
     MAXSTEPS = 100000
 
     def call(self, addr, regs=None, *,
-            maxsteps=MAXSTEPS, aborts=(0x00,), trace=False):
+            maxsteps=MAXSTEPS, aborts=_ABORT_opcodes, trace=False):
         ''' Simulate a JSR to `addr`, after setting any `registers`
             specified, returning when its corresponding RTS is reached.
 
             A `Timeout` will be raised if `maxsteps` opcodes are executed.
             An `Abort` will be raised if any opcodes in the `aborts`
             collection are about to be executed. (By default this list
-            contains ``BRK``.) `step()` tracing will be enabled if `trace`
-            is `True`.
+            contains all instructions in `_ABORT_opcodes`.) `step()`
+            tracing will be enabled if `trace` is `True`.
 
             The PC will be left at the final (unexecuted) RTS opcode. Thus,
             unlike `step()`, this may execute no opcodes if the PC is
@@ -90,19 +113,18 @@ class Machine(GenericMachine):
         if addr is not None:
             self.setregs(self.Registers(pc=addr))   # Overrides regs
 
-        I = Instructions
-        stopat = (I.JSR, I.RTS) + tuple(aborts)
+        stopat = self._JSR_opcodes | self._RTS_opcodes | set(aborts)
         depth = 0
         while True:
             opcode = self.byte(self.mpu.pc)
-            if opcode == I.RTS:
+            if opcode in self._RTS_opcodes:
                 if depth > 0:
                     depth -=1
                 else:
                     #   We don't execute the RTS because no JSR was called
                     #   to come in, so we may have nothing on the stack.
                     return
-            elif opcode == I.JSR:
+            elif opcode in self._JSR_opcodes:
                 #   Enter the new level with the next execution
                 depth += 1
             elif opcode in stopat:   # Abort

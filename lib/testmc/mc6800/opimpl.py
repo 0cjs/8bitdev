@@ -1,8 +1,8 @@
 ''' Implementation of opcodes.
 
     Each function here is passed a reference to an `MC6800` instance with
-    the program counter pointing to its opcode. The function is responsible
-    for updating all machine state before returning.
+    the program counter pointing the byte after the opcode. The function is
+    responsible for updating all machine state before returning.
 
     See `testmc.mc6800.opcodes.Instructions` for details of the naming scheme.
 '''
@@ -10,13 +10,16 @@
 from struct import unpack
 
 ####################################################################
-#   Tests of values for setting flags (HINZVC)
+#   Values tests for setting flags (HINZVC)
 
 def isnegative(b):
     return 0 != b & 0b10000000
 
 def iszero(b):
     return b == 0
+
+####################################################################
+#   Address handling, reading data at the PC, reading/writing stack
 
 def incword(word, addend):
     ''' Return 16-bit `word` incremented by `addend` (which may be negative).
@@ -72,44 +75,37 @@ def pushword(m, word):
 #   Opcode implementations
 
 def nop(m):
-    readbyte(m)
+    pass
 
 def bra(m):
-    readbyte(m)
     m.pc = readreloff(m)
 
 def rts(m):
     m.pc = popword(m)
 
 def jmpx(m):
-    readbyte(m)
     m.pc = readindex(m)
 
 def jmp(m):
-    readbyte(m)
     m.pc = readword(m)
 
 def ldaa(m):
-    readbyte(m)
     m.a = readbyte(m)
     m.N = isnegative(m.a)
     m.Z = iszero(m.a)
     m.V = False
 
 def bsr(m):
-    readbyte(m)
     target = readreloff(m)
     pushword(m, m.pc)
     m.pc = target
 
 def jsrx(m):
-    readbyte(m)
     target = readindex(m)
     pushword(m, m.pc)
     m.pc = target
 
 def jsr(m):
-    readbyte(m)
     target = readword(m)
     pushword(m, m.pc)
     m.pc = target

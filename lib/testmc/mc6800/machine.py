@@ -1,5 +1,6 @@
 from    testmc.generic  import *
 from    testmc.mc6800.opcodes  import OPCODES, Instructions
+from    testmc.mc6800.opimpl  import readbyte
 
 
 class NotImplementedError(Exception):
@@ -45,7 +46,7 @@ class Machine(GenericMachine):
         return self.pc
 
     def _step(self):
-        opcode = self.mem[self.pc]
+        opcode = readbyte(self)
         _, f = OPCODES.get(opcode,
             ('NotImplemented', lambda m: raiseNI(opcode)))
         f(self)

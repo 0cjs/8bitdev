@@ -13,13 +13,16 @@ import  pytest
 
 R = Machine.Registers
 
-def runop(opdata, *, machine=None, changedregs=R(), changedmem=None):
+def runop(opdata, *,
+        machine=None, initregs=R(),
+        changedregs=R(), changedmem=None):
     m = machine
     if m is None:
         m = Machine(memsize=0x20)
 
     startaddr = 0x0E
     m.deposit(startaddr, opdata)
+    m.setregs(initregs)
 
     m.pc = startaddr
     prevregs = m.regs
@@ -48,10 +51,28 @@ def test_NOP():
     #   The test framework will ensure that nothing but the PC has changed.
     runop([I.NOP])
 
+def test_BRA():
+    #   These depend on runop's startadr being 0x0E
+    runop([I.BRA,    0], changedregs=R(pc=0x0010))
+    runop([I.BRA, 0x80], changedregs=R(pc=0xFF90))
+    #   Additional coverage in test_readsignedbyte().
+
 def test_RTS():
     m = Machine(memsize=0x40)
     m.sp = 0x002D; m.depword(0x002E, 0x1234)
     runop([I.RTS], machine=m, changedregs=R(pc=0x1234, sp=0x002F))
+
+@pytest.mark.parametrize(
+    'offset,      x,     pc', (
+    (     0, 0xFFFF, 0xFFFF),
+    (     3, 0x1234, 0x1237),
+    (  0xFF, 0xFF80, 0x007F),
+))
+def test_JMPx(offset, x, pc):
+    runop([I.JMPx, offset], initregs=R(x=x), changedregs=R(pc=pc))
+
+def test_JMP():
+    runop([I.JMP, 0xAB, 0xCD], changedregs=R(pc=0xABCD))
 
 @pytest.mark.parametrize(
     'arg,  N, Z', (

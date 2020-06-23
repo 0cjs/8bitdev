@@ -9,7 +9,10 @@ from    testmc.mc6800.opimpl  import *
 
 OPCODES = {
     0x01: ('NOP', nop),
+    0x20: ('BRA', bra),
     0x39: ('RTS', rts),
+    0x6E: ('JMPx', jmpx),
+    0x7E: ('JMP', jmp),
     0x86: ('LDAA', ldaa),
 }
 

@@ -8,7 +8,8 @@
 import  pytest
 from    testmc.mc6800  import Machine
 from    testmc.mc6800.opimpl  import (
-    isnegative, iszero, incword, popword,
+    isnegative, iszero, incword,
+    readbyte, readsignedbyte, readword, popword,
     )
 
 
@@ -39,6 +40,21 @@ def test_iszero():
 ))
 def test_incword(initial, addend, expected):
     assert expected == incword(initial, addend)
+
+@pytest.mark.parametrize(
+    ' inb,   out', (
+    (0x00,     0),
+    (0x01,     1),
+    (0x7F,  0x7F),
+    (0x80, -0x80),
+    (0xFF,    -1),
+))
+def test_readsignedbyte(inb, out):
+    m = Machine()
+    m.pc = 0xFFFF
+    m.deposit(m.pc, inb)
+    assert out == readsignedbyte(m)
+    assert 0x0000 == m.pc
 
 @pytest.mark.parametrize(
     'initsp,    word,  newsp', (

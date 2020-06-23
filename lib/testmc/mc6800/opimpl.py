@@ -7,6 +7,8 @@
     See `testmc.mc6800.opcodes.Instructions` for details of the naming scheme.
 '''
 
+from struct import unpack
+
 ####################################################################
 #   Tests of values for setting flags (HINZVC)
 
@@ -22,7 +24,25 @@ def incword(word, addend):
     '''
     return (word + addend) & 0xFFFF
 
+def readbyte(m):
+    ' Read the byte at the PC and increment the PC past it. '
+    val = m.byte(m.pc)
+    m.pc = incword(m.pc, 1)
+    return val
+
+def readsignedbyte(m):
+    ' Read the byte at the PC as a signed value and increment the PC past it. '
+    val = unpack('b', m.bytes(m.pc, 1))[0]
+    m.pc = incword(m.pc, 1)
+    return val
+
+def readword(m):
+    ' Read the word at the PC and increment the PC past it. '
+    # Careful! PC may wrap between bytes.
+    return (readbyte(m) << 8) | readbyte(m)
+
 def popword(m):
+    ' Pop a word off the stack and return it. '
     m.sp = incword(m.sp, 1)
     msb = m.byte(m.sp)
     m.sp = incword(m.sp, 1)
@@ -33,10 +53,23 @@ def popword(m):
 #   Opcode implementations
 
 def nop(m):
-    m.pc = incword(m.pc, 1)
+    readbyte(m)
+
+def bra(m):
+    relfrom = m.pc + 2
+    readbyte(m)
+    m.pc = incword(relfrom, readsignedbyte(m))
 
 def rts(m):
     m.pc = popword(m)
+
+def jmpx(m):
+    readbyte(m)
+    m.pc = incword(m.x, readbyte(m))
+
+def jmp(m):
+    readbyte(m)
+    m.pc = readword(m)
 
 def ldaa(m):
     m.a = m.byte(m.pc+1)

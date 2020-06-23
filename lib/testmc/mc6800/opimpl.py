@@ -25,25 +25,33 @@ def incword(word, addend):
     return (word + addend) & 0xFFFF
 
 def readbyte(m):
-    ' Read the byte at the PC and increment the PC past it. '
+    ' Consume a byte at [PC] and return it. '
     val = m.byte(m.pc)
     m.pc = incword(m.pc, 1)
     return val
 
 def readsignedbyte(m):
-    ' Read the byte at the PC as a signed value and increment the PC past it. '
+    ' Consume a byte at [PC] as a signed value and return it. '
     val = unpack('b', m.bytes(m.pc, 1))[0]
     m.pc = incword(m.pc, 1)
     return val
 
 def readword(m):
-    ' Read the word at the PC and increment the PC past it. '
+    ' Consume a word at [PC] and return it. '
     # Careful! PC may wrap between bytes.
     return (readbyte(m) << 8) | readbyte(m)
 
 def readindex(m):
-    ' Read a byte offset and return it added to the X register contents. '
+    ''' Consume an unsigned offset byte at [PC], add it to the X register
+        contents and return the result.
+    '''
     return incword(m.x, readbyte(m))
+
+def readreloff(m):
+    ''' Consume a signed relative offset byte at [PC] and return the
+        target address. '''
+    offset = readsignedbyte(m)
+    return incword(m.pc, offset)
 
 def popword(m):
     ' Pop a word off the stack and return it. '
@@ -67,9 +75,8 @@ def nop(m):
     readbyte(m)
 
 def bra(m):
-    relfrom = m.pc + 2
     readbyte(m)
-    m.pc = incword(relfrom, readsignedbyte(m))
+    m.pc = readreloff(m)
 
 def rts(m):
     m.pc = popword(m)
@@ -90,9 +97,8 @@ def ldaa(m):
     m.pc = incword(m.pc, 2)
 
 def bsr(m):
-    relfrom = m.pc + 2
     readbyte(m)
-    target = incword(relfrom, readsignedbyte(m))
+    target = readreloff(m)
     pushword(m, m.pc)
     m.pc = target
 

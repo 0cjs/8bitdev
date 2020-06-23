@@ -22,6 +22,10 @@ def M():
         is_little_endian            = False
         def get_memory_seq(self):   return self.mem
 
+        _JSR_opcodes    = set()
+        _RTS_opcodes    = set()
+        _ABORT_opcodes  = set()
+
         def _getpc(self):
             return self.pc
 

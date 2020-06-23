@@ -1,5 +1,5 @@
 from    testmc.generic  import *
-from    testmc.mc6800.opcodes  import OPCODES, Instructions
+from    testmc.mc6800.opcodes  import OPCODES, Instructions as I
 from    testmc.mc6800.opimpl  import readbyte
 
 
@@ -41,6 +41,10 @@ class Machine(GenericMachine):
 
     ####################################################################
     #   Instruction Execution
+
+    _JSR_opcodes    = set([I.JSR, I.JSRx, I.BSR])
+    _RTS_opcodes    = set([I.RTS])
+    _ABORT_opcodes  = set([0x00])
 
     def _getpc(self):
         return self.pc

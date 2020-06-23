@@ -105,7 +105,32 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
                 print('FileNotFoundError: ' + str(err), file=stderr)
 
     ####################################################################
-    #   Execution
+    #   Execution - abstract methods
+
+    @abstractproperty
+    def _JSR_opcodes(self):
+        ''' Opcodes that execute an unconditional call. This must be a `set()`
+            or other object that supports the `|` operator for set union.
+        '''
+    @abstractproperty
+    def _RTS_opcodes(self):
+        ''' Opcodes that execute an unconditional return from a called
+            subroutine. This must be a `set()` or other object that
+            supports the `|` operator for set union.
+        '''
+
+    @abstractproperty
+    def _ABORT_opcodes(self):
+        ''' The default set of opcodes that should abort the execution of
+            `call()`. This must be a `set()` or other object that supports
+            the `|` operator for set union.
+
+            Which opcode(s) you choose for this set will depend on both the
+            CPU and the conventions of programming on that CPU. For example
+            `BRK` is a reasonable abort default on 6502 because it's not
+            often used as a call mechanism in 6502 programs, but that is
+            not true for the very similar 6800 `SWI` instruction.
+        '''
 
     @abstractmethod
     def _getpc(self):
@@ -121,6 +146,9 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
     @abstractmethod
     def _step(self):
         ' Execute current opcode (and its arguments), updating machine state. '
+
+    ####################################################################
+    #   Execution - impelmentation
 
     def step(self, count=1, *, trace=False):
         ''' Execute `count` instructions (default 1).
@@ -139,6 +167,10 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
 
     class Timeout(RuntimeError):
         ' The emulator ran longer than requested. '
+        pass
+
+    class Abort(RuntimeError):
+        ' The emulator encoutered an instruction on which to abort.'
         pass
 
     #   Default maximum number of opcodes to execute when using stepto(),
@@ -165,3 +197,51 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
                 raise self.Timeout(
                     'Timeout after {} opcodes: {} opcode={}' \
                     .format(maxsteps, self.regs, self.byte(self.regs.pc)))
+
+    def call(self, addr, regs=None, *,
+            maxsteps=MAXSTEPS, aborts=None, trace=False):
+        ''' Simulate a JSR to `addr`, after setting any `registers`
+            specified, returning when its corresponding RTS is reached.
+
+            A `Timeout` will be raised if `maxsteps` opcodes are executed.
+            An `Abort` will be raised if any opcodes in the `aborts`
+            collection are about to be executed. (By default this list
+            contains all instructions in `_ABORT_opcodes`.) `step()`
+            tracing will be enabled if `trace` is `True`.
+
+            The PC will be left at the final (unexecuted) RTS opcode. Thus,
+            unlike `step()`, this may execute no opcodes if the PC is
+            initially pointing to an RTS.
+
+            JSR and RTS opcodes will be tracked to allow the routine to
+            call subroutines, but tricks with the stack (such as pushing an
+            address and executing RTS, with no corresponding JSR) will
+            confuse this routine and may cause it to terminate early or not
+            at all.
+        '''
+        if regs is None: regs = self.Registers()
+        self.setregs(regs)
+
+        if aborts is None: aborts = self._ABORT_opcodes
+
+        if addr is not None:
+            self.setregs(self.Registers(pc=addr))   # Overrides regs
+
+        stopat = self._JSR_opcodes | self._RTS_opcodes | set(aborts)
+        depth = 0
+        while True:
+            opcode = self.byte(self.mpu.pc)
+            if opcode in self._RTS_opcodes:
+                if depth > 0:
+                    depth -=1
+                else:
+                    #   We don't execute the RTS because no JSR was called
+                    #   to come in, so we may have nothing on the stack.
+                    return
+            elif opcode in self._JSR_opcodes:
+                #   Enter the new level with the next execution
+                depth += 1
+            elif opcode in stopat:   # Abort
+                raise self.Abort('Abort on opcode={}: {}' \
+                    .format(self.byte(self.regs.pc), self.regs))
+            self.stepto(stopat, maxsteps=maxsteps, trace=trace)

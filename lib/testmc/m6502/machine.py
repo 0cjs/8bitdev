@@ -29,10 +29,6 @@ class Machine(GenericMachine):
 
     ####################################################################
 
-    class Abort(RuntimeError):
-        ' The emulator encoutered an instruction on which to abort.'
-        pass
-
     def __init__(self):
         self.mpu = MPU()
         self.regsobj = self.mpu
@@ -51,83 +47,14 @@ class Machine(GenericMachine):
     def spword(self, depth=0):
         return self.word(self._stackaddr(depth, 2))
 
-    def _getpc(self):
-        return self.mpu.pc
+    ####################################################################
+    #   Execution
 
-    def _step(self):
-            self.mpu.step()
+    _JSR_opcodes        = set([I.JSR])
+    _RTS_opcodes        = set([I.RTS])
+    _ABORT_opcodes      = set([I.BRK])
 
-    #   Opcodes that execute an unconditional call. This must be a `set()`
-    #   or other object that supports the `|` operator for set union.
-    #
-    _JSR_opcodes = set([I.JSR])
+    def _getpc(self):   return self.mpu.pc
+    def _step(self):    self.mpu.step()
 
-    #   Opcodes that execute an unconditional return from a called
-    #   subroutine. This must be a `set()` or other object that supports
-    #   the `|` operator for set union.
-    #
-    _RTS_opcodes = set([I.RTS])
 
-    #   The default set of opcodes that should abort the execution of
-    #   `call()`. This must be a `set()` or other object that supports the
-    #   `|` operator for set union.
-    #
-    #   Which opcode(s) you choose for this set will depend on both the CPU
-    #   and the conventions of programming on that CPU. For example `BRK`
-    #   is a reasonable abort default on 6502 because it's not often used
-    #   as a call mechanism in 6502 programs, but that is not true for the
-    #   very similar 6800 `SWI` instruction.
-    #
-    _ABORT_opcodes = set([I.BRK])
-
-    #   Default maximum number of opcodes to execute when using stepto(),
-    #   call() and related functions. Even on a relatively slow modern
-    #   machine, 100,000 opcodes should terminate within a few seconds.
-    MAXSTEPS = 100000
-
-    def call(self, addr, regs=None, *,
-            maxsteps=MAXSTEPS, aborts=_ABORT_opcodes, trace=False):
-        ''' Simulate a JSR to `addr`, after setting any `registers`
-            specified, returning when its corresponding RTS is reached.
-
-            A `Timeout` will be raised if `maxsteps` opcodes are executed.
-            An `Abort` will be raised if any opcodes in the `aborts`
-            collection are about to be executed. (By default this list
-            contains all instructions in `_ABORT_opcodes`.) `step()`
-            tracing will be enabled if `trace` is `True`.
-
-            The PC will be left at the final (unexecuted) RTS opcode. Thus,
-            unlike `step()`, this may execute no opcodes if the PC is
-            initially pointing to an RTS.
-
-            JSR and RTS opcodes will be tracked to allow the routine to
-            call subroutines, but tricks with the stack (such as pushing an
-            address and executing RTS, with no corresponding JSR) will
-            confuse this routine and may cause it to terminate early or not
-            at all.
-        '''
-        if regs is None:
-            regs = self.Registers()
-        self.setregs(regs)
-
-        if addr is not None:
-            self.setregs(self.Registers(pc=addr))   # Overrides regs
-
-        stopat = self._JSR_opcodes | self._RTS_opcodes | set(aborts)
-        depth = 0
-        while True:
-            opcode = self.byte(self.mpu.pc)
-            if opcode in self._RTS_opcodes:
-                if depth > 0:
-                    depth -=1
-                else:
-                    #   We don't execute the RTS because no JSR was called
-                    #   to come in, so we may have nothing on the stack.
-                    return
-            elif opcode in self._JSR_opcodes:
-                #   Enter the new level with the next execution
-                depth += 1
-            elif opcode in stopat:   # Abort
-                raise self.Abort('Abort on opcode={}: {}' \
-                    .format(self.byte(self.regs.pc), self.regs))
-            self.stepto(stopat, maxsteps=maxsteps, trace=trace)

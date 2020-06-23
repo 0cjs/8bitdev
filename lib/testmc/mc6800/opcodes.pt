@@ -85,7 +85,7 @@ def test_JMP():
     (0xEA, 1, 0),
 ))
 def test_LDAA(arg, N, Z):
-    runop([I.LDAA, arg], changedregs=R(a=arg, N=N, Z=Z))
+    runop([I.LDAA, arg], changedregs=R(a=arg, N=N, Z=Z, V=0))
 
 def test_bsr():
     runop([I.BSR, 0xFE], startaddr=0x12,            # calling self

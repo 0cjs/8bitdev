@@ -178,19 +178,19 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
     #   machine, 100,000 opcodes should terminate within a few seconds.
     MAXSTEPS = 100000
 
-    def stepto(self, stopat, *, maxsteps=MAXSTEPS, trace=False):
+    def stepto(self, stopon, *, maxsteps=MAXSTEPS, trace=False):
         ''' Step an opcode and then, as long as the next opcode
-            is not `stopat` (if a single value) or in `stopat` (if a
+            is not `stopon` (if a single value) or in `stopon` (if a
             container), continue stepping.
 
-            If a `stopat` opcode hasn't been reached after `maxsteps`
+            If a `stopon` opcode hasn't been reached after `maxsteps`
             opcodes have been executed, raise a `Timeout` exception.
         '''
-        if not isinstance(stopat, Container):
-            stopat = (stopat,)
+        if not isinstance(stopon, Container):
+            stopon = (stopon,)
         self.step(trace=trace)
         count = maxsteps - 1
-        while self.byte(self._getpc()) not in stopat:
+        while self.byte(self._getpc()) not in stopon:
             self.step(trace=trace)
             count -= 1
             if count <= 0:
@@ -230,7 +230,7 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
         if addr is not None:
             self.setregs(self.Registers(pc=addr))   # Overrides regs
 
-        stopat = self._JSR_opcodes | self._RTS_opcodes | set(aborts)
+        stopon = self._JSR_opcodes | self._RTS_opcodes | set(aborts)
         depth = 0
         while True:
             opcode = self.byte(self._getpc())
@@ -244,7 +244,7 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
             elif opcode in self._JSR_opcodes:
                 #   Enter the new level with the next execution
                 depth += 1
-            elif opcode in stopat:   # Abort
+            elif opcode in stopon:   # Abort
                 raise self.Abort('Abort on opcode=${:02X}: {}' \
                     .format(self.byte(self.regs.pc), self.regs))
-            self.stepto(stopat, maxsteps=maxsteps, trace=trace)
+            self.stepto(stopon, maxsteps=maxsteps, trace=trace)

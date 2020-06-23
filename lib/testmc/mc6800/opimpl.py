@@ -41,6 +41,10 @@ def readword(m):
     # Careful! PC may wrap between bytes.
     return (readbyte(m) << 8) | readbyte(m)
 
+def readindex(m):
+    ' Read a byte offset and return it added to the X register contents. '
+    return incword(m.x, readbyte(m))
+
 def popword(m):
     ' Pop a word off the stack and return it. '
     m.sp = incword(m.sp, 1)
@@ -48,6 +52,13 @@ def popword(m):
     m.sp = incword(m.sp, 1)
     lsb = m.byte(m.sp)
     return (msb << 8) + lsb
+
+def pushword(m, word):
+    ' Push a word on to the stack, LSB followed by MSB. '
+    m.deposit(m.sp, word & 0xFF)
+    m.sp = incword(m.sp, -1)
+    m.deposit(m.sp, word >> 8)
+    m.sp = incword(m.sp, -1)
 
 ####################################################################
 #   Opcode implementations
@@ -65,7 +76,7 @@ def rts(m):
 
 def jmpx(m):
     readbyte(m)
-    m.pc = incword(m.x, readbyte(m))
+    m.pc = readindex(m)
 
 def jmp(m):
     readbyte(m)
@@ -77,3 +88,22 @@ def ldaa(m):
     m.Z = iszero(m.a)
     m.V = False
     m.pc = incword(m.pc, 2)
+
+def bsr(m):
+    relfrom = m.pc + 2
+    readbyte(m)
+    target = incword(relfrom, readsignedbyte(m))
+    pushword(m, m.pc)
+    m.pc = target
+
+def jsrx(m):
+    readbyte(m)
+    target = readindex(m)
+    pushword(m, m.pc)
+    m.pc = target
+
+def jsr(m):
+    readbyte(m)
+    target = readword(m)
+    pushword(m, m.pc)
+    m.pc = target

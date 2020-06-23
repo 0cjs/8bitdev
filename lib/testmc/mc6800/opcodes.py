@@ -14,6 +14,9 @@ OPCODES = {
     0x6E: ('JMPx', jmpx),
     0x7E: ('JMP', jmp),
     0x86: ('LDAA', ldaa),
+    0x8D: ('BSR', bsr),
+    0xAD: ('JSRx', jsrx),
+    0xBD: ('JSR', jsr),
 }
 
 ####################################################################

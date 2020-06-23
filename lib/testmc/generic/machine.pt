@@ -186,31 +186,37 @@ def test_underscore_step(M):
     m._step();      assert 10 == m.pc
     m._step();      assert 11 == m.pc
 
+####################################################################
+#   Execution - step(), stepto()
+
 def test_step(M):
     m = M();    assert 0 == m._steps_taken
     m.step();   assert 1 == m._steps_taken
     m.step(3);  assert 4 == m._steps_taken
 
-@pytest.mark.parametrize('stopon, steps, pc', (
-    (                       0xFD,   2, 3),  # stopon scalar
-    (    [0x02, 0xFE, 0xFD, 0xFC],  2, 3),  # stopon collections
-    (set([0x02, 0xFE, 0xFD, 0xFC]), 2, 3),
-    (                       0x00,   3, 5),  # always execute first op
-))
-def test_stepto(M, stopon, steps, pc):
-    m = M(); m.B = False
-    m.deposit(m.pc, b'\x00\x01\xFD\xFD\x00\x00')
-    print('stop on', type(stopon), stopon)   # test name not obvious
-    m.stepto(stopon)
-    assert (steps, pc) == (m._steps_taken, m.pc)
-
-def test_stepto_empty_stopon_and_otherargs(M):
+def test_stepto_maxsteps(M):
     m = M(); m.B = False
     m.deposit(m.pc, b'\x00\x01\xFD\xFD\x00\x00')
     with pytest.raises(m.Timeout) as ex:
-        m.stepto(set(), maxsteps=3, trace=True)
+        m.stepto(maxsteps=3, trace=True)
     assert (3, 5) == (m._steps_taken, m.pc)
     assert ex.match('after 3 opcodes: CPU pc=0005')
+
+@pytest.mark.parametrize('stopon, steps, pc', (
+    (                      [0xFD],  2, 3),
+    (    [0x02, 0xFE, 0xFD, 0xFC],  2, 3),
+    (set([0x02, 0xFE, 0xFD, 0xFC]), 2, 3),
+    (                      [0x00],  3, 5),  # always execute first op
+))
+def test_stepto_stopon(M, stopon, steps, pc):
+    m = M(); m.B = False
+    m.deposit(m.pc, b'\x00\x01\xFD\xFD\x00\x00')
+    print('stop on', type(stopon), stopon)   # test name not obvious
+    m.stepto(stopon=stopon)
+    assert (steps, pc) == (m._steps_taken, m.pc)
+
+####################################################################
+#   Execution - call()
 
 def test_call_rts_regs(M, R):
     m = M(); m.B = False

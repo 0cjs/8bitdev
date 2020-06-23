@@ -101,12 +101,12 @@ def test_Machine_stepto(M, R):
     M.deposit(0x300, [I.NOP, I.LDA, 2, I.NOP, I.RTS, I.BRK])
 
     M.setregs(R(pc=0x300))
-    M.stepto(I.NOP)                 # Always executes at least one instruction
+    M.stepto(stopon=(I.NOP,))       # Always executes at least one instruction
     assert R(pc=0x303) == M.regs
     assert M.mpu.processorCycles == 4
 
     M.setregs(R(pc=0x300))
-    M.stepto(I.RTS)
+    M.stepto(stopon=(I.RTS,))
     assert R(pc=0x304) == M.regs
 
     M.setregs(R(pc=0x300))
@@ -114,23 +114,23 @@ def test_Machine_stepto(M, R):
         #   0x02 is an illegal opcode that we should never encounter.
         #   We use about 1/10 the default timeout to speed up this test,
         #   but it's still >100 ms.
-        M.stepto(0x02, maxsteps=10000)
+        M.stepto(stopon=(0x02,), maxsteps=10000)
 
 def test_Machine_stepto_multi(M, R):
     M.deposit(0x700, [I.NOP, I.INX, I.NOP, I.INY, I.RTS, I.BRK])
 
     M.setregs(R(pc=0x700))
-    M.stepto([I.INY])
+    M.stepto(stopon=[I.INY])
     assert R(pc=0x703) == M.regs
 
     M.setregs(R(pc=0x700))
-    M.stepto((I.INY, I.INX))
+    M.stepto(stopon=(I.INY, I.INX))
     assert R(pc=0x701) == M.regs
 
 def test_machine_stepto_brk(M, R):
     M.deposit(0x710, [I.NOP, I.INX, I.BRK])
     M.setregs(R(pc=0x710))
-    M.stepto((I.BRK,))
+    M.stepto(stopon=(I.BRK,))
     assert R(pc=0x712) == M.regs
 
 def test_Machine_call_rts(M, R):

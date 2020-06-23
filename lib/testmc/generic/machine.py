@@ -178,25 +178,30 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
     #   machine, 100,000 opcodes should terminate within a few seconds.
     MAXSTEPS = 100000
 
-    def stepto(self, stopon, *, maxsteps=MAXSTEPS, trace=False):
-        ''' Step an opcode and then, as long as the next opcode
-            is not `stopon` (if a single value) or in `stopon` (if a
-            container), continue stepping.
+    def stepto(self, *, stopon=set(), maxsteps=MAXSTEPS, trace=False):
+        ''' Step an opcode and then continue until a opcode in `stopon` is
+            reached or until we have done `maxsteps`. (At least one opcode
+            is always executed.)
 
-            If a `stopon` opcode hasn't been reached after `maxsteps`
-            opcodes have been executed, raise a `Timeout` exception.
+            An attempt to exceed `maxsteps` will raise a `Timeout`
+            exception; if you want to run just a specific number of steps
+            use `step()` instead. Any other stop condition simply returns.
+
+            `stopon` must be a `collections.abc.Container`.
         '''
-        if not isinstance(stopon, Container):
-            stopon = (stopon,)
-        self.step(trace=trace)
-        count = maxsteps - 1
-        while self.byte(self._getpc()) not in stopon:
+        assert isinstance(stopon, Container), \
+            "'stopon' must be a collections.abc.Container"
+
+        remaining = maxsteps - 1
+        while True:
             self.step(trace=trace)
-            count -= 1
-            if count <= 0:
+            if self.byte(self._getpc()) in stopon:
+                break
+            if remaining <= 0:
                 raise self.Timeout(
                     'Timeout after {} opcodes: {} opcode={}' \
                     .format(maxsteps, self.regs, self.byte(self.regs.pc)))
+            remaining -= 1
 
     def call(self, addr, regs=None, *,
             maxsteps=MAXSTEPS, aborts=None, trace=False):
@@ -247,4 +252,4 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
             elif opcode in stopon:   # Abort
                 raise self.Abort('Abort on opcode=${:02X}: {}' \
                     .format(self.byte(self.regs.pc), self.regs))
-            self.stepto(stopon, maxsteps=maxsteps, trace=trace)
+            self.stepto(stopon=stopon, maxsteps=maxsteps, trace=trace)

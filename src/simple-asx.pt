@@ -70,7 +70,7 @@ def test_jmpptr(M, R, S):
 
 def test_jmpabsrts(M, R, S):
     M.setregs(R(pc=S.jmpabsrts, a=1))
-    M.stepto(I.RTS)
+    M.stepto(stopon=(I.RTS,))
     assert 0x5678-1 == M.spword()
     M.step()                 # rts
     assert R(pc=0x5678) == M.regs

@@ -23,6 +23,13 @@ def M():
         def get_memory_seq(self):   return self.mem
 
         def _step(self):
+            ''' In this test Machine, all opcodes are NOPs with the low two
+                bits indicating how many additional bytes should be
+                consumed as arguments to this opcode.
+            '''
+            argcount = self.byte(self.pc) & 0b11
+            self.pc += argcount + 1
+            self.pc &= 0xFFFF
             self._steps_taken += 1
 
     return Machine
@@ -158,6 +165,19 @@ def test_load():
 
 ####################################################################
 #   Execution
+
+def test_underscore_step(M):
+    ' Test that our test _step() function is doing what it should. '
+    m = M()
+    m.deposit(m.pc, b''.join((
+        b'\x00', b'\x01' * 2, b'\x02' * 3, b'\x03' * 4, b'\x04', )))
+
+    ...;            assert  0 == m.pc
+    m._step();      assert  1 == m.pc
+    m._step();      assert  3 == m.pc
+    m._step();      assert  6 == m.pc
+    m._step();      assert 10 == m.pc
+    m._step();      assert 11 == m.pc
 
 def test_step(M):
     m = M();    assert 0 == m._steps_taken

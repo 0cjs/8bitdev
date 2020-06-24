@@ -72,6 +72,18 @@ def pushword(m, word):
     m.sp = incword(m.sp, -1)
 
 ####################################################################
+#   Flag handling
+
+def logicNZV(m, val):
+    ''' Set N, Z and V flags based on `val`, and return `val`.
+        This is used for loads and logic operations.
+    '''
+    m.N = isnegative(val)
+    m.Z = iszero(val)
+    m.V = False
+    return val
+
+####################################################################
 #   Opcode implementations
 
 def nop(m):
@@ -89,11 +101,11 @@ def jmpx(m):
 def jmp(m):
     m.pc = readword(m)
 
+def anda(m):
+    m.a = logicNZV(m, m.a & readbyte(m))
+
 def ldaa(m):
-    m.a = readbyte(m)
-    m.N = isnegative(m.a)
-    m.Z = iszero(m.a)
-    m.V = False
+    m.a = logicNZV(m, readbyte(m))
 
 def bsr(m):
     target = readreloff(m)

@@ -13,6 +13,7 @@ OPCODES = {
     0x39: ('RTS', rts),
     0x6E: ('JMPx', jmpx),
     0x7E: ('JMP', jmp),
+    0x84: ('ANDA', anda),
     0x86: ('LDAA', ldaa),
     0x8D: ('BSR', bsr),
     0xAD: ('JSRx', jsrx),
@@ -33,7 +34,7 @@ class Instructions:
             -------------------------------------------------------
                             implied
                     #nn     immediate
-              z     nn      zero page
+              z     nn      direct page ($00-$FF)
               a     addr    absolute (extended)
               x     n,X     indirect via offset + [X register]
 

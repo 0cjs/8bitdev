@@ -51,6 +51,6 @@ class Machine(GenericMachine):
 
     def _step(self):
         opcode = readbyte(self)
-        _, f = OPCODES.get(opcode,
-            ('NotImplemented', lambda m: raiseNI(opcode)))
+        _, f = OPCODES.get(opcode, ('NotImplemented',
+            lambda m: raiseNI('opcode=${:02X}'.format(opcode))))
         f(self)

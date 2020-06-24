@@ -98,6 +98,10 @@ def nop(m):
 def bra(m):
     m.pc = readreloff(m)
 
+def bmi(m):
+    target = readreloff(m)
+    if m.N: m.pc = target
+
 def rts(m):
     m.pc = popword(m)
 

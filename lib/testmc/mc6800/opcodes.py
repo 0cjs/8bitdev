@@ -10,6 +10,7 @@ from    testmc.mc6800.opimpl  import *
 OPCODES = {
     0x01: ('NOP', nop),
     0x20: ('BRA', bra),
+    0x2B: ('BMI', bmi),
     0x39: ('RTS', rts),
     0x6E: ('JMPx', jmpx),
     0x7E: ('JMP', jmp),

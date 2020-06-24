@@ -43,3 +43,11 @@ def test_pnyb(M, S, R, val, char):
     M.deposit(S.charoutport, not val)
     M.call(S.pnyb, R(a=val))
     assert ord(char) == M.byte(S.charoutport)
+
+@pytest.mark.parametrize('val, chars', (
+    (0x00, b'00'), (0x0F, b'0F'), (0xA0, b'A0'), (0xFF, b'FF'),
+), ids=tmc_tid)
+def test_prhex(M, S, R, val, chars):
+    _, outchars = M.setiostreams(S.charoutport)
+    M.call(S.prhex, R(a=val))
+    assert chars == outchars.getvalue()

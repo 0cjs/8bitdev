@@ -156,3 +156,25 @@ def addHNZVC(m, augend, addend):
 
 def adda(m):
     m.a = addHNZVC(m, m.a, readbyte(m))
+
+def subNZVC(m, minuend, subtrahend):
+    difference = incbyte(minuend, -subtrahend)
+    m.N = isnegative(difference)
+    m.Z = iszero(difference)
+
+    bit7 = 0b10000000;              bit3 = 0b1000
+    x7 = bool(minuend & bit7);      x3 = bool(minuend & bit3)
+    m7 = bool(subtrahend & bit7);   m3 = bool(subtrahend & bit3)
+    r7 = bool(difference & bit7);   r3 = bool(difference & bit3)
+    #   The following is copied pretty much directly from the PRG,
+    #   page A-31 (CMP).
+    m.C = (not x7 and m7) or (m7 and r7) or (r7 and not x7)
+    m.V = (x7 and not m7 and not r7) or (not x7 and m7 and r7)
+
+    return difference
+
+def suba(m):
+    m.a = subNZVC(m, m.a, readbyte(m))
+
+def cmpa(m):
+    subNZVC(m, m.a, readbyte(m))

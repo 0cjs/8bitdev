@@ -184,3 +184,24 @@ def test_adda_i(a, arg, res, H, N, Z, V, C):
     runop([I.ADDA, arg], initregs=R(a=a, C=0), changedregs=cr)
     runop([I.ADDA, arg], initregs=R(a=a, C=1), changedregs=cr)
 
+@pytest.mark.parametrize('minuend, subtrahend, difference, N, Z, V, C', (
+    #minu, subt, diff, N, Z, V, C
+    (0x00, 0x00, 0x00, 0, 1, 0, 0),
+    #   V: overflow determined by bits 6
+    (0x81, 0x01, 0x80, 1, 0, 0, 0),
+    (0x81, 0x02, 0x7F, 0, 0, 1, 0),
+    (0x7F, 0x01, 0x7E, 0, 0, 0, 0),
+    #   C: borrow determined by bits 7
+    (0x01, 0x01, 0x00, 0, 1, 0, 0),
+    (0x01, 0x02, 0xFF, 1, 0, 0, 1),
+    (0xFF, 0x01, 0xFE, 1, 0, 0, 0),
+), ids=hexid)
+def test_suba(minuend, subtrahend, difference, N, Z, V, C):
+    cr = R(a=difference, N=N, Z=Z, V=V, C=C)
+    runop([I.SUBA, subtrahend], initregs=R(a=minuend, C=0), changedregs=cr)
+    runop([I.SUBA, subtrahend], initregs=R(a=minuend, C=1), changedregs=cr)
+
+def test_cmpa():
+    #   Confirm that A register is unchanged;
+    #   test_suba() provides the rest of the coverage.
+    runop([I.CMPA, 0x02], initregs=R(a=0x81), changedregs=R(N=0, Z=0, V=1, C=0))

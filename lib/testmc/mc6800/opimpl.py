@@ -62,20 +62,26 @@ def readreloff(m):
     offset = readsignedbyte(m)
     return incword(m.pc, offset)
 
+def popbyte(m):
+    ' Pop a byte off the stack and return it. '
+    m.sp = incword(m.sp, 1)
+    return m.byte(m.sp)
+
 def popword(m):
     ' Pop a word off the stack and return it. '
-    m.sp = incword(m.sp, 1)
-    msb = m.byte(m.sp)
-    m.sp = incword(m.sp, 1)
-    lsb = m.byte(m.sp)
+    msb = popbyte(m)
+    lsb = popbyte(m)
     return (msb << 8) + lsb
+
+def pushbyte(m, byte):
+    ' Push a byte on to the stack. '
+    m.deposit(m.sp, byte)
+    m.sp = incword(m.sp, -1)
 
 def pushword(m, word):
     ' Push a word on to the stack, LSB followed by MSB. '
-    m.deposit(m.sp, word & 0xFF)
-    m.sp = incword(m.sp, -1)
-    m.deposit(m.sp, word >> 8)
-    m.sp = incword(m.sp, -1)
+    pushbyte(m, word & 0xFF)
+    pushbyte(m, word >> 8)
 
 ####################################################################
 #   Flag handling
@@ -101,6 +107,12 @@ def bra(m):
 def bmi(m):
     target = readreloff(m)
     if m.N: m.pc = target
+
+def pula(m):
+    m.a = popbyte(m)
+
+def psha(m):
+    pushbyte(m, m.a)
 
 def rts(m):
     m.pc = popword(m)

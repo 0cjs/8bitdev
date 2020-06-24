@@ -19,13 +19,16 @@ def msb(n): return n >> 8
 def lsb(n): return n & 0xFF
 
 def runop(opdata, *, machine=None, memsize=0x20,
-        startaddr=0x0E, initregs=R(),
+        startaddr=0x0E, initregs=R(), initmem=None,
         changedregs=R(), changedmem=None):
     m = machine
     if m is None:
         m = Machine(memsize=memsize)
 
     m.deposit(startaddr, opdata)
+    if initmem is not None:
+        for addr, value in initmem.items():
+            m.deposit(addr, value)
     m.setregs(initregs)
 
     #   For any register not explicitly set that has a value in changedregs,
@@ -94,6 +97,20 @@ def test_BMI_not():
 
 def test_BMI_taken():
     runop([I.BMI, 0x40], initregs=R(N=1), changedregs=R(pc=0x0050))
+
+def test_PULA():
+    runop([I.PULA],
+        initregs    = R(sp=0x000C),
+        initmem     = { 0x000D: 0xA1 },
+        changedregs = R(sp=0x000D, a=0xA1),
+        )
+
+def test_PSHA():
+    runop([I.PSHA],
+        initregs    = R(a=0xEF, sp=0x000F),
+        changedregs = R(sp=0x000E),
+        changedmem  = { 0x000F: 0xEF },
+        )
 
 def test_RTS():
     m = Machine(memsize=0x40)

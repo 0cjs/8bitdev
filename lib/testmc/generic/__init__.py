@@ -11,9 +11,11 @@
 
 from testmc.generic.machine import GenericMachine
 from testmc.generic.registers import GenericRegisters, Reg, Flag, Bit
+from testmc.generic.iomem  import IOMem
 
 #   This is all that most implementations will need to implement the API.
 __all__ = [
     'GenericMachine',
     'GenericRegisters', 'Reg', 'Flag', 'Bit',
+    'IOMem',
     ]

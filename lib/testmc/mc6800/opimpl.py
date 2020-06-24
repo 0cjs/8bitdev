@@ -21,6 +21,12 @@ def iszero(b):
 ####################################################################
 #   Address handling, reading data at the PC, reading/writing stack
 
+def incbyte(byte, addend):
+    ''' Return 8-bit `byte` incremented by `addend` (which may be negative).
+        This returns an 8-bit unsigned result, wrapping at $FF/$00.
+    '''
+    return (byte + addend) & 0xFF
+
 def incword(word, addend):
     ''' Return 16-bit `word` incremented by `addend` (which may be negative).
         This returns a 16-bit unsigned result, wrapping at $FFFF/$0000.
@@ -121,3 +127,32 @@ def jsr(m):
     target = readword(m)
     pushword(m, m.pc)
     m.pc = target
+
+####################################################################
+#   Arithmetic opcodes
+
+def addHNZVC(m, augend, addend):
+    ''' Return the modular 8-bit sum of adding without carry `addend` (the
+        operand) to `augend` (the contents of the register). Set H, N, Z, V
+        and C flags based on the result, per pages A-4 (ADC) and A-5 (ADD)
+        in the PRG.
+    '''
+    sum = incbyte(augend, addend)
+
+    m.N = isnegative(sum)
+    m.Z = iszero(sum)
+
+    bit7 = 0b10000000;              bit3 = 0b1000
+    x7 = bool(augend & bit7);       x3 = bool(augend & bit3)
+    m7 = bool(addend & bit7);       m3 = bool(addend & bit3)
+    r7 = bool(sum & bit7);          r3 = bool(sum & bit3)
+
+    #   The following is copied directly from PRG pages A-4 and A-5.
+    m.C = x7 and m7  or  m7 and not r7  or  not r7 and x7
+    m.H = x3 and m3  or  m3 and not r3  or  not r3 and x3
+    m.V = x7 and m7 and not r7  or  not x7 and not m7 and r7
+
+    return sum
+
+def adda(m):
+    m.a = addHNZVC(m, m.a, readbyte(m))

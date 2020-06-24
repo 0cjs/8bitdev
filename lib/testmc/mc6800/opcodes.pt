@@ -6,6 +6,7 @@
 
 from    testmc.mc6800.machine  import Machine
 from    testmc.mc6800.opcodes  import Instructions as I
+from    numbers  import Number
 import  pytest
 
 ####################################################################
@@ -72,6 +73,15 @@ def runop(opdata, *, machine=None, memsize=0x20,
             newmem[addr] = value
         assert newmem == m.mem
 
+def hexid(x):
+    ''' If `x` is a numbers ≥ 2, return a nice hex representation, otherwise
+        return `x`. This is useful to help generate test IDs for parametrized
+        tests: ``parametrize(..., ids=hexid)``.
+    '''
+    if isinstance(x, Number) and x >= 2:
+        return '${:02X}'.format(x)
+    else:
+        return x
 
 ####################################################################
 #   Opcode Tests
@@ -144,3 +154,33 @@ def test_jsr():
         initregs    = R(sp=0),                      # test stack wraparound
         changedregs = R(pc=0x5678, sp=0xFFFE),
         changedmem  = { 0x0000: 0x37, 0xFFFF: 0x12, })
+
+####################################################################
+#   Arithmetic opcodes
+
+@pytest.mark.parametrize(
+    'a,     arg,  res, H, N, Z, V, C', (
+    (0x00, 0x00, 0x00, 0, 0, 1, 0, 0),
+    #   H: half carry determined by bits 3
+    (0x0E, 0x01, 0x0F, 0, 0, 0, 0, 0),
+    (0x0F, 0x01, 0x10, 1, 0, 0, 0, 0),
+    (0x10, 0x01, 0x11, 0, 0, 0, 0, 0),
+    #   V: overflow determined by bits 6
+    (0x7E, 0x01, 0x7F, 0, 0, 0, 0, 0),
+    (0x7F, 0x01, 0x80, 1, 1, 0, 1, 0),
+    (0x80, 0x01, 0x81, 0, 1, 0, 0, 0),
+    #   C: carry determined by bits 7
+    (0xFE, 0x01, 0xFF, 0, 1, 0, 0, 0),
+    (0xFF, 0x01, 0x00, 1, 0, 1, 0, 1),
+    (0xF0, 0x20, 0x10, 0, 0, 0, 0, 1),  # no half carry
+    #   C and V
+    (0x40, 0xF0, 0x30, 0, 0, 0, 0, 1),  # 2's comp: subtract from positive
+    (0xF0, 0xF0, 0xE0, 0, 1, 0, 0, 1),  # 2's comp: subtract from negative
+    (0x80, 0x80, 0x00, 0, 0, 1, 1, 1),
+), ids=hexid)
+def test_adda_i(a, arg, res, H, N, Z, V, C):
+    cr = R(a=res, H=H, N=N, Z=Z, V=V, C=C)
+    #   Operation should be the same whether carry set or clear.
+    runop([I.ADDA, arg], initregs=R(a=a, C=0), changedregs=cr)
+    runop([I.ADDA, arg], initregs=R(a=a, C=1), changedregs=cr)
+

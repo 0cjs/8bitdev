@@ -16,6 +16,7 @@ OPCODES = {
     0x84: ('ANDA', anda),
     0x86: ('LDAA', ldaa),
     0x8D: ('BSR', bsr),
+    0x8B: ('ADDA', adda),
     0xAD: ('JSRx', jsrx),
     0xBD: ('JSR', jsr),
 }

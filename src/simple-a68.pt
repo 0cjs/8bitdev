@@ -1,3 +1,4 @@
+from    testmc  import tmc_tid
 from    testmc.mc6800  import  Machine
 import  pytest
 
@@ -31,3 +32,14 @@ def test_call(M, S, R):
     assert R(a=0) == M.regs
     M.call(S.set_a_ff)
     assert R(a=0xFF) == M.regs
+
+####################################################################
+
+@pytest.mark.parametrize('val, char', (
+    (0x00, '0'), (0x01, '1'), (0x0E, 'E'), (0x0F, 'F'),
+    (0x10, '0'), (0xFF, 'F'),
+), ids=tmc_tid)
+def test_pnyb(M, S, R, val, char):
+    M.deposit(S.charoutport, not val)
+    M.call(S.pnyb, R(a=val))
+    assert ord(char) == M.byte(S.charoutport)

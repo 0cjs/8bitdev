@@ -9,4 +9,19 @@ ident       byt "simple-a68.a68"    ; we use this to check that we've loaded
 set_a_ff    ldaa #$FF
             rts
 
+; ----------------------------------------------------------------------
+
+charoutport equ $C000               ; character output port
+
+;   Print lower nybble of A to the character output port.
+pnyb        anda #$0F
+            adda #'0'
+            cmpa #'9'+1
+            bmi .digit
+            adda #'A'-'9'-1
+.digit      staa charoutport
+            rts
+
+; ----------------------------------------------------------------------
+
             end set_a_ff

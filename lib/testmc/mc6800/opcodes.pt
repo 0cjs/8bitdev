@@ -6,6 +6,7 @@
 
 from    testmc.mc6800.machine  import Machine
 from    testmc.mc6800.opcodes  import Instructions as I
+from    testmc  import tmc_tid
 from    numbers  import Number
 import  pytest
 
@@ -75,16 +76,6 @@ def runop(opdata, *, machine=None, memsize=0x20,
         for addr, value in changedmem.items():
             newmem[addr] = value
         assert newmem == m.mem
-
-def hexid(x):
-    ''' If `x` is a numbers ≥ 2, return a nice hex representation, otherwise
-        return `x`. This is useful to help generate test IDs for parametrized
-        tests: ``parametrize(..., ids=hexid)``.
-    '''
-    if isinstance(x, Number) and x >= 2:
-        return '${:02X}'.format(x)
-    else:
-        return x
 
 ####################################################################
 #   Opcode Tests
@@ -198,7 +189,7 @@ def test_jsr():
     (0x40, 0xF0, 0x30, 0, 0, 0, 0, 1),  # 2's comp: subtract from positive
     (0xF0, 0xF0, 0xE0, 0, 1, 0, 0, 1),  # 2's comp: subtract from negative
     (0x80, 0x80, 0x00, 0, 0, 1, 1, 1),
-), ids=hexid)
+), ids=tmc_tid)
 def test_adda_i(a, arg, res, H, N, Z, V, C):
     cr = R(a=res, H=H, N=N, Z=Z, V=V, C=C)
     #   Operation should be the same whether carry set or clear.
@@ -216,7 +207,7 @@ def test_adda_i(a, arg, res, H, N, Z, V, C):
     (0x01, 0x01, 0x00, 0, 1, 0, 0),
     (0x01, 0x02, 0xFF, 1, 0, 0, 1),
     (0xFF, 0x01, 0xFE, 1, 0, 0, 0),
-), ids=hexid)
+), ids=tmc_tid)
 def test_suba(minuend, subtrahend, difference, N, Z, V, C):
     cr = R(a=difference, N=N, Z=Z, V=V, C=C)
     runop([I.SUBA, subtrahend], initregs=R(a=minuend, C=0), changedregs=cr)

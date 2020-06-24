@@ -118,6 +118,18 @@ def test_RTS():
     runop([I.RTS], machine=m, changedregs=R(pc=0x1234, sp=0x002F))
 
 @pytest.mark.parametrize(
+    #   XXX see comment in code re V=N⊕C
+    'init,  res, Z, V, C', (
+    (0x01, 0x00, 1, 1, 1),
+    (0x02, 0x01, 0, 0, 0),
+    (0xAA, 0x55, 0, 0, 0),
+    (0xFF, 0x7F, 0, 1, 1),
+), ids=tmc_tid)
+def test_LSRA(init, res, Z, V, C):
+    runop([I.LSRA], initregs=R(a=init),
+        changedregs=R(a=res, N=0, Z=Z, V=V, C=C))
+
+@pytest.mark.parametrize(
     'offset,      x,     pc', (
     (     0, 0xFFFF, 0xFFFF),
     (     3, 0x1234, 0x1237),

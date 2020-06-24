@@ -117,6 +117,15 @@ def psha(m):
 def rts(m):
     m.pc = popword(m)
 
+def lsra(m):
+    m.C = m.a & 1
+    m.a = m.a >> 1
+    m.N = isnegative(m.a)
+    m.Z = iszero(m.a)
+    #   V is actually N⊕C, which is meaningless for right shifts
+    #   but with ASL means "the sign has changed."
+    m.V = m.C
+
 def jmpx(m):
     m.pc = readindex(m)
 

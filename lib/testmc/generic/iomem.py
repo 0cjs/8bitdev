@@ -22,7 +22,18 @@ class IOMem(bytearray):
         3. Slices that extend beyond the end of the memory are invalid and
            will raise an `IndexError`. (I.e., while `b'01'[:8]` will return
            a two-byte sequence , the same on this will raise an exception.)
+
+        When using this as backing storage for a CPU simulator object, you
+        will probably want to use `copyapi()` to copy the public API of
+        this to your object so that users don't need to access it through
+        your memory attribute (which may be considered private).
     '''
+
+    PUBLIC_API = ('setiostreams', 'streamiof', 'setio')
+
+    def copyapi(self, o):
+        for attr in self.PUBLIC_API:
+            setattr(o, attr, getattr(self, attr))
 
     def __init__(self, size=65536):
         super().__init__(size)

@@ -23,7 +23,9 @@ class Machine(GenericMachine):
             registers and flags as well would all be left in a random state
             on power-up, but that doesn't seem worth emulating here.
         '''
-        self.mem = bytearray(memsize)
+        self.mem = IOMem(memsize)
+        self.mem.copyapi(self)
+
         self.pc = self.a = self.b = self.x = 0
         self.sp = 0xBFFF
         self.H = self.I = self.N = self.Z = self.V = self.C = False

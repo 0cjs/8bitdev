@@ -113,3 +113,15 @@ def test_setiostreams(mem):
     #   deletion of io functions
     mem.setio(4, None)
     assert 0xEA == mem[4]
+
+def test_copyapi(mem):
+    class O: pass
+    o = O()
+    mem.copyapi(o)
+
+    assert hasattr(o, 'setiostreams')
+    assert hasattr(o, 'streamiof')
+    assert hasattr(o, 'setio')
+
+    in5, out5 = o.setiostreams(5, b'\x55')
+    assert 0x55 == mem[5]

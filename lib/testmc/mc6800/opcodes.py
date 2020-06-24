@@ -21,6 +21,7 @@ OPCODES = {
     0x8D: ('BSR', bsr),
     0x8B: ('ADDA', adda),
     0xAD: ('JSRx', jsrx),
+    0xB7: ('STAAm', staa_m),
     0xBD: ('JSR', jsr),
 }
 
@@ -38,8 +39,8 @@ class Instructions:
             -------------------------------------------------------
                             implied
                     #nn     immediate
-              z     nn      direct page ($00-$FF)
-              a     addr    absolute (extended)
+              z     nn      memory: direct page ($00-$FF)
+              m     addr    memory: absolute (extended)
               x     n,X     indirect via offset + [X register]
 
         One day we might find it worthwhile to have an Assembler class that

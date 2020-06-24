@@ -127,6 +127,9 @@ def jsrx(m):
     pushword(m, m.pc)
     m.pc = target
 
+def staa_m(m):
+    m.mem[readword(m)] = logicNZV(m, m.a)
+
 def jsr(m):
     target = readword(m)
     pushword(m, m.pc)

@@ -14,6 +14,9 @@ import  pytest
 
 R = Machine.Registers
 
+def msb(n): return n >> 8
+def lsb(n): return n & 0xFF
+
 def runop(opdata, *, machine=None, memsize=0x20,
         startaddr=0x0E, initregs=R(),
         changedregs=R(), changedmem=None):
@@ -153,6 +156,18 @@ def test_jsrx():
         startaddr   =                   0x0123,     memsize=0x140,
         changedmem  = { 0x1E: 0x01, 0x1F: 0x25, },
     )
+
+@pytest.mark.parametrize(
+    'a,   loc,     N, Z', (
+    (0x03, 0x0000, 0, 0),
+    (0x00, 0x0101, 0, 1),
+    (0xEB, 0x1234, 1, 0),
+))
+def test_STAAm(a, loc, N, Z):
+    runop([I.STAAm, msb(loc), lsb(loc)], memsize=max(loc+2, 0x20),
+        initregs    = R(a=a),
+        changedregs = R(N=N, Z=Z, V=0),
+        changedmem  = { loc: a })
 
 def test_jsr():
     runop([I.JSR, 0x56, 0x78],

@@ -18,8 +18,6 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
           the registers and flags of the machine.
         - `regs`: The current machine registers and flags.
         - `setregs()`: Set some or all machine registers and flags.
-
-        XXX Eventually this should also include `step()`, `call()`, etc.
     '''
 
     @abstractproperty

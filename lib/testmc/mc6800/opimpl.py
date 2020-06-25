@@ -10,15 +10,6 @@
 from struct import unpack
 
 ####################################################################
-#   Values tests for setting flags (HINZVC)
-
-def isnegative(b):
-    return 0 != b & 0b10000000
-
-def iszero(b):
-    return b == 0
-
-####################################################################
 #   Address handling, reading data at the PC, reading/writing stack
 
 def incbyte(byte, addend):
@@ -50,17 +41,17 @@ def readword(m):
     # Careful! PC may wrap between bytes.
     return (readbyte(m) << 8) | readbyte(m)
 
-def readindex(m):
-    ''' Consume an unsigned offset byte at [PC], add it to the X register
-        contents and return the result.
-    '''
-    return incword(m.x, readbyte(m))
-
 def readreloff(m):
     ''' Consume a signed relative offset byte at [PC] and return the
         target address. '''
     offset = readsignedbyte(m)
     return incword(m.pc, offset)
+
+def readindex(m):
+    ''' Consume an unsigned offset byte at [PC], add it to the X register
+        contents and return the result.
+    '''
+    return incword(m.x, readbyte(m))
 
 def popbyte(m):
     ' Pop a byte off the stack and return it. '
@@ -84,80 +75,65 @@ def pushword(m, word):
     pushbyte(m, word >> 8)
 
 ####################################################################
-#   Flag handling
+#   Branches
+
+def jmp(m):     m.pc = readword(m)
+def jmpx(m):    m.pc = readindex(m)
+def bra(m):     m.pc = readreloff(m)
+
+
+def jsr(m):     t = readword(m);    pushword(m, m.pc); m.pc = t
+def jsrx(m):    t = readindex(m);   pushword(m, m.pc); m.pc = t
+def bsr(m):     t = readreloff(m);  pushword(m, m.pc); m.pc = t
+
+def rts(m):     m.pc = popword(m)
+
+def bmi(m):
+    #   XXX Extract a branchif(m, predicate) function from this.
+    t = readreloff(m)
+    if m.N: m.pc = t
+
+####################################################################
+#   Data movement
+
+def pula(m):    m.a = popbyte(m)
+def psha(m):    pushbyte(m, m.a)
+
+def ldaa(m):    m.a = logicNZV(m, readbyte(m))
+def staa_m(m):  m.mem[readword(m)] = logicNZV(m, m.a)
+
+####################################################################
+#   Flag handling for data movement and logic
+
+def isneg(b):   return 0 != b & 0b10000000
+def iszero(b):  return b == 0
 
 def logicNZV(m, val):
     ''' Set N, Z and V flags based on `val`, and return `val`.
-        This is used for loads and logic operations.
+        This is used for data transfer and logic operations.
     '''
-    m.N = isnegative(val)
+    m.N = isneg(val)
     m.Z = iszero(val)
     m.V = False
     return val
 
 ####################################################################
-#   Opcode implementations
+#   Logic operations
 
-def nop(m):
-    pass
-
-def bra(m):
-    m.pc = readreloff(m)
-
-def bmi(m):
-    target = readreloff(m)
-    if m.N: m.pc = target
-
-def pula(m):
-    m.a = popbyte(m)
-
-def psha(m):
-    pushbyte(m, m.a)
-
-def rts(m):
-    m.pc = popword(m)
+def anda(m):
+    m.a = logicNZV(m, m.a & readbyte(m))
 
 def lsra(m):
     m.C = m.a & 1
     m.a = m.a >> 1
-    m.N = isnegative(m.a)
+    m.N = isneg(m.a)
     m.Z = iszero(m.a)
     #   V is actually N⊕C, which is meaningless for right shifts
     #   but with ASL means "the sign has changed."
     m.V = m.C
 
-def jmpx(m):
-    m.pc = readindex(m)
-
-def jmp(m):
-    m.pc = readword(m)
-
-def anda(m):
-    m.a = logicNZV(m, m.a & readbyte(m))
-
-def ldaa(m):
-    m.a = logicNZV(m, readbyte(m))
-
-def bsr(m):
-    target = readreloff(m)
-    pushword(m, m.pc)
-    m.pc = target
-
-def jsrx(m):
-    target = readindex(m)
-    pushword(m, m.pc)
-    m.pc = target
-
-def staa_m(m):
-    m.mem[readword(m)] = logicNZV(m, m.a)
-
-def jsr(m):
-    target = readword(m)
-    pushword(m, m.pc)
-    m.pc = target
-
 ####################################################################
-#   Arithmetic opcodes
+#   Arithmetic operations
 
 def addHNZVC(m, augend, addend):
     ''' Return the modular 8-bit sum of adding without carry `addend` (the
@@ -167,7 +143,7 @@ def addHNZVC(m, augend, addend):
     '''
     sum = incbyte(augend, addend)
 
-    m.N = isnegative(sum)
+    m.N = isneg(sum)
     m.Z = iszero(sum)
 
     bit7 = 0b10000000;              bit3 = 0b1000
@@ -187,7 +163,7 @@ def adda(m):
 
 def subNZVC(m, minuend, subtrahend):
     difference = incbyte(minuend, -subtrahend)
-    m.N = isnegative(difference)
+    m.N = isneg(difference)
     m.Z = iszero(difference)
 
     bit7 = 0b10000000;              bit3 = 0b1000

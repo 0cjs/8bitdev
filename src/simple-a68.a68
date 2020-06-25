@@ -14,23 +14,23 @@ set_a_ff    ldaa #$FF
 charoutport equ $C000               ; character output port
 
 ;   Print value in a as hex to the character output port.  ♣A
-;   Falls through to pnyb.
-prhex       psh a
-            lsr a
-            lsr a
-            lsr a
-            lsr a
-            bsr pnyb
-            pul a
+;   Falls through to prnyb.
+prhex       psh A
+            lsr A
+            lsr A
+            lsr A
+            lsr A
+            bsr prnyb
+            pul A
             ; fallthrough
 
 ;   Print lower nybble of A to the character output port.  ♣A
-pnyb        anda #$0F
-            adda #'0'
-            cmpa #'9'+1
+prnyb       and A,#$0F
+            add A,#'0'
+            cmp A,#'9'+1
             bmi .digit
-            adda #'A'-'9'-1
-.digit      staa charoutport
+            add A,#'A'-'9'-1
+.digit      sta A,charoutport
             rts
 
 

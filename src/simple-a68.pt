@@ -39,9 +39,9 @@ def test_call(M, S, R):
     (0x00, '0'), (0x01, '1'), (0x0E, 'E'), (0x0F, 'F'),
     (0x10, '0'), (0xFF, 'F'),
 ), ids=tmc_tid)
-def test_pnyb(M, S, R, val, char):
+def test_prnyb(M, S, R, val, char):
     M.deposit(S.charoutport, not val)
-    M.call(S.pnyb, R(a=val))
+    M.call(S.prnyb, R(a=val))
     assert ord(char) == M.byte(S.charoutport)
 
 @pytest.mark.parametrize('val, chars', (

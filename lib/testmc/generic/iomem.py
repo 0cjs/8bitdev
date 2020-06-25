@@ -76,7 +76,7 @@ class IOMem(bytearray):
         return istream, ostream
 
     def streamiof(self, istream, ostream):
-        ''' Given a pair of streams (which may be the same steream), return
+        ''' Given a pair of streams (which may be the same stream), return
             an I/O function suitable for passing to `setio()` that will
             read from `istream` and write to `ostream`.
         '''

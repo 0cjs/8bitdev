@@ -3,6 +3,8 @@
 
 from    testmc.mc6800.opimpl  import *
 
+__all__ = ( 'OPCODES', 'Instructions', )
+
 ####################################################################
 #   Map opcodes to mnemonics and implementations.
 #   See `Instructions` below for mnemonic naming.

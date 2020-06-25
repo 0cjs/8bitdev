@@ -1,17 +1,12 @@
-''' Unit tests for utility routines in the opimpl module.
-
-    The opcodes themselves are tested in the `opcodes` module tests
-    because they need to cover the opcode/instruction mappings as
-    well as the implementations.
-'''
-
+from    testmc.mc6800.opcodes   import Instructions as I
+from    testmc.mc6800.opimpl    import *
+from    testmc.mc6800           import Machine
+from    testmc                  import tmc_tid
+from    numbers                 import Number
 import  pytest
-from    testmc.mc6800  import Machine
-from    testmc.mc6800.opimpl  import (
-    isnegative, iszero, incbyte, incword,
-    readbyte, readsignedbyte, readword, popword,
-    )
 
+####################################################################
+#   Implementation support
 
 def test_isnegative():
     assert not isnegative(0)
@@ -87,3 +82,240 @@ def test_popword(initsp, word, newsp):
     m.sp = initsp
     assert word == popword(m)
     assert newsp == m.sp
+
+####################################################################
+#   Framework
+
+R = Machine.Registers
+
+def msb(n): return n >> 8
+def lsb(n): return n & 0xFF
+
+def runop(opdata, *, machine=None, memsize=0x20,
+        startaddr=0x0E, initregs=R(), initmem=None,
+        changedregs=R(), changedmem=None):
+    m = machine
+    if m is None:
+        m = Machine(memsize=memsize)
+
+    m.deposit(startaddr, opdata)
+    if initmem is not None:
+        for addr, value in initmem.items():
+            m.deposit(addr, value)
+    m.setregs(initregs)
+
+    #   For any register not explicitly set that has a value in changedregs,
+    #   set it to some other value so we can confirm it was changed.
+    unsetregs = set()
+    for name, val in initregs.all().items():
+        if val is None: unsetregs.add(name)
+    #   But always exclude the program counter and stack pointer
+    #   as they should never be randomized!
+    unsetregs.discard('pc'); unsetregs.discard('sp')
+    for name, val in changedregs.all().items():
+        if name in unsetregs:
+            setattr(m, name, not val)
+
+    m.pc = startaddr
+    prevregs = m.regs
+    prevmem = bytes(m.mem)
+
+    m.step(1)
+
+    regs = m.regs
+    #   If any regs in the machine are unvalued (i.e., set to `None`)
+    #   the opcode implementation has done something very wrong.
+    unvalued = set(regs.all().keys()) - set(regs.valued().keys())
+    assert not unvalued, 'op produced unvalued register(s)'
+
+    if changedregs.pc is None:
+        changedregs = changedregs.clone(pc=startaddr + len(opdata))
+    allregs = prevregs.clone(**changedregs.valued())
+
+    #   Lining these up in columns makes it easier to see what was wrong.
+    print('    expected all:', allregs)
+    print('expected changed:', changedregs)
+    print('          actual:', regs)
+
+    #   First assert that the registers and flags expected to change have
+    #   their correct values. This makes more clear test failures where a
+    #   tested value is wrong.
+    assert changedregs == regs, "expected register/flag changes"
+    #   Now assert that the other registers and flags, which we did not expect
+    #   to change (and are not explicitly tested), are actually unchanged.
+    assert allregs == regs, "unexpected register/flag changes"
+
+    if changedmem is None:
+        assert prevmem == bytes(m.mem)
+    else:
+        newmem = bytearray(prevmem)
+        for addr, value in changedmem.items():
+            newmem[addr] = value
+        assert newmem == m.mem
+
+####################################################################
+#   Opcode Tests
+
+def test_NOP():
+    #   The test framework will ensure that nothing but the PC has changed.
+    runop([I.NOP])
+
+def test_BRA():
+    runop([I.BRA,    0], startaddr=0x13, changedregs=R(pc=0x0015))
+    runop([I.BRA, 0x80], startaddr=0x0E, changedregs=R(pc=0xFF90))
+    #   Additional coverage in test_readsignedbyte().
+
+def test_BMI_not():
+    runop([I.BMI, 0x40], initregs=R(N=0), changedregs=R(pc=0x0010))
+
+def test_BMI_taken():
+    runop([I.BMI, 0x40], initregs=R(N=1), changedregs=R(pc=0x0050))
+
+def test_PULA():
+    runop([I.PULA],
+        initregs    = R(sp=0x000C),
+        initmem     = { 0x000D: 0xA1 },
+        changedregs = R(sp=0x000D, a=0xA1),
+        )
+
+def test_PSHA():
+    runop([I.PSHA],
+        initregs    = R(a=0xEF, sp=0x000F),
+        changedregs = R(sp=0x000E),
+        changedmem  = { 0x000F: 0xEF },
+        )
+
+def test_RTS():
+    m = Machine(memsize=0x40)
+    m.sp = 0x002D; m.depword(0x002E, 0x1234)
+    runop([I.RTS], machine=m, changedregs=R(pc=0x1234, sp=0x002F))
+
+@pytest.mark.parametrize(
+    #   XXX see comment in code re V=N⊕C
+    'init,  res, Z, V, C', (
+    (0x01, 0x00, 1, 1, 1),
+    (0x02, 0x01, 0, 0, 0),
+    (0xAA, 0x55, 0, 0, 0),
+    (0xFF, 0x7F, 0, 1, 1),
+), ids=tmc_tid)
+def test_LSRA(init, res, Z, V, C):
+    runop([I.LSRA], initregs=R(a=init),
+        changedregs=R(a=res, N=0, Z=Z, V=V, C=C))
+
+@pytest.mark.parametrize(
+    'offset,      x,     pc', (
+    (     0, 0xFFFF, 0xFFFF),
+    (     3, 0x1234, 0x1237),
+    (  0xFF, 0xFF80, 0x007F),
+))
+def test_JMPx(offset, x, pc):
+    runop([I.JMPx, offset], initregs=R(x=x), changedregs=R(pc=pc))
+
+def test_JMP():
+    runop([I.JMP, 0xAB, 0xCD], changedregs=R(pc=0xABCD))
+
+@pytest.mark.parametrize(
+    'a,     arg,  res, N, Z', (
+    (0x00, 0x00, 0x00, 0, 1),
+    (0x00, 0xFF, 0x00, 0, 1),
+    (0xFF, 0x00, 0x00, 0, 1),
+    (0xAA, 0x3C, 0x28, 0, 0),
+    (0xAA, 0xF0, 0xA0, 1, 0),
+))
+def test_anda_i(a, arg, res, N, Z):
+    runop([I.ANDA, arg], initregs=R(a=a), changedregs=R(a=res, N=N, Z=Z, V=0))
+
+@pytest.mark.parametrize(
+    'arg,  N, Z', (
+    (0x01, 0, 0),
+    (0x00, 0, 1),
+    (0xEA, 1, 0),
+))
+def test_LDAA(arg, N, Z):
+    runop([I.LDAA, arg], changedregs=R(a=arg, N=N, Z=Z, V=0))
+
+def test_bsr():
+    runop([I.BSR, 0xFE], startaddr=0x12,            # calling self
+        initregs    = R(sp=0x18),
+        changedregs = R(sp=0x16, pc=0x12),
+        changedmem  = { 0x17: 0x00, 0x18: 0x14, },
+    )
+
+def test_jsrx():
+    runop([I.JSRx,                    0x16],
+        initregs    = R(sp=0x1F,  x=0xFFF0, ),
+        changedregs = R(sp=0x1D, pc=0x0006, ),
+
+        startaddr   =                   0x0123,     memsize=0x140,
+        changedmem  = { 0x1E: 0x01, 0x1F: 0x25, },
+    )
+
+@pytest.mark.parametrize(
+    'a,   loc,     N, Z', (
+    (0x03, 0x0000, 0, 0),
+    (0x00, 0x0101, 0, 1),
+    (0xEB, 0x1234, 1, 0),
+))
+def test_STAAm(a, loc, N, Z):
+    runop([I.STAAm, msb(loc), lsb(loc)], memsize=max(loc+2, 0x20),
+        initregs    = R(a=a),
+        changedregs = R(N=N, Z=Z, V=0),
+        changedmem  = { loc: a })
+
+def test_jsr():
+    runop([I.JSR, 0x56, 0x78],
+        memsize=65536, startaddr=0x1234,
+        initregs    = R(sp=0),                      # test stack wraparound
+        changedregs = R(pc=0x5678, sp=0xFFFE),
+        changedmem  = { 0x0000: 0x37, 0xFFFF: 0x12, })
+
+####################################################################
+#   Arithmetic opcodes
+
+@pytest.mark.parametrize(
+    'a,     arg,  res, H, N, Z, V, C', (
+    (0x00, 0x00, 0x00, 0, 0, 1, 0, 0),
+    #   H: half carry determined by bits 3
+    (0x0E, 0x01, 0x0F, 0, 0, 0, 0, 0),
+    (0x0F, 0x01, 0x10, 1, 0, 0, 0, 0),
+    (0x10, 0x01, 0x11, 0, 0, 0, 0, 0),
+    #   V: overflow determined by bits 6
+    (0x7E, 0x01, 0x7F, 0, 0, 0, 0, 0),
+    (0x7F, 0x01, 0x80, 1, 1, 0, 1, 0),
+    (0x80, 0x01, 0x81, 0, 1, 0, 0, 0),
+    #   C: carry determined by bits 7
+    (0xFE, 0x01, 0xFF, 0, 1, 0, 0, 0),
+    (0xFF, 0x01, 0x00, 1, 0, 1, 0, 1),
+    (0xF0, 0x20, 0x10, 0, 0, 0, 0, 1),  # no half carry
+    #   C and V
+    (0x40, 0xF0, 0x30, 0, 0, 0, 0, 1),  # 2's comp: subtract from positive
+    (0xF0, 0xF0, 0xE0, 0, 1, 0, 0, 1),  # 2's comp: subtract from negative
+    (0x80, 0x80, 0x00, 0, 0, 1, 1, 1),
+), ids=tmc_tid)
+def test_adda_i(a, arg, res, H, N, Z, V, C):
+    cr = R(a=res, H=H, N=N, Z=Z, V=V, C=C)
+    #   Operation should be the same whether carry set or clear.
+    runop([I.ADDA, arg], initregs=R(a=a, C=0), changedregs=cr)
+    runop([I.ADDA, arg], initregs=R(a=a, C=1), changedregs=cr)
+
+@pytest.mark.parametrize('minuend, subtrahend, difference, N, Z, V, C', (
+    #minu, subt, diff, N, Z, V, C
+    (0x00, 0x00, 0x00, 0, 1, 0, 0),
+    #   V: overflow determined by bits 6
+    (0x81, 0x01, 0x80, 1, 0, 0, 0),
+    (0x81, 0x02, 0x7F, 0, 0, 1, 0),
+    (0x7F, 0x01, 0x7E, 0, 0, 0, 0),
+    #   C: borrow determined by bits 7
+    (0x01, 0x01, 0x00, 0, 1, 0, 0),
+    (0x01, 0x02, 0xFF, 1, 0, 0, 1),
+    (0xFF, 0x01, 0xFE, 1, 0, 0, 0),
+), ids=tmc_tid)
+def test_suba(minuend, subtrahend, difference, N, Z, V, C):
+    cr = R(a=difference, N=N, Z=Z, V=V, C=C)
+    runop([I.SUBA, subtrahend], initregs=R(a=minuend, C=0), changedregs=cr)
+    runop([I.SUBA, subtrahend], initregs=R(a=minuend, C=1), changedregs=cr)
+
+def test_cmpa():
+    #   Confirm that A register is unchanged;
+    #   test_suba() provides the rest of the coverage.
+    runop([I.CMPA, 0x02], initregs=R(a=0x81), changedregs=R(N=0, Z=0, V=1, C=0))

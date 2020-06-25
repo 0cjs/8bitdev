@@ -1,8 +1,14 @@
 To-do List
 ==========
 
+#### Cleanup
+
+- Make a better `repr()`/`str()` for `testmc.generic.Machine` so that
+  `assert R(...) = m.regs` looks nicer (and maybe provides useful info).
+
 #### Features
 
+- Add the `testmc.generic.IOMem` interface to `testmc.m6502`.
 - Add "hexadecimal integers" to framework with `__repr__()`s that
   print as `$EA` or `$FFFF`. Construct perhaps with `A(0xFFFF)`
   (address) and `B(0xFF)` (byte)?

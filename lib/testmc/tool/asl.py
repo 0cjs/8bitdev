@@ -245,11 +245,13 @@ def ps_parse_section(secname, stream):
         is not specified in the documentation but experimentally seems
         to be the case.
 
-        From about 2008 through asl-current-142-bld151 there was a bug in
-        .map file output where spaces in symbol values were not translated
-        to `\032` as documented__ in §5.2. This does not work with those
-        buggy versions, but does a heuristic check for some cases of wrong
-        output.
+        ASL ≥ cur-142-bld172 has 6 fields, earlier versions have 5.
+        However, from about 2008 through asl-current-142-bld151 there was a
+        bug in .map file output where spaces in symbol values were not
+        translated to `\032` as documented__ in §5.2. This does not work
+        with those buggy versions, but we du a heuristic check for some
+        cases of wrong output: if the number of fields is other than 5 or
+        6, we raise a ParseError.
 
         .. _documented: http://john.ccac.rwth-aachen.de:8000/as/
 
@@ -260,11 +262,18 @@ def ps_parse_section(secname, stream):
         if '' == line:                      # blank line or EOF
             return syms
 
-        try:
-            name, type, value, size, used = line.split()
-        except ValueError as ex:
-            raise ParseError("Bad asl version? Got '{}' while parsing {}" \
-                .format(ex, repr(line)))
+        fields = line.split()
+        if len(fields) not in (5, 6):
+            #   See docstring above.
+            raise ParseError('Bad map file fields (see code):'
+                ' {} fields in line {}'
+                .format(len(fields), repr(line)))
+
+        name, type, value = fields[0], fields[1], fields[2]
+        # size = fields[3]
+        # used = fields[4]
+        # isvar = fields[5]  # ASL ≥ cur-142-bld172: '0'=const, '1'=var
+
 
         if type == 'Int':
             value = int(value, base=16)

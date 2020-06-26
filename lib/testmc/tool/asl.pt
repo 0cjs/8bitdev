@@ -223,10 +223,12 @@ def test_ps_parse_section_space_in_string():
     ''' If we find an actual space in a string we are using a buggy
         version of AS that did not properly substitute ``\032``.
     '''
-    stream = StringIO('name String a value -1 0')
+    #   7 fields is > than 6 produced by ASL ≥ cur-142-bld172 and
+    #   the 5 produced by versions before that.
+    stream = StringIO('name String  val_part0 val_part1 val_part2 -1 0')
     with pytest.raises(ParseError) as ex:
         ps_parse_section('', stream)
-    assert ex.match('Bad asl version?')
+    assert ex.match(r'^Bad map file fields .see code.: 7 fields in line ')
 
 def test_parse_symtab_empty():
     ' Blank lines are ignored '

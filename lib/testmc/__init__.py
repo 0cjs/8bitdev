@@ -3,7 +3,7 @@
 
 from    numbers  import Number
 
-__all__ = ['hexid']
+__all__ = ['hexid', 'LSB', 'MSB']
 
 def tmc_tid(x):
     ''' `testmc` pytest ID. This helps generate nicer test IDs for pytest
@@ -22,3 +22,11 @@ def tmc_tid(x):
         return repr(x)
     else:
         return x
+
+def LSB(n):
+    ' Return the least significant byte of a 16-bit value. '
+    return n & 0xFF
+
+def MSB(n):
+    ' Return the most significant byte of a 16-bit value. '
+    return (n >> 8) & 0xFF

@@ -1,7 +1,7 @@
 from    testmc.mc6800.opcodes   import Instructions as I
 from    testmc.mc6800.opimpl    import *
 from    testmc.mc6800           import Machine
-from    testmc                  import tmc_tid
+from    testmc                  import tmc_tid, LSB, MSB
 from    numbers                 import Number
 import  pytest
 
@@ -79,9 +79,6 @@ def test_popword(initsp, word, newsp):
 #   Opcode test framework
 
 R = Machine.Registers
-
-def msb(n): return n >> 8
-def lsb(n): return n & 0xFF
 
 def runop(opdata, *, machine=None, memsize=0x20,
         startaddr=0x0E, initregs=R(), initmem=None,
@@ -241,7 +238,7 @@ def test_LDAA(arg, N, Z):
                          (0xEB, 0x1234, 1, 0),
 ), ids=tmc_tid)
 def test_STAAm(a, loc, N, Z):
-    runop([I.STAAm, msb(loc), lsb(loc)], memsize=max(loc+2, 0x20),
+    runop([I.STAAm, MSB(loc), LSB(loc)], memsize=max(loc+2, 0x20),
         initregs    = R(a=a),
         changedregs = R(N=N, Z=Z, V=0),
         changedmem  = { loc: a })

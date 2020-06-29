@@ -123,6 +123,14 @@ Stack:
   expression parsing mode; in command mode the `>` command, which does the
   same thing, will be interpreted instead.)
 
+Punctuation usage summary (special variables and commands):
+
+      Used   !"#$%& ()*+,-./  :;< >?      _     
+     Notes    ¹
+    Unused         '             =    [\]^  {|}~
+
+    ¹ Byte data entry only, but using it elsewhere would be confusing.
+
 
 Commands
 --------

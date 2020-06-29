@@ -224,13 +224,25 @@ def test_PSHA():
         changedmem  = { 0x000F: 0xEF },
         )
 
-@pytest.mark.parametrize('arg,  N, Z', (
-                         (0x01, 0, 0),
-                         (0x00, 0, 1),
-                         (0xEA, 1, 0),
-), ids=tmc_tid)
-def test_LDAA(arg, N, Z):
+def lda_tparams(startaddr):
+    return {
+        'argnames':     '        addr,  arg, N, Z',
+        'argvalues': (  ( startaddr+0, 0x01, 0, 0),
+                        ( startaddr+1, 0x00, 0, 1),
+                        ( startaddr+2, 0xEA, 1, 0),
+                     ),
+        'ids': tmc_tid,
+    }
+
+@pytest.mark.parametrize(**lda_tparams(0))
+def test_LDAA(addr, arg, N, Z):
     runop([I.LDAA, arg], changedregs=R(a=arg, N=N, Z=Z, V=0))
+
+@pytest.mark.parametrize(**lda_tparams(0x101))
+def test_LDAAm(addr, arg, N, Z):
+    runop([I.LDAAm, MSB(addr), LSB(addr)],
+        changedregs=R(a=arg, N=N, Z=Z, V=0),
+        memsize=0x110, initmem={ addr: arg })
 
 @pytest.mark.parametrize('   a,    loc, N, Z', (
                          (0x03, 0x0000, 0, 0),

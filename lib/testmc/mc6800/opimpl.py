@@ -100,6 +100,7 @@ def pula(m):    m.a = popbyte(m)
 def psha(m):    pushbyte(m, m.a)
 
 def ldaa(m):    m.a = logicNZV(m, readbyte(m))
+def ldaam(m):   m.a = logicNZV(m, m.mem[readword(m)])
 def staa_m(m):  m.mem[readword(m)] = logicNZV(m, m.a)
 
 ####################################################################

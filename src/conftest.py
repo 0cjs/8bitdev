@@ -1,5 +1,8 @@
 import  pytest
 
+#   Nicer assertion error display for various testmc objects.
+from    testmc.pytest  import pytest_assertrepr_compare
+
 @pytest.fixture
 def M(request):
     ''' A simulated machine with the object file loaded.

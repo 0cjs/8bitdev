@@ -447,6 +447,16 @@ def test_LSRA(init, res, Z, V, C):
 ####################################################################
 #   Arithmetic operations
 
+@pytest.mark.parametrize('   n,  dec, N, Z, V', (
+                         (0xFF, 0xFE, 1, 0, 0),
+                         (0x81, 0x80, 1, 0, 0),
+                         (0x80, 0x7F, 0, 0, 1),     # only case where V set
+                         (0x7F, 0x7E, 0, 0, 0),
+                         (0x01, 0x00, 0, 1, 0),
+))
+def test_decb(n, dec, N, Z, V):
+    runop([I.DECB], initregs=R(b=n), changedregs=R(b=dec, N=N, Z=Z, V=V))
+
 @pytest.mark.parametrize('     n, succ, Z', (
                          (0x0000, 0x0001, 0),
                          (0x00FF, 0x0100, 0),

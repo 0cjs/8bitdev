@@ -29,6 +29,7 @@ OPCODES = {
     0x36: ('PSHA',  psha),
     0x39: ('RTS',   rts),
     0x44: ('LSRA',  lsra),
+    0x5A: ('DECB',  decb),
     0x6E: ('JMPx',  jmpx),
     0x6F: ('CLRx',  clrx),
     0x7E: ('JMP',   jmp),

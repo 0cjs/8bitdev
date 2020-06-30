@@ -189,6 +189,13 @@ def lsra(m):
 ####################################################################
 #   Arithmetic operations
 
+def decb(m):
+    b7 = m.b & 0b10000000
+    m.b = incbyte(m.b, -1)
+    m.N = isneg(m.b)
+    m.Z = iszero(m.b)
+    m.V = bool(b7 ^ (m.b & 0b10000000))     # did bit 7 change?
+
 def inx(m):     m.x = incword(m.x, 1);  m.Z = iszero(m.x)
 def dex(m):     m.x = incword(m.x, -1); m.Z = iszero(m.x)
 

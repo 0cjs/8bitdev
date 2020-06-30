@@ -241,6 +241,17 @@ def test_RTS():
     runop([I.RTS], machine=m, changedregs=R(pc=0x1234, sp=0x002F))
 
 ####################################################################
+#   Flag Changes
+
+@pytest.mark.parametrize('op, flag', (
+    (I.CLC, R(C=0)), (I.SEC, R(C=1)),
+    (I.CLV, R(V=0)), (I.SEV, R(V=1)),
+    (I.CLI, R(I=0)), (I.SEI, R(I=1)),
+))
+def test_flag_change(op, flag):
+    runop([op], changedregs=flag)
+
+####################################################################
 #   Data Movement
 
 #### Stack

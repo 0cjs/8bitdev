@@ -157,6 +157,13 @@ def runop(opdata, *, machine=None, memsize=0x20,
         newmem[addr] = value
     assert newmem == m.mem
 
+def extend_arg(b):
+    ' If `b` is an 8-bit value, extend it to 16 bits by copying LSB to MSB. '
+    if b > 0xFF:
+        return b
+    else:
+        return (b << 8) | b
+
 ####################################################################
 #   Misc instructions
 
@@ -279,9 +286,7 @@ def test_LDAAm(addr, offset, arg, N, Z):
 @pytest.mark.parametrize(**loadstore_tparams(0x40,
     [(0x50, 0, 0x7FFF, 0, 0), (0x52, 0, 0x8000, 1, 0)]))
 def test_LDX(addr, offset, arg, N, Z):
-    if arg < 0x100:
-        #   Extend test data to 16 bits by copying LSB to MSB
-        arg = (arg << 8) | arg
+    arg = extend_arg(arg)
     runop([I.LDX, MSB(arg), LSB(arg)], changedregs=R(x=arg, N=N, Z=Z, V=0))
 
 #### Stores
@@ -312,9 +317,7 @@ def test_STAAx(addr, offset, arg, N, Z):
 @pytest.mark.parametrize(**loadstore_tparams(0x40,
     [(0x50, 0, 0x7FFF, 0, 0), (0x52, 0, 0x8000, 1, 0),]))
 def test_STXm(addr, offset, arg, N, Z):
-    if arg < 0x100:
-        #   Extend test data to 16 bits by copying LSB to MSB
-        arg = (arg << 8) | arg
+    arg = extend_arg(arg)
     runop([I.STXm, MSB(addr), LSB(addr)], memsize=0x90,
         initregs    = R(x=arg),
         changedregs = R(N=N, Z=Z, V=0),
@@ -329,9 +332,7 @@ def test_STXm_rollover():
 
 @pytest.mark.parametrize(**loadstore_tparams(0xF0))
 def test_STXz(addr, offset, arg, N, Z):
-    if arg < 0x100:
-        #   Extend test data to 16 bits by copying LSB to MSB
-        arg = (arg << 8) | arg
+    arg = extend_arg(arg)
     runop([I.STXz, addr], memsize=0x100,
         initregs    = R(x=arg),
         changedregs = R(N=N, Z=Z, V=0),

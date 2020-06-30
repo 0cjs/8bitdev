@@ -1,5 +1,5 @@
-from    testmc  import tmc_tid
-from    testmc.mc6800  import  Machine
+from    testmc  import tmc_tid, LSB, MSB
+from    testmc.mc6800  import  Machine, Instructions as I
 import  pytest
 
 object_file = 'src/simple-a68.p'
@@ -51,3 +51,80 @@ def test_prhex(M, S, R, val, chars):
     _, outchars = M.setiostreams(S.charoutport)
     M.call(S.prhex, R(a=val))
     assert chars == outchars.getvalue()
+
+####################################################################
+
+def test_rdchar(M, R, S):
+    ' Mostly confirms that our test framework works. '
+    chars = b'!\x00\x7F'
+    inchars, _ = M.setiostreams(S.charinport, chars)
+    for char in chars:
+        M.call(S.rdchar, R(a=0xEA))
+        assert R(a=char) == M.regs
+
+@pytest.mark.parametrize('buf, input', (
+    (b'',                   b'\r'),
+    (b'a',                  b'a\r'),
+    (b'jklm',               b'j_\bk_\xFFl__\b\bm\r'),
+    (b'',                   b'\b\xFF\b\r'),
+    (b'ij',                 b'\b\xFFgh\b\b\b\bij\r'),
+    (b'\x01\n\x1F\x7E',     b'\x01\x00\n\x00\x1F\x00\x7E\r'),
+))
+def test_rdline(M, R, S, input, buf):
+    TERM = b'END'
+    istream, ostream = M.setiostreams(S.charinport, input + TERM)
+    M.deposit(S.rdlinebuf, b'\xA5'*40)
+    M.call(S.rdline)
+
+    assert R(x=S.rdlinebuf, C=0) == M.regs
+    assert buf + b'\x00' == M.bytes(M.regs.x, len(buf)+1)
+
+    assert TERM == istream.read(len(TERM))  # no unconsumed input
+
+    def echo_of(readchars):
+        out = []
+        for i in readchars:
+            if   i == 0:    pass                # NUL not echoed
+            elif i == 0xFF: out.append(0x08)    # DEL echoes backspace
+            else:           out.append(i)
+        out.append(0x0A)                        # CR echos CR-LF newline
+        return bytes(out)
+
+    assert echo_of(input) == ostream.getvalue()
+
+def test_rdline_ctrlC(M, R, S):
+    istream, ostream = M.setiostreams(S.charinport, b'pqr\bqp\x03END')
+    M.call(S.rdline)
+    assert [ R(x=S.rdlinebuf, C=1), b'pqqp\x00'             ] \
+        == [ M.regs,                M.bytes(M.regs.x, 5)    ]
+    assert b'END' == istream.read(3)
+    assert b'pqr\bqp\a\r\n' == ostream.getvalue()   # BEL char sent
+
+def test_rdline_rubout_at_beginning(M, R, S):
+    istream, ostream = M.setiostreams(S.charinport, b'\b\b\babc\b\r')
+
+    #   Whatever happens to be just before the buffer may not be
+    #   the best sentinel bytes, but we can't overwrite it because
+    #   we don't know if something important might be there.
+    prebuf = M.bytes(S.rdlinebuf - 4, 4)
+    M.deposit(S.rdlinebuf, b'\xA5'*40)
+
+    M.call(S.rdline)
+    assert R(x=S.rdlinebuf, C=0) == M.regs
+    assert prebuf + b'ab\x00' == M.bytes(M.regs.x - 4, 7)
+
+def test_rdline_overflow(M, R, S):
+    buflen = S.rdlinebuf_end - S.rdlinebuf
+    bufinput = b'_' * (buflen - 3) + b'yz'
+    istream, ostream = M.setiostreams(S.charinport, bufinput + b'AB\r')
+
+    postbuf = M.bytes(S.rdlinebuf_end, 4)
+    M.call(S.rdline)
+
+    expected_buf = bufinput + b'\x00' + postbuf
+    actual_buf   = M.bytes(M.regs.x, len(expected_buf))
+    assert [ R(x=S.rdlinebuf, C=0), expected_buf,   ] \
+        == [ M.regs,                actual_buf,     ]
+
+    #   A BEL for each char rejected when the buffer was full.
+    assert bufinput + b'\a\a\r\n' == ostream.getvalue()

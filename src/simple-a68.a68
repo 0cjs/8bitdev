@@ -1,17 +1,35 @@
 ;   Simple 6800 routines to test our test framework and Macroassembler AS
 
+;   ♢ indicates registers holding return values.
+;   ♡ indicates registers preserved
+;   ♣ indicates registers destroyed.
+;   Flags are assumed to be destroyed unless otherwise indicated.
+
             cpu 6800
             org $180
 
 ident       byt "simple-a68.a68"    ; we use this to check that we've loaded
                                     ; the correct binary data and symbol table.
 
+; ----------------------------------------------------------------------
+
 set_a_ff    ldaa #$FF
             rts
 
 ; ----------------------------------------------------------------------
 
+;   ASCII character definitions
+BEL         equ $07                 ; bell ('\a')
+BS          equ $08                 ; backspace ('\b')
+LF          equ $0A                 ; line feed ('\n')
+CR          equ $0D                 ; carriage return ('\r')
+DEL         equ $FF
+
 charoutport equ $C000               ; character output port
+charinport  equ $C000               ; blocking input char read
+
+prchar      sta a,charoutport
+            rts
 
 ;   Print value in a as hex to the character output port.  ♣A
 ;   Falls through to prnyb.
@@ -30,9 +48,83 @@ prnyb       and A,#$0F
             cmp A,#'9'+1
             bmi .digit
             add A,#'A'-'9'-1
-.digit      sta A,charoutport
+.digit      bsr prchar
             rts
 
+;   Print a newline character or sequence. ♣A
+;   This particular version assumes a terminal needing CR-LF.
+prnl        lda A,#CR
+            bsr prchar
+            lda A,#LF
+            bsr prchar
+            rts
+
+;   Blocking read of a character from the user, returned in ♢A.
+;   This does not echo the character.
+rdchar      lda A,charinport
+            rts
+
+;   Read a line of user input, echoing each character. ♣A ♡B ♢X
+;   On return X will point to the chars read, terminated by $00,
+;   and the carry will be clear for CR termination, set for ^C termination.
+;
+;   The following characters are interpreted specially:
+;     - BS, DEL: if not at start of input, echo a BS and delete the
+;       previously entered character.
+;     - CR: echo a newline and return with C=0.
+;     - ^C: beep, echo a newline and return with C=1.
+;
+;   This uses its own buffer, rdlinebuf, which is overwritten with every call.
+;   When the buffer is full rdline will beep instead of accepting input chars.
+;
+rdline      ldx #rdlinebuf
+.nextchar   bsr rdchar
+            cmp A,#CR           ; done?
+            bne .continue
+            bsr prnl
+            clr ,X              ; clears carry
+.ret        ldx #rdlinebuf      ; no effect on carry
+            rts
+
+.continue   cmp  A,#$03         ; Ctrl-C
+            beq  .cancel
+            ;   If we're on the last byte of the buffer, we need to save that
+            ;   for the termination char. So just reject input at that point.
+            cpx #(rdlinebuf_end - 1)
+            bne .accept
+            lda A,#BEL
+            bsr prchar
+            bra .nextchar
+
+.accept     cmp  A,#$00         ; ignore NUL
+            beq  .nextchar
+            cmp  A,#BS
+            beq .backspace
+            cmp  A,#DEL
+            beq .backspace
+            sta A,0,X
+            inx
+.echo       bsr prchar
+            bra .nextchar
+
+.backspace  cpx #rdlinebuf
+            beq +               ; don't backspace past beginning of buffer
+            dex
++           lda A,#BS
+            bra .echo
+
+.cancel     ;   We terminate without storing the Ctrl-C char mainly
+            ;   because we don't know if we have space for it. We might
+            ;   be on the last byte of the buffer already.
+            clr ,X
+            lda A,#BEL          ; beep to indicate cancel
+            bsr prchar
+            bsr prnl
+            sec                 ; indicate input cancelled
+            bra .ret
+
+rdlinebuf   ds 160
+rdlinebuf_end
 
 ; ----------------------------------------------------------------------
 

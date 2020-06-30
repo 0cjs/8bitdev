@@ -220,10 +220,23 @@ def suba(m):
 def cmpa(m):
     subNZVC(m, m.a, readbyte(m))
 
-def cpx(m):
+def cpxarg(m, argh, argl):
     xh,     xl =    m.x >> 8,  m.x & 0xFF
-    argh, argl = readbyte(m), readbyte(m)
     subNZVC(m, xl, argl, affectC=False)
     Zl = m.Z
     subNZVC(m, xh, argh, affectC=False)
     m.Z = Zl and m.Z
+
+def cpx(m):
+    argh, argl = readbyte(m), readbyte(m)
+    cpxarg(m, argh, argl)
+
+def cpxz(m):
+    target = readbyte(m)
+    argh, argl = m.mem[target], m.mem[incword(target, 1)]
+    cpxarg(m, argh, argl)
+
+def cpxm(m):
+    target = readword(m)
+    argh, argl = m.mem[target], m.mem[incword(target, 1)]
+    cpxarg(m, argh, argl)

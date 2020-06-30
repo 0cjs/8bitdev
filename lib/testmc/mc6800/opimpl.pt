@@ -492,28 +492,45 @@ def test_CMPA():
     #   test_suba() provides the rest of the coverage.
     runop([I.CMPA, 0x02], initregs=R(a=0x81), changedregs=R(N=0, Z=0, V=1, C=0))
 
-@pytest.mark.parametrize('     x,    arg, Z, N, V', (
-                         (0x0000, 0x0000, 1, 0, 0),     # BEQ taken
-                         (0x0001, 0x0001, 1, 0, 0),
-                         (0x0080, 0x0080, 1, 0, 0),
-                         (0x7FFF, 0x7FFF, 1, 0, 0),
-                         (0x8000, 0x8000, 1, 0, 0),
-                         (0xFFFF, 0xFFFF, 1, 0, 0),
+cpxparams = (' addr,      x,    arg, Z, N, V', (
+             (0x0F1, 0x0000, 0x0000, 1, 0, 0),     # BEQ taken
+             (0x0F3, 0x0001, 0x0001, 1, 0, 0),
+             (0x0F5, 0x0080, 0x0080, 1, 0, 0),
+             (0x0F7, 0x7FFF, 0x7FFF, 1, 0, 0),
+             (0x0F9, 0x8000, 0x8000, 1, 0, 0),
+             (0x0FB, 0xFFFF, 0xFFFF, 1, 0, 0),
 
-                         (0x0000, 0x0001, 0, 0, 0),     # BNE taken
-                         (0x0000, 0x00FF, 0, 0, 0),
-                         (0x0000, 0x0100, 0, 1, 0),
+             (0x0FD, 0x0000, 0x0001, 0, 0, 0),     # BNE taken
+             (0x0FF, 0x0000, 0x00FF, 0, 0, 0),
+             (0x101, 0x0000, 0x0100, 0, 1, 0),
 
-                         (0x0000, 0x8100, 0, 0, 0),
-                         (0x0000, 0x80FF, 0, 1, 1),
-                         (0x0000, 0x8000, 0, 1, 1),
-                         (0x0000, 0x7FFF, 0, 1, 0),
+             (0x103, 0x0000, 0x8100, 0, 0, 0),
+             (0x105, 0x0000, 0x80FF, 0, 1, 1),
+             (0x107, 0x0000, 0x8000, 0, 1, 1),
+             (0x109, 0x0000, 0x7FFF, 0, 1, 0),
 
-                         (0x0000, 0xFFFF, 0, 0, 0),
-                         (0x8000, 0x0000, 0, 1, 0),
-                         (0x8000, 0x00FF, 0, 1, 0),
-                         (0x8000, 0x0100, 0, 0, 1),
-), ids=tmc_tid)
-def test_CPX(x, arg, N, Z, V):
+             (0x10B, 0x0000, 0xFFFF, 0, 0, 0),
+             (0x10D, 0x8000, 0x0000, 0, 1, 0),
+             (0x10F, 0x8000, 0x00FF, 0, 1, 0),
+             (0x121, 0x8000, 0x0100, 0, 0, 1),
+))
+
+@pytest.mark.parametrize(*cpxparams, ids=tmc_tid)
+def test_CPX(addr, x, arg, N, Z, V):
     runop([I.CPX, MSB(arg), LSB(arg)],
         initregs=R(x=x), changedregs=R(N=N, Z=Z, V=V))
+
+@pytest.mark.parametrize(*cpxparams, ids=tmc_tid)
+def test_CPXz(addr, x, arg, N, Z, V):
+    addr -= 0x40
+    runop([I.CPXz, addr], memsize=0xFF,
+        initmem     = { addr: MSB(arg), addr+1: LSB(arg) },
+        initregs    = R(x=x),
+        changedregs = R(N=N, Z=Z, V=V))
+
+@pytest.mark.parametrize(*cpxparams, ids=tmc_tid)
+def test_CPXm(addr, x, arg, N, Z, V):
+    runop([I.CPXm, MSB(addr), LSB(addr)], memsize=0x123,
+        initmem     = { addr: MSB(arg), addr+1: LSB(arg) },
+        initregs    = R(x=x),
+        changedregs = R(N=N, Z=Z, V=V))

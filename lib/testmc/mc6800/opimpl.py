@@ -87,6 +87,7 @@ def branchif(m, predicate):
         m.pc = target
 
 def beq(m): branchif(m, m.Z)
+def bne(m): branchif(m, not m.Z)
 def bmi(m): branchif(m, m.N)
 
 def jsr(m):     t = readword(m);    pushword(m, m.pc); m.pc = t

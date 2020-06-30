@@ -36,6 +36,7 @@ OPCODES = {
     0xAD: ('JSRx',  jsrx),
     0xB7: ('STAAm', staa_m),
     0xBD: ('JSR',   jsr),
+    0xC6: ('LDAB',  ldab),
     0xCE: ('LDX',   ldx),
 }
 

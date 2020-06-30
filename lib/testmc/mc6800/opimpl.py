@@ -103,6 +103,7 @@ def pula(m):    m.a = popbyte(m)
 def psha(m):    pushbyte(m, m.a)
 
 def ldaa(m):    m.a = logicNZV(m, readbyte(m))
+def ldab(m):    m.b = logicNZV(m, readbyte(m))
 def ldaam(m):   m.a = logicNZV(m, m.mem[readword(m)])
 def ldx(m):     m.x = logicNZV(m, readword(m), signbit=15)
 

@@ -266,8 +266,9 @@ def loadstore_tparams(baseaddr, extras=()):
     }
 
 @pytest.mark.parametrize(**loadstore_tparams(0))
-def test_LDAA(addr, offset, arg, N, Z):
+def test_LDA(addr, offset, arg, N, Z):
     runop([I.LDAA, arg], changedregs=R(a=arg, N=N, Z=Z, V=0))
+    runop([I.LDAB, arg], changedregs=R(b=arg, N=N, Z=Z, V=0))
 
 @pytest.mark.parametrize(**loadstore_tparams(0x101))
 def test_LDAAm(addr, offset, arg, N, Z):

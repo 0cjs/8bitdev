@@ -168,6 +168,21 @@ def test_BRA():
     runop([I.BRA, 0x80], startaddr=0x0E, changedregs=R(pc=0xFF90))
     #   Additional coverage in test_readsignedbyte().
 
+@pytest.mark.parametrize('offset, Z, newpc', (
+    (0x03,    True,  0x000D),
+    (0x100-4, True,  0x0006),
+    (0x20,    False, 0x000A),
+))
+def test_BEQ(offset, Z, newpc):
+    runop([I.BEQ, offset], initregs=R(Z=Z),
+        startaddr=0x08, changedregs=R(pc=newpc))
+
+def test_BMI_not():
+    runop([I.BMI, 0x40], initregs=R(N=0), changedregs=R(pc=0x0010))
+
+def test_BMI_taken():
+    runop([I.BMI, 0x40], initregs=R(N=1), changedregs=R(pc=0x0050))
+
 ############################
 
 def test_JSR():
@@ -192,20 +207,10 @@ def test_BSR():
         changedmem  = { 0x17: 0x00, 0x18: 0x14, },
     )
 
-############################
-
 def test_RTS():
     m = Machine(memsize=0x40)
     m.sp = 0x002D; m.depword(0x002E, 0x1234)
     runop([I.RTS], machine=m, changedregs=R(pc=0x1234, sp=0x002F))
-
-############################
-
-def test_BMI_not():
-    runop([I.BMI, 0x40], initregs=R(N=0), changedregs=R(pc=0x0010))
-
-def test_BMI_taken():
-    runop([I.BMI, 0x40], initregs=R(N=1), changedregs=R(pc=0x0050))
 
 ####################################################################
 #   Data Movement

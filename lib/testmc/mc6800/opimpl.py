@@ -81,17 +81,19 @@ def jmp(m):     m.pc = readword(m)
 def jmpx(m):    m.pc = readindex(m)
 def bra(m):     m.pc = readreloff(m)
 
+def branchif(m, predicate):
+    target = readreloff(m)
+    if predicate:
+        m.pc = target
+
+def beq(m): branchif(m, m.Z)
+def bmi(m): branchif(m, m.N)
 
 def jsr(m):     t = readword(m);    pushword(m, m.pc); m.pc = t
 def jsrx(m):    t = readindex(m);   pushword(m, m.pc); m.pc = t
 def bsr(m):     t = readreloff(m);  pushword(m, m.pc); m.pc = t
 
 def rts(m):     m.pc = popword(m)
-
-def bmi(m):
-    #   XXX Extract a branchif(m, predicate) function from this.
-    t = readreloff(m)
-    if m.N: m.pc = t
 
 ####################################################################
 #   Data movement

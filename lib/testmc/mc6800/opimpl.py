@@ -110,14 +110,17 @@ def ldx(m):     m.x = logicNZV(m, readword(m), signbit=15)
 def clrx(m):    m.mem[readindex(m)] = logicNZV(m, 0); m.C = 0
 def staa_m(m):  m.mem[readword(m)] = logicNZV(m, m.a)
 def staax(m):   m.mem[readindex(m)] = logicNZV(m, m.a)
-def stxm(m):
-    target0 = readword(m)
+
+def stxtarget(m, target0):
     target1 = incword(target0, 1)
     m.mem[target0] = m.x >> 8
     m.mem[target1] = m.x & 0xFF
     m.N = isneg(m.x, signbit=15)
     m.Z = iszero(m.x)
     m.V = 0
+
+def stxz(m):    stxtarget(m, readbyte(m))
+def stxm(m):    stxtarget(m, readword(m))
 
 ####################################################################
 #   Flag handling for data movement and logic

@@ -11,6 +11,8 @@ __all__ = ( 'OPCODES', 'Instructions', )
 
 OPCODES = {
     0x01: ('NOP',   lambda m: None),
+    0x06: ('TAP',   tap),
+    0x07: ('TPA',   tpa),
     0x08: ('INX',   inx),
     0x09: ('DEX',   dex),
     0x0A: ('CLV',   lambda m: setattr(m, 'V', 0)),

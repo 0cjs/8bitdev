@@ -97,6 +97,27 @@ def bsr(m):     t = readreloff(m);  pushword(m, m.pc); m.pc = t
 def rts(m):     m.pc = popword(m)
 
 ####################################################################
+#   Flag Changes
+
+def tap(m):
+    m.H = bool(m.a & 32)
+    m.I = bool(m.a & 16)
+    m.N = bool(m.a & 8)
+    m.Z = bool(m.a & 4)
+    m.V = bool(m.a & 2)
+    m.C = bool(m.a & 1)
+
+def tpa(m):
+    m.a = 0b11000000 \
+        | (m.H << 5) \
+        | (m.I << 4) \
+        | (m.N << 3) \
+        | (m.Z << 2) \
+        | (m.V << 1) \
+        | (m.C << 0) \
+        | 0
+
+####################################################################
 #   Data movement
 
 def pula(m):    m.a = popbyte(m)

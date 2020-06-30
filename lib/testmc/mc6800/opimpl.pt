@@ -247,9 +247,30 @@ def test_RTS():
     (I.CLC, R(C=0)), (I.SEC, R(C=1)),
     (I.CLV, R(V=0)), (I.SEV, R(V=1)),
     (I.CLI, R(I=0)), (I.SEI, R(I=1)),
-))
+), ids=tmc_tid)
 def test_flag_change(op, flag):
     runop([op], changedregs=flag)
+
+pccr_testdata = ('pccr, flags', (
+   (0b11000000, R(H=0, I=0, N=0, Z=0, V=0, C=0)),
+   (0b11000001, R(H=0, I=0, N=0, Z=0, V=0, C=1)),
+   (0b11000010, R(H=0, I=0, N=0, Z=0, V=1, C=0)),
+   (0b11000100, R(H=0, I=0, N=0, Z=1, V=0, C=0)),
+   (0b11001000, R(H=0, I=0, N=1, Z=0, V=0, C=0)),
+   (0b11010000, R(H=0, I=1, N=0, Z=0, V=0, C=0)),
+   (0b11100000, R(H=1, I=0, N=0, Z=0, V=0, C=0)),
+   (0b11010101, R(H=0, I=1, N=0, Z=1, V=0, C=1)),
+   (0b11101010, R(H=1, I=0, N=1, Z=0, V=1, C=0)),
+   (0b11111111, R(H=1, I=1, N=1, Z=1, V=1, C=1)),
+))
+
+@pytest.mark.parametrize(*pccr_testdata, ids=tmc_tid)
+def test_tap(pccr, flags):
+    runop([I.TAP], initregs=R(a=pccr), changedregs=flags)
+
+@pytest.mark.parametrize(*pccr_testdata, ids=tmc_tid)
+def test_tpa(pccr, flags):
+    runop([I.TPA], initregs=flags, changedregs=R(a=pccr))
 
 ####################################################################
 #   Data Movement

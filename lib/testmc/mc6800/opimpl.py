@@ -107,6 +107,15 @@ def ldab(m):    m.b = logicNZV(m, readbyte(m))
 def ldaam(m):   m.a = logicNZV(m, m.mem[readword(m)])
 def ldx(m):     m.x = logicNZV(m, readword(m), signbit=15)
 
+def ldxtarget(m, loc0):
+    loc1 = incword(loc0, 1)
+    val  = (m.mem[loc0] << 8) | m.mem[loc1]
+    m.x = logicNZV(m, val, signbit=15)
+
+def ldxz(m):    ldxtarget(m, readbyte(m))
+def ldxm(m):    ldxtarget(m, readword(m))
+def ldxx(m):    ldxtarget(m, readindex(m))
+
 def clrx(m):    m.mem[readindex(m)] = logicNZV(m, 0); m.C = 0
 def staa_m(m):  m.mem[readword(m)] = logicNZV(m, m.a)
 def staax(m):   m.mem[readindex(m)] = logicNZV(m, m.a)

@@ -38,7 +38,10 @@ OPCODES = {
     0xBD: ('JSR',   jsr),
     0xC6: ('LDAB',  ldab),
     0xCE: ('LDX',   ldx),
+    0xDE: ('LDXz',  ldxz),
     0xDF: ('STXz',  stxz),
+    0xEE: ('LDXx',  ldxx),
+    0xFE: ('LDXm',  ldxm),
     0xFF: ('STXm',  stxm),
 }
 

@@ -289,6 +289,32 @@ def test_LDX(addr, offset, arg, N, Z):
     arg = extend_arg(arg)
     runop([I.LDX, MSB(arg), LSB(arg)], changedregs=R(x=arg, N=N, Z=Z, V=0))
 
+@pytest.mark.parametrize(**loadstore_tparams(0x22,
+    [(0x50, 0, 0x7FFF, 0, 0), (0x52, 0, 0x8000, 1, 0)]))
+def test_LDXz(addr, offset, arg, N, Z):
+    arg = extend_arg(arg)
+    runop([I.LDXz, LSB(addr)],
+        changedregs=R(x=arg, N=N, Z=Z, V=0),
+        memsize=0x110, initmem={ addr: MSB(arg), addr+1: LSB(arg) })
+
+@pytest.mark.parametrize(**loadstore_tparams(0xFF,
+    [(0x50, 0, 0x7FFF, 0, 0), (0x52, 0, 0x8000, 1, 0)]))
+def test_LDXm(addr, offset, arg, N, Z):
+    arg = extend_arg(arg)
+    runop([I.LDXm, MSB(addr), LSB(addr)],
+        changedregs=R(x=arg, N=N, Z=Z, V=0),
+        memsize=0x110, initmem={ addr: MSB(arg), addr+1: LSB(arg) })
+
+@pytest.mark.parametrize(**loadstore_tparams(0x59,
+    [(0x50, 0, 0x7FFF, 0, 0), (0x52, 0, 0x8000, 1, 0)]))
+def test_LDXx(addr, offset, arg, N, Z):
+    arg = extend_arg(arg)
+    runop([I.LDXx, offset], memsize=0x110,
+        initregs    = R(x=addr),
+        initmem     = { addr+offset: MSB(arg), addr+offset+1: LSB(arg) },
+        changedregs = R(x=arg, N=N, Z=Z, V=0),
+    )
+
 #### Stores
 
 @pytest.mark.parametrize('x, offset, addr', (

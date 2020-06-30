@@ -101,19 +101,25 @@ def psha(m):    pushbyte(m, m.a)
 
 def ldaa(m):    m.a = logicNZV(m, readbyte(m))
 def ldaam(m):   m.a = logicNZV(m, m.mem[readword(m)])
+def ldx(m):     m.x = logicNZV(m, readword(m), signbit=15)
+
 def staa_m(m):  m.mem[readword(m)] = logicNZV(m, m.a)
 
 ####################################################################
 #   Flag handling for data movement and logic
 
-def isneg(b):   return 0 != b & 0b10000000
-def iszero(b):  return b == 0
+def isneg(b, signbit=7):
+    sign = b & (1 << signbit)
+    return 0 !=  sign
 
-def logicNZV(m, val):
+def iszero(b):
+    return b == 0
+
+def logicNZV(m, val, signbit=7):
     ''' Set N, Z and V flags based on `val`, and return `val`.
         This is used for data transfer and logic operations.
     '''
-    m.N = isneg(val)
+    m.N = isneg(val, signbit=signbit)
     m.Z = iszero(val)
     m.V = False
     return val

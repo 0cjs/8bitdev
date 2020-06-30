@@ -224,13 +224,13 @@ def test_PSHA():
         changedmem  = { 0x000F: 0xEF },
         )
 
-def lda_tparams(startaddr):
+def lda_tparams(startaddr, extras=()):
     return {
         'argnames':     '        addr,  arg, N, Z',
         'argvalues': (  ( startaddr+0, 0x01, 0, 0),
-                        ( startaddr+1, 0x00, 0, 1),
-                        ( startaddr+2, 0xEA, 1, 0),
-                     ),
+                        ( startaddr+2, 0x00, 0, 1),
+                        ( startaddr+4, 0xEA, 1, 0),
+                     ) + tuple(extras),
         'ids': tmc_tid,
     }
 
@@ -243,6 +243,14 @@ def test_LDAAm(addr, arg, N, Z):
     runop([I.LDAAm, MSB(addr), LSB(addr)],
         changedregs=R(a=arg, N=N, Z=Z, V=0),
         memsize=0x110, initmem={ addr: arg })
+
+@pytest.mark.parametrize(**lda_tparams(0x40,
+    [(0x50, 0x7FFF, 0, 0), (0x52, 0x8000, 1, 0)]))
+def test_LDX(addr, arg, N, Z):
+    if arg < 0x100:
+        #   Extend test data to 16 bits by copying LSB to MSB
+        arg = (arg << 8) | arg
+    runop([I.LDX, MSB(arg), LSB(arg)], changedregs=R(x=arg, N=N, Z=Z, V=0))
 
 @pytest.mark.parametrize('   a,    loc, N, Z', (
                          (0x03, 0x0000, 0, 0),
@@ -263,6 +271,12 @@ def test_isneg():
     assert not isneg(0x7F)
     assert     isneg(0x80)
     assert     isneg(0xFF)
+
+def test_isneg16():
+    assert not isneg(0x0000, signbit=15)
+    assert not isneg(0x7FFF, signbit=15)
+    assert     isneg(0x8000, signbit=15)
+    assert     isneg(0xFFFF, signbit=15)
 
 def test_iszero():
     assert     iszero(0)

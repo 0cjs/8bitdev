@@ -140,9 +140,9 @@ def runop(opdata, *, machine=None, memsize=0x20,
     allregs = prevregs.clone(**changedregs.valued())
 
     #   Lining these up in columns makes it easier to see what was wrong.
-    print('    expected all:', allregs)
-    print('expected changed:', changedregs)
-    print('          actual:', regs)
+   #print('    expected all:', allregs)
+   #print('expected changed:', changedregs)
+   #print('          actual:', regs)
 
     #   First assert that the registers and flags expected to change have
     #   their correct values. This makes more clear test failures where a

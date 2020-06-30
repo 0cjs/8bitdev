@@ -146,6 +146,8 @@ def lsra(m):
 ####################################################################
 #   Arithmetic operations
 
+def inx(m):     m.x = incword(m.x, 1); m.Z = iszero(m.x)
+
 def addHNZVC(m, augend, addend):
     ''' Return the modular 8-bit sum of adding without carry `addend` (the
         operand) to `augend` (the contents of the register). Set H, N, Z, V

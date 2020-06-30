@@ -352,6 +352,15 @@ def test_LSRA(init, res, Z, V, C):
 ####################################################################
 #   Arithmetic operations
 
+@pytest.mark.parametrize('     n, succ, Z', (
+                         (0x0000, 0x0001, 0),
+                         (0x00FF, 0x0100, 0),
+                         (0xFFFE, 0xFFFF, 0),
+                         (0xFFFF, 0x0000, 1),
+))
+def test_inx(n, succ, Z):
+    runop([I.INX], initregs=R(x=n), changedregs=R(x=succ, Z=Z))
+
 @pytest.mark.parametrize(
     'a,     arg,  res, H, N, Z, V, C', (
     (0x00, 0x00, 0x00, 0, 0, 1, 0, 0),

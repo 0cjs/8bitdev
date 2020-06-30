@@ -523,6 +523,8 @@ def test_CMPA():
     #   test_suba() provides the rest of the coverage.
     runop([I.CMPA, 0x02], initregs=R(a=0x81), changedregs=R(N=0, Z=0, V=1, C=0))
 
+#       Flag register value:         4  8  2
+#
 cpxparams = (' addr,      x,    arg, Z, N, V', (
              (0x0F1, 0x0000, 0x0000, 1, 0, 0),     # BEQ taken
              (0x0F3, 0x0001, 0x0001, 1, 0, 0),

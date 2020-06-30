@@ -1,0 +1,64 @@
+from    testmc.mc6800  import  Machine, Instructions as I
+
+object_file = 'src/cpxtest.p'
+
+def test_cpxtest(M, S):
+    otlen = int((S.argstable_end - S.argstable) / 4)
+    assert b'\x00'*otlen == M.bytes(S.outtable, otlen), 'outtable before'
+    M.call(S.cpxtest)
+    assert S.outtable + otlen == M.word(S.outptr)
+
+    # Flag register bits: 11hiNZVc
+    #    Flag bit values: N=8  Z=4  V=2
+
+    #   See testmc.mc6800.opimpl test cpxparams
+    testmc_expected = b''.join([
+        b'\xC4' * 6,
+        b'\xC0\xC0\xC8',
+        b'\xC0\xCA\xCA\xC8',
+        b'\xC0\xC8\xC8\xC2',
+        ])
+
+    #   XXX The output of a run on a real JR-200. This is unexpected and
+    #   appears to be wrong; neither Z ($4) nor V ($2) are ever set, and
+    #   N ($8) seems to bear no relation to what it should. Further testing
+    #   by hand (see routine after this one in the source file) seems to
+    #   show expected and correct behaviour when doing similar things, so
+    #   I'm not clear what's wrong here.
+    jr200_actual = b''.join([
+        b'\xC8\xC8\xC8\xC8', b'\xC0\xC0\xC8\xC8',
+        b'\xC8\xC0\xC0\xC0', b'\xC8\xC0\xC8\xC8',
+        b'\xC8',
+        ])
+
+    assert testmc_expected == M.bytes(S.outtable, otlen), 'after'
+
+
+def test_cpxtest_debug(M, S, R):
+    ''' This "test" executes to a breakpoint, printing out a trace of
+        information at that point.
+
+        It serves as a demonstration of how the test framework can
+        provide debugger functionality. It would be good to add a
+        parameter to `Machine.call()` that would allow you to pass
+        in an address and stuff to print at that address so that
+        tracing like this doesn't have to be done manually.
+    '''
+    print('inptr x    arg  pcr outptr')
+    data   = '{:04X}  {:04X} {:04X} {:02X}  {:04X}'
+
+    M.setregs(R(pc=S.cpxtest))
+    breakpoint = S['cpxtest.breakpoint']
+    while True:
+        M.stepto(stopat=[breakpoint], stopon=[I.RTS])
+        if M.regs.pc != breakpoint:
+            break   # not breakpoint; we're done
+        print(data.format(
+            M.word(S.inptr),
+            M.regs.x,
+            M.word(S.arg),
+            M.regs.a,
+            M.word(S.outptr),
+            ))
+
+   #assert 0, 'done'    # print stdout, where we logged our trace

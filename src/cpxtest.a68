@@ -1,0 +1,91 @@
+;   Run a list of CPX instructions and save the flag results.
+;   The results of a run on real hardware can be compared with the
+;   results of an emulator run to see if the emulator is correctly
+;   executing CPX.
+
+            cpu 6800
+            org $7000
+
+inptr       equ $E0     ; current location in argstable
+outptr      equ $E2     ; current location in output table
+arg         equ $E4     ; argument for CPX
+
+cpxtest     ldx #outtable
+            stx outptr
+            ldx #argstable
+            lda B,#(argstable_end - argstable)/4    ; entry count
+
+.loop       stx inptr
+            ldx 2,X     ; load argument for CPX
+            stx arg
+            ldx inptr   ; load X register value for CPX
+            ldx 0,X
+            clc         ; CPX does not affect carry; make it consistent
+            cpx arg     ; do test
+            tpa         ; save result...
+.breakpoint ldx outptr  ;  ...into output buffer
+            sta A,0,X
+            inx         ; increment output buffer address
+            stx outptr
+            ldx inptr   ; increment input buffer address
+            inx
+            inx
+            inx
+            inx
+            dec B       ; done?
+            bne .loop
+            rts
+
+            align 4,$FF ; make this table easier to read in dumps
+argstable   ;   X reg,   arg
+            fdb $0000, $0000
+            fdb $0001, $0001
+            fdb $0080, $0080
+            fdb $7FFF, $7FFF
+            fdb $8000, $8000
+            fdb $FFFF, $FFFF
+
+            fdb $0000, $0001
+            fdb $0000, $00FF
+            fdb $0000, $0100
+
+            fdb $0000, $8100
+            fdb $0000, $80FF
+            fdb $0000, $8000
+            fdb $0000, $7FFF
+
+            fdb $0000, $FFFF
+            fdb $8000, $0000
+            fdb $8000, $00FF
+            fdb $8000, $0100
+
+argstable_end
+
+            align 8,$FF
+outtable
+
+
+
+;   A small experiment, originally assembled by hand, to run on the JR-200
+;   to see why the above program isn't working correctly on it. On the JR-200
+;   this works as expected, storing the correct flags to both $F0 (if EQ)
+;   or $F1 (if NE) and to $F4.
+
+            org $7400
+
+z7400       clr $00F0
+            clr $00F1
+            nop
+            nop
+            ldx #$0000
+            cpx $00F2
+            tpa
+            nop
+            nop
+            bne .ne
+            sta A,$F0
+            bra .indir
+.ne         sta A,$F1
+.indir      ldx #$00F4
+            sta A,0,X
+            rts

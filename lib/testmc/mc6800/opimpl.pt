@@ -423,3 +423,29 @@ def test_CMPA():
     #   Confirm that A register is unchanged;
     #   test_suba() provides the rest of the coverage.
     runop([I.CMPA, 0x02], initregs=R(a=0x81), changedregs=R(N=0, Z=0, V=1, C=0))
+
+@pytest.mark.parametrize('     x,    arg, Z, N, V', (
+                         (0x0000, 0x0000, 1, 0, 0),     # BEQ taken
+                         (0x0001, 0x0001, 1, 0, 0),
+                         (0x0080, 0x0080, 1, 0, 0),
+                         (0x7FFF, 0x7FFF, 1, 0, 0),
+                         (0x8000, 0x8000, 1, 0, 0),
+                         (0xFFFF, 0xFFFF, 1, 0, 0),
+
+                         (0x0000, 0x0001, 0, 0, 0),     # BNE taken
+                         (0x0000, 0x00FF, 0, 0, 0),
+                         (0x0000, 0x0100, 0, 1, 0),
+
+                         (0x0000, 0x8100, 0, 0, 0),
+                         (0x0000, 0x80FF, 0, 1, 1),
+                         (0x0000, 0x8000, 0, 1, 1),
+                         (0x0000, 0x7FFF, 0, 1, 0),
+
+                         (0x0000, 0xFFFF, 0, 0, 0),
+                         (0x8000, 0x0000, 0, 1, 0),
+                         (0x8000, 0x00FF, 0, 1, 0),
+                         (0x8000, 0x0100, 0, 0, 1),
+), ids=tmc_tid)
+def test_CPX(x, arg, N, Z, V):
+    runop([I.CPX, MSB(arg), LSB(arg)],
+        initregs=R(x=x), changedregs=R(N=N, Z=Z, V=V))

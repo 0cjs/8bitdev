@@ -28,6 +28,7 @@ OPCODES = {
     0x81: ('CMPA',  cmpa),
     0x84: ('ANDA',  anda),
     0x86: ('LDAA',  ldaa),
+    0x8C: ('CPX',   cpx),
     0xB6: ('LDAAm', ldaam),
     0x8D: ('BSR',   bsr),
     0x8B: ('ADDA',  adda),

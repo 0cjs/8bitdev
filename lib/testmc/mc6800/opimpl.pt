@@ -367,6 +367,15 @@ def test_LSRA(init, res, Z, V, C):
 def test_inx(n, succ, Z):
     runop([I.INX], initregs=R(x=n), changedregs=R(x=succ, Z=Z))
 
+@pytest.mark.parametrize('     n, succ, Z', (
+                         (0x0001, 0x0000, 1),
+                         (0x0100, 0x00FF, 0),
+                         (0xFFFF, 0xFFFE, 0),
+                         (0x0000, 0xFFFF, 0),
+))
+def test_dex(n, succ, Z):
+    runop([I.DEX], initregs=R(x=n), changedregs=R(x=succ, Z=Z))
+
 @pytest.mark.parametrize(
     'a,     arg,  res, H, N, Z, V, C', (
     (0x00, 0x00, 0x00, 0, 0, 1, 0, 0),

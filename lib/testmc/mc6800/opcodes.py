@@ -19,6 +19,7 @@ OPCODES = {
     0x39: ('RTS',   rts),
     0x44: ('LSRA',  lsra),
     0x6E: ('JMPx',  jmpx),
+    0x6F: ('CLRx',  clrx),
     0x7E: ('JMP',   jmp),
     0x80: ('SUBA',  suba),
     0x81: ('CMPA',  cmpa),

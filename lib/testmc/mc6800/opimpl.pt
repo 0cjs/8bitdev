@@ -59,6 +59,19 @@ def test_readsignedbyte(inb, out):
     assert out == readsignedbyte(m)
     assert 0x0000 == m.pc
 
+@pytest.mark.parametrize('     x, offset, target', (
+                         (0x0000,   0x00, 0x0000),
+                         (0x0004,   0x03, 0x0007),
+                         (0x0080,   0xFF, 0x017F),
+                         (0xFFFF,   0x01, 0x0000),
+                         (0xFFFF,   0xFF, 0x00FE),
+))
+def test_readindex(x, offset, target):
+    m = Machine()
+    m.setregs(R(x=x, pc=0x10))
+    m.deposit(0x10, offset)
+    assert target == readindex(m)
+
 @pytest.mark.parametrize('initsp,    word,  newsp', (
                          (     0,  0x4142,      2),
                          (     1,  0x4243,      3),
@@ -81,17 +94,11 @@ def test_popword(initsp, word, newsp):
 R = Machine.Registers
 
 def runop(opdata, *, machine=None, memsize=0x20,
-        startaddr=0x0E, initregs=R(), initmem=None,
-        changedregs=R(), changedmem=None):
+        startaddr=0x0E, initregs=R(), initmem={},
+        changedregs=R(), changedmem={}):
     m = machine
     if m is None:
         m = Machine(memsize=memsize)
-
-    m.deposit(startaddr, opdata)
-    if initmem is not None:
-        for addr, value in initmem.items():
-            m.deposit(addr, value)
-    m.setregs(initregs)
 
     #   For any register not explicitly set that has a value in changedregs,
     #   set it to some other value so we can confirm it was changed.
@@ -104,6 +111,17 @@ def runop(opdata, *, machine=None, memsize=0x20,
     for name, val in changedregs.all().items():
         if name in unsetregs:
             setattr(m, name, not val)
+    #   Also set unexpected values for any memory locations expected to change.
+    for addr, value in changedmem.items():
+        m.mem[addr] = not value
+
+    #   Now that unexpected values have been placed, set any specified
+    #   initial data. This is done after the unexpected value
+    #   initialization so that those can be explicitly overridden.
+    m.deposit(startaddr, opdata)
+    for addr, value in initmem.items():
+        m.deposit(addr, value)
+    m.setregs(initregs)
 
     m.pc = startaddr
     prevregs = m.regs
@@ -134,13 +152,10 @@ def runop(opdata, *, machine=None, memsize=0x20,
     #   to change (and are not explicitly tested), are actually unchanged.
     assert allregs == regs, "unexpected register/flag changes"
 
-    if changedmem is None:
-        assert prevmem == bytes(m.mem)
-    else:
-        newmem = bytearray(prevmem)
-        for addr, value in changedmem.items():
-            newmem[addr] = value
-        assert newmem == m.mem
+    newmem = bytearray(prevmem)
+    for addr, value in changedmem.items():
+        newmem[addr] = value
+    assert newmem == m.mem
 
 ####################################################################
 #   Misc instructions
@@ -215,6 +230,8 @@ def test_RTS():
 ####################################################################
 #   Data Movement
 
+#### Stack
+
 def test_PULA():
     runop([I.PULA],
         initregs    = R(sp=0x000C),
@@ -239,6 +256,8 @@ def lda_tparams(startaddr, extras=()):
         'ids': tmc_tid,
     }
 
+#### Loads
+
 @pytest.mark.parametrize(**lda_tparams(0))
 def test_LDAA(addr, arg, N, Z):
     runop([I.LDAA, arg], changedregs=R(a=arg, N=N, Z=Z, V=0))
@@ -256,6 +275,17 @@ def test_LDX(addr, arg, N, Z):
         #   Extend test data to 16 bits by copying LSB to MSB
         arg = (arg << 8) | arg
     runop([I.LDX, MSB(arg), LSB(arg)], changedregs=R(x=arg, N=N, Z=Z, V=0))
+
+#### Stores
+
+@pytest.mark.parametrize('x, offset, addr', (
+    (      0x0003,    0, 0x0003),
+    (      0x0004,    2, 0x0006),
+    (0x10000-0xF8, 0xFF, 0x0007),
+))
+def test_CLRx(x, offset, addr):
+    runop([I.CLRx, offset], initregs=R(x=x),
+        changedregs=R(N=0, Z=1, V=0, C=0), changedmem={ addr: 0 })
 
 @pytest.mark.parametrize('   a,    loc, N, Z', (
                          (0x03, 0x0000, 0, 0),

@@ -28,6 +28,7 @@ OPCODES = {
     0xB6: ('LDAAm', ldaam),
     0x8D: ('BSR',   bsr),
     0x8B: ('ADDA',  adda),
+    0xA7: ('STAAx', staax),
     0xAD: ('JSRx',  jsrx),
     0xB7: ('STAAm', staa_m),
     0xBD: ('JSR',   jsr),

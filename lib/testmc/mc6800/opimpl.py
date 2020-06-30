@@ -107,6 +107,7 @@ def ldx(m):     m.x = logicNZV(m, readword(m), signbit=15)
 
 def clrx(m):    m.mem[readindex(m)] = logicNZV(m, 0); m.C = 0
 def staa_m(m):  m.mem[readword(m)] = logicNZV(m, m.a)
+def staax(m):   m.mem[readindex(m)] = logicNZV(m, m.a)
 
 ####################################################################
 #   Flag handling for data movement and logic

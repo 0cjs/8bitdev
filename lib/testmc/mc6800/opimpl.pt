@@ -309,6 +309,24 @@ def test_STAAx(addr, offset, arg, N, Z):
         changedregs = R(N=N, Z=Z, V=0),
         changedmem  = { addr+offset: arg })
 
+@pytest.mark.parametrize(**loadstore_tparams(0x40,
+    [(0x50, 0, 0x7FFF, 0, 0), (0x52, 0, 0x8000, 1, 0),]))
+def test_STXm(addr, offset, arg, N, Z):
+    if arg < 0x100:
+        #   Extend test data to 16 bits by copying LSB to MSB
+        arg = (arg << 8) | arg
+    runop([I.STXm, MSB(addr), LSB(addr)], memsize=0x90,
+        initregs    = R(x=arg),
+        changedregs = R(N=N, Z=Z, V=0),
+        changedmem  = { addr: MSB(arg), addr+1: LSB(arg) },
+    )
+
+def test_STXm_rollover():
+    runop([I.STXm, 0xFF, 0xFF], memsize=64*1024,
+        initregs= R(x=0x89AB), changedregs=R(N=1, Z=0, V=0),
+        changedmem={ 0xFFFF: 0x89, 0x0000: 0xAB },
+    )
+
 ####################################################################
 #   Flag handling for data movement and logic
 

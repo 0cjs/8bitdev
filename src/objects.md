@@ -60,7 +60,7 @@ Notes:
 - Details of the smallint type are given below.
 
 It's not clear what the best use of the unused tag is. Options include:
-- A second cons-cell-only heap (presumably in a separate bank).
+- A second heap in a separate bank.
 - A char/unsigned-byte type.
 
 ### Tag Format and Reference Data Types
@@ -125,6 +125,36 @@ properly aligned) address in a heap we cannot tell if it points to an
 object or not. Thus walking the entire heap must be done by starting
 at its lowest location in memory or at a known-good pointer to an
 object.
+
+### Alternative Heaps
+
+Described above is a single heap that mixes fixed-length cons cells and
+variable-length obdata blocks. The following variations could be
+investigated.
+
+__Split heap:__ this is effectively two heaps of variable size with cons
+cells in the top half and obdata in the bottom half. Each grows towards the
+other and is GC'd separately. This should make allocatio more efficient and
+also removes the need to have separate tags to distinguish obdata blocks
+from cons cells, since we know them by which heap they're in. Given that
+the %01 tag is currently unused, smallint could be moved to that and it
+frees up bit 1 (%1x and %0x), which could be used for GC or perhaps to help
+extend the address space.
+
+__Tiny Heap__ for very small memory systems:
+- This is intended to compete feature-wide with 4K BASICs.
+- If necessary, restrict pointers to 32 KB (or even 16 KB?), freeing up the
+  top bit to mark object header tags.
+- Make all heap objects four bytes asize and remove length byte (length
+  would be implicit in obdata type).
+- Pare down the number of data types, possibly even having only FP or
+  integer, not both.
+- "Bigints" would be replaced by fixed 24 bit integers.
+- Floating point is 24 bits; exponent/significand options could be 8/16
+  (±127/4.8 digits), 6/18 (±32/5.4 digits), 5/19 (±16/5.7 digits), even
+  4/20 (ٍ±8/6 digits).
+- Symbols are limited to ASCII numeric/punctuation and one case of alpha
+  sticks; symbols of up to 4 chars packed as 4×6-bit in 24 bits.
 
 
 Obdata Types and Formats

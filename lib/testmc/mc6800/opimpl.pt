@@ -201,10 +201,20 @@ def test_BEQ(offset, Z, newpc):
         startaddr=0x08, changedregs=R(pc=newpc))
 
 @pytest.mark.parametrize('  op, initregs, taken', (
-                        (I.BNE,   R(Z=1), False),
-                        (I.BNE,   R(Z=0),  True),
+                        (I.BCC,   R(C=0),  True),
+                        (I.BCC,   R(C=1), False),
+                        (I.BCS,   R(C=0), False),
+                        (I.BCS,   R(C=1),  True),
                         (I.BMI,   R(N=0), False),
                         (I.BMI,   R(N=1),  True),
+                        (I.BNE,   R(Z=1), False),
+                        (I.BNE,   R(Z=0),  True),
+                        (I.BPL,   R(N=0),  True),
+                        (I.BPL,   R(N=1), False),
+                        (I.BVC,   R(V=0),  True),
+                        (I.BVC,   R(V=1), False),
+                        (I.BVS,   R(V=0), False),
+                        (I.BVS,   R(V=1),  True),
 ))
 def test_condbranch(op, initregs, taken):
     print('op {} ${:02X}, flag: {}, taken {} expected\n'

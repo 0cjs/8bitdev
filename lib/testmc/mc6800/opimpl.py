@@ -79,13 +79,13 @@ def pushword(m, word):
 
 def jmp(m):     m.pc = readword(m)
 def jmpx(m):    m.pc = readindex(m)
-def bra(m):     m.pc = readreloff(m)
 
 def branchif(m, predicate):
     target = readreloff(m)
     if predicate:
         m.pc = target
 
+def bra(m): branchif(m, True)
 def beq(m): branchif(m, m.Z)
 def bne(m): branchif(m, not m.Z)
 def bmi(m): branchif(m, m.N)

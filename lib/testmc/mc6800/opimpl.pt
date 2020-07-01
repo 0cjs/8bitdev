@@ -188,6 +188,7 @@ def test_JMPx(offset, x, pc):
 def test_BRA():
     runop([I.BRA,    0], startaddr=0x13, changedregs=R(pc=0x0015))
     runop([I.BRA, 0x80], startaddr=0x0E, changedregs=R(pc=0xFF90))
+    runop([I.BRA, 0xFC], startaddr=0x08, changedregs=R(pc=0x0006))
     #   Additional coverage in test_readsignedbyte().
 
 @pytest.mark.parametrize('offset, Z, newpc', (

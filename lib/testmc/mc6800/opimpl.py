@@ -130,7 +130,12 @@ def psha(m):    pushbyte(m, m.a)
 
 def ldaa(m):    m.a = logicNZV(m, readbyte(m))
 def ldab(m):    m.b = logicNZV(m, readbyte(m))
+def ldaaz(m):   m.a = logicNZV(m, m.mem[readbyte(m)])
+def ldabz(m):   m.b = logicNZV(m, m.mem[readbyte(m)])
 def ldaam(m):   m.a = logicNZV(m, m.mem[readword(m)])
+def ldabm(m):   m.b = logicNZV(m, m.mem[readword(m)])
+def ldaax(m):   m.a = logicNZV(m, m.mem[readindex(m)])
+def ldabx(m):   m.b = logicNZV(m, m.mem[readindex(m)])
 def ldx(m):     m.x = logicNZV(m, readword(m), signbit=15)
 
 def ldxtarget(m, loc0):

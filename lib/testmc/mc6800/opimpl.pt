@@ -320,11 +320,32 @@ def test_LDA(addr, offset, arg, N, Z):
     runop([I.LDAA, arg], changedregs=R(a=arg, N=N, Z=Z, V=0))
     runop([I.LDAB, arg], changedregs=R(b=arg, N=N, Z=Z, V=0))
 
+@pytest.mark.parametrize(**loadstore_tparams(0x44))
+def test_LDAz(addr, offset, arg, N, Z):
+    runop([I.LDAAz, LSB(addr)], changedregs=R(a=arg, N=N, Z=Z, V=0),
+        memsize=0x50, initmem={ addr: arg })
+    runop([I.LDABz, LSB(addr)], changedregs=R(b=arg, N=N, Z=Z, V=0),
+        memsize=0x50, initmem={ addr: arg })
+
 @pytest.mark.parametrize(**loadstore_tparams(0x101))
 def test_LDAAm(addr, offset, arg, N, Z):
     runop([I.LDAAm, MSB(addr), LSB(addr)],
         changedregs=R(a=arg, N=N, Z=Z, V=0),
         memsize=0x110, initmem={ addr: arg })
+    runop([I.LDABm, MSB(addr), LSB(addr)],
+        changedregs=R(b=arg, N=N, Z=Z, V=0),
+        memsize=0x110, initmem={ addr: arg })
+
+@pytest.mark.parametrize(**loadstore_tparams(0x88))
+def test_LDAx(addr, offset, arg, N, Z):
+    runop([I.LDAAx, offset], memsize=0x110,
+        initregs    = R(x=addr),
+        initmem     = { addr+offset: LSB(arg) },
+        changedregs = R(a=arg, N=N, Z=Z, V=0),)
+    runop([I.LDABx, offset], memsize=0x110,
+        initregs    = R(x=addr),
+        initmem     = { addr+offset: LSB(arg) },
+        changedregs = R(b=arg, N=N, Z=Z, V=0),)
 
 @pytest.mark.parametrize(**loadstore_tparams(0x40,
     [(0x50, 0, 0x7FFF, 0, 0), (0x52, 0, 0x8000, 1, 0)]))

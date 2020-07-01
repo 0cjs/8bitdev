@@ -1,12 +1,6 @@
 from    testmc.generic  import *
 from    testmc.mc6800.opcodes  import OPCODES, Instructions as I
-from    testmc.mc6800.opimpl  import readbyte
-
-
-class NotImplementedError(Exception):
-    ''' Get rid of this once we're more complete. ''' # XXX
-def raiseNI(msg):
-    raise NotImplementedError(msg)
+from    testmc.mc6800.opimpl  import incword, readbyte
 
 class Machine(GenericMachine):
 
@@ -51,8 +45,14 @@ class Machine(GenericMachine):
     def _getpc(self):
         return self.pc
 
+    class NotImplementedError(Exception):
+        ''' Get rid of this once we're more complete. ''' # XXX
+
     def _step(self):
         opcode = readbyte(self)
-        _, f = OPCODES.get(opcode, ('NotImplemented',
-            lambda m: raiseNI('opcode=${:02X}'.format(opcode))))
+        _, f = OPCODES.get(opcode, (None, None))
+        if not f:
+            raise self.NotImplementedError(
+                'opcode=${:02X} pc=${:04X}'
+                .format(opcode, incword(self.pc, -1)))
         f(self)

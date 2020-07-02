@@ -293,7 +293,7 @@ def test_PSHA():
         )
 
 ####################################################################
-#   Flag Changes
+#   Flag (Condition Code) Changes
 
 @pytest.mark.parametrize('op, flag', (
     (I.CLC, R(C=0)), (I.SEC, R(C=1)),
@@ -303,38 +303,41 @@ def test_PSHA():
 def test_flag_change(op, flag):
     runop([op], changedregs=flag)
 
-pccr_testdata = ('pccr, flags', (
-   (0b11000000, R(H=0, I=0, N=0, Z=0, V=0, C=0)),
-   (0b11000001, R(H=0, I=0, N=0, Z=0, V=0, C=1)),
-   (0b11000010, R(H=0, I=0, N=0, Z=0, V=1, C=0)),
-   (0b11000100, R(H=0, I=0, N=0, Z=1, V=0, C=0)),
-   (0b11001000, R(H=0, I=0, N=1, Z=0, V=0, C=0)),
-   (0b11010000, R(H=0, I=1, N=0, Z=0, V=0, C=0)),
-   (0b11100000, R(H=1, I=0, N=0, Z=0, V=0, C=0)),
-   (0b11010101, R(H=0, I=1, N=0, Z=1, V=0, C=1)),
-   (0b11101010, R(H=1, I=0, N=1, Z=0, V=1, C=0)),
-   (0b11111111, R(H=1, I=1, N=1, Z=1, V=1, C=1)),
-))
+#   pccr = processor condition codes register (PRM A-70, A-72)
+PCCRparams = {
+    'argnames': 'pccr, flags',
+    'argvalues': (
+        (0b11000000, R(H=0, I=0, N=0, Z=0, V=0, C=0)),
+        (0b11000001, R(H=0, I=0, N=0, Z=0, V=0, C=1)),
+        (0b11000010, R(H=0, I=0, N=0, Z=0, V=1, C=0)),
+        (0b11000100, R(H=0, I=0, N=0, Z=1, V=0, C=0)),
+        (0b11001000, R(H=0, I=0, N=1, Z=0, V=0, C=0)),
+        (0b11010000, R(H=0, I=1, N=0, Z=0, V=0, C=0)),
+        (0b11100000, R(H=1, I=0, N=0, Z=0, V=0, C=0)),
+        (0b11010101, R(H=0, I=1, N=0, Z=1, V=0, C=1)),
+        (0b11101010, R(H=1, I=0, N=1, Z=0, V=1, C=0)),
+        (0b11111111, R(H=1, I=1, N=1, Z=1, V=1, C=1)),
+        ),
+    'ids': tmc_tid,
+    }
 
-@pytest.mark.parametrize(*pccr_testdata, ids=tmc_tid)
+@pytest.mark.parametrize(**PCCRparams)
 def test_tap(pccr, flags):
     runop([I.TAP], initregs=R(a=pccr), changedregs=flags)
 
-@pytest.mark.parametrize(*pccr_testdata, ids=tmc_tid)
+@pytest.mark.parametrize(**PCCRparams)
 def test_tpa(pccr, flags):
     runop([I.TPA], initregs=flags, changedregs=R(a=pccr))
 
 ####################################################################
 #   Data Movement
 
-#### Loads
-
-def loadstore_offsets(*additional):
+def LDSToffsets(*additional):
     ' Offset parameters for indexed (,X) load/store tests. '
     return {    'argnames': 'offset',
                 'argvalues': (3, 0, 0x80) + tuple(additional), }
 
-def loadstore_tparams(baseaddr, extras=()):
+def LDSTparams(baseaddr, extras=()):
     #   All loads and stores affect N and Z and clear V.
     return {
         'argnames':     '        addr,  arg, N, Z',
@@ -345,19 +348,21 @@ def loadstore_tparams(baseaddr, extras=()):
         'ids': tmc_tid,
     }
 
-@pytest.mark.parametrize(**loadstore_tparams(0))
+#### Loads
+
+@pytest.mark.parametrize(**LDSTparams(0))
 def test_LDA(addr, arg, N, Z):
     runop([I.LDAA, arg], changedregs=R(a=arg, N=N, Z=Z, V=0))
     runop([I.LDAB, arg], changedregs=R(b=arg, N=N, Z=Z, V=0))
 
-@pytest.mark.parametrize(**loadstore_tparams(0x44))
+@pytest.mark.parametrize(**LDSTparams(0x44))
 def test_LDAz(addr, arg, N, Z):
     runop([I.LDAAz, LSB(addr)], changedregs=R(a=arg, N=N, Z=Z, V=0),
         memsize=0x50, initmem={ addr: arg })
     runop([I.LDABz, LSB(addr)], changedregs=R(b=arg, N=N, Z=Z, V=0),
         memsize=0x50, initmem={ addr: arg })
 
-@pytest.mark.parametrize(**loadstore_tparams(0x101))
+@pytest.mark.parametrize(**LDSTparams(0x101))
 def test_LDAAm(addr, arg, N, Z):
     runop([I.LDAAm, MSB(addr), LSB(addr)],
         changedregs=R(a=arg, N=N, Z=Z, V=0),
@@ -366,8 +371,8 @@ def test_LDAAm(addr, arg, N, Z):
         changedregs=R(b=arg, N=N, Z=Z, V=0),
         memsize=0x110, initmem={ addr: arg })
 
-@pytest.mark.parametrize(**loadstore_tparams(0x88))
-@pytest.mark.parametrize(**loadstore_offsets())
+@pytest.mark.parametrize(**LDSTparams(0x88))
+@pytest.mark.parametrize(**LDSToffsets())
 def test_LDAx(addr, offset, arg, N, Z):
     runop([I.LDAAx, offset], memsize=0x110,
         initregs    = R(x=addr),
@@ -378,13 +383,13 @@ def test_LDAx(addr, offset, arg, N, Z):
         initmem     = { addr+offset: LSB(arg) },
         changedregs = R(b=arg, N=N, Z=Z, V=0),)
 
-@pytest.mark.parametrize(**loadstore_tparams(0x40,
+@pytest.mark.parametrize(**LDSTparams(0x40,
     [(0x50, 0x7FFF, 0, 0), (0x52, 0x8000, 1, 0)]))
 def test_LDX(addr, arg, N, Z):
     arg = extend_arg(arg)
     runop([I.LDX, MSB(arg), LSB(arg)], changedregs=R(x=arg, N=N, Z=Z, V=0))
 
-@pytest.mark.parametrize(**loadstore_tparams(0x22,
+@pytest.mark.parametrize(**LDSTparams(0x22,
     [(0x50, 0x7FFF, 0, 0), (0x52, 0x8000, 1, 0)]))
 def test_LDXz(addr, arg, N, Z):
     arg = extend_arg(arg)
@@ -392,7 +397,7 @@ def test_LDXz(addr, arg, N, Z):
         changedregs=R(x=arg, N=N, Z=Z, V=0),
         memsize=0x110, initmem={ addr: MSB(arg), addr+1: LSB(arg) })
 
-@pytest.mark.parametrize(**loadstore_tparams(0xFF,
+@pytest.mark.parametrize(**LDSTparams(0xFF,
     [(0x50, 0x7FFF, 0, 0), (0x52, 0x8000, 1, 0)]))
 def test_LDXm(addr, arg, N, Z):
     arg = extend_arg(arg)
@@ -400,9 +405,9 @@ def test_LDXm(addr, arg, N, Z):
         changedregs=R(x=arg, N=N, Z=Z, V=0),
         memsize=0x110, initmem={ addr: MSB(arg), addr+1: LSB(arg) })
 
-@pytest.mark.parametrize(**loadstore_tparams(0x59,
+@pytest.mark.parametrize(**LDSTparams(0x59,
     [(0x50, 0x7FFF, 0, 0), (0x52, 0x8000, 1, 0)]))
-@pytest.mark.parametrize(**loadstore_offsets(0xFC, 0xC1))
+@pytest.mark.parametrize(**LDSToffsets(0xFC, 0xC1))
 def test_LDXx(addr, offset, arg, N, Z):
     arg = extend_arg(arg)
     runop([I.LDXx, offset], memsize=0x200,
@@ -422,22 +427,22 @@ def test_CLRx(x, offset, addr):
     runop([I.CLRx, offset], initregs=R(x=x),
         changedregs=R(N=0, Z=1, V=0, C=0), changedmem={ addr: 0 })
 
-@pytest.mark.parametrize(**loadstore_tparams(0x0003))
+@pytest.mark.parametrize(**LDSTparams(0x0003))
 def test_STAAm(addr, arg, N, Z):
     runop([I.STAAm, MSB(addr), LSB(addr)],
         initregs    = R(a=arg),
         changedregs = R(N=N, Z=Z, V=0),
         changedmem  = { addr: arg })
 
-@pytest.mark.parametrize(**loadstore_tparams(0x0004))
-@pytest.mark.parametrize(**loadstore_offsets())
+@pytest.mark.parametrize(**LDSTparams(0x0004))
+@pytest.mark.parametrize(**LDSToffsets())
 def test_STAAx(addr, offset, arg, N, Z):
     runop([I.STAAx, offset], memsize=0x90,
         initregs    = R(x=addr, a=arg),
         changedregs = R(N=N, Z=Z, V=0),
         changedmem  = { addr+offset: arg })
 
-@pytest.mark.parametrize(**loadstore_tparams(0x40,
+@pytest.mark.parametrize(**LDSTparams(0x40,
     [(0x50, 0x7FFF, 0, 0), (0x52, 0x8000, 1, 0),]))
 def test_STXm(addr, arg, N, Z):
     arg = extend_arg(arg)
@@ -453,7 +458,7 @@ def test_STXm_rollover():
         changedmem={ 0xFFFF: 0x89, 0x0000: 0xAB },
     )
 
-@pytest.mark.parametrize(**loadstore_tparams(0xF0))
+@pytest.mark.parametrize(**LDSTparams(0xF0))
 def test_STXz(addr, arg, N, Z):
     arg = extend_arg(arg)
     runop([I.STXz, addr], memsize=0x100,
@@ -588,37 +593,39 @@ def test_CMPA():
     #   test_suba() provides the rest of the coverage.
     runop([I.CMPA, 0x02], initregs=R(a=0x81), changedregs=R(N=0, Z=0, V=1, C=0))
 
-#       Flag register value:         4  8  2
-#
-cpxparams = (' addr,      x,    arg, Z, N, V', (
-             (0x0F1, 0x0000, 0x0000, 1, 0, 0),     # BEQ taken
-             (0x0F3, 0x0001, 0x0001, 1, 0, 0),
-             (0x0F5, 0x0080, 0x0080, 1, 0, 0),
-             (0x0F7, 0x7FFF, 0x7FFF, 1, 0, 0),
-             (0x0F9, 0x8000, 0x8000, 1, 0, 0),
-             (0x0FB, 0xFFFF, 0xFFFF, 1, 0, 0),
+CPXparams = {
+    'argnames':     ' addr,      x,    arg, Z, N, V',
+    #  Flag register value:                 4  8  2
+    'argvalues': (  (0x0F1, 0x0000, 0x0000, 1, 0, 0),     # BEQ taken
+                    (0x0F3, 0x0001, 0x0001, 1, 0, 0),
+                    (0x0F5, 0x0080, 0x0080, 1, 0, 0),
+                    (0x0F7, 0x7FFF, 0x7FFF, 1, 0, 0),
+                    (0x0F9, 0x8000, 0x8000, 1, 0, 0),
+                    (0x0FB, 0xFFFF, 0xFFFF, 1, 0, 0),
 
-             (0x0FD, 0x0000, 0x0001, 0, 0, 0),     # BNE taken
-             (0x0FF, 0x0000, 0x00FF, 0, 0, 0),
-             (0x101, 0x0000, 0x0100, 0, 1, 0),
+                    (0x0FD, 0x0000, 0x0001, 0, 0, 0),     # BNE taken
+                    (0x0FF, 0x0000, 0x00FF, 0, 0, 0),
+                    (0x101, 0x0000, 0x0100, 0, 1, 0),
 
-             (0x103, 0x0000, 0x8100, 0, 0, 0),
-             (0x105, 0x0000, 0x80FF, 0, 1, 1),
-             (0x107, 0x0000, 0x8000, 0, 1, 1),
-             (0x109, 0x0000, 0x7FFF, 0, 1, 0),
+                    (0x103, 0x0000, 0x8100, 0, 0, 0),
+                    (0x105, 0x0000, 0x80FF, 0, 1, 1),
+                    (0x107, 0x0000, 0x8000, 0, 1, 1),
+                    (0x109, 0x0000, 0x7FFF, 0, 1, 0),
 
-             (0x10B, 0x0000, 0xFFFF, 0, 0, 0),
-             (0x10D, 0x8000, 0x0000, 0, 1, 0),
-             (0x10F, 0x8000, 0x00FF, 0, 1, 0),
-             (0x121, 0x8000, 0x0100, 0, 0, 1),
-))
+                    (0x10B, 0x0000, 0xFFFF, 0, 0, 0),
+                    (0x10D, 0x8000, 0x0000, 0, 1, 0),
+                    (0x10F, 0x8000, 0x00FF, 0, 1, 0),
+                    (0x121, 0x8000, 0x0100, 0, 0, 1),
+                ),
+    'ids': tmc_tid,
+}
 
-@pytest.mark.parametrize(*cpxparams, ids=tmc_tid)
+@pytest.mark.parametrize(**CPXparams)
 def test_CPX(addr, x, arg, N, Z, V):
     runop([I.CPX, MSB(arg), LSB(arg)],
         initregs=R(x=x), changedregs=R(N=N, Z=Z, V=V))
 
-@pytest.mark.parametrize(*cpxparams, ids=tmc_tid)
+@pytest.mark.parametrize(**CPXparams)
 def test_CPXz(addr, x, arg, N, Z, V):
     addr -= 0x40
     runop([I.CPXz, addr], memsize=0xFF,
@@ -626,7 +633,7 @@ def test_CPXz(addr, x, arg, N, Z, V):
         initregs    = R(x=x),
         changedregs = R(N=N, Z=Z, V=V))
 
-@pytest.mark.parametrize(*cpxparams, ids=tmc_tid)
+@pytest.mark.parametrize(**CPXparams)
 def test_CPXm(addr, x, arg, N, Z, V):
     runop([I.CPXm, MSB(addr), LSB(addr)], memsize=0x123,
         initmem     = { addr: MSB(arg), addr+1: LSB(arg) },

@@ -324,11 +324,6 @@ def test_tpa(pccr, flags):
 ####################################################################
 #   Data Movement
 
-def LDSToffsets(*additional):
-    ' Offset parameters for indexed (,X) load/store tests. '
-    return {    'argnames': 'offset',
-                'argvalues': (3, 0, 0x80) + tuple(additional), }
-
 def LDSTparams(baseaddr):
     ''' LDx/STx instructions loading/storing 8-bit values.
         All loads and stores affect N and Z and clear V.
@@ -360,40 +355,61 @@ def LDST16params(baseaddr):
                           ),
         'ids': tmc_tid, }
 
+def LDSTaccum(optemplate):
+    ''' Parametrize by A and B accumulators.
+
+        `optemplate` is the name of the opcode from `opcodes.OPCODES` with
+        `~` in place of the accumulator name, e.g., ``LDA~m`` or ``BIT~m``.
+
+        The opcode names for the A and B versions (``LDAAm``, ``LDABm``)
+        will be generated; these can be looked up with ``I[opname]``.
+
+        An `accval(value, regs_flags)` function will also be given; this
+        constructs a `Registers` object where the selected accumulator is
+        initialized with *value* and the remaining parameters are passed
+        on to the `Registers` constructor, e.g. ``accval(0xFF, Z=1, V=0)``.
+    '''
+    opnameA = optemplate.replace('~', 'A')
+    opnameB = optemplate.replace('~', 'B')
+    def make_accval(accname):
+        def accval(accvalue, **kwargs):
+            return R(**{ accname: accvalue, **kwargs })
+        return accval
+    return dict(argnames='opname, accval',
+        argvalues=((opnameA, make_accval('a')), (opnameB, make_accval('b'))))
+
+def LDSToffsets(*additional):
+    ' Offset parameters for indexed (,X) load/store tests. '
+    return {    'argnames': 'offset',
+                'argvalues': (3, 0, 0x80) + tuple(additional), }
+
 #### Loads
 
+@pytest.mark.parametrize(**LDSTaccum('LDA~'))
 @pytest.mark.parametrize(**LDSTparams(0))
-def test_LDA(addr, arg, N, Z):
-    runop([I.LDAA, arg], changedregs=R(a=arg, N=N, Z=Z, V=0))
-    runop([I.LDAB, arg], changedregs=R(b=arg, N=N, Z=Z, V=0))
+def test_LDA(opname, accval, addr, arg, N, Z):
+    runop([I[opname], arg], changedregs=accval(arg, N=N, Z=Z, V=0))
 
+@pytest.mark.parametrize(**LDSTaccum('LDA~z'))
 @pytest.mark.parametrize(**LDSTparams(0x44))
-def test_LDAz(addr, arg, N, Z):
-    runop([I.LDAAz, LSB(addr)], changedregs=R(a=arg, N=N, Z=Z, V=0),
-        memsize=0x50, initmem={ addr: arg })
-    runop([I.LDABz, LSB(addr)], changedregs=R(b=arg, N=N, Z=Z, V=0),
+def test_LDAz(opname, accval, addr, arg, N, Z):
+    runop([I[opname], LSB(addr)], changedregs=accval(arg, N=N, Z=Z, V=0),
         memsize=0x50, initmem={ addr: arg })
 
+@pytest.mark.parametrize(**LDSTaccum('LDA~m'))
 @pytest.mark.parametrize(**LDSTparams(0x101))
-def test_LDAAm(addr, arg, N, Z):
-    runop([I.LDAAm, MSB(addr), LSB(addr)],
-        changedregs=R(a=arg, N=N, Z=Z, V=0),
-        memsize=0x110, initmem={ addr: arg })
-    runop([I.LDABm, MSB(addr), LSB(addr)],
-        changedregs=R(b=arg, N=N, Z=Z, V=0),
+def test_LDAAm(opname, accval, addr, arg, N, Z):
+    runop([I[opname], MSB(addr), LSB(addr)],
+        changedregs=accval(arg, N=N, Z=Z, V=0),
         memsize=0x110, initmem={ addr: arg })
 
+@pytest.mark.parametrize(**LDSTaccum('LDA~x'))
 @pytest.mark.parametrize(**LDSTparams(0x85))
 @pytest.mark.parametrize(**LDSToffsets())
-def test_LDAx(addr, offset, arg, N, Z):
-    runop([I.LDAAx, offset], memsize=0x110,
-        initregs    = R(x=addr),
-        initmem     = { addr+offset: LSB(arg) },
-        changedregs = R(a=arg, N=N, Z=Z, V=0),)
-    runop([I.LDABx, offset], memsize=0x110,
-        initregs    = R(x=addr),
-        initmem     = { addr+offset: LSB(arg) },
-        changedregs = R(b=arg, N=N, Z=Z, V=0),)
+def test_LDAx(opname, accval, addr, offset, arg, N, Z):
+    runop([I[opname], offset],
+        memsize=0x110, initmem={ addr+offset: LSB(arg) },
+        initregs=R(x=addr), changedregs=accval(arg, N=N, Z=Z, V=0))
 
 @pytest.mark.parametrize(**LDST16params(0x40))
 def test_LDX(addr, arg, N, Z):

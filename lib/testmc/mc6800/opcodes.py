@@ -145,8 +145,11 @@ OPCODES = {
 ####################################################################
 #   Map instructions to opcodes
 
-class Instructions:
+class InstructionsClass:
     ''' Opcode constants for the 6800, named after the assembly instructions.
+
+        These are available both as attributes on the class or object
+        (``I.LDABx``) and via subscript lookup (``I['LDABx']``).
 
         There are often multiple opcodes per instruction, one for each of
         the different addressing modes. We distinguish these with a
@@ -166,6 +169,13 @@ class Instructions:
         gain from that at the moment.
     '''
 
+    def __getitem__(self, key):
+        ' Return the opcode value for the given opcode name. '
+        return getattr(self, key)
+
+#   Add all opcode names as attributes to InstructionsClass.
 for opcode, (mnemonic, f) in OPCODES.items():
     if mnemonic is not None:
-        setattr(Instructions, mnemonic, opcode)
+        setattr(InstructionsClass, mnemonic, opcode)
+
+Instructions = InstructionsClass()

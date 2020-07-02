@@ -85,6 +85,10 @@ def runop(opdata, *, machine=None, memsize=0x20,
     if m is None:
         m = Machine(memsize=memsize)
 
+    #   Set registers A, B and X to have non-zero values if they're not
+    #   otherwise used to help detect if they're accidentally zeroed.
+    m.a = 0xA5; m.b = 0xB5; m.x = 0xC5D5;
+
     #   For any register not explicitly set that has a value in changedregs,
     #   set it to some other value so we can confirm it was changed.
     unsetregs = set()
@@ -93,7 +97,7 @@ def runop(opdata, *, machine=None, memsize=0x20,
     #   But always exclude the program counter and stack pointer
     #   as they should never be randomized!
     unsetregs.discard('pc'); unsetregs.discard('sp')
-    for name, val in changedregs.all().items():
+    for name, val in changedregs.valued().items():
         if name in unsetregs:
             setattr(m, name, not val)
     #   Also set unexpected values for any memory locations expected to change.

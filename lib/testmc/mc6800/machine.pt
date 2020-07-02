@@ -40,11 +40,11 @@ def test_step_notimplemented(m, R):
     ''' This should be replaced with a "bad opcode" test once we've no
         longer got unimplemented opcodes.
     '''
-    m.deposit(0x100, [I.NOP, 0xFD])  # FD is an unused opcode.
+    m.deposit(0x100, [I.NOP, 0x3E])  # $3E = SWI
     m.setregs(R(pc=0x100))
     with pytest.raises(Machine.NotImplementedError) as ex:
         m.step(2)
-    assert ex.match(r'^opcode=\$FD pc=\$0101$')
+    assert ex.match(r'^opcode=\$3E pc=\$0101$')
 
 def test_step(m, R):
     ''' Smoke test; the detailed work of instruction execution is covered

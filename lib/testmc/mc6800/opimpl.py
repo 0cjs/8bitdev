@@ -9,6 +9,18 @@
 
 from struct import unpack
 
+class InvalidOpcode(RuntimeError):
+    ''' Since it is designed for testing code, the simulator
+        will not execute invalid opcodes, instead raising an exception.
+    '''
+    def __init__(self, opcode, pc):
+        self.opcode = opcode
+        self.pc = pc
+        super().__init__('opcode=${:02X} pc=${:04X}'.format(opcode, pc))
+
+def invalid(m):
+    raise InvalidOpcode(m.mem[incword(m.pc, -1)], m.pc-1)
+
 ####################################################################
 #   Address handling, reading data at the PC, reading/writing stack
 

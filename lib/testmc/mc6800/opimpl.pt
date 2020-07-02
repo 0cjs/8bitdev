@@ -467,42 +467,34 @@ def test_CLRx(x, offset, addr):
     runop([I.CLRx, offset], initregs=R(x=x),
         changedregs=R(N=0, Z=1, V=0, C=0), changedmem={ addr: 0 })
 
+@pytest.mark.parametrize(**LDSTaccum('STA~m'))
 @pytest.mark.parametrize(**LDSTparams(0x0003))
-def test_STAAm(addr, arg, N, Z):
-    runop([I.STAAm, MSB(addr), LSB(addr)],
-        initregs    = R(a=arg),
-        changedregs = R(N=N, Z=Z, V=0),
-        changedmem  = { addr: arg })
+def test_STAm(opname, accval, addr, arg, N, Z):
+    runop([I[opname], MSB(addr), LSB(addr)], initregs=accval(arg),
+        changedmem={ addr: arg }, changedregs=R(N=N, Z=Z, V=0))
 
+@pytest.mark.parametrize(**LDSTaccum('STA~x'))
 @pytest.mark.parametrize(**LDSTparams(0x0004))
 @pytest.mark.parametrize(**LDSToffsets())
-def test_STAAx(addr, offset, arg, N, Z):
-    runop([I.STAAx, offset], memsize=0x90,
-        initregs    = R(x=addr, a=arg),
-        changedregs = R(N=N, Z=Z, V=0),
-        changedmem  = { addr+offset: arg })
+def test_STAx(opname, accval, addr, offset, arg, N, Z):
+    runop([I[opname], offset], memsize=0x90, initregs=accval(arg, x=addr),
+        changedmem={ addr+offset: arg }, changedregs=R(N=N, Z=Z, V=0))
 
 @pytest.mark.parametrize(**LDST16params(0x40))
 def test_STXm(addr, arg, N, Z):
-    runop([I.STXm, MSB(addr), LSB(addr)], memsize=0x90,
-        initregs    = R(x=arg),
-        changedregs = R(N=N, Z=Z, V=0),
-        changedmem  = { addr: MSB(arg), addr+1: LSB(arg) },
-    )
+    runop([I.STXm, MSB(addr), LSB(addr)], memsize=0x90, initregs=R(x=arg),
+        changedmem={ addr: MSB(arg), addr+1: LSB(arg) },
+        changedregs=R(N=N, Z=Z, V=0))
 
 def test_STXm_rollover():
-    runop([I.STXm, 0xFF, 0xFF], memsize=64*1024,
-        initregs= R(x=0x89AB), changedregs=R(N=1, Z=0, V=0),
-        changedmem={ 0xFFFF: 0x89, 0x0000: 0xAB },
-    )
+    runop([I.STXm, 0xFF, 0xFF], memsize=64*1024, initregs=R(x=0x89AB),
+        changedmem={ 0xFFFF: 0x89, 0x0000: 0xAB }, changedregs=R(N=1, Z=0, V=0))
 
 @pytest.mark.parametrize(**LDST16params(0xF0))
 def test_STXz(addr, arg, N, Z):
-    runop([I.STXz, addr], memsize=0x100,
-        initregs    = R(x=arg),
-        changedregs = R(N=N, Z=Z, V=0),
-        changedmem  = { addr: MSB(arg), addr+1: LSB(arg) },
-    )
+    runop([I.STXz, addr], memsize=0x100, initregs=R(x=arg),
+        changedmem={ addr: MSB(arg), addr+1: LSB(arg) },
+        changedregs = R(N=N, Z=Z, V=0))
 
 ####################################################################
 #   Flag handling for data movement and logic

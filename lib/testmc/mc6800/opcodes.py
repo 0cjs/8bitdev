@@ -111,7 +111,7 @@ OPCODES = {
 
     0xB3: (None,    invalid),
     0xB6: ('LDAAm', ldaam),
-    0xB7: ('STAAm', staa_m),
+    0xB7: ('STAAm', staam),
     0xBC: ('CPXm',  cpxm),
     0xBD: ('JSR',   jsr),
 
@@ -132,12 +132,14 @@ OPCODES = {
 
     0xE3: (None,    invalid),
     0xE6: ('LDABx', ldabx),
+    0xE7: ('STABx', stabx),
     0xEC: (None,    invalid),
     0xED: (None,    invalid),
     0xEE: ('LDXx',  ldxx),
 
     0xF3: (None,    invalid),
     0xF6: ('LDABm', ldabm),
+    0xF7: ('STABm', stabm),
     0xFC: (None,    invalid),
     0xFD: (None,    invalid),
     0xFE: ('LDXm',  ldxm),

@@ -27,26 +27,36 @@ def test_convascdigit_error(M, R, char):
     assert R(N=1) == M.regs
 
 def test_convascdigit_good_exhaustive(M, R):
-    ''' Exhaustive test of all good values. Because we're nervous types.
-        But the parametertized tests are easier for debugging errors.
+    ''' Exhaustive test of all good values.
+
+        Not just because we're nervous types, but also because these are
+        useful for debugging new implementations where it's more convenient
+        to see just the "next" error rather than lots of errors.
+
+        As well, looping through the values in one test speeds things up by
+        saving on setup/teardown for 256 tests.
     '''
 
     def ordrange(a, z):
         return range(ord(a), ord(z)+1)
     def readasc(a):
+        print('{:02X}'.format(char), end=' ')
         M.call(M.symtab.convascdigit, R(a=a, N=1))
         return M.regs
 
     for num,char in zip(count(0), ordrange('0','9')):
-        assert R(a=num, N=0) == readasc(char)
+        assert R(a=num, N=0) == readasc(char), \
+            'failed on input ${:02X} {}'.format(char, repr(chr(char)))
     for num,char in zip(count(10), ordrange('A', '_')):
-        assert R(a=num, N=0) == readasc(char), '{} ??? char {}'.format(num, char)
+        assert R(a=num, N=0) == readasc(char), \
+            'failed on input ${:02X} {}'.format(char, repr(chr(char)))
     for num,char in zip(count(10), ordrange('a', '\x7F')):
-        assert R(a=num, N=0) == readasc(char), '{} ??? char {}'.format(num, char)
+        assert R(a=num, N=0) == readasc(char), \
+            'failed on input ${:02X} {}'.format(char, repr(chr(char)))
 
 def test_convascdigit_error_exhaustive(M, R):
-    ''' Exhaustive test of all bad values. Because we're nervous types.
-        But the parametertized tests are easier for debugging errors.
+    ''' Exhaustive test of all bad values.
+        See further comments on `test_convascdigit_good_exhaustive`.
     '''
     badchars = chain(
         range(0,          ord('0')),
@@ -56,4 +66,5 @@ def test_convascdigit_error_exhaustive(M, R):
         )
     for char in badchars:
         M.call(M.symtab.convascdigit, R(a=char, N=0))
-        assert R(N=1) == M.regs, 'char {} should be bad'.format(char)
+        assert R(N=1) == M.regs, \
+            'input ${:02X} {} should be bad'.format(char, repr(chr(char)))

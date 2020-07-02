@@ -103,8 +103,8 @@ Configuration:
   by address entry.
 
 Command parameters:
-* `*`: _cur_, the starting location for reads.
-* `/`: _end_, the end location of reads.
+* `*`: _cur_, the starting location for reads from memory.
+* `/`: _end_, the end location of reads from memory.
 * `;`: _next_, starting deposit location for memory modifcation commands.
 
 Calculations and saved values:
@@ -216,11 +216,19 @@ _cur_ with, e.g., `80 #/100 X` or `80#/100X`.
 - `<`: Pop a word from the stack and set _cur_ and _next_ to that word.
   (Not actually a real command; it's just evaluating the special variable
   and interpreting the word as normal.)
-- `RD` (_bytelist_): Read into memory from currently selected device,
-  starting at the "default load location" saved in the file, if present. If
-  a default load location is not present, generate an error.
-- `RN` (_bytelist_): Read into memory starting at _next_ from currently
-  selected device.
+- `RD` (_bytelist_): "Read Default" from current device into memory
+  starting at the default load location saved in the file, if present. If a
+  default load location is not present, generate an error. The file
+  determines the data length.
+- `RN` (_bytelist_): "Read to _Next_" from current device into memory
+  starting at _next_. The file determines the data length.
+- `RS` (_bytelist_): "Read Specified Size" from the current device into
+  memory starting at _next_ up to (but not including) _end_, or until file
+  data runs out.
+
+All `R` commands leave _cur_ and _end_ pointing to the start of the data
+read and one past the end of the data read, respectively. _end_ may be
+reset to the current block size by entering _cur_, `*`.
 
 ### Registers and Execution
 
@@ -256,6 +264,39 @@ XXX how to display and set registers?
   have _end_ as well, set automatically to _cur_ + _defsize_ unless changed
   separately?
 - Ctrl-commands available?
+
+
+Devices and Reading/Writing
+---------------------------
+
+The `R` and `W` commands make use of a "currently selected device." These
+are handled by routines with a common interface (see below).
+- `W`: _cur_, _end_ for the memory area to read.
+- `RD`: Contents of file determine start and length.
+- `RN`: Write memory starting at _next_, file contents determine length.
+- `RS`: _next_, _end_ for the memory area to write.
+  - XXX but review this; `7000 #/77FF RD` is an ideomatic way to read 2 KB,
+    but what if someone inserts a bit before reading,  `7000 #/7FFF :1234
+    ABCD: RD` would read only 2KB - 4 bytes immediately after the deposited
+    data. But that does seem sensible.
+
+The currently selected device is determined by a word in memory. (Should we
+have two words, for separate read/write?) If it's a small value, e.g. $0000
+or $0002, it will be used as an index into a table of I/O routines supplied
+by the monitor. If it's larger it will be used as a pointer to a
+user-supplied I/O routine. (Possibly the address pointed to should be
+checked for a valid starting byte?)
+
+The interface could be:
+- X points to the command argument _bytelist_.
+- Start/end address are taken from the usual variables, where necessary.
+- Simplest thing: enter with a flag clear or set to indicate read or write.
+  But how to handle "read full file" vs. "read only this much"?
+- Magic cookie (to let monitor error-check pointers) followed by entry
+  offsets for start of read/write/whatever routines? (Could be used to make
+  driver supply separate `RD`, `RN`, `RS`.)
+- Maybe have an APIs count in the magic cookie so that additional ones
+  could be added to display a directory or whatever.
 
 
 Use Cases / Sample Session

@@ -128,3 +128,13 @@ def test_rdline_overflow(M, R, S):
 
     #   A BEL for each char rejected when the buffer was full.
     assert bufinput + b'\a\a\r\n' == ostream.getvalue()
+
+####################################################################
+
+pytest.register_assert_rewrite('bigint')
+from bigint import (
+    test_convascdigit_good as test_convascdigit_good_6800,
+    test_convascdigit_good_exhaustive as test_convascdigit_good_exhaustive_6800,
+    test_convascdigit_error as test_convascdigit_error_6800,
+    test_convascdigit_error_exhaustive as test_convascdigit_error_exhaustive_6800,
+    )

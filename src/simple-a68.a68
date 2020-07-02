@@ -128,4 +128,21 @@ rdlinebuf_end
 
 ; ----------------------------------------------------------------------
 
+;   ♢A ♡BX ♣- Same interface as convascdigit in bigint.a65.
+;   Returns N flag clear and binary digit in A, or N set on error.
+;
+convascdigit
+            cmp A,#'9'+1
+            bcc .letter         ; >9, convert letter
+            sub A,#'0'          ; convert digit, N set if <0
+            rts
+.letter
+            and A,#%11011111    ; clear bit 5 to convert to upper-case
+            bmi .exit           ; high bit set, error
+            sub A,#'A'-$0A
+            cmp A,#$0A          ; set N if < $0A
+.exit       rts
+
+; ----------------------------------------------------------------------
+
             end set_a_ff

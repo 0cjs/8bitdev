@@ -208,6 +208,13 @@ def logicNZV(m, val, signbit=7):
 def anda(m):
     m.a = logicNZV(m, m.a & readbyte(m))
 
+def asla(m):
+    m.C = bool(m.a & 0x80)
+    m.a = (m.a << 1) & 0xFF
+    m.N = isneg(m.a)
+    m.Z = iszero(m.a)
+    m.V = m.N ^ m.C
+
 def lsra(m):
     m.C = m.a & 1
     m.a = m.a >> 1

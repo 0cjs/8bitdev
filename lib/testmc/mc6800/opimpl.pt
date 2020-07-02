@@ -532,6 +532,21 @@ def test_logicNZV():
 def test_ANDA(a, arg, res, N, Z):
     runop([I.ANDA, arg], initregs=R(a=a), changedregs=R(a=res, N=N, Z=Z, V=0))
 
+@pytest.mark.parametrize('init,  res, N, Z, C', (
+                         (0x00, 0x00, 0, 1, 0),
+                         (0x21, 0x42, 0, 0, 0),
+                         (0x80, 0x00, 0, 1, 1),
+                         (0x81, 0x02, 0, 0, 1),
+                         (0xC8, 0x90, 1, 0, 1),
+                         (0xFF, 0xFE, 1, 0, 1),
+                         (0x55, 0xAA, 1, 0, 0),
+                         (0xAA, 0x54, 0, 0, 1),
+), ids=tmc_tid)
+def test_ASLA(init, res, N, Z, C):
+    V = N ^ C
+    runop([I.ASLA], initregs=R(a=init),
+        changedregs=R(a=res, N=N, Z=Z, V=V, C=C))
+
 @pytest.mark.parametrize('init,  res, Z, V, C', (
                          #   XXX see comment in code re V=N⊕C
                          (0x01, 0x00, 1, 1, 1),
@@ -540,8 +555,9 @@ def test_ANDA(a, arg, res, N, Z):
                          (0xFF, 0x7F, 0, 1, 1),
 ), ids=tmc_tid)
 def test_LSRA(init, res, Z, V, C):
+    N = 0; assert V == N ^ C, 'V = N ⊕ C'
     runop([I.LSRA], initregs=R(a=init),
-        changedregs=R(a=res, N=0, Z=Z, V=V, C=C))
+        changedregs=R(a=res, N=N, Z=Z, V=V, C=C))
 
 ####################################################################
 #   Arithmetic operations

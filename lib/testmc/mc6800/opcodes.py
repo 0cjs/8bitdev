@@ -62,6 +62,7 @@ OPCODES = {
     0x42: (None,    invalid),
     0x44: ('LSRA',  lsra),
     0x45: (None,    invalid),
+    0x48: ('ASLA',  asla),
     0x4B: (None,    invalid),
     0x4E: (None,    invalid),
     0x4F: ('CLRA',  clra),

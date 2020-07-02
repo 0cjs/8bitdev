@@ -442,11 +442,27 @@ def test_LDXx(addr, offset, arg, N, Z):
 
 #### Stores
 
+@pytest.mark.parametrize(**LDSTaccum('CLR~'))
+@pytest.mark.parametrize('initval', (0x00, 0x02, 0xFF))
+def test_CLRA(opname, accval, initval):
+    runop([I[opname]], initregs=accval(initval),
+        changedregs=(accval(0, N=0, Z=1, V=0, C=0)))
+
+@pytest.mark.parametrize(' addr, initval', (
+                         (0x0012,   0x00),
+                         (0x0013,   0x03),
+                         (0x0111,   0xFF),
+), ids=tmc_tid)
+def test_CLRm(addr, initval):
+    runop([I.CLRm, MSB(addr), LSB(addr)], memsize=0x112,
+        initmem={ addr: initval }, changedmem={ addr: 0 },
+        changedregs=R(N=0, Z=1, V=0, C=0))
+
 @pytest.mark.parametrize('x, offset, addr', (
     (      0x0003,    0, 0x0003),
     (      0x0004,    2, 0x0006),
     (0x10000-0xF8, 0xFF, 0x0007),
-))
+), ids=tmc_tid)
 def test_CLRx(x, offset, addr):
     runop([I.CLRx, offset], initregs=R(x=x),
         changedregs=R(N=0, Z=1, V=0, C=0), changedmem={ addr: 0 })

@@ -162,7 +162,11 @@ def ldxz(m):    ldxtarget(m, readbyte(m))
 def ldxm(m):    ldxtarget(m, readword(m))
 def ldxx(m):    ldxtarget(m, readindex(m))
 
+def clra(m):    m.a                 = logicNZV(m, 0); m.C = 0
+def clrb(m):    m.b                 = logicNZV(m, 0); m.C = 0
+def clrm(m):    m.mem[readword(m)]  = logicNZV(m, 0); m.C = 0
 def clrx(m):    m.mem[readindex(m)] = logicNZV(m, 0); m.C = 0
+
 def staa_m(m):  m.mem[readword(m)] = logicNZV(m, m.a)
 def staax(m):   m.mem[readindex(m)] = logicNZV(m, m.a)
 

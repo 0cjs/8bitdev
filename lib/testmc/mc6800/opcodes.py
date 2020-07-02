@@ -64,6 +64,7 @@ OPCODES = {
     0x45: (None,    invalid),
     0x4B: (None,    invalid),
     0x4E: (None,    invalid),
+    0x4F: ('CLRA',  clra),
 
     0x51: (None,    invalid),
     0x52: (None,    invalid),
@@ -71,6 +72,7 @@ OPCODES = {
     0x5A: ('DECB',  decb),
     0x5B: (None,    invalid),
     0x5E: (None,    invalid),
+    0x5F: ('CLRB',  clrb),
 
     0x61: (None,    invalid),
     0x62: (None,    invalid),
@@ -84,6 +86,7 @@ OPCODES = {
     0x75: (None,    invalid),
     0x7B: (None,    invalid),
     0x7E: ('JMP',   jmp),
+    0x7F: ('CLRm',  clrm),
 
     0x80: ('SUBA',  suba),
     0x81: ('CMPA',  cmpa),

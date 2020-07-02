@@ -22,7 +22,7 @@ def invalid(m):
     raise InvalidOpcode(m.mem[incword(m.pc, -1)], m.pc-1)
 
 ####################################################################
-#   Address handling, reading data at the PC, reading/writing stack
+#   Address handling, reading data at the PC
 
 def incbyte(byte, addend):
     ''' Return 8-bit `byte` incremented by `addend` (which may be negative).
@@ -65,27 +65,6 @@ def readindex(m):
     '''
     return incword(m.x, readbyte(m))
 
-def popbyte(m):
-    ' Pop a byte off the stack and return it. '
-    m.sp = incword(m.sp, 1)
-    return m.byte(m.sp)
-
-def popword(m):
-    ' Pop a word off the stack and return it. '
-    msb = popbyte(m)
-    lsb = popbyte(m)
-    return (msb << 8) + lsb
-
-def pushbyte(m, byte):
-    ' Push a byte on to the stack. '
-    m.deposit(m.sp, byte)
-    m.sp = incword(m.sp, -1)
-
-def pushword(m, word):
-    ' Push a word on to the stack, LSB followed by MSB. '
-    pushbyte(m, word & 0xFF)
-    pushbyte(m, word >> 8)
-
 ####################################################################
 #   Branches
 
@@ -107,11 +86,38 @@ def bne(m): branchif(m, not m.Z)
 def bmi(m): branchif(m, m.N)
 def bpl(m): branchif(m, not m.N)
 
+####################################################################
+#   Instructions affecting the stack
+
+def popbyte(m):
+    ' Pop a byte off the stack and return it. '
+    m.sp = incword(m.sp, 1)
+    return m.byte(m.sp)
+
+def popword(m):
+    ' Pop a word off the stack and return it. '
+    msb = popbyte(m)
+    lsb = popbyte(m)
+    return (msb << 8) + lsb
+
+def pushbyte(m, byte):
+    ' Push a byte on to the stack. '
+    m.deposit(m.sp, byte)
+    m.sp = incword(m.sp, -1)
+
+def pushword(m, word):
+    ' Push a word on to the stack, LSB followed by MSB. '
+    pushbyte(m, word & 0xFF)
+    pushbyte(m, word >> 8)
+
+
 def jsr(m):     t = readword(m);    pushword(m, m.pc); m.pc = t
 def jsrx(m):    t = readindex(m);   pushword(m, m.pc); m.pc = t
 def bsr(m):     t = readreloff(m);  pushword(m, m.pc); m.pc = t
-
 def rts(m):     m.pc = popword(m)
+
+def pula(m):    m.a = popbyte(m)
+def psha(m):    pushbyte(m, m.a)
 
 ####################################################################
 #   Flag Changes
@@ -136,9 +142,6 @@ def tpa(m):
 
 ####################################################################
 #   Data movement
-
-def pula(m):    m.a = popbyte(m)
-def psha(m):    pushbyte(m, m.a)
 
 def ldaa(m):    m.a = logicNZV(m, readbyte(m))
 def ldab(m):    m.b = logicNZV(m, readbyte(m))

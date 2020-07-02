@@ -14,7 +14,7 @@ import  pytest
 #   support functions anyway.
 
 ####################################################################
-#   Address handling, reading data at the PC, reading/writing stack
+#   Address handling, reading data at the PC
 
 @pytest.mark.parametrize('initial, addend, expected', (
                          (      0,      0,        0),
@@ -72,22 +72,6 @@ def test_readindex(x, offset, target):
     m.setregs(R(x=x, pc=0x10))
     m.deposit(0x10, offset)
     assert target == readindex(m)
-
-@pytest.mark.parametrize('initsp,    word,  newsp', (
-                         (     0,  0x4142,      2),
-                         (     1,  0x4243,      3),
-                         (0xFFFD,  0xCECF, 0xFFFF),
-                         (0xFFFE,  0xCF40,      0),
-                         (0xFFFF,  0x4041,      1),
-), ids=tmc_tid)
-def test_popword(initsp, word, newsp):
-    m = Machine()
-    m.deposit(0x0000, b'\x40\x41\x42\x43')
-    m.deposit(0xFFFC, b'\xCC\xCD\xCE\xCF')
-
-    m.sp = initsp
-    assert word == popword(m)
-    assert newsp == m.sp
 
 ####################################################################
 #   Opcode test framework
@@ -242,7 +226,26 @@ def test_condbranch(op, initregs, taken):
     runop([op, 0x40], initregs=initregs,
         changedregs= R(pc=0x0050) if taken else R(pc=0x0010))
 
-############################
+####################################################################
+#   Instructions affecting the stack
+
+@pytest.mark.parametrize('initsp,    word,  newsp', (
+                         (     0,  0x4142,      2),
+                         (     1,  0x4243,      3),
+                         (0xFFFD,  0xCECF, 0xFFFF),
+                         (0xFFFE,  0xCF40,      0),
+                         (0xFFFF,  0x4041,      1),
+), ids=tmc_tid)
+def test_popword(initsp, word, newsp):
+    m = Machine()
+    m.deposit(0x0000, b'\x40\x41\x42\x43')
+    m.deposit(0xFFFC, b'\xCC\xCD\xCE\xCF')
+
+    m.sp = initsp
+    assert word == popword(m)
+    assert newsp == m.sp
+
+### Subroutine calls
 
 def test_JSR():
     runop([I.JSR, 0x56, 0x78],
@@ -270,6 +273,24 @@ def test_RTS():
     m = Machine(memsize=0x40)
     m.sp = 0x002D; m.depword(0x002E, 0x1234)
     runop([I.RTS], machine=m, changedregs=R(pc=0x1234, sp=0x002F))
+
+### Data Movement
+#   All the other data movement operations affect flags.
+#   PSH and PUL do not, which is why they belong here rather than there.
+
+def test_PULA():
+    runop([I.PULA],
+        initregs    = R(sp=0x000C),
+        initmem     = { 0x000D: 0xA1 },
+        changedregs = R(sp=0x000D, a=0xA1),
+        )
+
+def test_PSHA():
+    runop([I.PSHA],
+        initregs    = R(a=0xEF, sp=0x000F),
+        changedregs = R(sp=0x000E),
+        changedmem  = { 0x000F: 0xEF },
+        )
 
 ####################################################################
 #   Flag Changes
@@ -305,22 +326,6 @@ def test_tpa(pccr, flags):
 
 ####################################################################
 #   Data Movement
-
-#### Stack
-
-def test_PULA():
-    runop([I.PULA],
-        initregs    = R(sp=0x000C),
-        initmem     = { 0x000D: 0xA1 },
-        changedregs = R(sp=0x000D, a=0xA1),
-        )
-
-def test_PSHA():
-    runop([I.PSHA],
-        initregs    = R(a=0xEF, sp=0x000F),
-        changedregs = R(sp=0x000E),
-        changedmem  = { 0x000F: 0xEF },
-        )
 
 #### Loads
 

@@ -197,23 +197,20 @@ def test_BRA():
     runop([I.BRA, 0xFC], startaddr=0x08, changedregs=R(pc=0x0006))
     #   Additional coverage in test_readsignedbyte().
 
-@pytest.mark.parametrize('  op, initregs, taken', (
-                        (I.BCC,   R(C=0),  True),
-                        (I.BCC,   R(C=1), False),
-                        (I.BCS,   R(C=0), False),
-                        (I.BCS,   R(C=1),  True),
-                        (I.BMI,   R(N=0), False),
-                        (I.BMI,   R(N=1),  True),
-                        (I.BEQ,   R(Z=0), False),
-                        (I.BEQ,   R(Z=1),  True),
-                        (I.BNE,   R(Z=1), False),
-                        (I.BNE,   R(Z=0),  True),
-                        (I.BPL,   R(N=0),  True),
-                        (I.BPL,   R(N=1), False),
-                        (I.BVC,   R(V=0),  True),
-                        (I.BVC,   R(V=1), False),
-                        (I.BVS,   R(V=0), False),
-                        (I.BVS,   R(V=1),  True),
+@pytest.mark.parametrize('op, taken, initregs', (
+    #                       Carry flag
+    (I.BCC, False, R(C=1)),             (I.BCC, True,  R(C=0)),
+    (I.BCS, False, R(C=0)),             (I.BCS, True,  R(C=1)),
+    #                       Zero flag
+    (I.BEQ, False, R(Z=0)),             (I.BEQ, True,  R(Z=1)),
+    (I.BNE, False, R(Z=1)),             (I.BNE, True,  R(Z=0)),
+    #                       Negative flag
+    (I.BMI, False, R(N=0)),             (I.BMI, True,  R(N=1)),
+    (I.BPL, False, R(N=1)),             (I.BPL, True,  R(N=0)),
+    #                       Overflow flag
+    (I.BVC, False, R(V=1)),             (I.BVC, True,  R(V=0)),
+    (I.BVS, False, R(V=0)),             (I.BVS, True,  R(V=1)),
+
 ), ids=tmc_tid)
 def test_condbranch(op, initregs, taken):
     print('op {} ${:02X}, flag: {}, taken {} expected\n'

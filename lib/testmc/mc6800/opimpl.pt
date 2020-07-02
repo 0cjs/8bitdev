@@ -191,18 +191,11 @@ def test_JMPx(offset, x, pc):
 
 def test_BRA():
     runop([I.BRA,    0], startaddr=0x13, changedregs=R(pc=0x0015))
+    runop([I.BRA,    3], startaddr=0x14, changedregs=R(pc=0x0019))
+    runop([I.BRA, 0x7F], startaddr=0x00, changedregs=R(pc=0x0081))
     runop([I.BRA, 0x80], startaddr=0x0E, changedregs=R(pc=0xFF90))
     runop([I.BRA, 0xFC], startaddr=0x08, changedregs=R(pc=0x0006))
     #   Additional coverage in test_readsignedbyte().
-
-@pytest.mark.parametrize('offset, Z, newpc', (
-    (0x03,    True,  0x000D),
-    (0x100-4, True,  0x0006),
-    (0x20,    False, 0x000A),
-))
-def test_BEQ(offset, Z, newpc):
-    runop([I.BEQ, offset], initregs=R(Z=Z),
-        startaddr=0x08, changedregs=R(pc=newpc))
 
 @pytest.mark.parametrize('  op, initregs, taken', (
                         (I.BCC,   R(C=0),  True),
@@ -211,6 +204,8 @@ def test_BEQ(offset, Z, newpc):
                         (I.BCS,   R(C=1),  True),
                         (I.BMI,   R(N=0), False),
                         (I.BMI,   R(N=1),  True),
+                        (I.BEQ,   R(Z=0), False),
+                        (I.BEQ,   R(Z=1),  True),
                         (I.BNE,   R(Z=1), False),
                         (I.BNE,   R(Z=0),  True),
                         (I.BPL,   R(N=0),  True),
@@ -219,7 +214,7 @@ def test_BEQ(offset, Z, newpc):
                         (I.BVC,   R(V=1), False),
                         (I.BVS,   R(V=0), False),
                         (I.BVS,   R(V=1),  True),
-))
+), ids=tmc_tid)
 def test_condbranch(op, initregs, taken):
     print('op {} ${:02X}, flag: {}, taken {} expected\n'
         .format(OPCODES[op][0], op, str(initregs).split()[-1], taken))

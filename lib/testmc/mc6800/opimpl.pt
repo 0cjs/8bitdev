@@ -600,6 +600,20 @@ def test_ROLa(opname, accval, inC, arg, res, N, Z, C):
     runop([I[opname]], initregs=accval(arg, C=inC),
         changedregs=accval(res, N=N, Z=Z, V=N^C, C=C))
 
+@pytest.mark.parametrize(**ROLparams)
+def test_ROLm(inC, arg, res, N, Z, C):
+    addr = v16(arg)
+    runop([I.ROLm, MSB(addr), LSB(addr)],
+        initmem={ addr:arg }, initregs=R(C=inC),
+        changedmem={ addr:res }, changedregs=R(N=N, Z=Z, V=N^C, C=C))
+
+@pytest.mark.parametrize(**ROLparams)
+def test_ROLx(inC, arg, res, N, Z, C):
+    base, offset = v16(arg), v8(arg)
+    runop([I.ROLx, offset],
+        initmem={ base+offset:arg }, initregs=R(x=base, C=inC),
+        changedmem={ base+offset:res }, changedregs=R(N=N, Z=Z, V=N^C, C=C))
+
 LSRparams = { 'argnames':    ' arg,  res, Z, V, C',
               'argvalues': ( (0x01, 0x00, 1, 1, 1),
                              (0x02, 0x01, 0, 0, 0),
@@ -614,6 +628,21 @@ def test_LSRa(opname, accval, arg, res, Z, V, C):
     #   V is meaningless for LSR, but with ASL means "the sign has changed."
     runop([I[opname]], initregs=accval(arg),
         changedregs=accval(res, N=N, Z=Z, V=N^C, C=C))
+
+@pytest.mark.parametrize(**LSRparams)
+def test_LSRm(arg, res, Z, V, C):
+    N = 0; assert V == C
+    addr = v16(arg)
+    runop([I.LSRm, MSB(addr), LSB(addr)], initmem={ addr:arg },
+        changedmem={ addr:res }, changedregs=R(N=N, Z=Z, V=N^C, C=C))
+
+@pytest.mark.parametrize(**LSRparams)
+def test_LSRx(arg, res, Z, V, C):
+    N = 0; assert V == C
+    base, offset = v16(arg), v8(arg)
+    runop([I.LSRx, offset],
+        initmem={ base+offset:arg }, initregs=R(x=base),
+        changedmem={ base+offset:res }, changedregs=R(N=N, Z=Z, V=N^C, C=C))
 
 ASRparams = { 'argnames':    ' arg,  res, N, Z, C',
               'argvalues': ( (0x00, 0x00, 0, 1, 0),
@@ -634,6 +663,19 @@ def test_ASRa(opname, accval, arg, res, N, Z, C):
     runop([I[opname]], initregs=accval(arg),
         changedregs=accval(res, N=N, Z=Z, V=N^C, C=C))
 
+@pytest.mark.parametrize(**ASRparams)
+def test_ASRm(arg, res, N, Z, C):
+    addr = v16(arg)
+    runop([I.ASRm, MSB(addr), LSB(addr)], initmem={ addr:arg },
+        changedmem={ addr:res }, changedregs=R(N=N, Z=Z, V=N^C, C=C))
+
+@pytest.mark.parametrize(**ASRparams)
+def test_ASRx(arg, res, N, Z, C):
+    base, offset = v16(arg), v8(arg)
+    runop([I.ASRx, offset],
+        initmem={ base+offset:arg }, initregs=R(x=base),
+        changedmem={ base+offset:res }, changedregs=R(N=N, Z=Z, V=N^C, C=C))
+
 RORparams = {
     'argnames':    'inC,  arg,  res, C, N, Z',   # inC,  arg,  res, C, N, Z
     'argvalues': ( (  0, 0x00, 0x00, 0, 0, 1),    (  1, 0x00, 0x80, 0, 1, 0),
@@ -653,6 +695,20 @@ def test_RORa(opname, accval, inC, arg, res, N, Z, C):
     assert N == bool(res >> 7)  # shift just to be different from CUT's AND
     runop([I[opname]], initregs=accval(arg, C=inC),
         changedregs=accval(res, N=N, Z=Z, V=N^C, C=C))
+
+@pytest.mark.parametrize(**RORparams)
+def test_RORm(inC, arg, res, N, Z, C):
+    addr = v16(arg)
+    runop([I.RORm, MSB(addr), LSB(addr)],
+        initmem={ addr:arg }, initregs=R(C=inC),
+        changedmem={ addr:res }, changedregs=R(N=N, Z=Z, V=N^C, C=C))
+
+@pytest.mark.parametrize(**RORparams)
+def test_RORx(inC, arg, res, N, Z, C):
+    base, offset = v16(arg), v8(arg)
+    runop([I.RORx, offset],
+        initmem={ base+offset:arg }, initregs=R(x=base, C=inC),
+        changedmem={ base+offset:res }, changedregs=R(N=N, Z=Z, V=N^C, C=C))
 
 ####################################################################
 #   Arithmetic operations

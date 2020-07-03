@@ -225,22 +225,30 @@ def lsr(m, arg): return shiftflags(m,  arg & 1,     (arg >> 1)                )
 def asr(m, arg): return shiftflags(m,  arg & 1,     (arg >> 1) | (arg & 0x80) )
 def ror(m, arg): return shiftflags(m,  arg & 1,     (arg >> 1) | (m.C << 7)   )
 
-def asla(m): m.a = asl(m, m.a)
-def aslb(m): m.b = asl(m, m.b)
+def asla(m):                            m.a = asl(m, m.a)
+def aslb(m):                            m.b = asl(m, m.b)
 def aslm(m): loc = readword(m);  m.mem[loc] = asl(m, m.mem[loc])
 def aslx(m): loc = readindex(m); m.mem[loc] = asl(m, m.mem[loc])
 
-def rola(m): m.a = rol(m, m.a)
-def rolb(m): m.b = rol(m, m.b)
+def rola(m):                            m.a = rol(m, m.a)
+def rolb(m):                            m.b = rol(m, m.b)
+def rolm(m): loc = readword(m);  m.mem[loc] = rol(m, m.mem[loc])
+def rolx(m): loc = readindex(m); m.mem[loc] = rol(m, m.mem[loc])
 
-def lsra(m): m.a = lsr(m, m.a)
-def lsrb(m): m.b = lsr(m, m.b)
+def lsra(m):                            m.a = lsr(m, m.a)
+def lsrb(m):                            m.b = lsr(m, m.b)
+def lsrm(m): loc = readword(m);  m.mem[loc] = lsr(m, m.mem[loc])
+def lsrx(m): loc = readindex(m); m.mem[loc] = lsr(m, m.mem[loc])
 
-def asra(m): m.a = asr(m, m.a)
-def asrb(m): m.b = asr(m, m.b)
+def asra(m):                            m.a = asr(m, m.a)
+def asrb(m):                            m.b = asr(m, m.b)
+def asrm(m): loc = readword(m);  m.mem[loc] = asr(m, m.mem[loc])
+def asrx(m): loc = readindex(m); m.mem[loc] = asr(m, m.mem[loc])
 
-def rora(m): m.a = ror(m, m.a)
-def rorb(m): m.b = ror(m, m.b)
+def rora(m):                            m.a = ror(m, m.a)
+def rorb(m):                            m.b = ror(m, m.b)
+def rorm(m): loc = readword(m);  m.mem[loc] = ror(m, m.mem[loc])
+def rorx(m): loc = readindex(m); m.mem[loc] = ror(m, m.mem[loc])
 
 ####################################################################
 #   Arithmetic operations

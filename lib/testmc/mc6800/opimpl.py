@@ -218,6 +218,14 @@ def asla(m):
     m.Z = iszero(m.a)
     m.V = m.N ^ m.C
 
+def rola(m):
+    newb0 = m.C
+    m.C = bool(m.a & 0x80)
+    m.a = (m.a << 1) & 0xFF | newb0
+    m.N = isneg(m.a)
+    m.Z = iszero(m.a)
+    m.V = m.N ^ m.C
+
 def lsra(m):
     m.C = m.a & 1
     m.a = m.a >> 1

@@ -65,6 +65,7 @@ OPCODES = {
     0x46: ('RORA',  rora),
     0x47: ('ASRA',  asra),
     0x48: ('ASLA',  asla),
+    0x49: ('ROLA',  rola),
     0x4B: (None,    invalid),
     0x4E: (None,    invalid),
     0x4F: ('CLRA',  clra),

@@ -550,6 +550,24 @@ def test_ASLA(init, res, N, Z, C):
     runop([I.ASLA], initregs=R(a=init),
         changedregs=R(a=res, N=N, Z=Z, V=V, C=C))
 
+@pytest.mark.parametrize(
+    ' arg, inC, C,  res, N, Z', ( #  arg, inC, C,  res, N, Z
+    (0x00, 0,   0, 0x00, 0, 1),    (0x00, 1,   0, 0x01, 0, 0),
+    (0x01, 0,   0, 0x02, 0, 0),    (0x01, 1,   0, 0x03, 0, 0),
+    (0x7F, 0,   0, 0xFE, 1, 0),    (0x7F, 1,   0, 0xFF, 1, 0),
+    (0x80, 0,   1, 0x00, 0, 1),    (0x80, 1,   1, 0x01, 0, 0),
+    (0xFE, 0,   1, 0xFC, 1, 0),    (0xFE, 1,   1, 0xFD, 1, 0),
+    (0xFF, 0,   1, 0xFE, 1, 0),    (0xFF, 1,   1, 0xFF, 1, 0),
+    (0x55, 0,   0, 0xAA, 1, 0),    (0x55, 1,   0, 0xAB, 1, 0),
+    (0xAA, 0,   1, 0x54, 0, 0),    (0xAA, 1,   1, 0x55, 0, 0),
+), ids=tmc_tid)
+def test_ROLA(inC, arg, res, N, Z, C):
+    V = N ^ C
+    assert res & 1 == inC
+    assert N == bool(res >> 7)  # shift just to be different from CUT's AND
+    runop([I.ROLA], initregs=R(a=arg, C=inC),
+        changedregs=R(a=res, N=N, Z=Z, V=V, C=C))
+
 @pytest.mark.parametrize('init,  res, Z, V, C', (
                          #   XXX see comment in code re V=N⊕C
                          (0x01, 0x00, 1, 1, 1),

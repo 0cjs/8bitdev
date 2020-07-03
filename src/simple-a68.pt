@@ -170,3 +170,12 @@ def test_qhexword(M, S, R, testno, N, result, consumed, input):
     assert R(x=buf+consumed) == M.regs
     assert R(N=N) == M.regs
     if N == 0: assert result == hexword
+
+####################################################################
+
+def test_cmdloop(M, S, R):
+    istream, ostream = M.setiostreams(S.charinport, b'a800\rQ\r')
+    M.deposit(0xA800, b'ABCDEFGH')
+    M.call(S.cmdloop)
+    dumpline = b'\r\nA800: 41 42 43 44 45 46 47 48\r\n'
+    assert dumpline in ostream.getvalue()

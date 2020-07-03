@@ -23,6 +23,7 @@ BEL         equ $07                 ; bell ('\a')
 BS          equ $08                 ; backspace ('\b')
 LF          equ $0A                 ; line feed ('\n')
 CR          equ $0D                 ; carriage return ('\r')
+SPACE       equ ' '
 DEL         equ $FF
 
 charoutport equ $C000               ; character output port
@@ -49,6 +50,16 @@ prnyb       and A,#$0F
             bmi .digit
             add A,#'A'-'9'-1
 .digit      bsr prchar
+            rts
+
+;   ♣A Print a space.
+prspace     lda A,#SPACE
+            bsr prchar
+            rts
+
+;   ♣A Ring the console bell
+prbell      lda A,#BEL
+            bsr prchar
             rts
 
 ;   Print a newline character or sequence. ♣A
@@ -92,8 +103,7 @@ rdline      ldx #rdlinebuf
             ;   for the termination char. So just reject input at that point.
             cpx #(rdlinebuf_end - 1)
             bne .accept
-            lda A,#BEL
-            bsr prchar
+            bsr prbell
             bra .nextchar
 
 .accept     cmp  A,#$00         ; ignore NUL
@@ -117,8 +127,7 @@ rdline      ldx #rdlinebuf
             ;   because we don't know if we have space for it. We might
             ;   be on the last byte of the buffer already.
             clr ,X
-            lda A,#BEL          ; beep to indicate cancel
-            bsr prchar
+            bsr prbell          ; beep to indicate cancel
             bsr prnl
             sec                 ; indicate input cancelled
             bra .ret
@@ -202,6 +211,44 @@ qhex        clr A               ; current result: $0000
 ;
 qhexword2
             rts ; XXX
+
+; ----------------------------------------------------------------------
+
+;   A simple command loop to demo this stuff.
+cmdloop
+            jsr prnl
+            lda A,#'?'
+            jsr prchar
+            jsr prspace
+            jsr rdline
+.parse      jsr qhexword
+            ;   XXX probably here we want to push .parse and have subroutines
+            ;   return to it
+            bpl hexdump
+            lda A,0,X
+            cmp A,#'Q'
+            beq .quit
+            jsr prbell          ; bad command
+            bra cmdloop
+.quit       rts
+
+hexdump     lda A,hexword       ; addr hi
+            jsr prhex
+            lda A,hexword+1     ; addr lo
+            jsr prhex
+            lda A,#':'
+            jsr prchar
+
+            ldx hexword
+            lda B,#8            ; bytes to print
+.loop       jsr prspace
+            lda A,,X
+            jsr prhex
+            inx
+            dec B
+            bne .loop
+            bra cmdloop         ; prompt prints newline
+
 
 ; ----------------------------------------------------------------------
 

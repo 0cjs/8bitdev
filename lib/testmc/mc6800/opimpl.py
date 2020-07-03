@@ -219,7 +219,17 @@ def shiftflags(m, newC, val):
     return val
 
 #                                 new carry   shifted/rotated value
+
 def asla(m): m.a = shiftflags(m,  m.a & 0x80, (m.a << 1) & 0xFF         )
+def aslm(m):
+    loc = readword(m)
+    val = m.mem[loc]
+    m.mem[loc] =   shiftflags(m,  val & 0x80, (val << 1) & 0xFF)
+def aslx(m):
+    loc = readindex(m)
+    val = m.mem[loc]
+    m.mem[loc] =   shiftflags(m,  val & 0x80, (val << 1) & 0xFF)
+
 def rola(m): m.a = shiftflags(m,  m.a & 0x80, (m.a << 1) & 0xFF | m.C   )
 def lsra(m): m.a = shiftflags(m,  m.a & 1,    (m.a >> 1)                )
 def asra(m): m.a = shiftflags(m,  m.a & 1,    (m.a >> 1) | (m.a & 0x80) )

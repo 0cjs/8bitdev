@@ -146,6 +146,16 @@ def runop(opdata, *, machine=None, memsize=0x20,
         newmem[addr] = value
     assert newmem == m.mem
 
+def makeaddr(b):
+    ''' Given a byte `b`, return a pair consiting of a 16-bit address in
+        range $0080-$011F and 8-bit offset or address in range $00-$FF that
+        are not obviously related to `b`. These are used for semi-
+        randomizing the memory locations used by tests: use memsize of
+        0x180 if you use addr only, 0x280 if you add the offset to it.
+    '''
+    m = ((b^0x5A)+0x2A) & 0xFF
+    return (0x80+b, (b-60)&0xFF)
+
 def extend_arg(b):
     ' If `b` is an 8-bit value, extend it to 16 bits by copying LSB to MSB. '
     if b > 0xFF:
@@ -557,6 +567,21 @@ def test_ASLA(init, res, N, Z, C):
     V = N ^ C
     runop([I.ASLA], initregs=R(a=init),
         changedregs=R(a=res, N=N, Z=Z, V=V, C=C))
+
+@pytest.mark.parametrize(**ASLparams)
+def test_ASLm(init, res, N, Z, C):
+    V = N ^ C
+    addr, _ = makeaddr(init)
+    runop([I.ASLm, MSB(addr), LSB(addr)], memsize=0x180, initmem={ addr:init },
+        changedmem={ addr:res }, changedregs=R(N=N, Z=Z, V=V, C=C))
+
+@pytest.mark.parametrize(**ASLparams)
+def test_ASLx(init, res, N, Z, C):
+    V = N ^ C
+    base, offset = makeaddr(init)
+    runop([I.ASLx, offset], memsize=0x280,
+        initmem={ base+offset:init }, initregs=R(x=base),
+        changedmem={ base+offset:res }, changedregs=R(N=N, Z=Z, V=V, C=C))
 
 ROLparams = {
     'argnames':    ' arg, inC, C,  res, N, Z',   #  arg, inC, C,  res, N, Z

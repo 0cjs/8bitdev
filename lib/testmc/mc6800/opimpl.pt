@@ -579,6 +579,24 @@ def test_ASRA(init, res, N, Z, C):
     runop([I.ASRA], initregs=R(a=init),
         changedregs=R(a=res, N=N, Z=Z, V=V, C=C))
 
+@pytest.mark.parametrize(
+    'initC, init,  res, C, N, Z', ( # initC, init,  res, C, N, Z
+    (    0, 0x00, 0x00, 0, 0, 1),    (    1, 0x00, 0x80, 0, 1, 0),
+    (    0, 0x01, 0x00, 1, 0, 1),    (    1, 0x01, 0x80, 1, 1, 0),
+    (    0, 0x02, 0x01, 0, 0, 0),    (    1, 0x02, 0x81, 0, 1, 0),
+    (    0, 0x03, 0x01, 1, 0, 0),    (    1, 0x03, 0x81, 1, 1, 0),
+    (    0, 0x55, 0x2A, 1, 0, 0),    (    1, 0x55, 0xAA, 1, 1, 0),
+    (    0, 0xAA, 0x55, 0, 0, 0),    (    1, 0xAA, 0xD5, 0, 1, 0),
+    (    0, 0xFE, 0x7F, 0, 0, 0),    (    1, 0xFE, 0xFF, 0, 1, 0),
+    (    0, 0xFF, 0x7F, 1, 0, 0),    (    1, 0xFF, 0xFF, 1, 1, 0),
+), ids=tmc_tid)
+def test_RORA(initC, init, res, N, Z, C):
+    V = N ^ C
+    assert N == initC
+    assert N == bool(res >> 7)  # shift just to be different from CUT's AND
+    runop([I.RORA], initregs=R(a=init, C=initC),
+        changedregs=R(a=res, N=N, Z=Z, V=V, C=C))
+
 ####################################################################
 #   Arithmetic operations
 

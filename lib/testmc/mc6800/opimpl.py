@@ -234,6 +234,14 @@ def asra(m):
     m.Z = iszero(m.a)
     m.V = m.N ^ m.C
 
+def rora(m):
+    newb7 = m.C << 7
+    m.C = m.a & 1
+    m.a = newb7 | (m.a >> 1)
+    m.N = isneg(m.a)
+    m.Z = iszero(m.a)
+    m.V = m.N ^ m.C
+
 ####################################################################
 #   Arithmetic operations
 

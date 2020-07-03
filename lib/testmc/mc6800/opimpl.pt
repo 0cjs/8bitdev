@@ -532,6 +532,9 @@ def test_logicNZV():
 def test_ANDA(a, arg, res, N, Z):
     runop([I.ANDA, arg], initregs=R(a=a), changedregs=R(a=res, N=N, Z=Z, V=0))
 
+####################################################################
+#   Shifts and Rotates
+
 @pytest.mark.parametrize('init,  res, N, Z, C', (
                          (0x00, 0x00, 0, 1, 0),
                          (0x21, 0x42, 0, 0, 0),
@@ -557,6 +560,23 @@ def test_ASLA(init, res, N, Z, C):
 def test_LSRA(init, res, Z, V, C):
     N = 0; assert V == N ^ C, 'V = N ⊕ C'
     runop([I.LSRA], initregs=R(a=init),
+        changedregs=R(a=res, N=N, Z=Z, V=V, C=C))
+
+@pytest.mark.parametrize('init,  res, N, Z, C', (
+                         (0x00, 0x00, 0, 1, 0),
+                         (0x01, 0x00, 0, 1, 1),
+                         (0x02, 0x01, 0, 0, 0),
+                         (0x7F, 0x3F, 0, 0, 1),
+                         (0x80, 0xC0, 1, 0, 0),
+                         (0x81, 0xC0, 1, 0, 1),
+                         (0xFF, 0xFF, 1, 0, 1),
+                         (0x55, 0x2A, 0, 0, 1),
+                         (0xAA, 0xD5, 1, 0, 0),
+), ids=tmc_tid)
+def test_ASRA(init, res, N, Z, C):
+    V = N ^ C
+    assert N == bool(res >> 7)
+    runop([I.ASRA], initregs=R(a=init),
         changedregs=R(a=res, N=N, Z=Z, V=V, C=C))
 
 ####################################################################

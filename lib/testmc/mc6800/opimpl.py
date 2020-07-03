@@ -208,6 +208,9 @@ def logicNZV(m, val, signbit=7):
 def anda(m):
     m.a = logicNZV(m, m.a & readbyte(m))
 
+####################################################################
+#   Shifts and Rotates
+
 def asla(m):
     m.C = bool(m.a & 0x80)
     m.a = (m.a << 1) & 0xFF
@@ -223,6 +226,13 @@ def lsra(m):
     #   V is actually N⊕C, which is meaningless for right shifts
     #   but with ASL means "the sign has changed."
     m.V = m.C
+
+def asra(m):
+    m.C = m.a & 1
+    m.a = (m.a & 0x80) | (m.a >> 1)
+    m.N = isneg(m.a)
+    m.Z = iszero(m.a)
+    m.V = m.N ^ m.C
 
 ####################################################################
 #   Arithmetic operations

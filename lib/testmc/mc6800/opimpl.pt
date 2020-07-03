@@ -78,12 +78,13 @@ def test_readindex(x, offset, target):
 
 R = Machine.Registers
 
-def runop(opdata, *, machine=None, memsize=0x20,
-        startaddr=0x0E, initregs=R(), initmem={},
-        changedregs=R(), changedmem={}):
+def runop(opdata, *, machine=None, memsize=0x402, startaddr=None,
+        initregs=R(), initmem={}, changedregs=R(), changedmem={}):
     m = machine
     if m is None:
         m = Machine(memsize=memsize)
+    if startaddr is None:
+        startaddr = 0x300 + v8(opdata[0])
 
     #   Set registers A, B and X to have non-zero values if they're not
     #   otherwise used to help detect if they're accidentally zeroed.
@@ -146,22 +147,24 @@ def runop(opdata, *, machine=None, memsize=0x20,
         newmem[addr] = value
     assert newmem == m.mem
 
-def makeaddr(b):
-    ''' Given a byte `b`, return a pair consiting of a 16-bit address in
-        range $0080-$011F and 8-bit offset or address in range $00-$FF that
-        are not obviously related to `b`. These are used for semi-
-        randomizing the memory locations used by tests: use memsize of
-        0x180 if you use addr only, 0x280 if you add the offset to it.
+def v8(val):
+    ''' Given a byte or word `val`, return an 8-bit value dependent upon
+        but not obviously related to `val`. (A given input value will
+        always produce the same output value.) This is useful to produce
+        different offsets for tests based on their test data.
     '''
-    m = ((b^0x5A)+0x2A) & 0xFF
-    return (0x80+b, (b-60)&0xFF)
+    if val > 0xFF:
+        val = (val >> 8) ^ val
+    return (val-60) & 0xFF
 
-def extend_arg(b):
-    ' If `b` is an 8-bit value, extend it to 16 bits by copying LSB to MSB. '
-    if b > 0xFF:
-        return b
-    else:
-        return (b << 8) | b
+def v16(val, offset=0x80):
+    ''' Given a byte or word `val`, return a 16-bit value between `offset`
+        and `offset`+$FF that is dependent upon but not obviously related
+        to `val`. (A given input value will always produce the same output
+        value.) This is useful to produce different addresses for tests
+        based on their test data.
+    '''
+    return offset + (v8(val) ^ 0xFF)
 
 ####################################################################
 #   Misc instructions
@@ -181,7 +184,7 @@ def test_invalid_opcodes():
     for i, op in enumerate(badops):
         addr = 0x00E0 + i
         with pytest.raises(InvalidOpcode) as ex:
-            runop([op], memsize=0x0140, startaddr=addr)
+            runop([op], startaddr=addr)
         assert (op, addr) == (ex.value.opcode, ex.value.pc)
         assert ex.match(r'^opcode=\${:02X} pc=\${:04X}$'.format(op, addr))
 
@@ -229,7 +232,7 @@ def test_BRA():
 def test_condbranch(op, initregs, taken):
     print('op {} ${:02X}, flag: {}, taken {} expected\n'
         .format(OPCODES[op][0], op, str(initregs).split()[-1], taken))
-    runop([op, 0x40], initregs=initregs,
+    runop([op, 0x40], initregs=initregs, startaddr=0x0E,
         changedregs= R(pc=0x0050) if taken else R(pc=0x0010))
 
 ####################################################################
@@ -264,7 +267,7 @@ def test_JSRx():
     runop([I.JSRx,                    0x16],
         initregs    = R(sp=0x1F,  x=0xFFF0, ),
         changedregs = R(sp=0x1D, pc=0x0006, ),
-        startaddr   =                   0x0123,     memsize=0x140,
+        startaddr   =                   0x0123,
         changedmem  = { 0x1E: 0x01, 0x1F: 0x25, },
     )
 
@@ -276,9 +279,9 @@ def test_BSR():
     )
 
 def test_RTS():
-    m = Machine(memsize=0x40)
-    m.sp = 0x002D; m.depword(0x002E, 0x1234)
-    runop([I.RTS], machine=m, changedregs=R(pc=0x1234, sp=0x002F))
+    runop([I.RTS],
+        initregs=R(sp=0x002D), initmem={ 0x002E:0x12, 0x002F:0x34 },
+        changedregs=R(pc=0x1234, sp=0x002F))
 
 ### Data Movement
 #   All the other data movement operations affect flags.
@@ -408,21 +411,21 @@ def test_LDA(opname, accval, addr, arg, N, Z):
 @pytest.mark.parametrize(**LDSTparams(0x44))
 def test_LDAz(opname, accval, addr, arg, N, Z):
     runop([I[opname], LSB(addr)], changedregs=accval(arg, N=N, Z=Z, V=0),
-        memsize=0x50, initmem={ addr: arg })
+        initmem={ addr: arg })
 
 @pytest.mark.parametrize(**LDSTaccum('LDA~m'))
 @pytest.mark.parametrize(**LDSTparams(0x101))
 def test_LDAAm(opname, accval, addr, arg, N, Z):
     runop([I[opname], MSB(addr), LSB(addr)],
         changedregs=accval(arg, N=N, Z=Z, V=0),
-        memsize=0x110, initmem={ addr: arg })
+        initmem={ addr: arg })
 
 @pytest.mark.parametrize(**LDSTaccum('LDA~x'))
 @pytest.mark.parametrize(**LDSTparams(0x85))
 @pytest.mark.parametrize(**LDSToffsets())
 def test_LDAx(opname, accval, addr, offset, arg, N, Z):
     runop([I[opname], offset],
-        memsize=0x110, initmem={ addr+offset: LSB(arg) },
+        initmem={ addr+offset: LSB(arg) },
         initregs=R(x=addr), changedregs=accval(arg, N=N, Z=Z, V=0))
 
 @pytest.mark.parametrize(**LDST16params(0x40))
@@ -433,18 +436,18 @@ def test_LDX(addr, arg, N, Z):
 def test_LDXz(addr, arg, N, Z):
     runop([I.LDXz, LSB(addr)],
         changedregs=R(x=arg, N=N, Z=Z, V=0),
-        memsize=0x110, initmem={ addr: MSB(arg), addr+1: LSB(arg) })
+        initmem={ addr: MSB(arg), addr+1: LSB(arg) })
 
 @pytest.mark.parametrize(**LDST16params(0xFF))
 def test_LDXm(addr, arg, N, Z):
     runop([I.LDXm, MSB(addr), LSB(addr)],
         changedregs=R(x=arg, N=N, Z=Z, V=0),
-        memsize=0x110, initmem={ addr: MSB(arg), addr+1: LSB(arg) })
+        initmem={ addr: MSB(arg), addr+1: LSB(arg) })
 
 @pytest.mark.parametrize(**LDST16params(0x59))
 @pytest.mark.parametrize(**LDSToffsets(0xFC, 0xC1))
 def test_LDXx(addr, offset, arg, N, Z):
-    runop([I.LDXx, offset], memsize=0x200,
+    runop([I.LDXx, offset],
         initregs    = R(x=addr),
         initmem     = { addr+offset: MSB(arg), addr+offset+1: LSB(arg) },
         changedregs = R(x=arg, N=N, Z=Z, V=0),
@@ -464,7 +467,7 @@ def test_CLRA(opname, accval, initval):
                          (0x0111,   0xFF),
 ), ids=tmc_tid)
 def test_CLRm(addr, initval):
-    runop([I.CLRm, MSB(addr), LSB(addr)], memsize=0x112,
+    runop([I.CLRm, MSB(addr), LSB(addr)],
         initmem={ addr: initval }, changedmem={ addr: 0 },
         changedregs=R(N=0, Z=1, V=0, C=0))
 
@@ -487,12 +490,12 @@ def test_STAm(opname, accval, addr, arg, N, Z):
 @pytest.mark.parametrize(**LDSTparams(0x0004))
 @pytest.mark.parametrize(**LDSToffsets())
 def test_STAx(opname, accval, addr, offset, arg, N, Z):
-    runop([I[opname], offset], memsize=0x90, initregs=accval(arg, x=addr),
+    runop([I[opname], offset], initregs=accval(arg, x=addr),
         changedmem={ addr+offset: arg }, changedregs=R(N=N, Z=Z, V=0))
 
 @pytest.mark.parametrize(**LDST16params(0x40))
 def test_STXm(addr, arg, N, Z):
-    runop([I.STXm, MSB(addr), LSB(addr)], memsize=0x90, initregs=R(x=arg),
+    runop([I.STXm, MSB(addr), LSB(addr)], initregs=R(x=arg),
         changedmem={ addr: MSB(arg), addr+1: LSB(arg) },
         changedregs=R(N=N, Z=Z, V=0))
 
@@ -502,7 +505,7 @@ def test_STXm_rollover():
 
 @pytest.mark.parametrize(**LDST16params(0xF0))
 def test_STXz(addr, arg, N, Z):
-    runop([I.STXz, addr], memsize=0x100, initregs=R(x=arg),
+    runop([I.STXz, addr], initregs=R(x=arg),
         changedmem={ addr: MSB(arg), addr+1: LSB(arg) },
         changedregs = R(N=N, Z=Z, V=0))
 
@@ -571,15 +574,15 @@ def test_ASLA(init, res, N, Z, C):
 @pytest.mark.parametrize(**ASLparams)
 def test_ASLm(init, res, N, Z, C):
     V = N ^ C
-    addr, _ = makeaddr(init)
-    runop([I.ASLm, MSB(addr), LSB(addr)], memsize=0x180, initmem={ addr:init },
+    addr = v16(init)
+    runop([I.ASLm, MSB(addr), LSB(addr)], initmem={ addr:init },
         changedmem={ addr:res }, changedregs=R(N=N, Z=Z, V=V, C=C))
 
 @pytest.mark.parametrize(**ASLparams)
 def test_ASLx(init, res, N, Z, C):
     V = N ^ C
-    base, offset = makeaddr(init)
-    runop([I.ASLx, offset], memsize=0x280,
+    base, offset = v16(init), v8(init)
+    runop([I.ASLx, offset],
         initmem={ base+offset:init }, initregs=R(x=base),
         changedmem={ base+offset:res }, changedregs=R(N=N, Z=Z, V=V, C=C))
 
@@ -770,14 +773,14 @@ def test_CPX(addr, x, arg, N, Z, V):
 @pytest.mark.parametrize(**CPXparams)
 def test_CPXz(addr, x, arg, N, Z, V):
     addr -= 0x40
-    runop([I.CPXz, addr], memsize=0xFF,
+    runop([I.CPXz, addr],
         initmem     = { addr: MSB(arg), addr+1: LSB(arg) },
         initregs    = R(x=x),
         changedregs = R(N=N, Z=Z, V=V))
 
 @pytest.mark.parametrize(**CPXparams)
 def test_CPXm(addr, x, arg, N, Z, V):
-    runop([I.CPXm, MSB(addr), LSB(addr)], memsize=0x123,
+    runop([I.CPXm, MSB(addr), LSB(addr)],
         initmem     = { addr: MSB(arg), addr+1: LSB(arg) },
         initregs    = R(x=x),
         changedregs = R(N=N, Z=Z, V=V))

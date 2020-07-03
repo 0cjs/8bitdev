@@ -214,6 +214,11 @@ qhexword2
 
 ; ----------------------------------------------------------------------
 
+LSB         function addr,(addr & $FF)
+MSB         function addr,((addr & $FF00) >> 8)
+
+cmdqptr     rmb 2               ; current parsing loc in command input buffer
+
 ;   A simple command loop to demo this stuff.
 cmdloop
             jsr prnl
@@ -221,18 +226,42 @@ cmdloop
             jsr prchar
             jsr prspace
             jsr rdline
-.parse      jsr qhexword
-            ;   XXX probably here we want to push .parse and have subroutines
-            ;   return to it
-            bpl hexdump
+            stx cmdqptr
+.parse      lda A,#LSB(.parse)  ; We jump to service routines and they
+            psh A               ;   RTS back to .parse to continue parsing
+            lda A,#MSB(.parse)  ;   the command line.
+            psh A
+            ldx cmdqptr         ; routines that consume must update cmdqptr
+            ;   From here, we branch to routines that return to .parse with RTS.
+            jsr qhexword
+            bpl hexdump         ; parsed hexword
+            ;   Consume a char and parse it as a command.
+            ;   (Callees who need to know the char parsed may DEX to get it.)
             lda A,0,X
+            inx
+            stx cmdqptr
+            cmp A,#' '
+            beq .rts            ; ignore spaces
+            cmp A,#'~'
+            beq beepcmd
+            ;   No subroutine to call; take .parse return address off stack.
+            pul B
+            pul B
+            ;   We must have a quit command or an error.
             cmp A,#'Q'
-            beq .quit
+            beq .rts
             jsr prbell          ; bad command
             bra cmdloop
-.quit       rts
+.quit       pul A               ; get rid of .parse return address
+            pul A
+.rts        rts
 
-hexdump     lda A,hexword       ; addr hi
+beepcmd:    ;   "null" command just beeps; used by unit tests
+            jsr prbell
+            rts
+
+hexdump     stx cmdqptr         ; XXX because not done by main for qhexword
+            lda A,hexword       ; addr hi
             jsr prhex
             lda A,hexword+1     ; addr lo
             jsr prhex
@@ -247,7 +276,8 @@ hexdump     lda A,hexword       ; addr hi
             inx
             dec B
             bne .loop
-            bra cmdloop         ; prompt prints newline
+            jsr prnl
+            rts
 
 
 ; ----------------------------------------------------------------------

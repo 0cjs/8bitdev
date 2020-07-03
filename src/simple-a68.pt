@@ -173,9 +173,82 @@ def test_qhexword(M, S, R, testno, N, result, consumed, input):
 
 ####################################################################
 
-def test_cmdloop(M, S, R):
-    istream, ostream = M.setiostreams(S.charinport, b'a800\rQ\r')
+def test_cmdloop_quitcmd(M, S, R):
+    ' Minimal path that gets us through to exit. '
+    istream, ostream = M.setiostreams(S.charinport, b'Q\r')
+    #   Because this plays tricks with the stack and RTS, we can't use
+    #   call(). But we do have a single exit point, so we can stop there.
+    M.setregs(R(pc=S.cmdloop))
+    M.stepto(stopat=[S['cmdloop.rts']], stopon=[0x00], maxsteps=10000, trace=0)
+    assert b'\r\n? Q\r\n' ==  ostream.getvalue()
+
+def test_cmdloop_multicmd(M, S, R):
+    ' Multiple command processing of the simplest possible commands. '
+    istream, ostream = M.setiostreams(S.charinport, b'~~ ~Q\r')
+    M.setregs(R(pc=S.cmdloop))
+    M.stepto(stopat=[S['cmdloop.rts']], stopon=[0x00], maxsteps=10000)
+    #   XXX This is ugly. Because the space processing jumps to cmdloop.rts,
+    #   but uses it for return to .parse, we need to run again to finish
+    #   the command line parsing.
+    M.stepto(stopat=[S['cmdloop.rts']], stopon=[0x00], maxsteps=10000)
+    assert b'\r\n? ~~ ~Q\r\n\x07\x07\x07' ==  ostream.getvalue()
+
+def test_cmdloop_dump(M, S, R):
+    istream, ostream = M.setiostreams(S.charinport, b'a800\r 3Q\r')
     M.deposit(0xA800, b'ABCDEFGH')
-    M.call(S.cmdloop)
-    dumpline = b'\r\nA800: 41 42 43 44 45 46 47 48\r\n'
-    assert dumpline in ostream.getvalue()
+
+    M.setregs(R(pc=S.cmdloop))
+    M.stepto(stopat=[S['cmdloop.rts']], stopon=[0x00])
+    M.stepto(stopat=[S['cmdloop.rts']], stopon=[0x00])  # skip space
+
+    print(M.regs, M.bytes(M.regs.sp-8, 8))
+    output = ostream.getvalue()
+    print(output)
+
+    assert b'\r\nA800: 41 42 43 44 45 46 47 48\r\n' in output
+    assert b'\r\n0003: ' in output
+
+@pytest.mark.skip
+def test_cmdloop_eachrts(M, S, R):
+    ''' A (currently non-working) hack to do "selective trace," printing
+        the current instruction, stack contents and buffer contents at a
+        few points during execution.
+    '''
+    input = b'a800\r3Q\r'
+    input = b'~ ~~Q\r'
+    istream, ostream = M.setiostreams(S.charinport, input)
+    M.deposit(0xA800, b'ABCDEFGH')
+
+    stackbase = M.regs.sp + 1
+    def showstack():
+        return '{:02X}{:02X} {:02X}{:02X} {:02X}{:02X} {:02X}{:02X}' \
+            .format(*M.bytes(stackbase-8, 8))
+
+    M.setregs(R(pc=S.cmdloop))
+    level = 0
+    print('{}                {}'.format(M.regs, showstack()))
+    while True:
+        M.stepto(stopon=[I.JSR, I.BSR, I.RTS, I.PSHA],
+            stopat=[ S['cmdloop.rts'], S['cmdloop.parse'] - 1 ])
+        r = M.regs
+        opcode = M.byte(r.pc)
+        if   opcode == I.PSHA:
+            level += 1
+            inst = 'PSH'
+            dest = S['cmdloop.parse']
+        elif opcode == I.JSR:
+            level += 1
+            inst = 'JSR'
+            dest = M.word(r.pc+1)
+        elif opcode == I.BSR:
+            level += 1
+            inst = 'BSR'
+            dest = r.pc + 2 + M.byte(r.pc+1)
+        else:
+            level -= 1
+            inst = 'RTS'
+            dest = 0
+        print('{} {:3d} {} {:04X}   {}   {}'
+            .format(r, level, inst, dest, showstack(), M.bytes(r.x, 6)))
+
+    assert 0

@@ -73,6 +73,7 @@ OPCODES = {
     0x51: (None,    invalid),
     0x52: (None,    invalid),
     0x55: (None,    invalid),
+    0x58: ('ASLB',  aslb),
     0x5A: ('DECB',  decb),
     0x5B: (None,    invalid),
     0x5E: (None,    invalid),

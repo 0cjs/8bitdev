@@ -562,10 +562,11 @@ ASLparams = { 'argnames':    'init,  res, N, Z, C',
               ), 'ids': tmc_tid, }
 
 @pytest.mark.parametrize(**ASLparams)
-def test_ASLA(init, res, N, Z, C):
+@pytest.mark.parametrize(**ACC('ASL~'))
+def test_ASLa(opname, accval, init, res, N, Z, C):
     V = N ^ C
-    runop([I.ASLA], initregs=R(a=init),
-        changedregs=R(a=res, N=N, Z=Z, V=V, C=C))
+    runop([I[opname]], initregs=accval(init),
+        changedregs=accval(res, N=N, Z=Z, V=V, C=C))
 
 @pytest.mark.parametrize(**ASLparams)
 def test_ASLm(init, res, N, Z, C):

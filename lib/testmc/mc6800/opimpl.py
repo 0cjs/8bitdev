@@ -221,6 +221,7 @@ def shiftflags(m, newC, val):
 #                                 new carry   shifted/rotated value
 
 def asla(m): m.a = shiftflags(m,  m.a & 0x80, (m.a << 1) & 0xFF         )
+def aslb(m): m.b = shiftflags(m,  m.b & 0x80, (m.b << 1) & 0xFF         )
 def aslm(m):
     loc = readword(m)
     val = m.mem[loc]

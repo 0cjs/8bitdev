@@ -166,6 +166,29 @@ def v16(val, offset=0x80):
     '''
     return offset + (v8(val) ^ 0xFF)
 
+def ACC(optemplate):
+    ''' Parametrize by A and B accumulators.
+
+        `optemplate` is the name of the opcode from `opcodes.OPCODES` with
+        `~` in place of the accumulator name, e.g., ``LDA~m`` or ``BIT~m``.
+
+        The opcode names for the A and B versions (``LDAAm``, ``LDABm``)
+        will be generated; these can be looked up with ``I[opname]``.
+
+        An `accval(value, regs_flags)` function will also be given; this
+        constructs a `Registers` object where the selected accumulator is
+        initialized with *value* and the remaining parameters are passed
+        on to the `Registers` constructor, e.g. ``accval(0xFF, Z=1, V=0)``.
+    '''
+    opnameA = optemplate.replace('~', 'A')
+    opnameB = optemplate.replace('~', 'B')
+    def make_accval(accname):
+        def accval(accvalue, **kwargs):
+            return R(**{ accname: accvalue, **kwargs })
+        return accval
+    return dict(argnames='opname, accval',
+        argvalues=((opnameA, make_accval('a')), (opnameB, make_accval('b'))))
+
 ####################################################################
 #   Misc instructions
 
@@ -365,45 +388,22 @@ LDST16params = {     'argnames':  '    arg, N, Z ',
                                 ( 0xFFFF, 1, 0 ),
     ), 'ids': tmc_tid, }
 
-def LDSTaccum(optemplate):
-    ''' Parametrize by A and B accumulators.
-
-        `optemplate` is the name of the opcode from `opcodes.OPCODES` with
-        `~` in place of the accumulator name, e.g., ``LDA~m`` or ``BIT~m``.
-
-        The opcode names for the A and B versions (``LDAAm``, ``LDABm``)
-        will be generated; these can be looked up with ``I[opname]``.
-
-        An `accval(value, regs_flags)` function will also be given; this
-        constructs a `Registers` object where the selected accumulator is
-        initialized with *value* and the remaining parameters are passed
-        on to the `Registers` constructor, e.g. ``accval(0xFF, Z=1, V=0)``.
-    '''
-    opnameA = optemplate.replace('~', 'A')
-    opnameB = optemplate.replace('~', 'B')
-    def make_accval(accname):
-        def accval(accvalue, **kwargs):
-            return R(**{ accname: accvalue, **kwargs })
-        return accval
-    return dict(argnames='opname, accval',
-        argvalues=((opnameA, make_accval('a')), (opnameB, make_accval('b'))))
-
 #### Loads
 
-@pytest.mark.parametrize(**LDSTaccum('LDA~'))
+@pytest.mark.parametrize(**ACC('LDA~'))
 @pytest.mark.parametrize(**LDSTparams)
 def test_LDA(opname, accval, arg, N, Z):
     addr = v16(arg)
     runop([I[opname], arg], changedregs=accval(arg, N=N, Z=Z, V=0))
 
-@pytest.mark.parametrize(**LDSTaccum('LDA~z'))
+@pytest.mark.parametrize(**ACC('LDA~z'))
 @pytest.mark.parametrize(**LDSTparams)
 def test_LDAz(opname, accval, arg, N, Z):
     addr = v8(arg)
     runop([I[opname], LSB(addr)], changedregs=accval(arg, N=N, Z=Z, V=0),
         initmem={ addr: arg })
 
-@pytest.mark.parametrize(**LDSTaccum('LDA~m'))
+@pytest.mark.parametrize(**ACC('LDA~m'))
 @pytest.mark.parametrize(**LDSTparams)
 def test_LDAAm(opname, accval, arg, N, Z):
     addr =v16(arg)
@@ -411,7 +411,7 @@ def test_LDAAm(opname, accval, arg, N, Z):
         changedregs=accval(arg, N=N, Z=Z, V=0),
         initmem={ addr: arg })
 
-@pytest.mark.parametrize(**LDSTaccum('LDA~x'))
+@pytest.mark.parametrize(**ACC('LDA~x'))
 @pytest.mark.parametrize(**LDSTparams)
 def test_LDAx(opname, accval, arg, N, Z):
     addr = v16(arg); offset = v8(arg)
@@ -448,7 +448,7 @@ def test_LDXx(arg, N, Z):
 
 #### Stores
 
-@pytest.mark.parametrize(**LDSTaccum('CLR~'))
+@pytest.mark.parametrize(**ACC('CLR~'))
 @pytest.mark.parametrize('initval', (0x00, 0x02, 0xFF))
 def test_CLRA(opname, accval, initval):
     runop([I[opname]], initregs=accval(initval),
@@ -473,14 +473,14 @@ def test_CLRx(x, offset, addr):
     runop([I.CLRx, offset], initregs=R(x=x),
         changedregs=R(N=0, Z=1, V=0, C=0), changedmem={ addr: 0 })
 
-@pytest.mark.parametrize(**LDSTaccum('STA~m'))
+@pytest.mark.parametrize(**ACC('STA~m'))
 @pytest.mark.parametrize(**LDSTparams)
 def test_STAm(opname, accval, arg, N, Z):
     addr = v16(arg)
     runop([I[opname], MSB(addr), LSB(addr)], initregs=accval(arg),
         changedmem={ addr: arg }, changedregs=R(N=N, Z=Z, V=0))
 
-@pytest.mark.parametrize(**LDSTaccum('STA~x'))
+@pytest.mark.parametrize(**ACC('STA~x'))
 @pytest.mark.parametrize(**LDSTparams)
 def test_STAx(opname, accval, arg, N, Z):
     addr = v16(arg); offset = v8(arg)

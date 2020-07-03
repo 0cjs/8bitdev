@@ -576,7 +576,8 @@ def test_ROLA(inC, arg, res, N, Z, C):
                          (0xFF, 0x7F, 0, 1, 1),
 ), ids=tmc_tid)
 def test_LSRA(init, res, Z, V, C):
-    N = 0; assert V == N ^ C, 'V = N ⊕ C'
+    N = 0; assert V == C
+    #   V is meaningless for LSR, but with ASL means "the sign has changed."
     runop([I.LSRA], initregs=R(a=init),
         changedregs=R(a=res, N=N, Z=Z, V=V, C=C))
 

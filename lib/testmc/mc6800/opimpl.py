@@ -211,44 +211,19 @@ def anda(m):
 ####################################################################
 #   Shifts and Rotates
 
-def asla(m):
-    m.C = bool(m.a & 0x80)
-    m.a = (m.a << 1) & 0xFF
-    m.N = isneg(m.a)
-    m.Z = iszero(m.a)
+def shiftflags(m, newC, val):
+    m.Z = iszero(val)
+    m.N = isneg(val)
+    m.C = bool(newC)
     m.V = m.N ^ m.C
+    return val
 
-def rola(m):
-    newb0 = m.C
-    m.C = bool(m.a & 0x80)
-    m.a = (m.a << 1) & 0xFF | newb0
-    m.N = isneg(m.a)
-    m.Z = iszero(m.a)
-    m.V = m.N ^ m.C
-
-def lsra(m):
-    m.C = m.a & 1
-    m.a = m.a >> 1
-    m.N = isneg(m.a)
-    m.Z = iszero(m.a)
-    #   V is actually N⊕C, which is meaningless for right shifts
-    #   but with ASL means "the sign has changed."
-    m.V = m.C
-
-def asra(m):
-    m.C = m.a & 1
-    m.a = (m.a & 0x80) | (m.a >> 1)
-    m.N = isneg(m.a)
-    m.Z = iszero(m.a)
-    m.V = m.N ^ m.C
-
-def rora(m):
-    newb7 = m.C << 7
-    m.C = m.a & 1
-    m.a = newb7 | (m.a >> 1)
-    m.N = isneg(m.a)
-    m.Z = iszero(m.a)
-    m.V = m.N ^ m.C
+#                                 new carry   shifted/rotated value
+def asla(m): m.a = shiftflags(m,  m.a & 0x80, (m.a << 1) & 0xFF         )
+def rola(m): m.a = shiftflags(m,  m.a & 0x80, (m.a << 1) & 0xFF | m.C   )
+def lsra(m): m.a = shiftflags(m,  m.a & 1,    (m.a >> 1)                )
+def asra(m): m.a = shiftflags(m,  m.a & 1,    (m.a >> 1) | (m.a & 0x80) )
+def rora(m): m.a = shiftflags(m,  m.a & 1,    (m.a >> 1) | (m.C << 7)   )
 
 ####################################################################
 #   Arithmetic operations

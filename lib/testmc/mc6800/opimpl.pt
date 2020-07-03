@@ -535,32 +535,42 @@ def test_ANDA(a, arg, res, N, Z):
 ####################################################################
 #   Shifts and Rotates
 
-@pytest.mark.parametrize('init,  res, N, Z, C', (
-                         (0x00, 0x00, 0, 1, 0),
-                         (0x21, 0x42, 0, 0, 0),
-                         (0x80, 0x00, 0, 1, 1),
-                         (0x81, 0x02, 0, 0, 1),
-                         (0xC8, 0x90, 1, 0, 1),
-                         (0xFF, 0xFE, 1, 0, 1),
-                         (0x55, 0xAA, 1, 0, 0),
-                         (0xAA, 0x54, 0, 0, 1),
-), ids=tmc_tid)
+#   The correct values for the N and Z (and for shifts, C) flags could be
+#   calculated automatically by the test. However, we specify them manually
+#   (and confirm they're correct in the test using the automated method)
+#   because this makes it more clear in the test data that we're getting
+#   coverage of all states of those flags.
+
+ASLparams = { 'argnames':    'init,  res, N, Z, C',
+              'argvalues': ( (0x00, 0x00, 0, 1, 0),
+                             (0x21, 0x42, 0, 0, 0),
+                             (0x80, 0x00, 0, 1, 1),
+                             (0x81, 0x02, 0, 0, 1),
+                             (0xC8, 0x90, 1, 0, 1),
+                             (0xFF, 0xFE, 1, 0, 1),
+                             (0x55, 0xAA, 1, 0, 0),
+                             (0xAA, 0x54, 0, 0, 1),
+              ), 'ids': tmc_tid, }
+
+@pytest.mark.parametrize(**ASLparams)
 def test_ASLA(init, res, N, Z, C):
     V = N ^ C
     runop([I.ASLA], initregs=R(a=init),
         changedregs=R(a=res, N=N, Z=Z, V=V, C=C))
 
-@pytest.mark.parametrize(
-    ' arg, inC, C,  res, N, Z', ( #  arg, inC, C,  res, N, Z
-    (0x00, 0,   0, 0x00, 0, 1),    (0x00, 1,   0, 0x01, 0, 0),
-    (0x01, 0,   0, 0x02, 0, 0),    (0x01, 1,   0, 0x03, 0, 0),
-    (0x7F, 0,   0, 0xFE, 1, 0),    (0x7F, 1,   0, 0xFF, 1, 0),
-    (0x80, 0,   1, 0x00, 0, 1),    (0x80, 1,   1, 0x01, 0, 0),
-    (0xFE, 0,   1, 0xFC, 1, 0),    (0xFE, 1,   1, 0xFD, 1, 0),
-    (0xFF, 0,   1, 0xFE, 1, 0),    (0xFF, 1,   1, 0xFF, 1, 0),
-    (0x55, 0,   0, 0xAA, 1, 0),    (0x55, 1,   0, 0xAB, 1, 0),
-    (0xAA, 0,   1, 0x54, 0, 0),    (0xAA, 1,   1, 0x55, 0, 0),
-), ids=tmc_tid)
+ROLparams = {
+    'argnames':    ' arg, inC, C,  res, N, Z',   #  arg, inC, C,  res, N, Z
+    'argvalues': ( (0x00, 0,   0, 0x00, 0, 1),    (0x00, 1,   0, 0x01, 0, 0),
+                   (0x01, 0,   0, 0x02, 0, 0),    (0x01, 1,   0, 0x03, 0, 0),
+                   (0x7F, 0,   0, 0xFE, 1, 0),    (0x7F, 1,   0, 0xFF, 1, 0),
+                   (0x80, 0,   1, 0x00, 0, 1),    (0x80, 1,   1, 0x01, 0, 0),
+                   (0xFE, 0,   1, 0xFC, 1, 0),    (0xFE, 1,   1, 0xFD, 1, 0),
+                   (0xFF, 0,   1, 0xFE, 1, 0),    (0xFF, 1,   1, 0xFF, 1, 0),
+                   (0x55, 0,   0, 0xAA, 1, 0),    (0x55, 1,   0, 0xAB, 1, 0),
+                   (0xAA, 0,   1, 0x54, 0, 0),    (0xAA, 1,   1, 0x55, 0, 0),
+    ), 'ids': tmc_tid, }
+
+@pytest.mark.parametrize(**ROLparams)
 def test_ROLA(inC, arg, res, N, Z, C):
     V = N ^ C
     assert res & 1 == inC
@@ -568,52 +578,57 @@ def test_ROLA(inC, arg, res, N, Z, C):
     runop([I.ROLA], initregs=R(a=arg, C=inC),
         changedregs=R(a=res, N=N, Z=Z, V=V, C=C))
 
-@pytest.mark.parametrize('init,  res, Z, V, C', (
-                         #   XXX see comment in code re V=N⊕C
-                         (0x01, 0x00, 1, 1, 1),
-                         (0x02, 0x01, 0, 0, 0),
-                         (0xAA, 0x55, 0, 0, 0),
-                         (0xFF, 0x7F, 0, 1, 1),
-), ids=tmc_tid)
+LSRparams = { 'argnames':    'init,  res, Z, V, C',
+              'argvalues': ( (0x01, 0x00, 1, 1, 1),
+                             (0x02, 0x01, 0, 0, 0),
+                             (0xAA, 0x55, 0, 0, 0),
+                             (0xFF, 0x7F, 0, 1, 1),
+              ), 'ids': tmc_tid, }
+
+@pytest.mark.parametrize(**LSRparams)
 def test_LSRA(init, res, Z, V, C):
     N = 0; assert V == C
     #   V is meaningless for LSR, but with ASL means "the sign has changed."
     runop([I.LSRA], initregs=R(a=init),
         changedregs=R(a=res, N=N, Z=Z, V=V, C=C))
 
-@pytest.mark.parametrize('init,  res, N, Z, C', (
-                         (0x00, 0x00, 0, 1, 0),
-                         (0x01, 0x00, 0, 1, 1),
-                         (0x02, 0x01, 0, 0, 0),
-                         (0x7F, 0x3F, 0, 0, 1),
-                         (0x80, 0xC0, 1, 0, 0),
-                         (0x81, 0xC0, 1, 0, 1),
-                         (0xFF, 0xFF, 1, 0, 1),
-                         (0x55, 0x2A, 0, 0, 1),
-                         (0xAA, 0xD5, 1, 0, 0),
-), ids=tmc_tid)
+ASRparams = { 'argnames':    'init,  res, N, Z, C',
+              'argvalues': ( (0x00, 0x00, 0, 1, 0),
+                             (0x01, 0x00, 0, 1, 1),
+                             (0x02, 0x01, 0, 0, 0),
+                             (0x7F, 0x3F, 0, 0, 1),
+                             (0x80, 0xC0, 1, 0, 0),
+                             (0x81, 0xC0, 1, 0, 1),
+                             (0xFF, 0xFF, 1, 0, 1),
+                             (0x55, 0x2A, 0, 0, 1),
+                             (0xAA, 0xD5, 1, 0, 0),
+              ), 'ids': tmc_tid, }
+
+@pytest.mark.parametrize(**ASRparams)
 def test_ASRA(init, res, N, Z, C):
     V = N ^ C
     assert N == bool(res >> 7)
     runop([I.ASRA], initregs=R(a=init),
         changedregs=R(a=res, N=N, Z=Z, V=V, C=C))
 
-@pytest.mark.parametrize(
-    'initC, init,  res, C, N, Z', ( # initC, init,  res, C, N, Z
-    (    0, 0x00, 0x00, 0, 0, 1),    (    1, 0x00, 0x80, 0, 1, 0),
-    (    0, 0x01, 0x00, 1, 0, 1),    (    1, 0x01, 0x80, 1, 1, 0),
-    (    0, 0x02, 0x01, 0, 0, 0),    (    1, 0x02, 0x81, 0, 1, 0),
-    (    0, 0x03, 0x01, 1, 0, 0),    (    1, 0x03, 0x81, 1, 1, 0),
-    (    0, 0x55, 0x2A, 1, 0, 0),    (    1, 0x55, 0xAA, 1, 1, 0),
-    (    0, 0xAA, 0x55, 0, 0, 0),    (    1, 0xAA, 0xD5, 0, 1, 0),
-    (    0, 0xFE, 0x7F, 0, 0, 0),    (    1, 0xFE, 0xFF, 0, 1, 0),
-    (    0, 0xFF, 0x7F, 1, 0, 0),    (    1, 0xFF, 0xFF, 1, 1, 0),
-), ids=tmc_tid)
-def test_RORA(initC, init, res, N, Z, C):
+RORparams = {
+    'argnames':    'inC, init,  res, C, N, Z',   # inC, init,  res, C, N, Z
+    'argvalues': ( (  0, 0x00, 0x00, 0, 0, 1),    (  1, 0x00, 0x80, 0, 1, 0),
+                   (  0, 0x01, 0x00, 1, 0, 1),    (  1, 0x01, 0x80, 1, 1, 0),
+                   (  0, 0x02, 0x01, 0, 0, 0),    (  1, 0x02, 0x81, 0, 1, 0),
+                   (  0, 0x03, 0x01, 1, 0, 0),    (  1, 0x03, 0x81, 1, 1, 0),
+                   (  0, 0x55, 0x2A, 1, 0, 0),    (  1, 0x55, 0xAA, 1, 1, 0),
+                   (  0, 0xAA, 0x55, 0, 0, 0),    (  1, 0xAA, 0xD5, 0, 1, 0),
+                   (  0, 0xFE, 0x7F, 0, 0, 0),    (  1, 0xFE, 0xFF, 0, 1, 0),
+                   (  0, 0xFF, 0x7F, 1, 0, 0),    (  1, 0xFF, 0xFF, 1, 1, 0),
+    ), 'ids': tmc_tid, }
+
+@pytest.mark.parametrize(**RORparams)
+def test_RORA(inC, init, res, N, Z, C):
     V = N ^ C
-    assert N == initC
+    assert N == inC
     assert N == bool(res >> 7)  # shift just to be different from CUT's AND
-    runop([I.RORA], initregs=R(a=init, C=initC),
+    runop([I.RORA], initregs=R(a=init, C=inC),
         changedregs=R(a=res, N=N, Z=Z, V=V, C=C))
 
 ####################################################################

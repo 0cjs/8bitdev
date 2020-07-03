@@ -120,6 +120,7 @@ OPCODES = {
 
     0x93: (None,    invalid),
     0x96: ('LDAAz', ldaaz),
+    0x97: ('STAAz', staaz),
     0x9C: ('CPXz',  cpxz),
     0x9D: (None,    invalid),
 
@@ -144,6 +145,7 @@ OPCODES = {
 
     0xD3: (None,    invalid),
     0xD6: ('LDABz', ldabz),
+    0xD7: ('STABz', stabz),
     0xDC: (None,    invalid),
     0xDD: (None,    invalid),
     0xDE: ('LDXz',  ldxz),

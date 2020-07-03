@@ -167,9 +167,12 @@ def clrb(m):    m.b                 = logicNZV(m, 0); m.C = 0
 def clrm(m):    m.mem[readword(m)]  = logicNZV(m, 0); m.C = 0
 def clrx(m):    m.mem[readindex(m)] = logicNZV(m, 0); m.C = 0
 
+def staaz(m):   m.mem[readbyte(m)]  = logicNZV(m, m.a)
 def staam(m):   m.mem[readword(m)]  = logicNZV(m, m.a)
-def stabm(m):   m.mem[readword(m)]  = logicNZV(m, m.b)
 def staax(m):   m.mem[readindex(m)] = logicNZV(m, m.a)
+
+def stabz(m):   m.mem[readbyte(m)]  = logicNZV(m, m.b)
+def stabm(m):   m.mem[readword(m)]  = logicNZV(m, m.b)
 def stabx(m):   m.mem[readindex(m)] = logicNZV(m, m.b)
 
 def stxtarget(m, target0):

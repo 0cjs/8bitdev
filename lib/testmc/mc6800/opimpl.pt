@@ -450,7 +450,7 @@ def test_LDXx(arg, N, Z):
 
 @pytest.mark.parametrize(**ACC('CLR~'))
 @pytest.mark.parametrize('initval', (0x00, 0x02, 0xFF))
-def test_CLRA(opname, accval, initval):
+def test_CLRa(opname, accval, initval):
     runop([I[opname]], initregs=accval(initval),
         changedregs=(accval(0, N=0, Z=1, V=0, C=0)))
 
@@ -472,6 +472,13 @@ def test_CLRm(addr, initval):
 def test_CLRx(x, offset, addr):
     runop([I.CLRx, offset], initregs=R(x=x),
         changedregs=R(N=0, Z=1, V=0, C=0), changedmem={ addr: 0 })
+
+@pytest.mark.parametrize(**ACC('STA~z'))
+@pytest.mark.parametrize(**LDSTparams)
+def test_STAz(opname, accval, arg, N, Z):
+    addr = v8(arg)
+    runop([I[opname], addr], initregs=accval(arg),
+        changedmem={ addr: arg }, changedregs=R(N=N, Z=Z, V=0))
 
 @pytest.mark.parametrize(**ACC('STA~m'))
 @pytest.mark.parametrize(**LDSTparams)

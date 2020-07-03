@@ -72,8 +72,12 @@ OPCODES = {
 
     0x51: (None,    invalid),
     0x52: (None,    invalid),
+    0x54: ('LSRB',  lsrb),
     0x55: (None,    invalid),
+    0x56: ('RORB',  rorb),
+    0x57: ('ASRB',  asrb),
     0x58: ('ASLB',  aslb),
+    0x59: ('ROLB',  rolb),
     0x5A: ('DECB',  decb),
     0x5B: (None,    invalid),
     0x5E: (None,    invalid),

@@ -596,12 +596,13 @@ ROLparams = {
     ), 'ids': tmc_tid, }
 
 @pytest.mark.parametrize(**ROLparams)
-def test_ROLA(inC, arg, res, N, Z, C):
+@pytest.mark.parametrize(**ACC('ROL~'))
+def test_ROLa(opname, accval, inC, arg, res, N, Z, C):
     V = N ^ C
     assert res & 1 == inC
     assert N == bool(res >> 7)  # shift just to be different from CUT's AND
-    runop([I.ROLA], initregs=R(a=arg, C=inC),
-        changedregs=R(a=res, N=N, Z=Z, V=V, C=C))
+    runop([I[opname]], initregs=accval(arg, C=inC),
+        changedregs=accval(res, N=N, Z=Z, V=V, C=C))
 
 LSRparams = { 'argnames':    'init,  res, Z, V, C',
               'argvalues': ( (0x01, 0x00, 1, 1, 1),
@@ -611,11 +612,12 @@ LSRparams = { 'argnames':    'init,  res, Z, V, C',
               ), 'ids': tmc_tid, }
 
 @pytest.mark.parametrize(**LSRparams)
-def test_LSRA(init, res, Z, V, C):
+@pytest.mark.parametrize(**ACC('LSR~'))
+def test_LSRa(opname, accval, init, res, Z, V, C):
     N = 0; assert V == C
     #   V is meaningless for LSR, but with ASL means "the sign has changed."
-    runop([I.LSRA], initregs=R(a=init),
-        changedregs=R(a=res, N=N, Z=Z, V=V, C=C))
+    runop([I[opname]], initregs=accval(init),
+        changedregs=accval(res, N=N, Z=Z, V=V, C=C))
 
 ASRparams = { 'argnames':    'init,  res, N, Z, C',
               'argvalues': ( (0x00, 0x00, 0, 1, 0),
@@ -630,11 +632,12 @@ ASRparams = { 'argnames':    'init,  res, N, Z, C',
               ), 'ids': tmc_tid, }
 
 @pytest.mark.parametrize(**ASRparams)
-def test_ASRA(init, res, N, Z, C):
+@pytest.mark.parametrize(**ACC('ASR~'))
+def test_ASRa(opname, accval, init, res, N, Z, C):
     V = N ^ C
     assert N == bool(res >> 7)
-    runop([I.ASRA], initregs=R(a=init),
-        changedregs=R(a=res, N=N, Z=Z, V=V, C=C))
+    runop([I[opname]], initregs=accval(init),
+        changedregs=accval(res, N=N, Z=Z, V=V, C=C))
 
 RORparams = {
     'argnames':    'inC, init,  res, C, N, Z',   # inC, init,  res, C, N, Z
@@ -649,12 +652,13 @@ RORparams = {
     ), 'ids': tmc_tid, }
 
 @pytest.mark.parametrize(**RORparams)
-def test_RORA(inC, init, res, N, Z, C):
+@pytest.mark.parametrize(**ACC('ROR~'))
+def test_RORa(opname, accval, inC, init, res, N, Z, C):
     V = N ^ C
     assert N == inC
     assert N == bool(res >> 7)  # shift just to be different from CUT's AND
-    runop([I.RORA], initregs=R(a=init, C=inC),
-        changedregs=R(a=res, N=N, Z=Z, V=V, C=C))
+    runop([I[opname]], initregs=accval(init, C=inC),
+        changedregs=accval(res, N=N, Z=Z, V=V, C=C))
 
 ####################################################################
 #   Arithmetic operations

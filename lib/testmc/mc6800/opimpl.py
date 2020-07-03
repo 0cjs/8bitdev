@@ -218,23 +218,29 @@ def shiftflags(m, newC, val):
     m.V = m.N ^ m.C
     return val
 
-#                                 new carry   shifted/rotated value
+#                                      new carry    shifted/rotated value
+def asl(m, arg): return shiftflags(m,  arg & 0x80,  (arg << 1) & 0xFF         )
+def rol(m, arg): return shiftflags(m,  arg & 0x80,  (arg << 1) & 0xFF | m.C   )
+def lsr(m, arg): return shiftflags(m,  arg & 1,     (arg >> 1)                )
+def asr(m, arg): return shiftflags(m,  arg & 1,     (arg >> 1) | (arg & 0x80) )
+def ror(m, arg): return shiftflags(m,  arg & 1,     (arg >> 1) | (m.C << 7)   )
 
-def asla(m): m.a = shiftflags(m,  m.a & 0x80, (m.a << 1) & 0xFF         )
-def aslb(m): m.b = shiftflags(m,  m.b & 0x80, (m.b << 1) & 0xFF         )
-def aslm(m):
-    loc = readword(m)
-    val = m.mem[loc]
-    m.mem[loc] =   shiftflags(m,  val & 0x80, (val << 1) & 0xFF)
-def aslx(m):
-    loc = readindex(m)
-    val = m.mem[loc]
-    m.mem[loc] =   shiftflags(m,  val & 0x80, (val << 1) & 0xFF)
+def asla(m): m.a = asl(m, m.a)
+def aslb(m): m.b = asl(m, m.b)
+def aslm(m): loc = readword(m);  m.mem[loc] = asl(m, m.mem[loc])
+def aslx(m): loc = readindex(m); m.mem[loc] = asl(m, m.mem[loc])
 
-def rola(m): m.a = shiftflags(m,  m.a & 0x80, (m.a << 1) & 0xFF | m.C   )
-def lsra(m): m.a = shiftflags(m,  m.a & 1,    (m.a >> 1)                )
-def asra(m): m.a = shiftflags(m,  m.a & 1,    (m.a >> 1) | (m.a & 0x80) )
-def rora(m): m.a = shiftflags(m,  m.a & 1,    (m.a >> 1) | (m.C << 7)   )
+def rola(m): m.a = rol(m, m.a)
+def rolb(m): m.b = rol(m, m.b)
+
+def lsra(m): m.a = lsr(m, m.a)
+def lsrb(m): m.b = lsr(m, m.b)
+
+def asra(m): m.a = asr(m, m.a)
+def asrb(m): m.b = asr(m, m.b)
+
+def rora(m): m.a = ror(m, m.a)
+def rorb(m): m.b = ror(m, m.b)
 
 ####################################################################
 #   Arithmetic operations

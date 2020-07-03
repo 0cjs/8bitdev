@@ -308,21 +308,17 @@ def test_RTS():
 
 ### Data Movement
 #   All the other data movement operations affect flags.
-#   PSH and PUL do not, which is why they belong here rather than there.
+#   PSH and PUL do not, which is why they belong here.
 
-def test_PULA():
-    runop([I.PULA],
-        initregs    = R(sp=0x000C),
-        initmem     = { 0x000D: 0xA1 },
-        changedregs = R(sp=0x000D, a=0xA1),
-        )
+@pytest.mark.parametrize(**ACC('PUL~'))
+def test_PUL(opname, accval):
+    runop([I[opname]], initregs=R(sp=0x000C), initmem={ 0x000D: 0xA1 },
+        changedregs = accval(0xA1, sp=0x000D))
 
-def test_PSHA():
-    runop([I.PSHA],
-        initregs    = R(a=0xEF, sp=0x000F),
-        changedregs = R(sp=0x000E),
-        changedmem  = { 0x000F: 0xEF },
-        )
+@pytest.mark.parametrize(**ACC('PSH~'))
+def test_PSH(opname, accval):
+    runop([I[opname]], initregs=accval(0xEF, sp=0x000F),
+        changedregs = R(sp=0x000E), changedmem  = { 0x000F: 0xEF })
 
 ####################################################################
 #   Flag (Condition Code) Changes

@@ -117,7 +117,9 @@ def bsr(m):     t = readreloff(m);  pushword(m, m.pc); m.pc = t
 def rts(m):     m.pc = popword(m)
 
 def pula(m):    m.a = popbyte(m)
+def pulb(m):    m.b = popbyte(m)
 def psha(m):    pushbyte(m, m.a)
+def pshb(m):    pushbyte(m, m.b)
 
 ####################################################################
 #   Flag Changes

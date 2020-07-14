@@ -62,6 +62,11 @@ def test_rdchar(M, R, S):
         M.call(S.rdchar, R(a=0xEA))
         assert R(a=char) == M.regs
 
+    #   Document how an attempt to read past available input fails.
+    with pytest.raises(EOFError) as ex:
+        M.call(S.rdchar)
+    assert ex.match('No more input available')
+
 @pytest.mark.parametrize('buf, input', (
     (b'',                   b'\r'),
     (b'a',                  b'a\r'),

@@ -148,6 +148,11 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
     ####################################################################
     #   Execution - implementation
 
+    #   Default maximum number of opcodes to execute when using stepto(),
+    #   call() and related functions. Even on a relatively slow modern
+    #   machine, 100,000 opcodes should terminate within a few seconds.
+    MAXSTEPS = 100000
+
     def step(self, count=1, *, trace=False):
         ''' Execute `count` instructions (default 1).
 
@@ -157,21 +162,8 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
             XXX This should check for stack under/overflow.
         '''
         for _ in repeat(None, count):
-            if trace:
-                print('{} opcode={:02X}' \
-                    .format(self.regs, self.byte(self.regs.pc)))
+            if trace: print(self.traceline())
             self._step()
-
-    class Timeout(RuntimeError):
-        ' The emulator ran longer than requested. '
-
-    class Abort(RuntimeError):
-        ' The emulator encoutered an instruction on which to abort.'
-
-    #   Default maximum number of opcodes to execute when using stepto(),
-    #   call() and related functions. Even on a relatively slow modern
-    #   machine, 100,000 opcodes should terminate within a few seconds.
-    MAXSTEPS = 100000
 
     def stepto(self, *, stopat=set(), stopon=set(), maxsteps=MAXSTEPS,
         trace=False):
@@ -253,3 +245,23 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
                 raise self.Abort('Abort on opcode=${:02X}: {}' \
                     .format(self.byte(self.regs.pc), self.regs))
             self.stepto(stopon=stopon, maxsteps=maxsteps, trace=trace)
+
+    ####################################################################
+    #   Tracing and similar information
+
+    class Timeout(RuntimeError):
+        ' The emulator ran longer than requested. '
+
+    class Abort(RuntimeError):
+        ' The emulator encoutered an instruction on which to abort.'
+
+    def traceline(self):
+        ''' Return a line of tracing information about the current step of
+            the execution. This just prints the current registers and
+            opcode; it could be extended to print stack or other
+            information as well.
+        '''
+        #   Ideally this could do some proper disassembly and print a bit
+        #   of the stack as well. Printing the stack might also want somehow
+        #   to indicate where the stack started at the beginning of the test.
+        return '{} opcode={:02X}'.format(self.regs, self.byte(self.regs.pc))

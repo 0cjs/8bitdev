@@ -194,6 +194,17 @@ def test_step(M):
     m.step();   assert 1 == m._steps_taken
     m.step(3);  assert 4 == m._steps_taken
 
+def test_step_trace(M, capsys):
+    m = M(); m.B = False
+    m.step(2, trace=1)
+    out, err = capsys.readouterr()
+    assert '' == err
+    tracelines = ''.join((
+        'CPU pc=0000 --b- opcode=00\n',
+        'CPU pc=0001 --b- opcode=00\n',
+        ))
+    assert tracelines == out
+
 def test_stepto_maxsteps(M):
     m = M(); m.B = False
     m.deposit(m.pc, b'\x00\x01\xFD\xFD\x00\x00')

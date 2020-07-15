@@ -146,14 +146,13 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
         ' Execute current opcode (and its arguments), updating machine state. '
 
     ####################################################################
-    #   Execution - impelmentation
+    #   Execution - implementation
 
     def step(self, count=1, *, trace=False):
         ''' Execute `count` instructions (default 1).
 
-            If `trace` is `True`, the current machine state and
-            instruction about to be executed will be printed
-            before executing the step.
+            If `trace` is `True`, the current machine state and instruction
+            about to be executed will be printed before executing the step.
 
             XXX This should check for stack under/overflow.
         '''
@@ -165,11 +164,9 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
 
     class Timeout(RuntimeError):
         ' The emulator ran longer than requested. '
-        pass
 
     class Abort(RuntimeError):
         ' The emulator encoutered an instruction on which to abort.'
-        pass
 
     #   Default maximum number of opcodes to execute when using stepto(),
     #   call() and related functions. Even on a relatively slow modern

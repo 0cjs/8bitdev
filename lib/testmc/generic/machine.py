@@ -264,4 +264,12 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
         #   Ideally this could do some proper disassembly and print a bit
         #   of the stack as well. Printing the stack might also want somehow
         #   to indicate where the stack started at the beginning of the test.
-        return '{} opcode={:02X}'.format(self.regs, self.byte(self.regs.pc))
+        return '{} {}'.format(self.regs, self.disasm())
+
+    def disasm(self):
+        ''' Return a human-readable representation of the current instruction
+            at the PC. The default implementation just prints the hex opcode;
+            typically this will be overridden with a function that returns
+            a nicer disassembly.
+        '''
+        return 'opcode={:02X}'.format(self.byte(self.regs.pc))

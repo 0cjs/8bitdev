@@ -5,12 +5,12 @@
     toolchain; both the `SymTab` itself and the `Symbol` objects it
     holds may be subclassed for a particular toolchain.
 
-    Each `Symbol` in a `SymTab` has a name and a value and also
-    belongs to a *section* which may determine output addresses and/or
-    banks, addressing modes, and the like, or may just be an
-    assembly-time distinction (such as non-contiguous addresses in
-    source code). Names are unique across all sections; sec section
-    names (or numbers) are toolchain-dependent.
+    Each `Symbol` in a `SymTab` maps a unqiue name to a value and optional
+    *section*. Sections may have run-time distinctions (e.g., indicating
+    the address is in a different bank of memory) or may indicate only
+    assembly-time characteristics (e.g., for non-contiguous address areas
+    in source code). Section naming/numbering is toolchain-dependent;
+    toolchains without section support should use `None` as the section..
 
     Sections are often called "segments" and sometimes "areas" in
     particular toolchains; we use "section" to avoid confusion with

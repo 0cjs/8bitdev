@@ -71,3 +71,32 @@ def test_call(m, R):
     m.setregs(R(pc=start))
     m.call(start, trace=True); print(m.regs)
     assert R(pc=0x0208, a=0xCC) == m.regs
+
+####################################################################
+#   Tracing and similar information
+
+@pytest.mark.parametrize('ops, disasm', (
+    ([0x00],                    'FCB $00'),     # invalid instruction
+    ([0xFD],                    'FCB $FD'),     # invalid instruction
+    ([I.LDAA,   0xFD],          'LDAA #$FD'),
+    ([I.LDAAm,  0x00, 0x0A],    'LDAA $000A'),
+    ([I.LDAAz,  0x03],          'LDAA $03'),
+    ([I.LDABx,  0xCD],          'LDAB $CD,X'),
+    ([I.BRA,    0xF8],          'BRA $009A'),   # depends on start addr below
+    ([I.JMP,    0x00, 0x0A],    'JMP $000A'),
+    ([I.PSHB,   ],              'PSHB'),
+    ([I.NOP,    ],              'NOP'),
+))
+def test_disasm(m, R, ops, disasm):
+    start = ops[0] + 0x80   # pseudo-random start address
+    m.deposit(start, ops)
+    m.setregs(R(pc=start))
+    assert disasm == m.disasm()
+
+@pytest.mark.xfail(strict=True, reason='Unimplemented feature')
+def test_disasm_symtab():
+    ''' We should be able to have the disassembly function look up addresses
+       in `self.symtab` and, if present there, print the symbolic name
+       rather than the raw address.
+    '''
+    assert 0

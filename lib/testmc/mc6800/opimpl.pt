@@ -54,6 +54,7 @@ def test_incword(initial, addend, expected):
                          (0xFF,    -1),
 ), ids=tmc_tid)
 def test_readsignedbyte(inb, out):
+    #   This covers signedbyteat() as well.
     m = Machine()
     m.pc = 0xFFFF
     m.deposit(m.pc, inb)

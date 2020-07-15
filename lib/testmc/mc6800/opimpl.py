@@ -42,9 +42,13 @@ def readbyte(m):
     m.pc = incword(m.pc, 1)
     return val
 
+def signedbyteat(m, addr):
+    ' Return the byte at `addr` as a signed value. '
+    return unpack('b', m.bytes(addr, 1))[0]
+
 def readsignedbyte(m):
     ' Consume a byte at [PC] as a signed value and return it. '
-    val = unpack('b', m.bytes(m.pc, 1))[0]
+    val = signedbyteat(m, m.pc)
     m.pc = incword(m.pc, 1)
     return val
 

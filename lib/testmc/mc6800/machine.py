@@ -1,6 +1,9 @@
+from    itertools  import chain
 from    testmc.generic  import *
 from    testmc.mc6800.opcodes  import OPCODES, Instructions as I
-from    testmc.mc6800.opimpl  import InvalidOpcode, incword, readbyte
+from    testmc.mc6800.opimpl  import (
+    InvalidOpcode, incword, readbyte, signedbyteat,
+    )
 
 class Machine(GenericMachine):
 
@@ -58,3 +61,66 @@ class Machine(GenericMachine):
                 'opcode=${:02X} pc=${:04X}'
                 .format(opcode, incword(self.pc, -1)))
         f(self)
+
+    ####################################################################
+    #   Tracing and similar information
+
+    def disasm(self):
+        ''' Disassemble a 6800 opcode and its operands at the PC.
+
+            This has not been fully tested and may still get a few
+            instructions or addressing modes wrong.
+
+            TODO: Make this check `self.symtab` for addresses and,
+            if present there, print them as symbols.
+        '''
+        pc = self.regs.pc
+        op = self.byte(pc)
+        mnemonic, _ = OPCODES[op]
+        if mnemonic is None:
+            return 'FCB ${:02X}'.format(op)
+        else:
+            #   To be most general we should add an addressing mode field
+            #   to each tuple of opcode data and then just decode based on
+            #   that. But due to our method of encoding the addressing mode
+            #   in many mnemonics (described in the InstructionsClass
+            #   docstring) this information is already explicit for many
+            #   instructions, so for the moment we just re-use that until
+            #   we see how many exceptions actually arise.
+            mode = mnemonic[-1]
+            if mode == 'm':
+                return '{} ${:04X}'.format(mnemonic[0:-1], self.operand16())
+            if mode == 'z':
+                return '{} ${:02X}'.format(mnemonic[0:-1], self.operand8())
+            if mode == 'x':
+                return '{} ${:02X},X'.format(mnemonic[0:-1], self.operand8())
+            if mnemonic[0] == 'B':
+                #   Only relative branch instructions start with 'B'.
+                offset = signedbyteat(self, incword(self.regs.pc, 1))
+                return '{} ${:04X}'.format(mnemonic,
+                    incword(self.regs.pc, offset + 2))
+            if mnemonic in ['JMP', 'JSR']:
+                #   All remaining (i.e., not postfixed with 'm')
+                #   instructions with two-byte operands.
+                return '{} ${:04X}'.format(mnemonic, self.operand16())
+            if op in self.NO_OPERAND:
+                return mnemonic
+
+            #   Immediate operands
+            return '{} #${:02X}'.format(mnemonic, self.operand8())
+
+    #   Opcodes that take no operand
+    NO_OPERAND = frozenset(chain(
+        range(0x00, 0x10),  # NOP, TAP, INX, CLV, etc.
+        range(0x30, 0x40),  # TSX, PULA, RTS, RTI, WAI, SWI, etc.
+        ))
+
+    def operand8(self):
+        ' Return the first byte after the PC, handling wraparound. '
+        return self.mem[incword(self.regs.pc, 1)]
+
+    def operand16(self):
+        ' Return the first word after the PC, handling wraparound. '
+        pc1 = incword(self.regs.pc, 1)
+        pc2 = incword(self.regs.pc, 2)
+        return self.mem[pc1] * 0x100 + self.mem[pc2]

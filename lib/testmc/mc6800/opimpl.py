@@ -149,6 +149,9 @@ def tpa(m):
 ####################################################################
 #   Data movement
 
+def tab(m):     m.b = logicNZV(m, m.a)
+def tba(m):     m.a = logicNZV(m, m.b)
+
 def ldaa(m):    m.a = logicNZV(m, readbyte(m))
 def ldab(m):    m.b = logicNZV(m, readbyte(m))
 def ldaaz(m):   m.a = logicNZV(m, m.mem[readbyte(m)])

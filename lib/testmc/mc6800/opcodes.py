@@ -32,6 +32,8 @@ OPCODES = {
     0x13: (None,    invalid),
     0x14: (None,    invalid),
     0x15: (None,    invalid),
+    0x16: ('TAB',   tab),
+    0x17: ('TBA',   tba),
     0x18: (None,    invalid),
     0x1A: (None,    invalid),
     0x1C: (None,    invalid),

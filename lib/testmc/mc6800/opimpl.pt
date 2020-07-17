@@ -387,6 +387,14 @@ LDST16params = {     'argnames':  '    arg, N, Z ',
 
 #### Loads
 
+@pytest.mark.parametrize(**LDSTparams)
+def test_TAB(arg, N, Z):
+    runop([I.TAB], initregs=R(a=arg), changedregs=R(b=arg, N=N, Z=Z, V=0))
+
+@pytest.mark.parametrize(**LDSTparams)
+def test_TBA(arg, N, Z):
+    runop([I.TBA], initregs=R(b=arg), changedregs=R(a=arg, N=N, Z=Z, V=0))
+
 @pytest.mark.parametrize(**ACC('LDA~'))
 @pytest.mark.parametrize(**LDSTparams)
 def test_LDA(opname, accval, arg, N, Z):

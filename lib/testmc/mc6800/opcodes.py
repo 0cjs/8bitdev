@@ -52,8 +52,10 @@ OPCODES = {
     0x2A: ('BPL',   bpl),
     0x2B: ('BMI',   bmi),
 
+    0x30: ('TSX',   tsx),
     0x32: ('PULA',  pula),
     0x33: ('PULB',  pulb),
+    0x35: ('TXS',   txs),
     0x36: ('PSHA',  psha),
     0x37: ('PSHB',  pshb),
     0x38: (None,    invalid),

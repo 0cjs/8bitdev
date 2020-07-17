@@ -195,6 +195,9 @@ def stxtarget(m, target0):
 def stxz(m):    stxtarget(m, readbyte(m))
 def stxm(m):    stxtarget(m, readword(m))
 
+def tsx(m):     m.x = m.sp
+def txs(m):     m.sp = m.x
+
 ####################################################################
 #   Flag handling for data movement and logic
 

@@ -282,11 +282,16 @@ def neg(m, arg):
     m.V = arg == 0x80
     m.C = arg != 0x00
     return updateNZ(m, ((arg^0xFF) + 1) & 0xFF)
-
 def nega(m):                            m.a = neg(m, m.a)
 def negb(m):                            m.b = neg(m, m.b)
 def negm(m): loc = readword(m);  m.mem[loc] = neg(m, m.mem[loc])
 def negx(m): loc = readindex(m); m.mem[loc] = neg(m, m.mem[loc])
+
+def inc(m, val): m.V = val == 0x7F; return updateNZ(m, (val+1)&0xFF)
+def inca(m):                            m.a = inc(m, m.a)
+def incb(m):                            m.b = inc(m, m.b)
+def incm(m): loc = readword(m);  m.mem[loc] = inc(m, m.mem[loc])
+def incx(m): loc = readindex(m); m.mem[loc] = inc(m, m.mem[loc])
 
 def decb(m):
     b7 = m.b & 0b10000000

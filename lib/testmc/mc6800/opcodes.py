@@ -75,6 +75,7 @@ OPCODES = {
     0x48: ('ASLA',  asla),
     0x49: ('ROLA',  rola),
     0x4B: (None,    invalid),
+    0x4C: ('INCA',  inca),
     0x4E: (None,    invalid),
     0x4F: ('CLRA',  clra),
 
@@ -90,6 +91,7 @@ OPCODES = {
     0x59: ('ROLB',  rolb),
     0x5A: ('DECB',  decb),
     0x5B: (None,    invalid),
+    0x5C: ('INCB',  incb),
     0x5E: (None,    invalid),
     0x5F: ('CLRB',  clrb),
 
@@ -104,6 +106,7 @@ OPCODES = {
     0x68: ('ASLx',  aslx),
     0x69: ('ROLx',  rolx),
     0x6B: (None,    invalid),
+    0x6C: ('INCx',  incx),
     0x6E: ('JMPx',  jmpx),
     0x6F: ('CLRx',  clrx),
 
@@ -118,6 +121,7 @@ OPCODES = {
     0x78: ('ASLm',  aslm),
     0x79: ('ROLm',  rolm),
     0x7B: (None,    invalid),
+    0x7C: ('INCm',  incm),
     0x7E: ('JMP',   jmp),
     0x7F: ('CLRm',  clrm),
 

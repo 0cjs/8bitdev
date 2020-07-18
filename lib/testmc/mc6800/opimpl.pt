@@ -559,6 +559,30 @@ def test_logicNZV():
 ####################################################################
 #   Logic operations
 
+COM = pytest.mark.parametrize(**
+    { 'argnames':    ' arg,  res, N, Z',
+      'argvalues': ( (0xFF, 0x00, 0, 1),
+                     (0x00, 0xFF, 1, 0),
+                     (0x55, 0xAA, 1, 0),
+                     (0xAA, 0x55, 0, 0),
+    ), 'ids': tmc_tid, })
+@COM
+@accx('COM~')
+def test_COMa(opname, accval, arg, res, N, Z):
+    runop([I[opname]], initregs=accval(arg),
+        changedregs=accval(res, N=N, Z=Z, V=0, C=1))
+@COM
+def test_COMm(arg, res, N, Z):
+    addr = v16(arg)
+    runop([I.COMm, MSB(addr), LSB(addr)], initmem={ addr:arg },
+        changedmem={ addr:res }, changedregs=R(N=N, Z=Z, V=0, C=1))
+@COM
+def test_COMx(arg, res, N, Z):
+    base, offset = v16(arg), v8(arg)
+    runop([I.COMx, offset],
+        initmem={ base+offset:arg }, initregs=R(x=base),
+        changedmem={ base+offset:res }, changedregs=R(N=N, Z=Z, V=0, C=1))
+
 @pytest.mark.parametrize('a,     arg,  res, N, Z', (
                          (0x00, 0x00, 0x00, 0, 1),
                          (0x00, 0xFF, 0x00, 0, 1),

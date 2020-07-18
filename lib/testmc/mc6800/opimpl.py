@@ -224,6 +224,12 @@ def logicNZV(m, val, signbit=7):
 ####################################################################
 #   Logic operations
 
+def com(m, val): m.V = 0; m.C = 1; return updateNZ(m, val ^ 0xFF)
+def coma(m):                            m.a = com(m, m.a)
+def comb(m):                            m.b = com(m, m.b)
+def comm(m): loc = readword(m);  m.mem[loc] = com(m, m.mem[loc])
+def comx(m): loc = readindex(m); m.mem[loc] = com(m, m.mem[loc])
+
 def anda(m):
     m.a = logicNZV(m, m.a & readbyte(m))
 

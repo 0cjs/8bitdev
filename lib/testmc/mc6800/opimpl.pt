@@ -195,6 +195,44 @@ def ACC(optemplate):
     return dict(argnames='opname, accval',
         argvalues=((opnameA, make_accval('a')), (opnameB, make_accval('b'))))
 
+def runABmx(instr, arg, res, N, Z, V, C):
+    ''' Test an instruction that modifies a single argument in the standard
+        four addressing modes: ACCA, ACCB, extended (memory) and indexed
+        (from X register).
+
+        `instr` is the base instruction name; this will be run with A, B, m
+        and x suffixes, asserting that ``arg`` is replaced by ``res` and
+        that flags `N`, `Z`, `V` and `C` have the specified values, or
+        unchanged if the specified value is `None`.
+    '''
+
+    outflags = R(N=N, Z=Z, V=V, C=C)
+
+    #   If a flag is not tested, meaning it doesn't change, set it to a
+    #   pseudo-random value based on the argument to try to find cases
+    #   where it's changed when it ought not be.
+    inflags = R()
+    for flag in ('N', 'Z', 'V', 'C'):
+        if getattr(outflags, flag) is None:
+            f = arg & 1
+            inflags = inflags.clone(**{flag:f})
+            outflags = outflags.clone(**{flag:f})
+
+    runop([I[instr + 'A']],
+        initregs=inflags.clone(a=arg), changedregs=outflags.clone(a=res))
+    runop([I[instr + 'B']],
+        initregs=inflags.clone(b=arg), changedregs=outflags.clone(b=res))
+
+    addr = v16(arg)
+    runop([I[instr + 'm'], MSB(addr), LSB(addr)],
+        initmem={ addr:arg }, initregs=inflags,
+        changedmem={ addr:res }, changedregs=outflags)
+
+    base, offset = v16(arg), v8(arg)
+    runop([I[instr + 'x'], offset],
+        initmem={ base+offset:arg }, initregs=inflags.clone(x=base),
+        changedmem={ base+offset:res }, changedregs=outflags)
+
 ####################################################################
 #   Misc instructions
 
@@ -566,18 +604,8 @@ def test_logicNZV():
                      (0x55, 0xAA, 1, 0, 0, 1),
                      (0xAA, 0x55, 0, 0, 0, 1),
     ), 'ids': tmc_tid, })
-def test_COMa(arg, res, N, Z, V, C):
-    outflags = R(N=N, Z=Z, V=V, C=C)
-
-    runop([I.COMA], initregs=R(a=arg), changedregs=outflags.clone(a=res))
-    runop([I.COMB], initregs=R(b=arg), changedregs=outflags.clone(b=res))
-    addr = v16(arg)
-    runop([I.COMm, MSB(addr), LSB(addr)], initmem={ addr:arg },
-        changedmem={ addr:res }, changedregs=outflags)
-    base, offset = v16(arg), v8(arg)
-    runop([I.COMx, offset],
-        initmem={ base+offset:arg }, initregs=R(x=base),
-        changedmem={ base+offset:res }, changedregs=outflags)
+def test_COM(arg, res, N, Z, V, C):
+    runABmx('COM', arg, res, N, Z, V, C)
 
 @pytest.mark.parametrize('a,     arg,  res, N, Z', (
                          (0x00, 0x00, 0x00, 0, 1),
@@ -771,16 +799,7 @@ def test_RORx(inC, arg, res, N, Z, C):
                      (0x80, 0x80, 1, 0, 1, 1),
     ), 'ids': tmc_tid, })
 def test_NEG(arg, res, N, Z, V, C):
-    outflags = R(N=N, Z=Z, V=V, C=C)
-    runop([I.NEGA], initregs=R(a=arg), changedregs=outflags.clone(a=res))
-    runop([I.NEGB], initregs=R(b=arg), changedregs=outflags.clone(b=res))
-    addr = v16(arg)
-    runop([I.NEGm, MSB(addr), LSB(addr)], initmem={ addr:arg },
-        changedmem={ addr:res }, changedregs=outflags)
-    base, offset = v16(arg), v8(arg)
-    runop([I.NEGx, offset],
-        initmem={ base+offset:arg }, initregs=R(x=base),
-        changedmem={ base+offset:res }, changedregs=outflags)
+    runABmx('NEG', arg, res, N, Z, V, C)
 
 @pytest.mark.parametrize(**
     { 'argnames':    ' arg,  res, N, Z, V, C',
@@ -792,29 +811,8 @@ def test_NEG(arg, res, N, Z, V, C):
                      (0xFE, 0xFF, 1, 0, 0, None),
                      (0xFF, 0x00, 0, 1, 0, None),
     ), 'ids': tmc_tid, })
-def test_INCa(arg, res, N, Z, V, C):
-    outflags = R(N=N, Z=Z, V=V, C=C)
-
-    #   If a flag is not tested, meaning it doesn't change, set it to a
-    #   pseudo-random value based on the argument to try to find cases
-    #   where it's changed when it ought not be.
-    inflags = R()
-    for flag in ('N', 'Z', 'V', 'C'):
-        if getattr(outflags, flag) is None:
-            f = arg & 1
-            inflags = inflags.clone(**{flag:f})
-            outflags = outflags.clone(**{flag:f})
-
-    runop([I.INCA], initregs=inflags.clone(a=arg), changedregs=outflags.clone(a=res))
-    runop([I.INCB], initregs=inflags.clone(b=arg), changedregs=outflags.clone(b=res))
-    addr = v16(arg)
-    runop([I.INCm, MSB(addr), LSB(addr)],
-        initmem={ addr:arg }, initregs=inflags,
-        changedmem={ addr:res }, changedregs=outflags)
-    base, offset = v16(arg), v8(arg)
-    runop([I.INCx, offset],
-        initmem={ base+offset:arg }, initregs=inflags.clone(x=base),
-        changedmem={ base+offset:res }, changedregs=outflags)
+def test_INC(arg, res, N, Z, V, C):
+    runABmx('INC', arg, res, N, Z, V, C)
 
 @pytest.mark.parametrize('   n,  dec, N, Z, V', (
                          (0xFF, 0xFE, 1, 0, 0),

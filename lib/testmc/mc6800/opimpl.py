@@ -287,7 +287,9 @@ def negb(m):                            m.b = neg(m, m.b)
 def negm(m): loc = readword(m);  m.mem[loc] = neg(m, m.mem[loc])
 def negx(m): loc = readindex(m); m.mem[loc] = neg(m, m.mem[loc])
 
-def inc(m, val): m.V = val == 0x7F; return updateNZ(m, (val+1)&0xFF)
+def inc(m, val):
+    m.V = val == 0x7F
+    return updateNZ(m, (val+1)&0xFF)
 def inca(m):                            m.a = inc(m, m.a)
 def incb(m):                            m.b = inc(m, m.b)
 def incm(m): loc = readword(m);  m.mem[loc] = inc(m, m.mem[loc])

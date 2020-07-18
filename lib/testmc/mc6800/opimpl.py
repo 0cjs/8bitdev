@@ -295,12 +295,13 @@ def incb(m):                            m.b = inc(m, m.b)
 def incm(m): loc = readword(m);  m.mem[loc] = inc(m, m.mem[loc])
 def incx(m): loc = readindex(m); m.mem[loc] = inc(m, m.mem[loc])
 
-def decb(m):
-    b7 = m.b & 0b10000000
-    m.b = incbyte(m.b, -1)
-    m.N = isneg(m.b)
-    m.Z = iszero(m.b)
-    m.V = bool(b7 ^ (m.b & 0b10000000))     # did bit 7 change?
+def dec(m, val):
+    m.V = val == 0x80
+    return updateNZ(m, (val-1)&0xFF)
+def deca(m):                            m.a = dec(m, m.a)
+def decb(m):                            m.b = dec(m, m.b)
+def decm(m): loc = readword(m);  m.mem[loc] = dec(m, m.mem[loc])
+def decx(m): loc = readindex(m); m.mem[loc] = dec(m, m.mem[loc])
 
 def inx(m):     m.x = incword(m.x, 1);  m.Z = iszero(m.x)
 def dex(m):     m.x = incword(m.x, -1); m.Z = iszero(m.x)

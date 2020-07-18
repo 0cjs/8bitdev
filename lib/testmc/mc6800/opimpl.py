@@ -272,6 +272,16 @@ def rorx(m): loc = readindex(m); m.mem[loc] = ror(m, m.mem[loc])
 ####################################################################
 #   Arithmetic operations
 
+def neg(m, arg):
+    m.V = arg == 0x80
+    m.C = arg != 0x00
+    return updateNZ(m, ((arg^0xFF) + 1) & 0xFF)
+
+def nega(m):                            m.a = neg(m, m.a)
+def negb(m):                            m.b = neg(m, m.b)
+def negm(m): loc = readword(m);  m.mem[loc] = neg(m, m.mem[loc])
+def negx(m): loc = readindex(m); m.mem[loc] = neg(m, m.mem[loc])
+
 def decb(m):
     b7 = m.b & 0b10000000
     m.b = incbyte(m.b, -1)

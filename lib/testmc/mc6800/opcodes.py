@@ -64,6 +64,7 @@ OPCODES = {
     0x3C: (None,    invalid),
     0x3D: (None,    invalid),
 
+    0x40: ('NEGA',  nega),
     0x41: (None,    invalid),
     0x42: (None,    invalid),
     0x44: ('LSRA',  lsra),
@@ -76,6 +77,7 @@ OPCODES = {
     0x4E: (None,    invalid),
     0x4F: ('CLRA',  clra),
 
+    0x50: ('NEGB',  negb),
     0x51: (None,    invalid),
     0x52: (None,    invalid),
     0x54: ('LSRB',  lsrb),
@@ -89,6 +91,7 @@ OPCODES = {
     0x5E: (None,    invalid),
     0x5F: ('CLRB',  clrb),
 
+    0x60: ('NEGx',  negx),
     0x61: (None,    invalid),
     0x62: (None,    invalid),
     0x64: ('LSRx',  lsrx),
@@ -101,6 +104,7 @@ OPCODES = {
     0x6E: ('JMPx',  jmpx),
     0x6F: ('CLRx',  clrx),
 
+    0x70: ('NEGm',  negm),
     0x71: (None,    invalid),
     0x72: (None,    invalid),
     0x74: ('LSRm',  lsrm),

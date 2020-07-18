@@ -167,6 +167,11 @@ def v16(val, offset=0x80):
     '''
     return offset + (v8(val) ^ 0xFF)
 
+def accx(optemplate):
+    ''' Parameterize a test by A and B accumulators.
+    '''
+    return pytest.mark.parametrize(**ACC(optemplate))
+
 def ACC(optemplate):
     ''' Parametrize by A and B accumulators.
 
@@ -735,6 +740,32 @@ def test_RORx(inC, arg, res, N, Z, C):
 
 ####################################################################
 #   Arithmetic operations
+
+NEG = pytest.mark.parametrize(**
+    { 'argnames':    ' arg,  res, N, Z, V, C',
+      'argvalues': ( (0x01, 0xFF, 1, 0, 0, 1),
+                     (0xFF, 0x01, 0, 0, 0, 1),
+                     (0x7F, 0x81, 1, 0, 0, 1),
+                     (0x81, 0x7F, 0, 0, 0, 1),
+                     (0x00, 0x00, 0, 1, 0, 0),
+                     (0x80, 0x80, 1, 0, 1, 1),
+    ), 'ids': tmc_tid, })
+@NEG
+@accx('NEG~')
+def test_NEGa(opname, accval, arg, res, N, Z, V, C):
+    runop([I[opname]], initregs=accval(arg),
+        changedregs=accval(res, N=N, Z=Z, V=V, C=C))
+@NEG
+def test_NEGm(arg, res, N, Z, V, C):
+    addr = v16(arg)
+    runop([I.NEGm, MSB(addr), LSB(addr)], initmem={ addr:arg },
+        changedmem={ addr:res }, changedregs=R(N=N, Z=Z, V=V, C=C))
+@NEG
+def test_NEGx(arg, res, N, Z, V, C):
+    base, offset = v16(arg), v8(arg)
+    runop([I.NEGx, offset],
+        initmem={ base+offset:arg }, initregs=R(x=base),
+        changedmem={ base+offset:res }, changedregs=R(N=N, Z=Z, V=V, C=C))
 
 @pytest.mark.parametrize('   n,  dec, N, Z, V', (
                          (0xFF, 0xFE, 1, 0, 0),

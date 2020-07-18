@@ -208,14 +208,18 @@ def isneg(b, signbit=7):
 def iszero(b):
     return b == 0
 
-def logicNZV(m, val, signbit=7):
-    ''' Set N, Z and V flags based on `val`, and return `val`.
-        This is used for data transfer and logic operations.
-    '''
+def updateNZ(m, val, signbit=7):
+    ' Set N and Z flags based on `val`, and return `val`. '
     m.N = isneg(val, signbit=signbit)
     m.Z = iszero(val)
-    m.V = False
     return val
+
+def logicNZV(m, val, signbit=7):
+    ''' Clear V flag and return `updateNZ()` for `val`.
+        This is used for data transfer and logic operations.
+    '''
+    m.V = False
+    return updateNZ(m, val, signbit=signbit)
 
 ####################################################################
 #   Logic operations

@@ -835,7 +835,7 @@ def test_DEC(arg, res, N, Z, V, C):
     (0xFFFE, 0xFFFF, 0),
     (0xFFFF, 0x0000, 1),
 )
-def test_inx(n, succ, Z):
+def test_INX(n, succ, Z):
     runop([I.INX], initregs=R(x=n), changedregs=R(x=succ, Z=Z))
 
 @tc('     n, succ, Z',
@@ -844,7 +844,7 @@ def test_inx(n, succ, Z):
     (0xFFFF, 0xFFFE, 0),
     (0x0000, 0xFFFF, 0),
 )
-def test_dex(n, succ, Z):
+def test_DEX(n, succ, Z):
     runop([I.DEX], initregs=R(x=n), changedregs=R(x=succ, Z=Z))
 
 @tc('a,     arg,  res, H, N, Z, V, C',

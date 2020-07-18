@@ -559,25 +559,21 @@ def test_logicNZV():
 ####################################################################
 #   Logic operations
 
-COM = pytest.mark.parametrize(**
+@pytest.mark.parametrize(**
     { 'argnames':    ' arg,  res, N, Z',
       'argvalues': ( (0xFF, 0x00, 0, 1),
                      (0x00, 0xFF, 1, 0),
                      (0x55, 0xAA, 1, 0),
                      (0xAA, 0x55, 0, 0),
     ), 'ids': tmc_tid, })
-@COM
-@accx('COM~')
-def test_COMa(opname, accval, arg, res, N, Z):
-    runop([I[opname]], initregs=accval(arg),
-        changedregs=accval(res, N=N, Z=Z, V=0, C=1))
-@COM
-def test_COMm(arg, res, N, Z):
+def test_COMa(arg, res, N, Z):
+    runop([I.COMA], initregs=R(a=arg),
+        changedregs=R(a=res, N=N, Z=Z, V=0, C=1))
+    runop([I.COMB], initregs=R(b=arg),
+        changedregs=R(b=res, N=N, Z=Z, V=0, C=1))
     addr = v16(arg)
     runop([I.COMm, MSB(addr), LSB(addr)], initmem={ addr:arg },
         changedmem={ addr:res }, changedregs=R(N=N, Z=Z, V=0, C=1))
-@COM
-def test_COMx(arg, res, N, Z):
     base, offset = v16(arg), v8(arg)
     runop([I.COMx, offset],
         initmem={ base+offset:arg }, initregs=R(x=base),
@@ -765,7 +761,7 @@ def test_RORx(inC, arg, res, N, Z, C):
 ####################################################################
 #   Arithmetic operations
 
-NEG = pytest.mark.parametrize(**
+@pytest.mark.parametrize(**
     { 'argnames':    ' arg,  res, N, Z, V, C',
       'argvalues': ( (0x01, 0xFF, 1, 0, 0, 1),
                      (0xFF, 0x01, 0, 0, 0, 1),
@@ -774,24 +770,20 @@ NEG = pytest.mark.parametrize(**
                      (0x00, 0x00, 0, 1, 0, 0),
                      (0x80, 0x80, 1, 0, 1, 1),
     ), 'ids': tmc_tid, })
-@NEG
-@accx('NEG~')
-def test_NEGa(opname, accval, arg, res, N, Z, V, C):
-    runop([I[opname]], initregs=accval(arg),
-        changedregs=accval(res, N=N, Z=Z, V=V, C=C))
-@NEG
-def test_NEGm(arg, res, N, Z, V, C):
+def test_NEG(arg, res, N, Z, V, C):
+    runop([I.NEGA], initregs=R(a=arg),
+        changedregs=R(a=res, N=N, Z=Z, V=V, C=C))
+    runop([I.NEGB], initregs=R(b=arg),
+        changedregs=R(b=res, N=N, Z=Z, V=V, C=C))
     addr = v16(arg)
     runop([I.NEGm, MSB(addr), LSB(addr)], initmem={ addr:arg },
         changedmem={ addr:res }, changedregs=R(N=N, Z=Z, V=V, C=C))
-@NEG
-def test_NEGx(arg, res, N, Z, V, C):
     base, offset = v16(arg), v8(arg)
     runop([I.NEGx, offset],
         initmem={ base+offset:arg }, initregs=R(x=base),
         changedmem={ base+offset:res }, changedregs=R(N=N, Z=Z, V=V, C=C))
 
-INC = pytest.mark.parametrize(**
+@pytest.mark.parametrize(**
     { 'argnames':    ' arg,  res, N, Z, V',
       'argvalues': ( (0x00, 0x01, 0, 0, 0),
                      (0x01, 0x02, 0, 0, 0),
@@ -801,18 +793,14 @@ INC = pytest.mark.parametrize(**
                      (0xFE, 0xFF, 1, 0, 0),
                      (0xFF, 0x00, 0, 1, 0),
     ), 'ids': tmc_tid, })
-@INC
-@accx('INC~')
-def test_INCa(opname, accval, arg, res, N, Z, V):
-    runop([I[opname]], initregs=accval(arg, C=arg&1),   # pseudo-random carry
-        changedregs=accval(res, N=N, Z=Z, V=V))
-@INC
-def test_INCm(arg, res, N, Z, V):
+def test_INCa(arg, res, N, Z, V):
+    runop([I.INCA], initregs=R(a=arg, C=arg&1),   # pseudo-random carry
+        changedregs=R(a=res, N=N, Z=Z, V=V))
+    runop([I.INCB], initregs=R(b=arg, C=(not (arg&1))),
+        changedregs=R(b=res, N=N, Z=Z, V=V))
     addr = v16(arg)
     runop([I.INCm, MSB(addr), LSB(addr)], initmem={ addr:arg },
         changedmem={ addr:res }, changedregs=R(N=N, Z=Z, V=V))
-@INC
-def test_INCx(arg, res, N, Z, V):
     base, offset = v16(arg), v8(arg)
     runop([I.INCx, offset],
         initmem={ base+offset:arg }, initregs=R(x=base),

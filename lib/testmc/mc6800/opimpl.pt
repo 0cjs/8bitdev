@@ -204,7 +204,7 @@ def ACC(optemplate):
     return dict(argnames='opname, accval',
         argvalues=((opnameA, make_accval('a')), (opnameB, make_accval('b'))))
 
-def runABmx(instr, arg, res, N, Z, V, C):
+def runABmx(instr, arg, res, N, Z, V, C, inflags=R()):
     ''' Test an instruction that modifies a single argument in the standard
         four addressing modes: ACCA, ACCB, extended (memory) and indexed
         (from X register).
@@ -220,7 +220,6 @@ def runABmx(instr, arg, res, N, Z, V, C):
     #   If a flag is not tested, meaning it doesn't change, set it to a
     #   pseudo-random value based on the argument to try to find cases
     #   where it's changed when it ought not be.
-    inflags = R()
     for flag in ('N', 'Z', 'V', 'C'):
         if getattr(outflags, flag) is None:
             f = arg & 1
@@ -759,39 +758,20 @@ def test_ASRx(arg, res, N, Z, C):
         initmem={ base+offset:arg }, initregs=R(x=base),
         changedmem={ base+offset:res }, changedregs=R(N=N, Z=Z, V=N^C, C=C))
 
-RORparams = {
-    'argnames':    'inC,  arg,  res, C, N, Z',   # inC,  arg,  res, C, N, Z
-    'argvalues': ( (  0, 0x00, 0x00, 0, 0, 1),    (  1, 0x00, 0x80, 0, 1, 0),
-                   (  0, 0x01, 0x00, 1, 0, 1),    (  1, 0x01, 0x80, 1, 1, 0),
-                   (  0, 0x02, 0x01, 0, 0, 0),    (  1, 0x02, 0x81, 0, 1, 0),
-                   (  0, 0x03, 0x01, 1, 0, 0),    (  1, 0x03, 0x81, 1, 1, 0),
-                   (  0, 0x55, 0x2A, 1, 0, 0),    (  1, 0x55, 0xAA, 1, 1, 0),
-                   (  0, 0xAA, 0x55, 0, 0, 0),    (  1, 0xAA, 0xD5, 0, 1, 0),
-                   (  0, 0xFE, 0x7F, 0, 0, 0),    (  1, 0xFE, 0xFF, 0, 1, 0),
-                   (  0, 0xFF, 0x7F, 1, 0, 0),    (  1, 0xFF, 0xFF, 1, 1, 0),
-    ), 'ids': tmc_tid, }
-
-@pytest.mark.parametrize(**RORparams)
-@pytest.mark.parametrize(**ACC('ROR~'))
-def test_RORa(opname, accval, inC, arg, res, N, Z, C):
-    assert N == inC
+@tc('inC,  arg,  res, C, N, Z',   # inC,  arg,  res, C, N, Z
+    (  0, 0x00, 0x00, 0, 0, 1),    (  1, 0x00, 0x80, 0, 1, 0),
+    (  0, 0x01, 0x00, 1, 0, 1),    (  1, 0x01, 0x80, 1, 1, 0),
+    (  0, 0x02, 0x01, 0, 0, 0),    (  1, 0x02, 0x81, 0, 1, 0),
+    (  0, 0x03, 0x01, 1, 0, 0),    (  1, 0x03, 0x81, 1, 1, 0),
+    (  0, 0x55, 0x2A, 1, 0, 0),    (  1, 0x55, 0xAA, 1, 1, 0),
+    (  0, 0xAA, 0x55, 0, 0, 0),    (  1, 0xAA, 0xD5, 0, 1, 0),
+    (  0, 0xFE, 0x7F, 0, 0, 0),    (  1, 0xFE, 0xFF, 0, 1, 0),
+    (  0, 0xFF, 0x7F, 1, 0, 0),    (  1, 0xFF, 0xFF, 1, 1, 0),
+)
+def test_ROR(inC, arg, res, N, Z, C):
     assert N == bool(res >> 7)  # shift just to be different from CUT's AND
-    runop([I[opname]], initregs=accval(arg, C=inC),
-        changedregs=accval(res, N=N, Z=Z, V=N^C, C=C))
-
-@pytest.mark.parametrize(**RORparams)
-def test_RORm(inC, arg, res, N, Z, C):
-    addr = v16(arg)
-    runop([I.RORm, MSB(addr), LSB(addr)],
-        initmem={ addr:arg }, initregs=R(C=inC),
-        changedmem={ addr:res }, changedregs=R(N=N, Z=Z, V=N^C, C=C))
-
-@pytest.mark.parametrize(**RORparams)
-def test_RORx(inC, arg, res, N, Z, C):
-    base, offset = v16(arg), v8(arg)
-    runop([I.RORx, offset],
-        initmem={ base+offset:arg }, initregs=R(x=base, C=inC),
-        changedmem={ base+offset:res }, changedregs=R(N=N, Z=Z, V=N^C, C=C))
+    V = N^C
+    runABmx('ROR', arg, res, N, Z, V, C, inflags=R(C=inC))
 
 ####################################################################
 #   Arithmetic operations

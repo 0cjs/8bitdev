@@ -241,6 +241,57 @@ def runABmx(instr, arg, res, N, Z, V, C, inflags=R()):
         initmem={ base+offset:arg }, initregs=inflags.clone(x=base),
         changedmem={ base+offset:res }, changedregs=outflags)
 
+def runbinary(instr, arg0, arg1, res, N, Z, V, C, inflags=R()):
+    ''' Test a binary instruction taking two arguments and overwriting the
+        first argument with the result. This tests all eight standard
+        addressing modes: immediate, direct, extended and indirect using
+        both A and B as `arg0`.
+
+        `instr` is the base instruction name; this will be run with A, Az,
+        Am, Ax, B, Bz, Bm and Bx suffixes, asserting that `arg0` is
+        replaced by `res` and that flags `N`, `Z`, `V` and `C` have the
+        specified values, or unchanged if the specified value is `None`.
+    '''
+    outflags = R(N=N, Z=Z, V=V, C=C)
+
+    #   If a flag is not tested, meaning it doesn't change, set it to a
+    #   pseudo-random value based on arg1 to try to find cases where it's
+    #   changed when it ought not be.
+    for flag in ('N', 'Z', 'V', 'C'):
+        if getattr(outflags, flag) is None:
+            f = arg1 & 1
+            inflags = inflags.clone(**{flag:f})
+            outflags = outflags.clone(**{flag:f})
+
+    runop([I[instr + 'A'], arg1],
+        initregs=inflags.clone(a=arg0), changedregs=outflags.clone(a=res))
+    runop([I[instr + 'B'], arg1],
+        initregs=inflags.clone(b=arg0), changedregs=outflags.clone(b=res))
+
+    addr = v8(arg1)
+    runop([I[instr + 'Az'], LSB(addr)],
+        initmem={ addr:arg1 }, initregs=inflags.clone(a=arg0),
+        changedregs=outflags.clone(a=res))
+    runop([I[instr + 'Bz'], LSB(addr)],
+        initmem={ addr:arg1 }, initregs=inflags.clone(b=arg0),
+        changedregs=outflags.clone(b=res))
+
+    addr = v16(arg1)
+    runop([I[instr + 'Am'], MSB(addr), LSB(addr)],
+        initmem={ addr:arg1 }, initregs=inflags.clone(a=arg0),
+        changedregs=outflags.clone(a=res))
+    runop([I[instr + 'Bm'], MSB(addr), LSB(addr)],
+        initmem={ addr:arg1 }, initregs=inflags.clone(b=arg0),
+        changedregs=outflags.clone(b=res))
+
+    addr = v16(arg1); offset = v8(arg1)
+    runop([I[instr + 'Ax'], offset],
+        initmem={ addr+offset: arg1 }, initregs=inflags.clone(a=arg0, x=addr),
+        changedregs=outflags.clone(a=res))
+    runop([I[instr + 'Bx'], offset],
+        initmem={ addr+offset: arg1 }, initregs=inflags.clone(b=arg0, x=addr),
+        changedregs=outflags.clone(b=res))
+
 ####################################################################
 #   Misc instructions
 
@@ -461,7 +512,7 @@ def test_LDAz(opname, accval, arg, N, Z):
 @pytest.mark.parametrize(**ACC('LDA~m'))
 @pytest.mark.parametrize(**LDSTparams)
 def test_LDAAm(opname, accval, arg, N, Z):
-    addr =v16(arg)
+    addr = v16(arg)
     runop([I[opname], MSB(addr), LSB(addr)],
         changedregs=accval(arg, N=N, Z=Z, V=0),
         initmem={ addr: arg })
@@ -613,15 +664,17 @@ def test_logicNZV():
 def test_COM(arg, res, N, Z, V, C):
     runABmx('COM', arg, res, N, Z, V, C)
 
-@tc('   a,  arg,  res, N, Z',
+@tc('arg0, arg1,  res, N, Z',
     (0x00, 0x00, 0x00, 0, 1),
     (0x00, 0xFF, 0x00, 0, 1),
     (0xFF, 0x00, 0x00, 0, 1),
+    (0xFF, 0xFF, 0xFF, 1, 0),
     (0xAA, 0x3C, 0x28, 0, 0),
     (0xAA, 0xF0, 0xA0, 1, 0),
 )
-def test_ANDA(a, arg, res, N, Z):
-    runop([I.ANDA, arg], initregs=R(a=a), changedregs=R(a=res, N=N, Z=Z, V=0))
+def test_AND(arg0, arg1, res, N, Z):
+    V = 0; C = None
+    runbinary('AND', arg0, arg1, res, N, Z, V, C)
 
 ####################################################################
 #   Shifts and Rotates

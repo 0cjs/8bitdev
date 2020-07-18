@@ -230,8 +230,14 @@ def comb(m):                            m.b = com(m, m.b)
 def comm(m): loc = readword(m);  m.mem[loc] = com(m, m.mem[loc])
 def comx(m): loc = readindex(m); m.mem[loc] = com(m, m.mem[loc])
 
-def anda(m):
-    m.a = logicNZV(m, m.a & readbyte(m))
+def anda(m):    m.a = logicNZV(m, m.a & readbyte(m))
+def andaz(m):   m.a = logicNZV(m, m.a & m.mem[readbyte(m)])
+def andam(m):   m.a = logicNZV(m, m.a & m.mem[readword(m)])
+def andax(m):   m.a = logicNZV(m, m.a & m.mem[readindex(m)])
+def andb(m):    m.b = logicNZV(m, m.b & readbyte(m))
+def andbz(m):   m.b = logicNZV(m, m.b & m.mem[readbyte(m)])
+def andbm(m):   m.b = logicNZV(m, m.b & m.mem[readword(m)])
+def andbx(m):   m.b = logicNZV(m, m.b & m.mem[readindex(m)])
 
 ####################################################################
 #   Shifts and Rotates

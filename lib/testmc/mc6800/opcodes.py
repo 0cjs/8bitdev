@@ -140,23 +140,27 @@ OPCODES = {
     0x8F: (None,    invalid),
 
     0x93: (None,    invalid),
+    0x94: ('ANDAz', andaz),
     0x96: ('LDAAz', ldaaz),
     0x97: ('STAAz', staaz),
     0x9C: ('CPXz',  cpxz),
     0x9D: (None,    invalid),
 
     0xA3: (None,    invalid),
+    0xA4: ('ANDAx', andax),
     0xA6: ('LDAAx', ldaax),
     0xA7: ('STAAx', staax),
     0xAD: ('JSRx',  jsrx),
 
     0xB3: (None,    invalid),
+    0xB4: ('ANDAm', andam),
     0xB6: ('LDAAm', ldaam),
     0xB7: ('STAAm', staam),
     0xBC: ('CPXm',  cpxm),
     0xBD: ('JSR',   jsr),
 
     0xC3: (None,    invalid),
+    0xC4: ('ANDB',  andb),
     0xC6: ('LDAB',  ldab),
     0xC7: (None,    invalid),
     0xCC: (None,    invalid),
@@ -165,6 +169,7 @@ OPCODES = {
     0xCF: (None,    invalid),
 
     0xD3: (None,    invalid),
+    0xD4: ('ANDBz', andbz),
     0xD6: ('LDABz', ldabz),
     0xD7: ('STABz', stabz),
     0xDC: (None,    invalid),
@@ -173,6 +178,7 @@ OPCODES = {
     0xDF: ('STXz',  stxz),
 
     0xE3: (None,    invalid),
+    0xE4: ('ANDBx', andbx),
     0xE6: ('LDABx', ldabx),
     0xE7: ('STABx', stabx),
     0xEC: (None,    invalid),
@@ -180,6 +186,7 @@ OPCODES = {
     0xEE: ('LDXx',  ldxx),
 
     0xF3: (None,    invalid),
+    0xF4: ('ANDBm', andbm),
     0xF6: ('LDABm', ldabm),
     0xF7: ('STABm', stabm),
     0xFC: (None,    invalid),

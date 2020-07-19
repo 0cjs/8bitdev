@@ -885,6 +885,14 @@ def test_ADC_C1(arg0, arg1, res, H, N, Z, V, C):
     if arg1 < 0: arg1 = 0xFF
     runbinary('ADC', arg0, arg1, res, N, Z, V, C, H=H, inflags=R(C=1))
 
+@pytest.mark.parametrize('inC', (0, 1))
+def test_ABA(inC):
+    ''' Tests just load/store locations; coverage for the addition
+        operation itself is done in `test_ADD_C0()` and `test_ADD_C1`.
+    '''
+    runop([I.ABA], initregs=R(a=0x7F, b=0x02, C=inC),
+        changedregs=R(a=0x81, H=1, N=1, Z=0, V=1, C=0))
+
 SUBtests = (
     'arg0, arg1,  res, N, Z, V, C',     # minuend, subtrahend, difference
     (0x00, 0x00, 0x00, 0, 1, 0, 0),
@@ -917,6 +925,12 @@ def test_SBC_C1(arg0, arg1, res, N, Z, V, C):
     if arg1 == 0x100: arg1 = 0
     runbinary('SBC', arg0, arg1, res, N, Z, V, C, inflags=R(C=1))
 
+@pytest.mark.parametrize('inC', (0, 1))
+def test_SBA(inC):
+    ' As with `test_ABA()`. '
+    runop([I.SBA], initregs=R(a=0x82, b=0x04, C=inC),
+        changedregs=R(a=0x7E, N=0, Z=0, V=1, C=0))
+
 def test_CMP():
     ''' This test just confirms that the accumulator is unchanged;
         `test_SUB()` provides the rest of the coverage.
@@ -924,6 +938,12 @@ def test_CMP():
     V = 1; N = Z = C = 0
     runbinary('CMP', 0x81, 0x02, 0x81, N, Z, V, C, inflags=R(C=0))
     runbinary('CMP', 0x81, 0x02, 0x81, N, Z, V, C, inflags=R(C=1))
+
+@pytest.mark.parametrize('inC', (0, 1))
+def test_CBA(inC):
+    ' As with `test_SBA()`. '
+    runop([I.CBA], initregs=R(a=0x82, b=0x04, C=inC),
+        changedregs=R(a=0x82, N=0, Z=0, V=1, C=0))
 
 @tc(' addr,      x,    arg, Z, N, V',
     #  Flag register value: 4  8  2

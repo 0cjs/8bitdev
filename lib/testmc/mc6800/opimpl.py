@@ -409,6 +409,8 @@ def adcbz(m):   m.b = add(m, m.b, m.mem[readbyte(m)] + m.C)
 def adcbm(m):   m.b = add(m, m.b, m.mem[readword(m)] + m.C)
 def adcbx(m):   m.b = add(m, m.b, m.mem[readindex(m)] + m.C)
 
+def aba(m):     m.a = add(m, m.a, m.b)
+
 def sub(m, minuend, subtrahend, affectC=True):
     difference = incbyte(minuend, -subtrahend)
     m.N = isneg(difference)
@@ -452,6 +454,9 @@ def cmpb(m):          sub(m, m.b, readbyte(m))
 def cmpbz(m):         sub(m, m.b, m.mem[readbyte(m)])
 def cmpbm(m):         sub(m, m.b, m.mem[readword(m)])
 def cmpbx(m):         sub(m, m.b, m.mem[readindex(m)])
+
+def sba(m):     m.a = sub(m, m.a, m.b)
+def cba(m):           sub(m, m.a, m.b)
 
 def cpxarg(m, argh, argl):
     xh,     xl =    m.x >> 8,  m.x & 0xFF

@@ -11,8 +11,8 @@ __all__ = ( 'OPCODES', 'Instructions', 'InvalidOpcode' )
 
 OPCODES = {
 
-    0x00: (None,    invalid),
-    0x01: ('NOP',   lambda m:None),
+    0x00: (None,    invalid),       0x10: ('SBA',   sba),
+    0x01: ('NOP',   lambda m:None), 0x11: ('CBA',   cba),
     0x02: (None,    invalid),       0x12: (None,    invalid),
     0x03: (None,    invalid),       0x13: (None,    invalid),
     0x04: (None,    invalid),       0x14: (None,    invalid),
@@ -22,7 +22,7 @@ OPCODES = {
     0x08: ('INX',   inx),           0x18: (None,    invalid),
     0x09: ('DEX',   dex),
     0x0A: ('CLV',   clv),           0x1A: (None,    invalid),
-    0x0B: ('SEV',   sev),
+    0x0B: ('SEV',   sev),           0x1B: ('ABA',   aba),
     0x0C: ('CLC',   clc),           0x1C: (None,    invalid),
     0x0D: ('SEC',   sec),           0x1D: (None,    invalid),
     0x0E: ('CLI',   cli),           0x1E: (None,    invalid),

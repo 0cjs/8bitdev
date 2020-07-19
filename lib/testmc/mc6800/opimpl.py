@@ -160,13 +160,12 @@ def ldaam(m):   m.a = logicNZV(m, m.mem[readword(m)])
 def ldabm(m):   m.b = logicNZV(m, m.mem[readword(m)])
 def ldaax(m):   m.a = logicNZV(m, m.mem[readindex(m)])
 def ldabx(m):   m.b = logicNZV(m, m.mem[readindex(m)])
-def ldx(m):     m.x = logicNZV(m, readword(m), signbit=15)
 
+def ldx(m):     m.x = logicNZV(m, readword(m), signbit=15)
 def ldxtarget(m, loc0):
     loc1 = incword(loc0, 1)
     val  = (m.mem[loc0] << 8) | m.mem[loc1]
     m.x = logicNZV(m, val, signbit=15)
-
 def ldxz(m):    ldxtarget(m, readbyte(m))
 def ldxm(m):    ldxtarget(m, readword(m))
 def ldxx(m):    ldxtarget(m, readindex(m))

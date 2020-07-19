@@ -212,7 +212,7 @@ def accx(optemplate):
         argvalues=((opnameA, make_accval('a')), (opnameB, make_accval('b')))
         ))
 
-def inoutflags(arg, N, Z, V, C, inflags=R()):
+def inoutflags(arg, N, Z, V, C, *, H=None, inflags=R()):
     ''' Given expected output flags where `None` indicates "unchanged,"
         return a pair of `Registers` objects ``(inflags, outflags)`` for
         the input and expected output flag values.
@@ -224,8 +224,8 @@ def inoutflags(arg, N, Z, V, C, inflags=R()):
         Input flags set by the test, if any, should be provided in the
         `Registers` object `inflags`.
     '''
-    outflags = R(N=N, Z=Z, V=V, C=C)
-    for flag in ('N', 'Z', 'V', 'C'):
+    outflags = R(N=N, Z=Z, V=V, C=C, H=H)
+    for flag in ('N', 'Z', 'V', 'C', 'H'):
         if getattr(outflags, flag) is None:
             f = arg & 1
             inflags = inflags.clone(**{flag:f})
@@ -241,7 +241,7 @@ def rununary(instr, arg, res, N, Z, V, C, inflags=R()):
         that flags `N`, `Z`, `V` and `C` have the specified values, or
         unchanged if the specified value is `None`.
     '''
-    inflags, outflags = inoutflags(arg, N, Z, V, C, inflags)
+    inflags, outflags = inoutflags(arg, N, Z, V, C, inflags=inflags)
 
     runop([I[instr + 'A']],
         initregs=inflags.clone(a=arg), changedregs=outflags.clone(a=res))
@@ -258,16 +258,18 @@ def rununary(instr, arg, res, N, Z, V, C, inflags=R()):
         initmem={ base+offset:arg }, initregs=inflags.clone(x=base),
         changedmem={ base+offset:res }, changedregs=outflags)
 
-def runbinary(instr, arg0, arg1, res, N, Z, V, C, inflags=R()):
+def runbinary(instr, arg0, arg1, res, N, Z, V, C, *, H=None, inflags=R()):
     ''' Test a binary operation for both A and B accumulators in all four
         standard addressing modes: immediate, direct, extended and indirect.
 
         `instr` is the base instruction name; this will be run with A, B,
         Az, Bz, Am, Bm, Ax and Bx suffixes, asserting that `arg0` is
-        replaced by `res` and that flags `N`, `Z`, `V` and `C` have the
-        specified values, or unchanged if the specified value is `None`.
+        replaced by `res` and that flags `N`, `Z`, `V`, `C` and `H` have
+        the specified values, or unchanged if the specified value is
+        `None`. (`H` is optional, defaulting to `None`; most ops don't
+        use it.)
     '''
-    inflags, outflags = inoutflags(arg1, N, Z, V, C, inflags)
+    inflags, outflags = inoutflags(arg1, N, Z, V, C, H=H, inflags=inflags)
 
     for acc in ('A', 'B'):
         inacc = { acc.lower(): arg0 }
@@ -803,7 +805,11 @@ def test_INS(n, succ):
 def test_DES(n, succ):
     runop([I.DES], initregs=R(sp=n), changedregs=R(sp=succ))
 
-@tc('a,     arg,  res, H, N, Z, V, C',
+####################################################################
+#   Binary Arithmetic operations
+
+ADDtests = (
+    'arg0, arg1,  res, H, N, Z, V, C',
     (0x00, 0x00, 0x00, 0, 0, 1, 0, 0),
     #   H: half carry determined by bits 3
     (0x0E, 0x01, 0x0F, 0, 0, 0, 0, 0),
@@ -822,11 +828,14 @@ def test_DES(n, succ):
     (0xF0, 0xF0, 0xE0, 0, 1, 0, 0, 1),  # 2's comp: subtract from negative
     (0x80, 0x80, 0x00, 0, 0, 1, 1, 1),
 )
-def test_ADDA(a, arg, res, H, N, Z, V, C):
-    cr = R(a=res, H=H, N=N, Z=Z, V=V, C=C)
-    #   Operation should be the same whether carry set or clear.
-    runop([I.ADDA, arg], initregs=R(a=a, C=0), changedregs=cr)
-    runop([I.ADDA, arg], initregs=R(a=a, C=1), changedregs=cr)
+
+@tc(*ADDtests)
+def test_ADD_C0(arg0, arg1, res, H, N, Z, V, C):
+    runbinary('ADD', arg0, arg1, res, N, Z, V, C, H=H, inflags=R(C=0))
+
+@tc(*ADDtests)
+def test_ADD_C1(arg0, arg1, res, H, N, Z, V, C):
+    runbinary('ADD', arg0, arg1, res, N, Z, V, C, H=H, inflags=R(C=1))
 
 @tc('minuend, subtrahend, difference, N, Z, V, C',
     #minu, subt, diff, N, Z, V, C

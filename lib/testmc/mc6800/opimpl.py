@@ -311,7 +311,7 @@ def rorm(m): loc = readword(m);  m.mem[loc] = ror(m, m.mem[loc])
 def rorx(m): loc = readindex(m); m.mem[loc] = ror(m, m.mem[loc])
 
 ####################################################################
-#   Arithmetic operations
+#   Urnary Arithmetic operations
 
 def neg(m, arg):
     m.V = arg == 0x80
@@ -344,7 +344,10 @@ def dex(m):     m.x = incword(m.x, -1); m.Z = iszero(m.x)
 def ins(m):     m.sp = incword(m.sp, 1)
 def des(m):     m.sp = incword(m.sp, -1)
 
-def addHNZVC(m, augend, addend):
+####################################################################
+#   Binary Arithmetic operations
+
+def add(m, augend, addend):
     ''' Return the modular 8-bit sum of adding without carry `addend` (the
         operand) to `augend` (the contents of the register). Set H, N, Z, V
         and C flags based on the result, per pages A-4 (ADC) and A-5 (ADD)
@@ -367,8 +370,14 @@ def addHNZVC(m, augend, addend):
 
     return sum
 
-def adda(m):
-    m.a = addHNZVC(m, m.a, readbyte(m))
+def adda(m):    m.a = add(m, m.a, readbyte(m))
+def addaz(m):   m.a = add(m, m.a, m.mem[readbyte(m)])
+def addam(m):   m.a = add(m, m.a, m.mem[readword(m)])
+def addax(m):   m.a = add(m, m.a, m.mem[readindex(m)])
+def addb(m):    m.b = add(m, m.b, readbyte(m))
+def addbz(m):   m.b = add(m, m.b, m.mem[readbyte(m)])
+def addbm(m):   m.b = add(m, m.b, m.mem[readword(m)])
+def addbx(m):   m.b = add(m, m.b, m.mem[readindex(m)])
 
 def subNZVC(m, minuend, subtrahend, affectC=True):
     difference = incbyte(minuend, -subtrahend)

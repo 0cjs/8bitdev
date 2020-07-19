@@ -56,6 +56,7 @@ OPCODES = {
     0x4A: ('DECA',  deca),          0x5A: ('DECB',  decb),
     0x4B: (None,    invalid),       0x5B: (None,    invalid),
     0x4C: ('INCA',  inca),          0x5C: ('INCB',  incb),
+    0x4D: ('TSTA',  tsta),          0x5D: ('TSTB',  tstb),
     0x4E: (None,    invalid),       0x5E: (None,    invalid),
     0x4F: ('CLRA',  clra),          0x5F: ('CLRB',  clrb),
 
@@ -72,6 +73,7 @@ OPCODES = {
     0x6A: ('DECx',  decx),          0x7A: ('DECm',  decm),
     0x6B: (None,    invalid),       0x7B: (None,    invalid),
     0x6C: ('INCx',  incx),          0x7C: ('INCm',  incm),
+    0x6D: ('TSTx',  tstx),          0x7D: ('TSTm',  tstm),
     0x6E: ('JMPx',  jmpx),          0x7E: ('JMP',   jmp),
     0x6F: ('CLRx',  clrx),          0x7F: ('CLRm',  clrm),
 

@@ -650,6 +650,17 @@ def test_EOR(arg0, arg1, res, N, Z):
     V = 0; C = None
     runbinary('EOR', arg0, arg1, res, N, Z, V, C)
 
+@tc(' arg, N, Z',
+    (0x00, 0, 1),
+    (0x01, 0, 0),
+    (0x7F, 0, 0),
+    (0x80, 1, 0),
+    (0xFF, 1, 0),
+)
+def test_TST(arg, N, Z):
+    V = C = 0
+    rununary('TST', arg, arg, N, Z, V, C)
+
 ####################################################################
 #   Shifts and Rotates
 

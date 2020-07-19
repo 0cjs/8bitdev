@@ -263,6 +263,11 @@ def eorbz(m):   m.b = logicNZV(m, m.b ^ m.mem[readbyte(m)])
 def eorbm(m):   m.b = logicNZV(m, m.b ^ m.mem[readword(m)])
 def eorbx(m):   m.b = logicNZV(m, m.b ^ m.mem[readindex(m)])
 
+def tsta(m):    m.C = 0; logicNZV(m, m.a)
+def tstb(m):    m.C = 0; logicNZV(m, m.b)
+def tstm(m):    m.C = 0; logicNZV(m, m.mem[readword(m)])
+def tstx(m):    m.C = 0; logicNZV(m, m.mem[readindex(m)])
+
 ####################################################################
 #   Shifts and Rotates
 

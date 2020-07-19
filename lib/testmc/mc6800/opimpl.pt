@@ -562,22 +562,33 @@ def test_STA(opname, accval, arg, N, Z):
         changedmem={ addr+offset: arg }, changedregs=R(N=N, Z=Z, V=0))
 
 @tc(*LDST16tests)
-def test_STXm(arg, N, Z):
+def test_STX(arg, N, Z):
     addr = v16(arg)
     runop([I.STXm, MSB(addr), LSB(addr)], initregs=R(x=arg),
         changedmem={ addr: MSB(arg), addr+1: LSB(arg) },
         changedregs=R(N=N, Z=Z, V=0))
 
-def test_STXm_rollover():
-    runop([I.STXm, 0xFF, 0xFF], memsize=64*1024, initregs=R(x=0x89AB),
-        changedmem={ 0xFFFF: 0x89, 0x0000: 0xAB }, changedregs=R(N=1, Z=0, V=0))
-
-@tc(*LDST16tests)
-def test_STXz(arg, N, Z):
     addr = v8(arg)
     runop([I.STXz, addr], initregs=R(x=arg),
         changedmem={ addr: MSB(arg), addr+1: LSB(arg) },
-        changedregs = R(N=N, Z=Z, V=0))
+        changedregs=R(N=N, Z=Z, V=0))
+
+    offset = v8(arg)
+    addr = (arg + offset) & 0xFFFF
+    runop([I.STXx, offset], memsize=65536, initregs=R(x=arg),
+        changedmem={ addr: MSB(arg), addr+1: LSB(arg) },
+        changedregs=R(N=N, Z=Z, V=0))
+
+def test_STXz_rollover():
+    ' XXX This should be confirmed on a real 6800. ' # XXX
+    arg = 0x1234
+    runop([I.STXz, 0xFF], initregs=R(x=arg),
+        changedmem={ 0xFF: MSB(arg), 0x100: LSB(arg) },
+        changedregs=R(N=0, Z=0, V=0))
+
+def test_STXm_rollover():
+    runop([I.STXm, 0xFF, 0xFF], memsize=64*1024, initregs=R(x=0x89AB),
+        changedmem={ 0xFFFF: 0x89, 0x0000: 0xAB }, changedregs=R(N=1, Z=0, V=0))
 
 ####################################################################
 #   Flag handling for data movement and logic

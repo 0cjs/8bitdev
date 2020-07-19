@@ -140,7 +140,7 @@ OPCODES = {
     0xEC: (None,    invalid),       0xFC: (None,    invalid),
     0xED: (None,    invalid),       0xFD: (None,    invalid),
     0xEE: ('LDXx',  ldxx),          0xFE: ('LDXm',  ldxm),
-                                    0xFF: ('STXm',  stxm),
+    0xEF: ('STXx',  stxx),          0xFF: ('STXm',  stxm),
 
 }
 

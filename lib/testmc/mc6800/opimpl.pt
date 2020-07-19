@@ -565,22 +565,35 @@ def test_STA(opname, accval, arg, N, Z):
         changedmem={ addr+offset: arg }, changedregs=R(N=N, Z=Z, V=0))
 
 @tc(*LDST16tests)
-def test_STX(arg, N, Z):
+@pytest.mark.parametrize('reg', ('x', 'sp'))
+def test_ST16(reg, arg, N, Z):
+    instr = 'ST' + reg[0].upper()
+    initregs = R(**{ reg: arg})
+    print('initregs', initregs)
+    changedregs = R(N=N, Z=Z, V=0)
+
     addr = v16(arg)
-    runop([I.STXm, MSB(addr), LSB(addr)], initregs=R(x=arg),
+    runop([I[instr + 'm'], MSB(addr), LSB(addr)], initregs=initregs,
         changedmem={ addr: MSB(arg), addr+1: LSB(arg) },
-        changedregs=R(N=N, Z=Z, V=0))
+        changedregs=changedregs)
 
     addr = v8(arg)
-    runop([I.STXz, addr], initregs=R(x=arg),
+    runop([I[instr + 'z'], addr], initregs=initregs,
         changedmem={ addr: MSB(arg), addr+1: LSB(arg) },
-        changedregs=R(N=N, Z=Z, V=0))
+        changedregs=changedregs)
 
     offset = v8(arg)
     addr = (arg + offset) & 0xFFFF
-    runop([I.STXx, offset], memsize=65536, initregs=R(x=arg),
+    print('instr={}x arg=${:04X} offset=${:02X} addr=${:04X}'
+        .format(instr, arg, offset, addr))
+    runop([I[instr + 'x'], offset], memsize=65536,
+        #   XXX We should be using an address different from the value we
+        #   store (arg), but that probably requires splitting this part
+        #   into two tests, which doesn't seem worthwhile given the
+        #   commonality in the code under test.
+        initregs=initregs.clone(x=arg),
         changedmem={ addr: MSB(arg), addr+1: LSB(arg) },
-        changedregs=R(N=N, Z=Z, V=0))
+        changedregs=changedregs)
 
 def test_STXz_rollover():
     ' XXX This should be confirmed on a real 6800. ' # XXX

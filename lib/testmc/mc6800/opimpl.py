@@ -196,17 +196,22 @@ def stabz(m):   m.mem[readbyte(m)]  = logicNZV(m, m.b)
 def stabm(m):   m.mem[readword(m)]  = logicNZV(m, m.b)
 def stabx(m):   m.mem[readindex(m)] = logicNZV(m, m.b)
 
-def stxtarget(m, target0):
+def st16target(m, val, target0):
+    print('val=${:04X}'.format(val))
     target1 = incword(target0, 1)
-    m.mem[target0] = m.x >> 8
-    m.mem[target1] = m.x & 0xFF
-    m.N = isneg(m.x, signbit=15)
-    m.Z = iszero(m.x)
+    m.mem[target0] = val >> 8
+    m.mem[target1] = val & 0xFF
+    m.N = isneg(val, signbit=15)
+    m.Z = iszero(val)
     m.V = 0
 
-def stxz(m):    stxtarget(m, readbyte(m))
-def stxm(m):    stxtarget(m, readword(m))
-def stxx(m):    stxtarget(m, readindex(m))
+def stxz(m):    st16target(m, m.x,  readbyte(m))
+def stxm(m):    st16target(m, m.x,  readword(m))
+def stxx(m):    st16target(m, m.x,  readindex(m))
+
+def stsz(m):    st16target(m, m.sp, readbyte(m))
+def stsm(m):    st16target(m, m.sp, readword(m))
+def stsx(m):    st16target(m, m.sp, readindex(m))
 
 def tsx(m):     m.x = m.sp
 def txs(m):     m.sp = m.x

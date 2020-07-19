@@ -91,6 +91,7 @@ OPCODES = {
     0x8B: ('ADDA',  adda),          0x9B: ('ADDAz', addaz),
     0x8C: ('CPX',   cpx),           0x9C: ('CPXz',  cpxz),
     0x8D: ('BSR',   bsr),           0x9D: (None,    invalid),
+    0x8E: ('LDS',   lds),           0x9E: ('LDSz',  ldsz),
     0x8F: (None,    invalid),
 
     0xA0: ('SUBAx', subax),         0xB0: ('SUBAm', subam),
@@ -107,6 +108,7 @@ OPCODES = {
     0xAB: ('ADDAx', addax),         0xBB: ('ADDAm', addam),
                                     0xBC: ('CPXm',  cpxm),
     0xAD: ('JSRx',  jsrx),          0xBD: ('JSR',   jsr),
+    0xAE: ('LDSx',  ldsx),          0xBE: ('LDSm',  ldsm),
 
     0xC0: ('SUBB',  subb),          0xD0: ('SUBBz', subbz),
     0xC1: ('CMPB',  cmpb),          0xD1: ('CMPBz', cmpbz),

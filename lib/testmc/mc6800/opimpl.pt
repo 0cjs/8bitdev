@@ -507,25 +507,28 @@ def test_LDA(arg, N, Z):
     runbinary('LDA', not arg, arg, arg, N, Z, V, C)
 
 @tc(*LDST16tests)
-def test_LDX(arg, N, Z):
-    runop([I.LDX, MSB(arg), LSB(arg)], changedregs=R(x=arg, N=N, Z=Z, V=0))
+@pytest.mark.parametrize('reg', ('x', 'sp'))
+def test_LD16(reg, arg, N, Z):
+    instr = 'LD' + reg[0].upper()
+    changedregs = R(**{ reg: arg}).clone(N=N, Z=Z, V=0)
+
+    runop([I[instr], MSB(arg), LSB(arg)], changedregs=changedregs)
 
     addr = v8(arg)
-    runop([I.LDXz, addr],
-        changedregs=R(x=arg, N=N, Z=Z, V=0),
-        initmem={ addr: MSB(arg), addr+1: LSB(arg) })
+    runop([I[instr + 'z'], addr],
+        initmem={ addr: MSB(arg), addr+1: LSB(arg) },
+        changedregs=changedregs)
 
     addr = v16(arg)
-    runop([I.LDXm, MSB(addr), LSB(addr)],
-        changedregs=R(x=arg, N=N, Z=Z, V=0),
-        initmem={ addr: MSB(arg), addr+1: LSB(arg) })
+    runop([I[instr + 'm'], MSB(addr), LSB(addr)],
+        initmem={ addr: MSB(arg), addr+1: LSB(arg) },
+        changedregs=changedregs)
 
     addr = v16(arg); offset = v8(arg)
-    runop([I.LDXx, offset],
+    runop([I[instr + 'x'], offset],
         initregs    = R(x=addr),
         initmem     = { addr+offset: MSB(arg), addr+offset+1: LSB(arg) },
-        changedregs = R(x=arg, N=N, Z=Z, V=0),
-    )
+        changedregs = changedregs)
 
 @tc('arg', 0x0000, 0x1234, 0xFFED)
 def test_TSX(arg):

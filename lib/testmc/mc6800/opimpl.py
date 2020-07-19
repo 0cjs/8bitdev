@@ -469,12 +469,10 @@ def cpx(m):
     argh, argl = readbyte(m), readbyte(m)
     cpxarg(m, argh, argl)
 
-def cpxz(m):
-    target = readbyte(m)
+def cpxtarget(m, target):
     argh, argl = m.mem[target], m.mem[incword(target, 1)]
     cpxarg(m, argh, argl)
 
-def cpxm(m):
-    target = readword(m)
-    argh, argl = m.mem[target], m.mem[incword(target, 1)]
-    cpxarg(m, argh, argl)
+def cpxz(m):    cpxtarget(m, readbyte(m))
+def cpxm(m):    cpxtarget(m, readword(m))
+def cpxx(m):    cpxtarget(m, readindex(m))

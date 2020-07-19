@@ -108,7 +108,7 @@ OPCODES = {
     0xA9: ('ADCAx', adcax),         0xB9: ('ADCAm', adcam),
     0xAA: ('ORAAx', oraax),         0xBA: ('ORAAm', oraam),
     0xAB: ('ADDAx', addax),         0xBB: ('ADDAm', addam),
-                                    0xBC: ('CPXm',  cpxm),
+    0xAC: ('CPXx',  cpxx),          0xBC: ('CPXm',  cpxm),
     0xAD: ('JSRx',  jsrx),          0xBD: ('JSR',   jsr),
     0xAE: ('LDSx',  ldsx),          0xBE: ('LDSm',  ldsm),
     0xAF: ('STSx',  stsx),          0xBF: ('STSm',  stsm),

@@ -982,3 +982,11 @@ def test_CPX(addr, x, arg, N, Z, V):
         initmem     = { addr: MSB(arg), addr+1: LSB(arg) },
         initregs    = R(x=x),
         changedregs = R(N=N, Z=Z, V=V))
+
+def test_CPXx():
+    ' Covers source locations; the compare itself is covered by `test_CPX()`. '
+    x = 0x0123; offset = 0x80; addr = x + offset
+    runop([I.CPXx, offset],
+        initmem     = { addr: 0x01, addr+1: 0x23 },
+        initregs    = R(x=x),
+        changedregs = R(N=0, Z=1, V=0))

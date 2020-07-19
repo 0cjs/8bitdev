@@ -77,8 +77,8 @@ OPCODES = {
     0x6E: ('JMPx',  jmpx),          0x7E: ('JMP',   jmp),
     0x6F: ('CLRx',  clrx),          0x7F: ('CLRm',  clrm),
 
-    0x80: ('SUBA',  suba),
-    0x81: ('CMPA',  cmpa),
+    0x80: ('SUBA',  suba),          0x90: ('SUBAz', subaz),
+    0x81: ('CMPA',  cmpa),          0x91: ('CMPAz', cmpaz),
     0x83: (None,    invalid),       0x93: (None,    invalid),
     0x84: ('ANDA',  anda),          0x94: ('ANDAz', andaz),
     0x86: ('LDAA',  ldaa),          0x96: ('LDAAz', ldaaz),
@@ -90,6 +90,8 @@ OPCODES = {
     0x8D: ('BSR',   bsr),           0x9D: (None,    invalid),
     0x8F: (None,    invalid),
 
+    0xA0: ('SUBAx', subax),         0xB0: ('SUBAm', subam),
+    0xA1: ('CMPAx', cmpax),         0xB1: ('CMPAm', cmpam),
     0xA3: (None,    invalid),       0xB3: (None,    invalid),
     0xA4: ('ANDAx', andax),         0xB4: ('ANDAm', andam),
     0xA6: ('LDAAx', ldaax),         0xB6: ('LDAAm', ldaam),
@@ -100,6 +102,8 @@ OPCODES = {
                                     0xBC: ('CPXm',  cpxm),
     0xAD: ('JSRx',  jsrx),          0xBD: ('JSR',   jsr),
 
+    0xC0: ('SUBB',  subb),          0xD0: ('SUBBz', subbz),
+    0xC1: ('CMPB',  cmpb),          0xD1: ('CMPBz', cmpbz),
     0xC3: (None,    invalid),       0xD3: (None,    invalid),
     0xC4: ('ANDB',  andb),          0xD4: ('ANDBz', andbz),
     0xC6: ('LDAB',  ldab),          0xD6: ('LDABz', ldabz),
@@ -112,6 +116,8 @@ OPCODES = {
     0xCE: ('LDX',   ldx),           0xDE: ('LDXz',  ldxz),
     0xCF: (None,    invalid),       0xDF: ('STXz',  stxz),
 
+    0xE0: ('SUBBx', subbx),         0xF0: ('SUBBm', subbm),
+    0xE1: ('CMPBx', cmpbx),         0xF1: ('CMPBm', cmpbm),
     0xE3: (None,    invalid),       0xF3: (None,    invalid),
     0xE4: ('ANDBx', andbx),         0xF4: ('ANDBm', andbm),
     0xE6: ('LDABx', ldabx),         0xF6: ('LDABm', ldabm),

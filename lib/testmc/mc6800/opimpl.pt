@@ -837,8 +837,8 @@ def test_ADD_C0(arg0, arg1, res, H, N, Z, V, C):
 def test_ADD_C1(arg0, arg1, res, H, N, Z, V, C):
     runbinary('ADD', arg0, arg1, res, N, Z, V, C, H=H, inflags=R(C=1))
 
-@tc('minuend, subtrahend, difference, N, Z, V, C',
-    #minu, subt, diff, N, Z, V, C
+SUBtests = (
+    'arg0, arg1,  res, N, Z, V, C',     # minuend, subtrahend, difference
     (0x00, 0x00, 0x00, 0, 1, 0, 0),
     #   V: overflow determined by bits 6
     (0x81, 0x01, 0x80, 1, 0, 0, 0),
@@ -849,15 +849,21 @@ def test_ADD_C1(arg0, arg1, res, H, N, Z, V, C):
     (0x01, 0x02, 0xFF, 1, 0, 0, 1),
     (0xFF, 0x01, 0xFE, 1, 0, 0, 0),
 )
-def test_SUBA(minuend, subtrahend, difference, N, Z, V, C):
-    cr = R(a=difference, N=N, Z=Z, V=V, C=C)
-    runop([I.SUBA, subtrahend], initregs=R(a=minuend, C=0), changedregs=cr)
-    runop([I.SUBA, subtrahend], initregs=R(a=minuend, C=1), changedregs=cr)
 
-def test_CMPA():
+@tc(*SUBtests)
+def test_SUB_C0(arg0, arg1, res, N, Z, V, C):
+    runbinary('SUB', arg0, arg1, res, N, Z, V, C, inflags=R(C=0))
+
+@tc(*SUBtests)
+def test_SUB_C1(arg0, arg1, res, N, Z, V, C):
+    runbinary('SUB', arg0, arg1, res, N, Z, V, C, inflags=R(C=1))
+
+def test_CMP():
     #   Confirm that A register is unchanged;
     #   test_suba() provides the rest of the coverage.
-    runop([I.CMPA, 0x02], initregs=R(a=0x81), changedregs=R(N=0, Z=0, V=1, C=0))
+    V = 1; N = Z = C = 0
+    runbinary('CMP', 0x81, 0x02, 0x81, N, Z, V, C, inflags=R(C=0))
+    runbinary('CMP', 0x81, 0x02, 0x81, N, Z, V, C, inflags=R(C=1))
 
 @tc(' addr,      x,    arg, Z, N, V',
     #  Flag register value: 4  8  2

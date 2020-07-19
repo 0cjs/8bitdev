@@ -379,7 +379,7 @@ def addbz(m):   m.b = add(m, m.b, m.mem[readbyte(m)])
 def addbm(m):   m.b = add(m, m.b, m.mem[readword(m)])
 def addbx(m):   m.b = add(m, m.b, m.mem[readindex(m)])
 
-def subNZVC(m, minuend, subtrahend, affectC=True):
+def sub(m, minuend, subtrahend, affectC=True):
     difference = incbyte(minuend, -subtrahend)
     m.N = isneg(difference)
     m.Z = iszero(difference)
@@ -396,17 +396,29 @@ def subNZVC(m, minuend, subtrahend, affectC=True):
 
     return difference
 
-def suba(m):
-    m.a = subNZVC(m, m.a, readbyte(m))
+def suba(m):    m.a = sub(m, m.a, readbyte(m))
+def subaz(m):   m.a = sub(m, m.a, m.mem[readbyte(m)])
+def subam(m):   m.a = sub(m, m.a, m.mem[readword(m)])
+def subax(m):   m.a = sub(m, m.a, m.mem[readindex(m)])
+def subb(m):    m.b = sub(m, m.b, readbyte(m))
+def subbz(m):   m.b = sub(m, m.b, m.mem[readbyte(m)])
+def subbm(m):   m.b = sub(m, m.b, m.mem[readword(m)])
+def subbx(m):   m.b = sub(m, m.b, m.mem[readindex(m)])
 
-def cmpa(m):
-    subNZVC(m, m.a, readbyte(m))
+def cmpa(m):          sub(m, m.a, readbyte(m))
+def cmpaz(m):         sub(m, m.a, m.mem[readbyte(m)])
+def cmpam(m):         sub(m, m.a, m.mem[readword(m)])
+def cmpax(m):         sub(m, m.a, m.mem[readindex(m)])
+def cmpb(m):          sub(m, m.b, readbyte(m))
+def cmpbz(m):         sub(m, m.b, m.mem[readbyte(m)])
+def cmpbm(m):         sub(m, m.b, m.mem[readword(m)])
+def cmpbx(m):         sub(m, m.b, m.mem[readindex(m)])
 
 def cpxarg(m, argh, argl):
     xh,     xl =    m.x >> 8,  m.x & 0xFF
-    subNZVC(m, xl, argl, affectC=False)
+    sub(m, xl, argl, affectC=False)
     Zl = m.Z
-    subNZVC(m, xh, argh, affectC=False)
+    sub(m, xh, argh, affectC=False)
     m.Z = Zl and m.Z
 
 def cpx(m):

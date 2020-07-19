@@ -614,7 +614,9 @@ def test_logicNZV():
 def test_COM(arg, res, N, Z, V, C):
     rununary('COM', arg, res, N, Z, V, C)
 
-@tc('arg0, arg1,  res, N, Z',
+
+ANDtests = (
+    'arg0, arg1,  res, N, Z',
     (0x00, 0x00, 0x00, 0, 1),
     (0x00, 0xFF, 0x00, 0, 1),
     (0xFF, 0x00, 0x00, 0, 1),
@@ -622,9 +624,18 @@ def test_COM(arg, res, N, Z, V, C):
     (0xAA, 0x3C, 0x28, 0, 0),
     (0xAA, 0xF0, 0xA0, 1, 0),
 )
+
+@tc(*ANDtests)
 def test_AND(arg0, arg1, res, N, Z):
     V = 0; C = None
     runbinary('AND', arg0, arg1, res, N, Z, V, C)
+
+@tc(*ANDtests)
+def test_BIT(arg0, arg1, res, N, Z):
+    #   `res` is ignored;
+    #   here it merely documents what the result would have been.
+    V = 0; C = None
+    runbinary('BIT', arg0, arg1, arg0, N, Z, V, C)
 
 @tc('arg0, arg1,  res, N, Z',
     (0x00, 0x00, 0x00, 0, 1),
@@ -880,8 +891,9 @@ def test_SBC_C1(arg0, arg1, res, N, Z, V, C):
     runbinary('SBC', arg0, arg1, res, N, Z, V, C, inflags=R(C=1))
 
 def test_CMP():
-    #   Confirm that A register is unchanged;
-    #   test_suba() provides the rest of the coverage.
+    ''' This test just confirms that the accumulator is unchanged;
+        `test_SUB()` provides the rest of the coverage.
+    '''
     V = 1; N = Z = C = 0
     runbinary('CMP', 0x81, 0x02, 0x81, N, Z, V, C, inflags=R(C=0))
     runbinary('CMP', 0x81, 0x02, 0x81, N, Z, V, C, inflags=R(C=1))

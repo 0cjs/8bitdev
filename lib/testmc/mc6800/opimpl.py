@@ -128,6 +128,13 @@ def pshb(m):    pushbyte(m, m.b)
 ####################################################################
 #   Flag Changes
 
+def clv(m): setattr(m, 'V', 0)
+def sev(m): setattr(m, 'V', 1)
+def clc(m): setattr(m, 'C', 0)
+def sec(m): setattr(m, 'C', 1)
+def cli(m): setattr(m, 'I', 0)
+def sei(m): setattr(m, 'I', 1)
+
 def tap(m):
     m.H = bool(m.a & 32)
     m.I = bool(m.a & 16)

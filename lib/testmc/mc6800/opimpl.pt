@@ -141,7 +141,8 @@ def runop(opdata, *, machine=None, memsize=0x402, startaddr=None,
     #   If any regs in the machine are unvalued (i.e., set to `None`)
     #   the opcode implementation has done something very wrong.
     unvalued = set(regs.all().keys()) - set(regs.valued().keys())
-    assert not unvalued, 'op produced unvalued register(s)'
+    assert not unvalued, \
+        'op=${:02X} produced unvalued register(s)'.format(opdata[0])
 
     if changedregs.pc is None:
         changedregs = changedregs.clone(pc=startaddr + len(opdata))
@@ -155,10 +156,12 @@ def runop(opdata, *, machine=None, memsize=0x402, startaddr=None,
     #   First assert that the registers and flags expected to change have
     #   their correct values. This makes more clear test failures where a
     #   tested value is wrong.
-    assert changedregs == regs, "expected register/flag changes"
+    assert changedregs == regs, \
+        'expected register/flag changes, op=${:02X}'.format(opdata[0])
     #   Now assert that the other registers and flags, which we did not expect
     #   to change (and are not explicitly tested), are actually unchanged.
-    assert allregs == regs, "unexpected register/flag changes"
+    assert allregs == regs, \
+        'unexpected register/flag changes, op=${:02X}'.format(opdata[0])
 
     newmem = bytearray(prevmem)
     for addr, value in changedmem.items():

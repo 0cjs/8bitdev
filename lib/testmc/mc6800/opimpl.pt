@@ -781,6 +781,14 @@ def test_INX(n, succ, Z):
 def test_DEX(n, succ, Z):
     runop([I.DEX], initregs=R(x=n), changedregs=R(x=succ, Z=Z))
 
+@tc('n, succ', (0,1), (0x100,0x101), (0xFFFE,0xFFFF), (0xFFFF,0x0000))
+def test_INS(n, succ):
+    runop([I.INS], initregs=R(sp=n), changedregs=R(sp=succ))
+
+@tc('n, succ', (1,0), (0x100,0xFF), (0xFFFF,0xFFFE), (0x0000,0xFFFF))
+def test_DES(n, succ):
+    runop([I.DES], initregs=R(sp=n), changedregs=R(sp=succ))
+
 @tc('a,     arg,  res, H, N, Z, V, C',
     (0x00, 0x00, 0x00, 0, 0, 1, 0, 0),
     #   H: half carry determined by bits 3

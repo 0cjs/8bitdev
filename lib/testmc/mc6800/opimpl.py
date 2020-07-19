@@ -329,6 +329,9 @@ def decx(m): loc = readindex(m); m.mem[loc] = dec(m, m.mem[loc])
 def inx(m):     m.x = incword(m.x, 1);  m.Z = iszero(m.x)
 def dex(m):     m.x = incword(m.x, -1); m.Z = iszero(m.x)
 
+def ins(m):     m.sp = incword(m.sp, 1)
+def des(m):     m.sp = incword(m.sp, -1)
+
 def addHNZVC(m, augend, addend):
     ''' Return the modular 8-bit sum of adding without carry `addend` (the
         operand) to `augend` (the contents of the register). Set H, N, Z, V

@@ -238,6 +238,16 @@ def andbz(m):   m.b = logicNZV(m, m.b & m.mem[readbyte(m)])
 def andbm(m):   m.b = logicNZV(m, m.b & m.mem[readword(m)])
 def andbx(m):   m.b = logicNZV(m, m.b & m.mem[readindex(m)])
 
+def oraa(m):    m.a = logicNZV(m, m.a | readbyte(m))
+def oraaz(m):   m.a = logicNZV(m, m.a | m.mem[readbyte(m)])
+def oraam(m):   m.a = logicNZV(m, m.a | m.mem[readword(m)])
+def oraax(m):   m.a = logicNZV(m, m.a | m.mem[readindex(m)])
+def orab(m):    m.b = logicNZV(m, m.b | readbyte(m))
+def orabz(m):   m.b = logicNZV(m, m.b | m.mem[readbyte(m)])
+def orabm(m):   m.b = logicNZV(m, m.b | m.mem[readword(m)])
+def orabx(m):   m.b = logicNZV(m, m.b | m.mem[readindex(m)])
+
+
 ####################################################################
 #   Shifts and Rotates
 

@@ -489,55 +489,25 @@ def test_TAB(arg, N, Z):
 def test_TBA(arg, N, Z):
     runop([I.TBA], initregs=R(b=arg), changedregs=R(a=arg, N=N, Z=Z, V=0))
 
-@pytest.mark.parametrize(**ACC('LDA~'))
 @pytest.mark.parametrize(**LDSTparams)
-def test_LDA(opname, accval, arg, N, Z):
-    addr = v16(arg)
-    runop([I[opname], arg], changedregs=accval(arg, N=N, Z=Z, V=0))
-
-@pytest.mark.parametrize(**ACC('LDA~z'))
-@pytest.mark.parametrize(**LDSTparams)
-def test_LDAz(opname, accval, arg, N, Z):
-    addr = v8(arg)
-    runop([I[opname], LSB(addr)], changedregs=accval(arg, N=N, Z=Z, V=0),
-        initmem={ addr: arg })
-
-@pytest.mark.parametrize(**ACC('LDA~m'))
-@pytest.mark.parametrize(**LDSTparams)
-def test_LDAAm(opname, accval, arg, N, Z):
-    addr = v16(arg)
-    runop([I[opname], MSB(addr), LSB(addr)],
-        changedregs=accval(arg, N=N, Z=Z, V=0),
-        initmem={ addr: arg })
-
-@pytest.mark.parametrize(**ACC('LDA~x'))
-@pytest.mark.parametrize(**LDSTparams)
-def test_LDAx(opname, accval, arg, N, Z):
-    addr = v16(arg); offset = v8(arg)
-    runop([I[opname], offset],
-        initmem={ addr+offset: LSB(arg) },
-        initregs=R(x=addr), changedregs=accval(arg, N=N, Z=Z, V=0))
+def test_LDA(arg, N, Z):
+    V = 0; C = None     # overflow always cleared; carry unchanged
+    runbinary('LDA', not arg, arg, arg, N, Z, V, C)
 
 @pytest.mark.parametrize(**LDST16params)
 def test_LDX(arg, N, Z):
     runop([I.LDX, MSB(arg), LSB(arg)], changedregs=R(x=arg, N=N, Z=Z, V=0))
 
-@pytest.mark.parametrize(**LDST16params)
-def test_LDXz(arg, N, Z):
     addr = v8(arg)
     runop([I.LDXz, addr],
         changedregs=R(x=arg, N=N, Z=Z, V=0),
         initmem={ addr: MSB(arg), addr+1: LSB(arg) })
 
-@pytest.mark.parametrize(**LDST16params)
-def test_LDXm(arg, N, Z):
     addr = v16(arg)
     runop([I.LDXm, MSB(addr), LSB(addr)],
         changedregs=R(x=arg, N=N, Z=Z, V=0),
         initmem={ addr: MSB(arg), addr+1: LSB(arg) })
 
-@pytest.mark.parametrize(**LDST16params)
-def test_LDXx(arg, N, Z):
     addr = v16(arg); offset = v8(arg)
     runop([I.LDXx, offset],
         initregs    = R(x=addr),
@@ -558,50 +528,25 @@ def test_TXS(arg):
 
 #### Stores
 
-@pytest.mark.parametrize(**ACC('CLR~'))
-@tc('initval', 0x00, 0x02, 0xFF)
-def test_CLRa(opname, accval, initval):
-    runop([I[opname]], initregs=accval(initval),
-        changedregs=(accval(0, N=0, Z=1, V=0, C=0)))
+@tc('arg', 0x00, 0x03, 0x88, 0xFF)
+#   Different arg values tests at different memory locations.
+def test_CLR(arg):
+    Z = 1; N = V = C = 0
+    rununary('CLR', arg, 0, N, Z, V, C)
 
-@tc(' addr, initval',
-    (0x0012,   0x00),
-    (0x0013,   0x03),
-    (0x0111,   0xFF),
-)
-def test_CLRm(addr, initval):
-    runop([I.CLRm, MSB(addr), LSB(addr)],
-        initmem={ addr: initval }, changedmem={ addr: 0 },
-        changedregs=R(N=0, Z=1, V=0, C=0))
-
-@tc('           x, offset, addr',
-    (      0x0003,    0, 0x0003),
-    (      0x0004,    2, 0x0006),
-    (0x10000-0xF8, 0xFF, 0x0007),
-)
-def test_CLRx(x, offset, addr):
-    runop([I.CLRx, offset], initregs=R(x=x),
-        changedregs=R(N=0, Z=1, V=0, C=0), changedmem={ addr: 0 })
-
-@pytest.mark.parametrize(**ACC('STA~z'))
+@pytest.mark.parametrize(**ACC('STA~'))
 @pytest.mark.parametrize(**LDSTparams)
-def test_STAz(opname, accval, arg, N, Z):
+def test_STA(opname, accval, arg, N, Z):
     addr = v8(arg)
-    runop([I[opname], addr], initregs=accval(arg),
+    runop([I[opname + 'z'], addr], initregs=accval(arg),
         changedmem={ addr: arg }, changedregs=R(N=N, Z=Z, V=0))
 
-@pytest.mark.parametrize(**ACC('STA~m'))
-@pytest.mark.parametrize(**LDSTparams)
-def test_STAm(opname, accval, arg, N, Z):
     addr = v16(arg)
-    runop([I[opname], MSB(addr), LSB(addr)], initregs=accval(arg),
+    runop([I[opname + 'm'], MSB(addr), LSB(addr)], initregs=accval(arg),
         changedmem={ addr: arg }, changedregs=R(N=N, Z=Z, V=0))
 
-@pytest.mark.parametrize(**ACC('STA~x'))
-@pytest.mark.parametrize(**LDSTparams)
-def test_STAx(opname, accval, arg, N, Z):
     addr = v16(arg); offset = v8(arg)
-    runop([I[opname], offset], initregs=accval(arg, x=addr),
+    runop([I[opname + 'x'], offset], initregs=accval(arg, x=addr),
         changedmem={ addr+offset: arg }, changedregs=R(N=N, Z=Z, V=0))
 
 @pytest.mark.parametrize(**LDST16params)

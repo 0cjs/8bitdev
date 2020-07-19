@@ -22,6 +22,14 @@ def tc(argnames, *argvalues):
     return pytest.mark.parametrize(
         **{ 'argnames': argnames, 'argvalues': argvalues, 'ids': tmc_tid, })
 
+@pytest.mark.xfail(strict=True, reason='Implementation incomplete')
+def test_all_opcodes_implemented():
+    ''' We expressly mark invalid opcodes with an entry in OPCODES,
+        so anything missing is something that is not yet implemented.
+    '''
+    missing_count = 256 - len(OPCODES)
+    assert not missing_count, 'Missing instruction count'
+
 ####################################################################
 #   Address handling, reading data at the PC
 

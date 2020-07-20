@@ -83,6 +83,8 @@ class IOMem(bytearray):
         def f(_location, byte):
             if byte is not None:
                 ostream.write(bytes((byte,)))
+                #   In case we're connected to a buffered tty or similar.
+                ostream.flush()
             else:
                 bs = istream.read(1)
                 if len(bs) > 0:

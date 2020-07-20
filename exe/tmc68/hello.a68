@@ -7,16 +7,39 @@ charoutport equ $C000               ; character output port
 charinport  equ $C000               ; blocking input char read
 
 hello       ldx #message
-.loop       lda A,0,X
-            beq .done
+            bsr prstr
+.nextchar   bsr rdchar
+            bsr prchar              ; echo char
+            cmp A,#$03              ; Ctrl-C exits
+            beq .exit
+            cmp A,#$0D              ; CR prints hello again
+            bne .nextchar
+            lda A,#$0A              ; print LF (CR already echoed)
             bsr prchar
-            inx
-            bra .loop
-.done
+            bra hello
+
+.exit       bsr prnl                ; simulator output starts on new line
             fcb 0                   ; cause an abort
 -           bra -                   ; infinite loop
 
+;   Print the 0-terminated string pointed to by X.
+prstr       lda A,0,X
+            beq .done
+            bsr prchar
+            inx
+            bra prstr
+.done       rts
+
+prnl        lda A,#$0D              ; CR
+            bsr prchar
+            lda A,#$0A              ; LF
+            bsr prchar
+            rts
+
 prchar      sta A,charoutport
+            rts
+
+rdchar      lda A,charinport
             rts
 
 message     fcb "Hello, world.\r\n\0"

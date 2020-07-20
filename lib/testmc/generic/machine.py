@@ -75,10 +75,18 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
         self.setregs(self.Registers(pc=memimage.entrypoint))
 
     def load(self, path):
-        ''' Load the given ``.bin`` file and, if available, the
-            symbols from a ``.rst`` (ASxxxx linker listing file)
-            in the same directory. The Machine's ``pc`` register
-            will be set to the entry point of the loaded binary.
+        ''' Load the given file and, if available, symbols. The Machine's
+            ``pc`` register will be set to the entry point of the loaded
+            binary. (XXX Currently this may be `None`.)
+
+            The types of files this understands are:
+            * ``.p`` output from Macroassembler AS and its associated
+              ``.map`` file.
+            * ``.bin`` CoCo binary format and associated ASxxxx ``.rst``
+              linker listing file.
+
+            The symbol file is loaded from the same directory and base
+            filename as the input file.
         '''
         if path.lower().endswith('.p'):
             #   Assume it's Macro Assembler AS output.

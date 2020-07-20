@@ -5,6 +5,10 @@ To-do List
 
 - Make a better `repr()`/`str()` for `testmc.generic.Machine` so that
   `assert R(...) = m.regs` looks nicer (and maybe provides useful info).
+- testmc.generic.machine.Machine.load_memimage() currently sets the
+  PC to `None` if there's no entrypoint in the file it's loading. It
+  should probably instead set the PC to the reset vector, or the first
+  address loaded, or something like that.
 
 #### Features
 

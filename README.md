@@ -46,7 +46,8 @@ Directories:
 - [`src/`]: Assembly source code, unit tests and documentation. These are
   generally modules used by full programs under `exe/`.
 - [`exe/`]: "Top-level" assembly files for full executable program builds,
-  usually just doing configuration and including code from `src/`.
+  usually just doing configuration and including code from `src/`. See
+  [`exe/README`](exe/README.md).
 - [`tmp/`]: Ignored; used to keep developer's random files out of the way.
 
 

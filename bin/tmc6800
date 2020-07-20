@@ -9,6 +9,7 @@ charoutport = 0xC000
 from    os.path  import abspath, dirname, join
 from    site  import addsitedir
 from    sys  import argv, stdout, stderr
+from    traceback  import print_exception
 
 BASEDIR = dirname(dirname(abspath(__file__)))
 
@@ -28,8 +29,12 @@ def exec(fname):
     m = Machine()
     m.load(fname)
     setupIO(m)
-    while True:
-        m.step()
+    try:
+        while True: m.step()
+    except Exception as ex:
+        tb = ex.__traceback__
+        tb = None   # Traceback not usually useful. Add option to print it?
+        print_exception(None, ex, tb)
 
 def usage():
     print('Usage: tmc6800 <file>', file=stderr)

@@ -1,0 +1,44 @@
+#!/usr/bin/env python3
+#
+#  tmc6800 - load an AS .p file into the testmc.mc6800 simulator and run it
+#
+
+charinport  = 0xC000
+charoutport = 0xC000
+
+from    os.path  import abspath, dirname, join
+from    site  import addsitedir
+from    sys  import argv, stdout, stderr
+
+BASEDIR = dirname(dirname(abspath(__file__)))
+
+def binname(fname):
+    if '.' not in fname: fname += '.p'
+    if '/' not in fname: fname = join(BASEDIR, '.build', 'obj', 'src', fname)
+    return fname
+
+def setupIO(m):
+    ''' Set up `charoutport` for writes to stdout and `charinport` for
+        blocking reads from stdin.
+    '''
+    #   XXX Does not yet do stdin; we need to disable cbreak on terminals.
+    m.setiostreams(charoutport, output=stdout.buffer)
+
+def exec(fname):
+    m = Machine()
+    m.load(fname)
+    setupIO(m)
+    while True:
+        m.step()
+
+def usage():
+    print('Usage: tmc6800 <file>', file=stderr)
+    exit(2)
+
+if __name__ == '__main__':
+    addsitedir(join(BASEDIR, 'lib'))
+    from testmc.tool.asl import parse_obj_fromfile
+    from testmc.mc6800 import Machine
+
+    if len(argv) != 2: usage()
+    exec(binname(argv[1]))

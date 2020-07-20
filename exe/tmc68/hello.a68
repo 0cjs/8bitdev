@@ -20,3 +20,5 @@ prchar      sta A,charoutport
             rts
 
 message     fcb "Hello, world.\r\n\0"
+
+            end hello

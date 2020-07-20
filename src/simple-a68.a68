@@ -159,6 +159,15 @@ hexword     equ $EE             ; result location
 ;   The N flag is clear if at least one digit is successfully parsed,
 ;   set otherwise.
 ;
+;   TODO Consider an alternative implementation (parametrizing the test to
+;   test both versions) to see if it may be shorter or faster to store by
+;   nybble to do less shifting. First digit goes into hexword nybble 3,
+;   second (if present) combines nybble 2 with 3, third (if present) goes
+;   straight into hexword nybble 1, and last, if present, combines into
+;   hexword nybble 0. Less ROL.
+;
+qhexword2 rts ; XXX
+;
 qhexword    lda B,#4            ; max digits to read
 qhex        clr A               ; current result: $0000
             sta A,hexword
@@ -187,25 +196,8 @@ qhex        clr A               ; current result: $0000
             pul B
             dec B
             bne .nextchar
-.exit       lda A,tmp0          ; affect error status flag
+.exit       lda A,tmp0          ; update error status flag
             rts
-
-            ;   to set N in one byte:
-            ;   ∙ use TST A if we know A is neg?
-            ;   LDA A immediate is just 2 cycles, cannot get faster
-
-;   ♠X,hexword ♣AB,tmp0 Parse an ASCII hex word at X.
-;
-;   Alternative implementation of `qhexword` that uses a different method
-;   of storing in `hexword`, to see if it's shorter and/or faster.
-;
-;   (Parametrize test to run both routines.) Instead of always shifting,
-;   store first value in hexword nybble 3, second (if present) combines
-;   nybble 2 with 3, third (if present) goes straight into hexword nybble
-;   1, and last, if present, combines into hexword nybble 0. Less ROL.
-;
-qhexword2
-            rts ; XXX
 
 ; ----------------------------------------------------------------------
 

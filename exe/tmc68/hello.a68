@@ -1,0 +1,22 @@
+;   "Hello, world" for `testmc.mc6800` simulator.
+
+            cpu 6800
+            org $100
+
+charoutport equ $C000               ; character output port
+charinport  equ $C000               ; blocking input char read
+
+hello       ldx #message
+.loop       lda A,0,X
+            beq .done
+            bsr prchar
+            inx
+            bra .loop
+.done
+            fcb 0                   ; cause an abort
+-           bra -                   ; infinite loop
+
+prchar      sta A,charoutport
+            rts
+
+message     fcb "Hello, world.\r\n\0"

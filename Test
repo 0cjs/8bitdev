@@ -197,6 +197,7 @@ asbuild src/fm7.a69
 
 asbuild     exe/a1/charset.a65
 a2exebuild  exe/a2/charset.a65
+asbuild     exe/tmc68/hello.a68
 
 ####################################################################
 #   Tests

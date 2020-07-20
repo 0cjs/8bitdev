@@ -3,13 +3,11 @@
 #  tmc6800 - load an AS .p file into the testmc.mc6800 simulator and run it
 #
 
-charinport  = 0xC000
-charoutport = 0xC000
-
 from    os.path  import abspath, dirname, join
 from    site  import addsitedir
-from    sys  import argv, stdout, stderr
+from    sys  import argv, stdin, stdout, stderr
 from    traceback  import print_exception
+import  termios, tty
 
 BASEDIR = dirname(dirname(abspath(__file__)))
 
@@ -18,12 +16,37 @@ def binname(fname):
     if '/' not in fname: fname = join(BASEDIR, '.build', 'obj', 'src', fname)
     return fname
 
+def getchar():
+    ''' Blocking read of a charater from stdin, in raw mode.
+
+        This enables raw mode only during the read so that the user can
+        still generate a SIGINT to kill the program when it's not waiting
+        for input.
+
+        XXX Echo probably should be disabled all the time to avoid echoing
+        typeahead.
+    '''
+    fd = stdin.fileno()
+    prevattrs = termios.tcgetattr(fd)
+    try:
+        tty.setraw(fd, termios.TCSADRAIN)
+        c = stdin.buffer.read(1)[0]
+    finally:
+        termios.tcsetattr(fd, termios.TCSANOW, prevattrs)
+    return c
+
+def consoleio(_addr, char):
+    if char is None:
+        return getchar()
+    else:
+        stdout.buffer.write(bytes([char]))
+        stdout.buffer.flush()
+
 def setupIO(m):
     ''' Set up `charoutport` for writes to stdout and `charinport` for
         blocking reads from stdin.
     '''
-    #   XXX Does not yet do stdin; we need to disable cbreak on terminals.
-    m.setiostreams(charoutport, output=stdout.buffer)
+    m.setio(0xC000, consoleio)
 
 def exec(fname):
     m = Machine()

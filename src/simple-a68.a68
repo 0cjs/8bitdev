@@ -1,10 +1,5 @@
 ;   Simple 6800 routines to test our test framework and Macroassembler AS
 
-;   ♢ indicates registers holding return values.
-;   ♡ indicates registers preserved
-;   ♣ indicates registers destroyed.
-;   Flags are assumed to be destroyed unless otherwise indicated.
-
             cpu 6800
             org $180
 
@@ -32,7 +27,7 @@ charinport  equ $C000               ; blocking input char read
 prchar      sta a,charoutport
             rts
 
-;   Print value in a as hex to the character output port.  ♣A
+;   ♣A Print value in a as hex to the character output port.
 ;   Falls through to prnyb.
 prhex       psh A
             lsr A
@@ -43,7 +38,7 @@ prhex       psh A
             pul A
             ; fallthrough
 
-;   Print lower nybble of A to the character output port.  ♣A
+;   ♣A Print lower nybble of A to the character output port.
 prnyb       and A,#$0F
             add A,#'0'
             cmp A,#'9'+1
@@ -62,7 +57,7 @@ prbell      lda A,#BEL
             bsr prchar
             rts
 
-;   Print a newline character or sequence. ♣A
+;   ♣A Print a newline character or sequence.
 ;   This particular version assumes a terminal needing CR-LF.
 prnl        lda A,#CR
             bsr prchar
@@ -70,12 +65,12 @@ prnl        lda A,#CR
             bsr prchar
             rts
 
-;   Blocking read of a character from the user, returned in ♢A.
+;   ♠A Blocking read of a character from the user.
 ;   This does not echo the character.
 rdchar      lda A,charinport
             rts
 
-;   Read a line of user input, echoing each character. ♣A ♡B ♢X
+;   ♠X ♣A ♡B Read a line of user input, echoing each character.
 ;   On return X will point to the chars read, terminated by $00,
 ;   and the carry will be clear for CR termination, set for ^C termination.
 ;
@@ -137,7 +132,7 @@ rdlinebuf_end
 
 ; ----------------------------------------------------------------------
 
-;   ♢A ♡BX ♣- Same interface as convascdigit in bigint.a65.
+;   ♠A ♡BX Same interface as convascdigit in bigint.a65.
 ;   Returns N flag clear and binary digit in A, or N set on error.
 ;
 convascdigit
@@ -157,7 +152,7 @@ convascdigit
 tmp0        equ $E8             ; temp storage
 hexword     equ $EE             ; result location
 
-;   ♢X,hexword ♡- ♣AB Parse an ASCII hex word at X.
+;   ♠X,hexword ♣AB,tmp0 Parse an ASCII hex word at X, N=0 on success.
 ;
 ;   0-4 ASCII characters are parsed and X is left pointing at the first
 ;   unparsed char. The parsed word, if any, is left in `hexword`.
@@ -199,7 +194,7 @@ qhex        clr A               ; current result: $0000
             ;   ∙ use TST A if we know A is neg?
             ;   LDA A immediate is just 2 cycles, cannot get faster
 
-;   ♢X,hexword ♡XXX ♣AB Parse an ASCII hex word at X.
+;   ♠X,hexword ♣AB,tmp0 Parse an ASCII hex word at X.
 ;
 ;   Alternative implementation of `qhexword` that uses a different method
 ;   of storing in `hexword`, to see if it's shorter and/or faster.

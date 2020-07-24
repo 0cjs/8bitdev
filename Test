@@ -182,6 +182,8 @@ asbuild src/asl/nomacro.a65
 asbuild src/asl/sym.a65
 asbuild src/asl/simple.a65  ';  Unit Test Assembly' '   org $240'
 asbuild src/mc68/simple-a68.a68
+asbuild src/tmc68/bioscode.a68
+
 asbuild src/m65/stdtest.a65     \
     '   cpu 6502' '   include "src/m65/std.a65"' '   org $240'
 asbuild src/m65/objects.a65     \

@@ -1,0 +1,16 @@
+from    testmc.mc6800  import Machine
+from    inspect  import currentframe
+
+object_file = 'src/tmc68/bioscode.p'
+
+def test_prchar(M, S, R):
+    _, outchars = M.setiostreams(S.charoutport)
+    M.call(S.prchar, R(a=ord('_')))
+    M.call(S.prchar, R(a=ord('\r')))
+    assert b'_\r' == outchars.getvalue()
+
+def test_rdchar(M, S, R):
+    M.setiostreams(S.charinport, b'~\n')
+    for char in ('~', '\n'):
+        M.call(S.rdchar)
+        assert R(a=ord(char)) == M.regs

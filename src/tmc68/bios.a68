@@ -1,0 +1,10 @@
+;   Public interface for tmc68/bioscode, which is loaded separately.
+
+prchar      equ     $C100       ; ♡ABX send char in A to output
+rdchar      equ     $C108       ; ♠A ♡A blocking read of char from input
+
+;   These are not used by the programs themselves, but the symbols are
+;   required here so that the test and run frameworks can find out where to
+;   hook in their side of the I/O routines.
+charoutport equ $C000               ; character output port
+charinport  equ $C000               ; blocking input char read

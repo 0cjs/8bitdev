@@ -15,6 +15,7 @@ assemblers.
     Platform    a1/         Apple 1 (and clones/similar machines)
                 a2/         Apple II, including later models
                 jr200/      National/Panasonic JR-200
+                tmc68/      bin/tmc6800 (testmc.mc6800) simulator
 
     Toolchain   asl/        The Macroassembler AS
                 asxxxx/     ASxxx assembler toolki

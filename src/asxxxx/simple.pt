@@ -5,7 +5,7 @@ import  pytest
 if not exists('.all-tools'):
     pytest.skip("skipping ASxxxx tests", allow_module_level=True)
 
-object_file = 'simple'
+object_file = 'asxxxx/simple'
 
 def test_loaded_object_file(M):
     ' Confirm that the correct object file was loaded. '

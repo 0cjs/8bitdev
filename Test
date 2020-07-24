@@ -86,8 +86,10 @@ linkopts="-numwt"
 
 asm() {
     local srcfile="$1"; shift
+    local objfile="$BUILDDIR/obj/asxxxx/"$(basename "$srcfile")
+    mkdir -p $(dirname "$objfile")
     #   `.rel` output extension is replaced/added automatically
-    as6500 $asmopts "$BUILDDIR/obj/"$(basename "$srcfile") "$srcfile" "$@" || {
+    as6500 $asmopts "$objfile" "$srcfile" "$@" || {
         local exitcode=$?
         [[ $exitcode -eq 127 ]] && echo 1>&2 \
             "as6500 exited with 127: do you support 32-bit executables?"
@@ -100,7 +102,7 @@ link() {
     #   Subsequent filenames are input files, with or without .rel extension
     #   Single filename is ouput and input.
     #   Other arguments before and after
-    (cd $BUILDDIR/obj/ && aslink $linkopts "$@")
+    (cd $BUILDDIR/obj/asxxxx/ && aslink $linkopts "$@")
 }
 
 [[ -f $all_tools ]] && {
@@ -112,7 +114,7 @@ link() {
     #   be done *after* the .rst file is created by the linker because
     #   otherwise the extra newlines make the linker edit the wrong lines
     #   in the .lst file.
-    sed -i -e 's/\f/\n/' "$BUILDDIR"/obj/*.{lst,rst,map}
+    sed -i -e 's/\f/\n/' "$BUILDDIR"/obj/asxxxx/*.{lst,rst,map}
 }
 
 ####################################################################

@@ -20,6 +20,7 @@ class Machine(GenericMachine):
             registers and flags as well would all be left in a random state
             on power-up, but that doesn't seem worth emulating here.
         '''
+        super().__init__()
         self.mem = IOMem(memsize)
         self.mem.copyapi(self)
 

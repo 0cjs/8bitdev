@@ -1,5 +1,9 @@
 from    testmc.symtab   import SymTab
 
+def test_empty_symtab():
+    s = SymTab()
+    assert 0 == len(s)
+
 def test_SymTab():
     sym1 = SymTab.Symbol('one', 1, None)
     sym2 = SymTab.Symbol('two', 'Two', None)

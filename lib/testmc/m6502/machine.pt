@@ -10,6 +10,9 @@ def M():
 def R(M):
     return M.Registers
 
+def test_super_init(M):
+    assert 0 == len(M.symtab)
+
 def test_Machine_memory_zeroed(M):
     assert [0]*0x10000 == M.mpu.memory
 

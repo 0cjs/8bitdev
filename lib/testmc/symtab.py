@@ -44,7 +44,9 @@ class SymTab():
         '''
         pass
 
-    def __init__(self, symbols):
+    def __init__(self, symbols=None):
+        if symbols is None:
+            symbols = ()
         self.symbols = { s.name: s for s in symbols }
 
     def sym(self, name):

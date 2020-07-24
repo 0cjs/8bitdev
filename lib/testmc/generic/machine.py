@@ -2,6 +2,7 @@ from    abc  import abstractmethod, abstractproperty
 from    collections.abc   import Container
 from    itertools  import repeat
 from    testmc.generic.memory  import MemoryAccess
+from    testmc.symtab  import SymTab
 from    testmc.tool  import asl, asxxxx
 
 class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
@@ -19,6 +20,9 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
         - `regs`: The current machine registers and flags.
         - `setregs()`: Set some or all machine registers and flags.
     '''
+
+    def __init__(self):
+        self.symtab = SymTab()      # symtab initially empty
 
     @abstractproperty
     def Registers(self):

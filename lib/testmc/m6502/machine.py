@@ -9,7 +9,6 @@ from    sys import stderr
 from    testmc.generic  import *
 from    testmc.m6502.instructions  import Instructions as I
 
-from    testmc import symtab
 from    testmc.tool import asl, asxxxx
 
 class Machine(GenericMachine):
@@ -30,9 +29,9 @@ class Machine(GenericMachine):
     ####################################################################
 
     def __init__(self):
+        super().__init__()
         self.mpu = MPU()
         self.regsobj = self.mpu
-        self.symtab = symtab.SymTab([])     # symtab initially empty
 
     def _stackaddr(self, depth, size):
         addr = 0x100 + self.mpu.sp + 1 + depth

@@ -44,6 +44,18 @@ class SymTab():
         '''
         pass
 
+    @staticmethod
+    def fromargs(**kwargs):
+        ''' Create a `SymTab` from the arguments list of symbol names
+            bound to values. This can also be used to create a `SymTab`
+            from a `dict` or other collection of mappings with an `items()`
+            method.
+        '''
+        symlist = []
+        for k, v in kwargs.items():
+            symlist.append(SymTab.Symbol(k, v, None))
+        return SymTab(symlist)
+
     def __init__(self, symbols=None):
         if symbols is None:
             symbols = ()
@@ -77,3 +89,40 @@ class SymTab():
             generic, so not returning the additional information is ok.
         '''
         return ((s.name, s.value) for _, s in self.symbols.items())
+
+    def merge(self, symtab, style='conflict'):
+        ''' Merge the symbols from `symtab` into this symbol table. `style`
+            determines how the merge is done, and must be one of the
+            following values:
+            - ``ignorenew``: Ignore all symbols in `symtab` (no-op).
+            - ``prefcur``: If a new symbol has the same name as an existing
+              symbol, keep the existing one and drop the new one.
+            - ``prefnew``: If a new symbol has the same name as an existing
+              symbol, drop the existing one and replace it with the new one.
+            - ``conflict``: If a new symbol has the same name as an existing
+              symbol, raise a `ValueError`.
+
+            This returns `symtab`.
+
+            XXX ``style='conflict'`` merges should not raise a conflict
+            if a new `Symbol` with the same name as an existing `Symbol`
+            also has the same value and other fields.
+        '''
+        ss = self.symbols
+        newvals = symtab.symbols.values()
+        if style == 'conflict':
+            for sym in newvals:
+                if sym.name in ss:
+                    raise ValueError('duplicate symbol: ' + repr(sym))
+                else:
+                    ss[sym.name] = sym
+        elif style == 'ignorenew':
+            pass
+        elif style == 'prefcur':
+            for sym in newvals:
+                if sym.name not in ss: ss[sym.name] = sym
+        elif style == 'prefnew':
+            for sym in newvals: ss[sym.name] = sym
+        else:
+            raise ValueError('Bad `style` parameter: ' + style)
+        return symtab

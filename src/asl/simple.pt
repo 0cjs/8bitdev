@@ -1,12 +1,12 @@
 from    testmc.m6502 import  Machine
 import  pytest
 
-object_file = 'src/simple-asl.p'
+object_file = 'src/asl/simple.p'
 
 def test_loaded_object_file(M):
     ' Confirm that the correct object file was loaded. '
     ident = M.symtab.ident
-    ident_str = b'simple-asl.a65'
+    ident_str = b'asl/simple.a65'
     assert ident_str == M.bytes(ident, len(ident_str))
     assert 0x240 == ident
 

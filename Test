@@ -104,9 +104,9 @@ link() {
 }
 
 [[ -f $all_tools ]] && {
-    asm src/simple-asx.a65  ; link simple-asx
-    asm src/reloctest.a65   ; link reloctest -b '_code=0x400' reloctest
-    asm src/zptest.a65      ; link zptest    -b '_code=0x0300'
+    asm src/asxxxx/simple.a65       ; link simple
+    asm src/asxxxx/reloctest.a65    ; link reloctest -b '_code=0x400' reloctest
+    asm src/asxxxx/zptest.a65       ; link zptest    -b '_code=0x0300'
 
     #   Replace form feeds since we view listing only on screen. This must
     #   be done *after* the .rst file is created by the linker because
@@ -176,16 +176,16 @@ a2exebuild() {
     #   We should work out an option to do this automatically.
 }
 
-asbuild src/asl-nomacro.a65
-asbuild src/asl-sym.a65
-asbuild src/simple-asl.a65  ';  Unit Test Assembly' '   org $240'
+asbuild src/asl/nomacro.a65
+asbuild src/asl/sym.a65
+asbuild src/asl/simple.a65  ';  Unit Test Assembly' '   org $240'
 asbuild src/mc68/simple-a68.a68
-asbuild src/stdtest.a65     \
-    '   cpu 6502' '   include "src/std.a65"' '   org $240'
-asbuild src/objects.a65     \
-    '   cpu 6502' '   include "src/std.a65"' '   org $300'
-asbuild src/bigint.a65      \
-    '   cpu 6502' '   include "src/std.a65"' '   org $1000'
+asbuild src/m65/stdtest.a65     \
+    '   cpu 6502' '   include "src/m65/std.a65"' '   org $240'
+asbuild src/m65/objects.a65     \
+    '   cpu 6502' '   include "src/m65/std.a65"' '   org $300'
+asbuild src/m65/bigint.a65      \
+    '   cpu 6502' '   include "src/m65/std.a65"' '   org $1000'
 
 asbuild src/a1/pia2.a65
 asbuild src/a2/misc.a65

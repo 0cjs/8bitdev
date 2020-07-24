@@ -2,7 +2,7 @@ from    testmc.m6502 import  Machine, Instructions as I
 import  pytest
 from    itertools import chain, count
 
-object_file = 'src/bigint.p'
+object_file = 'src/m65/bigint.p'
 
 ####################################################################
 #   Tests: convascdigit

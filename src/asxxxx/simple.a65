@@ -24,7 +24,7 @@
 
 ;   We use this ident to check that we've loaded the correct binary
 ;   data and symbol table.
-ident:      .str    "simple-asx.a65"
+ident:      .str    "asxxxx/simple.a65"
 
 ;--------------------------------------------------------------------------
 ;   Add X and Y, storing the result in xybuf and returning it in A

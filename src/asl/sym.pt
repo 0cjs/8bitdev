@@ -1,7 +1,7 @@
 from    testmc.m6502  import Machine
 import  pytest
 
-object_file = 'src/asl-sym.p'
+object_file = 'src/asl/sym.p'
 
 def test_eurosym(M, S):
     ' Test a symbol using a non-ASCII char from a western European language. '

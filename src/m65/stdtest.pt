@@ -1,7 +1,7 @@
 from    testmc.m6502 import  Machine, Instructions as I
 import  pytest
 
-object_file = 'src/stdtest.p'
+object_file = 'src/m65/stdtest.p'
 
 def test_ds_db_dw(M, S):
     start = S.defalloctest

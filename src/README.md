@@ -1,6 +1,28 @@
 8-bit Assembler Code
 ====================
 
+### Directory Structure
+
+There are three basic types of directories: CPU directories containing
+generic code for any platform using a particular CPU; platform directories
+containing code for a particular microcomputer or other system, and
+toolchain directories mainly used for testing features of various
+assemblers.
+
+    CPU         m65/        MOS 6502
+                mc68/       Motorola MC6800
+
+    Platform    a1/         Apple 1 (and clones/similar machines)
+                a2/         Apple II, including later models
+                jr200/      National/Panasonic JR-200
+
+    Toolchain   asl/        The Macroassembler AS
+                asxxxx/     ASxxx assembler toolki
+
+
+Code Conventions
+----------------
+
 The header comments for a routine generally use the following conventions
 to describe register and flag usage:
 

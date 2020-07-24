@@ -2,7 +2,7 @@ from    itertools  import chain
 from    testmc.generic  import *
 from    testmc.mc6800.opcodes  import OPCODES, Instructions as I
 from    testmc.mc6800.opimpl  import (
-    InvalidOpcode, incword, readbyte, signedbyteat,
+    LSB, MSB, InvalidOpcode, incword, readbyte, signedbyteat,
     )
 
 class Machine(GenericMachine):

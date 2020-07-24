@@ -1,11 +1,1 @@
-from    testmc  import LSB, MSB
-import  pytest
-
-@pytest.mark.parametrize(
-    '  value,  msb,  lsb', (
-    ( 0x0000, 0x00, 0x00),
-    ( 0xFEDC, 0xFE, 0xDC),
-    (0x12340, 0x23, 0x40),
-))
-def test_lsb_msb(value, msb, lsb):
-    assert (msb, lsb) == (MSB(value), LSB(value))
+import  testmc

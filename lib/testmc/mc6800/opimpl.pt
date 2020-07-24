@@ -2,7 +2,7 @@ from    testmc.mc6800.opcodes   import Instructions as I
 from    testmc.mc6800.opcodes   import *
 from    testmc.mc6800.opimpl    import *
 from    testmc.mc6800           import Machine
-from    testmc                  import tmc_tid, LSB, MSB
+from    testmc                  import tmc_tid
 from    numbers                 import Number
 import  pytest
 
@@ -32,6 +32,15 @@ def test_all_opcodes_implemented():
 
 ####################################################################
 #   Address handling, reading data at the PC
+
+@pytest.mark.parametrize(
+    '  value,  msb,  lsb', (
+    ( 0x0000, 0x00, 0x00),
+    ( 0xFEDC, 0xFE, 0xDC),
+    (0x12340, 0x23, 0x40),
+))
+def test_lsb_msb(value, msb, lsb):
+    assert (msb, lsb) == (MSB(value), LSB(value))
 
 @tc('initial, addend, expected',
     (      0,      0,        0),

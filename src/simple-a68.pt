@@ -1,4 +1,4 @@
-from    testmc  import tmc_tid, LSB, MSB
+from    testmc  import tmc_tid
 from    testmc.mc6800  import  Machine, Instructions as I
 import  pytest
 

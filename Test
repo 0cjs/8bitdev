@@ -191,6 +191,9 @@ asbuild src/m65/objects.a65     \
 asbuild src/m65/bigint.a65      \
     '   cpu 6502' '   include "src/m65/std.a65"' '   org $1000'
 
+asbuild src/mc68/hello.a68      \
+    '   cpu 6800' '    include "src/tmc68/bios.a68"' '   org $800'
+
 asbuild src/a1/pia2.a65
 asbuild src/a2/misc.a65
 asbuild src/a2/mondump.a65

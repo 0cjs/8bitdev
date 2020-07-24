@@ -1,0 +1,24 @@
+from    testmc.mc6800  import  Machine
+
+object_file = 'src/mc68/hello.p'
+
+def loadbios(m, input=None, output=None):
+    bioscode = '.build/obj/src/tmc68/bioscode.p'
+    S = m.symtab
+    m.load(bioscode, mergestyle='prefcur', setPC=False)
+    assert S['charinport'] == S['charoutport']
+    return m.setiostreams(S.charinport, input, output)
+
+def test_hello(M, S, R):
+    istream, ostream = loadbios(M, b'a0\rb1\x03')
+    M.setregs(R(pc=S.hello))
+    M.stepto(stopon=[0x02])
+
+    expected = (
+        b'Hello, world.\r\n'
+        b'a0\r'
+        b'\n' b'Hello, world.\r\n'
+        b'b1\x03'
+        b'\r\n'
+        )
+    assert expected == ostream.getvalue()

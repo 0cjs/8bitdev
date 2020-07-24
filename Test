@@ -179,7 +179,7 @@ a2exebuild() {
 asbuild src/asl-nomacro.a65
 asbuild src/asl-sym.a65
 asbuild src/simple-asl.a65  ';  Unit Test Assembly' '   org $240'
-asbuild src/simple-a68.a68
+asbuild src/mc68/simple-a68.a68
 asbuild src/stdtest.a65     \
     '   cpu 6502' '   include "src/std.a65"' '   org $240'
 asbuild src/objects.a65     \
@@ -191,8 +191,8 @@ asbuild src/a1/pia2.a65
 asbuild src/a2/misc.a65
 asbuild src/a2/mondump.a65
 asbuild src/c64.a65
-asbuild src/cpxtest.a68
-asbuild src/jr200.a68
+asbuild src/mc68/cpxtest.a68
+asbuild src/jr200/jr200.a68
 asbuild src/fm7.a69
 
 asbuild     exe/a1/charset.a65

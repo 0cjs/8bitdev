@@ -2,7 +2,7 @@ from    testmc  import tmc_tid
 from    testmc.mc6800  import  Machine, Instructions as I
 import  pytest
 
-object_file = 'src/simple-a68.p'
+object_file = 'src/mc68/simple-a68.p'
 
 def test_machine_type(M, R):
     ' Confirm the framework loaded the correct machine '

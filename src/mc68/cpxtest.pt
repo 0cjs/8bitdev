@@ -1,6 +1,6 @@
 from    testmc.mc6800  import  Machine, Instructions as I
 
-object_file = 'src/cpxtest.p'
+object_file = 'src/mc68/cpxtest.p'
 
 def test_cpxtest(M, S):
     otlen = int((S.argstable_end - S.argstable) / 4)

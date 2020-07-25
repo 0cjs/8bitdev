@@ -1,7 +1,5 @@
 ;   XXX something that should become a machine-language monitor one day
 
-            cpu 6800
-
 ;   ASCII character definitions
 BEL         equ $07                 ; bell ('\a')
 BS          equ $08                 ; backspace ('\b')

@@ -154,6 +154,30 @@ asbuild() {
     )
 }
 
+#   Build a unit-test version of a "library" file that's normally use by
+#   other files via `include`. This adds the standard setup/structure that
+#   is normally provided by the file including this one.
+#     This supplies an `org $1000` directive, but this can be overridden
+#   by supplying your own `org` in an additional parameter, if necessary.
+astest() {
+    local filename="$1"; shift
+    local cpu std
+    case "$filename" in
+        *.a65)  cpu=6502; std=m65/std.a65;;
+        *.a68)  cpu=6800; std=mc68/std.a68;;
+        *)      die 5 "astest(): Unknown file extension: $filename";;
+    esac
+    # XXX
+    asbuild "$filename" \
+        ';   Unit Test Assembly'                                    \
+        ''                                                          \
+        "           cpu $cpu"                                       \
+        '           include "src/'"$std"'"'                         \
+        '           org $1000'                                      \
+        ''                                                          \
+        "$@"
+}
+
 a2exebuild() {
     local exe=$(basename "$1")
           exe=${exe%.*}             # Remove extension
@@ -178,38 +202,46 @@ a2exebuild() {
     #   We should work out an option to do this automatically.
 }
 
+#   Non-CPU-specific builds/tests (assembler/toolchain tests).
 asbuild src/asl/nomacro.a65
 asbuild src/asl/sym.a65
-asbuild src/asl/simple.a65  ';  Unit Test Assembly' '   org $240'
+
+#   CPU-specific basic tests that do not rely on the assembly framework.
+asbuild src/asl/simple.a65 ' org $240'
 asbuild src/mc68/simple.a68
+
+#   Standalone blobs of code.
 asbuild src/tmc68/bioscode.a68
 
-asbuild src/m65/qdigit.a65      '  cpu 6502' '  org $400'
-asbuild src/m65/stdtest.a65     \
-    '   cpu 6502' '   include "src/m65/std.a65"' '   org $240'
-asbuild src/m65/objects.a65     \
-    '   cpu 6502' '   include "src/m65/std.a65"' '   org $300'
-asbuild src/m65/bigint.a65      \
-    '   cpu 6502' '   include "src/m65/std.a65"' '   org $1000'
+#   "Library" routines
+astest src/m65/stdtest.a65
+astest  src/m65/qdigit.a65
+astest src/mc68/qdigit.a68
+astest src/m65/objects.a65
+astest src/m65/bigint.a65
 
-asbuild src/mc68/qdigit.a68     '  cpu 6800' '  org $400'
-asbuild src/mc68/hello.a68      \
-    '   cpu 6800' '    include "src/tmc68/bios.a68"' '   org $800'
-asbuild src/mc68/cjsmon.a68     \
-    '   cpu 6800' '    include "src/tmc68/bios.a68"' '   org $7000'
+#   Portable programs (i.e., not platform-specific)
+#   and their platform-specific versions.
+astest   src/mc68/hello.a68     '  include "src/tmc68/bios.a68"'
+asbuild exe/tmc68/hello.a68
+asbuild exe/jr200/hello.a68
+astest   src/mc68/cjsmon.a68    '  include "src/tmc68/bios.a68"'
 
+#   Platform-specific code blobs
 asbuild src/a1/pia2.a65
 asbuild src/a2/misc.a65
 asbuild src/a2/mondump.a65
 asbuild src/c64.a65
-asbuild src/mc68/cpxtest.a68
 asbuild src/jr200/jr200.a68
 asbuild src/fm7.a69
 
+#   Platform-specific programs
 asbuild     exe/a1/charset.a65
 a2exebuild  exe/a2/charset.a65
-asbuild     exe/tmc68/hello.a68
-asbuild     exe/jr200/hello.a68
+
+#   Other stuff (probably needs sorting into categories above)
+astest  src/mc68/cpxtest.a68
+
 
 ####################################################################
 #   Tests

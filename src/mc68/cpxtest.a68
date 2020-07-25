@@ -3,7 +3,6 @@
 ;   results of an emulator run to see if the emulator is correctly
 ;   executing CPX.
 
-            cpu 6800
             org $7000
 
 inptr       equ $E0     ; current location in argstable

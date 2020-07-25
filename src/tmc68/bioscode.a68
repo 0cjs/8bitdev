@@ -21,7 +21,7 @@ assertdef       macro   sym,{NOEXPAND}
                 if sym <> sym[parent]
                     error "sym=\{sym} <> sym[parent]=\{sym[parent]}"
                 endif
-               ;message "last=\{_ad_lastaddr}  \tsym=\{sym}"
+               ;message "last=\{_ad_lastaddr}  \tsym=\{sym}  \t*=\{*}"
                 ;   Ensure we've not overwritten previous code: the newly
                 ;   defined symbol must be at or after the current address
                 ;   at the last call to this macro.
@@ -53,7 +53,6 @@ rdchar      lda A,charinport
 prnl        lda A,#$0A              ; LF
             bsr prchar
             rts
-
-
+            assertdef prnl
 
             endsection  ; tmc68_BIOS

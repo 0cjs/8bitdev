@@ -6,6 +6,7 @@
 from    os.path  import abspath, dirname, join
 from    site  import addsitedir
 from    sys  import argv, stdin, stdout, stderr
+from    os  import isatty
 from    traceback  import print_exception
 import  termios, tty
 
@@ -27,13 +28,16 @@ def getchar():
         typeahead.
     '''
     fd = stdin.fileno()
-    prevattrs = termios.tcgetattr(fd)
-    try:
-        tty.setraw(fd, termios.TCSADRAIN)
-        c = stdin.buffer.read(1)[0]
-    finally:
-        termios.tcsetattr(fd, termios.TCSANOW, prevattrs)
-    return c
+    if not isatty(fd):
+        return stdin.buffer.read(1)[0]
+    else:
+        prevattrs = termios.tcgetattr(fd)
+        try:
+            tty.setraw(fd, termios.TCSADRAIN)
+            c = stdin.buffer.read(1)[0]
+        finally:
+            termios.tcsetattr(fd, termios.TCSANOW, prevattrs)
+        return c
 
 def consoleio(_addr, char):
     if char is None:

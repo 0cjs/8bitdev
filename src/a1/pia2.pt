@@ -12,11 +12,11 @@ object_file = 'src/a1/pia2.p'
     (0x03,   3615), # next step: 3.6 ms; each additional step adds about 1.8 ms
    #(0x81, 229911), # half total delay available: about 230 ms (slowish test)
 ))
-def test_humdly(M, R, x, cycles):
-    M.call(M.symtab.loopdly, R(x=x))
-    assert cycles == M.mpu.processorCycles  # test framework doesn't include RTS
+def test_humdly(m, R, x, cycles):
+    m.call(m.symtab.loopdly, R(x=x))
+    assert cycles == m.mpu.processorCycles  # test framework doesn't include RTS
 
 @pytest.mark.skip(reason='Slow test')
-def test_humdlymax(M, R):
-    M.call(M.symtab.loopdlymax, R(x=3), maxops=1000000000)
-    assert 458005 == M.mpu.processorCycles  # about half a second at 1 MHz
+def test_humdlymax(m, R):
+    m.call(m.symtab.loopdlymax, R(x=3), maxops=1000000000)
+    assert 458005 == m.mpu.processorCycles  # about half a second at 1 MHz

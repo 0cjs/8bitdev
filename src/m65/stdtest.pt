@@ -3,17 +3,17 @@ import  pytest
 
 object_file = 'src/m65/stdtest.p'
 
-def test_ds_db_dw(M, S):
+def test_ds_db_dw(m, S):
     start = S.defalloctest
     assert S.dstest0            == start
     assert S.dstest1            == start+3
     assert S.dbtest             == start+4
-    assert b'\x00abc\xFF\xFF'   == bytes(M.bytes(S.dbtest, 6))
+    assert b'\x00abc\xFF\xFF'   == bytes(m.bytes(S.dbtest, 6))
     assert S.dwtest             == start+10
-    assert 0xABCD               == M.word(S.dwtest)
-    assert (0xCD, 0xAB)         == (M.byte(S.dwtest), M.byte(S.dwtest+1))
+    assert 0xABCD               == m.word(S.dwtest)
+    assert (0xCD, 0xAB)         == (m.byte(S.dwtest), m.byte(S.dwtest+1))
 
-def test_zds(M, S):
+def test_zds(m, S):
     #   The initial value of __ZDS_loc at the zdstest0 label.
     #   This value $10 assumes that zdstest1 is the first ZDS in this assembly.
     zloc = 0x10
@@ -34,25 +34,25 @@ def test_zds(M, S):
     (0xFF00, 0xFF01),
     (0xFFFF, 0x0000),
 ))
-def test_incw(M, R, input, expected):
-    incw = M.symtab.incwtest
-    data = M.symtab.incwdata
+def test_incw(m, R, input, expected):
+    incw = m.symtab.incwtest
+    data = m.symtab.incwdata
     r    = R(a=0x12, x=0x34, y=0x56)
 
-    M.depword(data, input)
-    M.call(incw, r)
-    assert r == M.regs
-    assert expected == M.word(data)
+    m.depword(data, input)
+    m.call(incw, r)
+    assert r == m.regs
+    assert expected == m.word(data)
 
 @pytest.mark.parametrize('inp, exp', (
     (0x1F9, 0x1FC), (0x1FA, 0x1FC), (0x1FB, 0x1FC), (0x1FC, 0x1FC),
     (0x1FD, 0x200), (0x1FE, 0x200), (0x1FF, 0x200), (0x200, 0x200),
     (0xFFFF, 0x0000), (0x0000, 0x0000),
 ))
-def test_dwalign(M, R, inp, exp):
-    dwaligntest, data = M.symtab.dwaligntest, M.symtab.dwaladdr
+def test_dwalign(m, R, inp, exp):
+    dwaligntest, data = m.symtab.dwaligntest, m.symtab.dwaladdr
     preservedregs = R(x=87, y=65)
-    M.depword(data, inp)
-    M.call(dwaligntest, preservedregs)
-    assert           exp == M.word(data)
-    assert preservedregs == M.regs
+    m.depword(data, inp)
+    m.call(dwaligntest, preservedregs)
+    assert           exp == m.word(data)
+    assert preservedregs == m.regs

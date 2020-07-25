@@ -32,30 +32,30 @@ object_file = 'src/m65/objects.p'
     (0xFF01,    (0xFF, 0xFF, 0xFF,     -1)),
     (0x3401,    (0xFF, 0xFF, 0x34,     -1)),
 ))
-def test_typedisp(M, S, obj, expected):
-    M.deposit(S.obfmtid,    0xFF)   # set outputs to sentinel values
-    M.deposit(S.oblen,      0xFF)
-    M.deposit(S.unused,     0xFF)
-    M.depword(S.smallint,   0xFFFF) # -1
+def test_typedisp(m, S, obj, expected):
+    m.deposit(S.obfmtid,    0xFF)   # set outputs to sentinel values
+    m.deposit(S.oblen,      0xFF)
+    m.deposit(S.unused,     0xFF)
+    m.depword(S.smallint,   0xFFFF) # -1
 
-    M.depword(S.obj, obj)
-    M.call(S.typedisp)
+    m.depword(S.obj, obj)
+    m.call(S.typedisp)
     obfmtid, oblen, unused \
-        = M.byte(S.obfmtid), M.byte(S.oblen), M.byte(S.unused)
+        = m.byte(S.obfmtid), m.byte(S.oblen), m.byte(S.unused)
     smallint =int.from_bytes(
-        M.bytes(S.smallint, 2), byteorder='little', signed=True)
+        m.bytes(S.smallint, 2), byteorder='little', signed=True)
 
     print('obj ${:04X}, obfmtid ${:02X}, oblen ${:02X} unused ${:02X}, ' \
           'smallint: ${:04X} {}' \
           .format(obj, obfmtid, oblen, unused, smallint, smallint))
 
     assert expected == (obfmtid, oblen, unused, smallint)
-    assert obj == M.word(S.obj), 'original obj should never be modified'
+    assert obj == m.word(S.obj), 'original obj should never be modified'
 
     #   XXX It might be useful to set some flags based on type.
     #   Depending on the next processing step may want to know
     #   heapdata vs. tagged pointer and pointer vs. value.
 
-    cycles = M.mpu.processorCycles
+    cycles = m.mpu.processorCycles
     #   Uncomment to see cycle count for each test.
     #assert 'cycles' ==  cycles

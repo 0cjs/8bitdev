@@ -3,64 +3,64 @@ import  pytest
 
 object_file = 'src/asl/simple.p'
 
-def test_loaded_object_file(M):
+def test_loaded_object_file(m):
     ' Confirm that the correct object file was loaded. '
-    ident = M.symtab.ident
+    ident = m.symtab.ident
     ident_str = b'asl/simple.a65'
-    assert ident_str == M.bytes(ident, len(ident_str))
+    assert ident_str == m.bytes(ident, len(ident_str))
     assert 0x240 == ident
 
-def test_brk(M, S):
-    assert 0x00 == M.byte(S.testbrk)
-    assert 0xFF == M.byte(S.testbrk+1), \
+def test_brk(m, S):
+    assert 0x00 == m.byte(S.testbrk)
+    assert 0xFF == m.byte(S.testbrk+1), \
         'redefined BRK should not add EA after 00'
 
-    assert 0x00 == M.byte(S.testbrkarg)
-    assert 0x38 == M.byte(S.testbrkarg+1)
-    assert 0xFE == M.byte(S.testbrkarg+2)
+    assert 0x00 == m.byte(S.testbrkarg)
+    assert 0x38 == m.byte(S.testbrkarg+1)
+    assert 0xFE == m.byte(S.testbrkarg+2)
 
-def test_addxy(M, R, S):
-    M.call(S.addxy, R(x=0x2A, y=0x33, C=1))
+def test_addxy(m, R, S):
+    m.call(S.addxy, R(x=0x2A, y=0x33, C=1))
     expected = 0x2A + 0x33
-    assert expected == M.byte(S.xybuf)
-    assert R(a=expected, x=0x2A, y=0x33) == M.regs
+    assert expected == m.byte(S.xybuf)
+    assert R(a=expected, x=0x2A, y=0x33) == m.regs
 
 @pytest.mark.parametrize('len', (1, 2, 16, 255))    # len must be at least 1
-def test_fill(M, R, S, len):
+def test_fill(m, R, S, len):
     base = 0x1234       # Fill does not include base address
 
     guard = b'\xFF\xFF'
-    M.deposit(base-2, [0xFF]*260)
+    m.deposit(base-2, [0xFF]*260)
 
     #   There's also a temporary symbol in here but we currently have
     #   neither a reliable way to access it or any good use for it.
-    M.depword(S.fillbase, base)
-    M.call(S.fill, R(y=len))
-    assert guard + b'\xFF' + bytes(len) + guard == M.bytes(base-2, len+5)
+    m.depword(S.fillbase, base)
+    m.call(S.fill, R(y=len))
+    assert guard + b'\xFF' + bytes(len) + guard == m.bytes(base-2, len+5)
 
-def test_negoff(M, R, S):
+def test_negoff(m, R, S):
     #   Show what negoff() calculates.
-    M.call(S.negoffcalc)
+    m.call(S.negoffcalc)
     print('no_data=${:04X} negoff=${:04X}'
-        .format(S.no_data, M.word(S.no_dbgaddr)))
+        .format(S.no_data, m.word(S.no_dbgaddr)))
 
     #   Confirm we have correct data in memory.
     assert [0xE0, b'0a5g8s', 0xE1] \
-        == [ M.byte(S.no_data-1),           # guard
-             bytes(M.bytes(S.no_data, 6)),  # string
-             M.byte(S.no_data+6),           # guard
+        == [ m.byte(S.no_data-1),           # guard
+             bytes(m.bytes(S.no_data, 6)),  # string
+             m.byte(S.no_data+6),           # guard
            ]
 
     #   Run the demo and confirm it worked.
-    M.call(S.negoffdemo, trace=True)
+    m.call(S.negoffdemo, trace=True)
     assert [0xE0, b'1b6h9t', 0xE1] \
-        == [ M.byte(S.no_data-1),           # guard
-             bytes(M.bytes(S.no_data, 6)),  # string
-             M.byte(S.no_data+6),           # guard
+        == [ m.byte(S.no_data-1),           # guard
+             bytes(m.bytes(S.no_data, 6)),  # string
+             m.byte(S.no_data+6),           # guard
            ]
-    assert R(x=0) == M.regs
+    assert R(x=0) == m.regs
 
-def test_chromatix_id(M, R):
-    M.call(M.symtab.chromatix_id)
+def test_chromatix_id(m, R):
+    m.call(m.symtab.chromatix_id)
     expa = ord('S')             # 65C02, this emulator is, apparently
-    assert R(a=expa) == M.regs
+    assert R(a=expa) == m.regs

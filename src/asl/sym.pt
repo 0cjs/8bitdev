@@ -3,7 +3,7 @@ import  pytest
 
 object_file = 'src/asl/sym.p'
 
-def test_eurosym(M, S):
+def test_eurosym(m, S):
     ' Test a symbol using a non-ASCII char from a western European language. '
-    M.call(S.test)
+    m.call(S.test)
     assert 295 == S.gerät

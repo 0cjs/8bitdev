@@ -7,14 +7,14 @@ if not exists('.all-tools'):
 
 object_file = 'asxxxx/reloctest'
 
-def test_relocaddr(M, S):
+def test_relocaddr(m, S):
     assert 0x400 == S.reloctest
     assert 0x40D == S.ident
 
-def test_global(M):
+def test_global(m):
     s = b'@[reloctest]@'
-    assert s == M.bytes(M.symtab.reloctest, len(s))
+    assert s == m.bytes(m.symtab.reloctest, len(s))
 
-def test_ident(M, S):
+def test_ident(m, S):
     ident_str = b'reloctest.a65'
-    assert ident_str == M.bytes(S.ident, len(ident_str))
+    assert ident_str == m.bytes(S.ident, len(ident_str))

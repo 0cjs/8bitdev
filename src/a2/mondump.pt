@@ -3,6 +3,6 @@ import  pytest
 
 object_file = 'src/a2/mondump.p'
 
-def test_dump(M, R, S):
-    M.call(S.hexdump, R(a=0))
-    assert R(a=0) == M.regs
+def test_dump(m, R, S):
+    m.call(S.hexdump, R(a=0))
+    assert R(a=0) == m.regs

@@ -3,13 +3,13 @@ import  pytest
 
 object_file = 'src/c64.p'
 
-def test_invscr(M, S):
-    M.deposit(0x3FF, [0]*1026)
-    M.call(S.invscr)
+def test_invscr(m, S):
+    m.deposit(0x3FF, [0]*1026)
+    m.call(S.invscr)
 
-    assert 0x00 == M.byte(0x3FF)
-    assert 0x80 == M.byte(0x400)
-    assert 0x80 == M.byte(0x7FF)
-    assert 0x00 == M.byte(0x800)
-    assert 0x0800 == M.word(S.addr)
+    assert 0x00 == m.byte(0x3FF)
+    assert 0x80 == m.byte(0x400)
+    assert 0x80 == m.byte(0x7FF)
+    assert 0x00 == m.byte(0x800)
+    assert 0x0800 == m.word(S.addr)
 

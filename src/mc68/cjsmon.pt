@@ -17,32 +17,32 @@ def loadbios(m, input=None, output=None):
     (0x00, b'0'), (0x01, b'1'), (0x0E, b'E'), (0x0F, b'F'),
     (0x10, b'0'), (0xFF, b'F'),
 ), ids=tmc_tid)
-def test_prnyb(M, S, R, val, char):
-    _, output = loadbios(M)
-    M.call(S.prnyb, R(a=val))
+def test_prnyb(m, S, R, val, char):
+    _, output = loadbios(m)
+    m.call(S.prnyb, R(a=val))
     assert char == output.getvalue()
 
 @pytest.mark.parametrize('val, chars', (
     (0x00, b'00'), (0x0F, b'0F'), (0xA0, b'A0'), (0xFF, b'FF'),
 ), ids=tmc_tid)
-def test_prhex(M, S, R, val, chars):
-    _, outchars = loadbios(M)
-    M.call(S.prhex, R(a=val))
+def test_prhex(m, S, R, val, chars):
+    _, outchars = loadbios(m)
+    m.call(S.prhex, R(a=val))
     assert chars == outchars.getvalue()
 
 ####################################################################
 
-def test_rdchar(M, R, S):
+def test_rdchar(m, R, S):
     ' Mostly confirms that our test framework works. '
     chars = b'!\x00\x7F'
-    inchars, _ = loadbios(M, chars)
+    inchars, _ = loadbios(m, chars)
     for char in chars:
-        M.call(S.rdchar, R(a=0xEA))
-        assert R(a=char) == M.regs
+        m.call(S.rdchar, R(a=0xEA))
+        assert R(a=char) == m.regs
 
     #   Document how an attempt to read past available input fails.
     with pytest.raises(EOFError) as ex:
-        M.call(S.rdchar)
+        m.call(S.rdchar)
     assert ex.match('No more input available')
 
 @pytest.mark.parametrize('buf, input', (
@@ -53,14 +53,14 @@ def test_rdchar(M, R, S):
     (b'ij',                 b'\b\xFFgh\b\b\b\bij\r'),
     (b'\x01\n\x1F\x7E',     b'\x01\x00\n\x00\x1F\x00\x7E\r'),
 ))
-def test_rdline(M, R, S, input, buf):
+def test_rdline(m, R, S, input, buf):
     TERM = b'END'
-    istream, ostream = loadbios(M, input + TERM)
-    M.deposit(S.rdlinebuf, b'\xA5'*40)
-    M.call(S.rdline)
+    istream, ostream = loadbios(m, input + TERM)
+    m.deposit(S.rdlinebuf, b'\xA5'*40)
+    m.call(S.rdline)
 
-    assert R(x=S.rdlinebuf, C=0) == M.regs
-    assert buf + b'\x00' == M.bytes(M.regs.x, len(buf)+1)
+    assert R(x=S.rdlinebuf, C=0) == m.regs
+    assert buf + b'\x00' == m.bytes(m.regs.x, len(buf)+1)
 
     assert TERM == istream.read(len(TERM))  # no unconsumed input
 
@@ -75,39 +75,39 @@ def test_rdline(M, R, S, input, buf):
 
     assert echo_of(input) == ostream.getvalue()
 
-def test_rdline_ctrlC(M, R, S):
-    istream, ostream = loadbios(M, b'pqr\bqp\x03END')
-    M.call(S.rdline)
+def test_rdline_ctrlC(m, R, S):
+    istream, ostream = loadbios(m, b'pqr\bqp\x03END')
+    m.call(S.rdline)
     assert [ R(x=S.rdlinebuf, C=1), b'pqqp\x00'             ] \
-        == [ M.regs,                M.bytes(M.regs.x, 5)    ]
+        == [ m.regs,                m.bytes(m.regs.x, 5)    ]
     assert b'END' == istream.read(3)
     assert b'pqr\bqp\a\n' == ostream.getvalue()   # BEL char sent
 
-def test_rdline_rubout_at_beginning(M, R, S):
-    istream, ostream = loadbios(M, b'\b\b\babc\b\r')
+def test_rdline_rubout_at_beginning(m, R, S):
+    istream, ostream = loadbios(m, b'\b\b\babc\b\r')
 
     #   Whatever happens to be just before the buffer may not be
     #   the best sentinel bytes, but we can't overwrite it because
     #   we don't know if something important might be there.
-    prebuf = M.bytes(S.rdlinebuf - 4, 4)
-    M.deposit(S.rdlinebuf, b'\xA5'*40)
+    prebuf = m.bytes(S.rdlinebuf - 4, 4)
+    m.deposit(S.rdlinebuf, b'\xA5'*40)
 
-    M.call(S.rdline)
-    assert R(x=S.rdlinebuf, C=0) == M.regs
-    assert prebuf + b'ab\x00' == M.bytes(M.regs.x - 4, 7)
+    m.call(S.rdline)
+    assert R(x=S.rdlinebuf, C=0) == m.regs
+    assert prebuf + b'ab\x00' == m.bytes(m.regs.x - 4, 7)
 
-def test_rdline_overflow(M, R, S):
+def test_rdline_overflow(m, R, S):
     buflen = S.rdlinebuf_end - S.rdlinebuf
     bufinput = b'_' * (buflen - 3) + b'yz'
-    istream, ostream = loadbios(M, bufinput + b'AB\r')
+    istream, ostream = loadbios(m, bufinput + b'AB\r')
 
-    postbuf = M.bytes(S.rdlinebuf_end, 4)
-    M.call(S.rdline)
+    postbuf = m.bytes(S.rdlinebuf_end, 4)
+    m.call(S.rdline)
 
     expected_buf = bufinput + b'\x00' + postbuf
-    actual_buf   = M.bytes(M.regs.x, len(expected_buf))
+    actual_buf   = m.bytes(m.regs.x, len(expected_buf))
     assert [ R(x=S.rdlinebuf, C=0), expected_buf,   ] \
-        == [ M.regs,                actual_buf,     ]
+        == [ m.regs,                actual_buf,     ]
 
     #   A BEL for each char rejected when the buffer was full.
     assert bufinput + b'\a\a\n' == ostream.getvalue()
@@ -125,53 +125,53 @@ def test_rdline_overflow(M, R, S):
     ( 7,  0, 0x0123,  4, b'01234'),
     ( 8,  0, 0xabcd,  4, b'aBcdE'),
 ), ids=tmc_tid)
-def test_qhexword(M, S, R, testno, N, result, consumed, input):
+def test_qhexword(m, S, R, testno, N, result, consumed, input):
     #   We re-use another routine's space.
     #   Change the address from test to test.
     buf = S.rdlinebuf + testno
-    M.deposit(buf, input + b'\x00')
-    print('buf=${:04X} {}'.format(buf, M.bytes(buf, len(input))), end='')
-    M.depword(S.hexword, 0x9999)    # definitely not our output value
+    m.deposit(buf, input + b'\x00')
+    print('buf=${:04X} {}'.format(buf, m.bytes(buf, len(input))), end='')
+    m.depword(S.hexword, 0x9999)    # definitely not our output value
 
-    M.call(S.qhexword, R(x=buf))
-    hexword = M.word(S.hexword)
-    print('\t\tX={:04X} N={} hexword=${:04X}'.format(M.x, M.N, hexword))
+    m.call(S.qhexword, R(x=buf))
+    hexword = m.word(S.hexword)
+    print('\t\tX={:04X} N={} hexword=${:04X}'.format(m.x, m.N, hexword))
 
-    assert R(x=buf+consumed) == M.regs
-    assert R(N=N) == M.regs
+    assert R(x=buf+consumed) == m.regs
+    assert R(N=N) == m.regs
     if N == 0: assert result == hexword
 
 ####################################################################
 
-def test_cmdloop_quitcmd(M, S, R):
+def test_cmdloop_quitcmd(m, S, R):
     ' Minimal path that gets us through to exit. '
-    istream, ostream = loadbios(M, b'Q\r')
+    istream, ostream = loadbios(m, b'Q\r')
     #   Because this plays tricks with the stack and RTS, we can't use
     #   call(). But we do have a single exit point, so we can stop there.
-    M.setregs(R(pc=S.cmdloop))
-    M.stepto(stopat=[S['cmdloop.rts']], stopon=[0x00], maxsteps=10000, trace=0)
+    m.setregs(R(pc=S.cmdloop))
+    m.stepto(stopat=[S['cmdloop.rts']], stopon=[0x00], maxsteps=10000, trace=0)
     assert b'\n? Q\n' ==  ostream.getvalue()
 
-def test_cmdloop_multicmd(M, S, R):
+def test_cmdloop_multicmd(m, S, R):
     ' Multiple command processing of the simplest possible commands. '
-    istream, ostream = loadbios(M, b'~~ ~Q\r')
-    M.setregs(R(pc=S.cmdloop))
-    M.stepto(stopat=[S['cmdloop.rts']], stopon=[0x00], maxsteps=10000)
+    istream, ostream = loadbios(m, b'~~ ~Q\r')
+    m.setregs(R(pc=S.cmdloop))
+    m.stepto(stopat=[S['cmdloop.rts']], stopon=[0x00], maxsteps=10000)
     #   XXX This is ugly. Because the space processing jumps to cmdloop.rts,
     #   but uses it for return to .parse, we need to run again to finish
     #   the command line parsing.
-    M.stepto(stopat=[S['cmdloop.rts']], stopon=[0x00], maxsteps=10000)
+    m.stepto(stopat=[S['cmdloop.rts']], stopon=[0x00], maxsteps=10000)
     assert b'\n? ~~ ~Q\n\x07\x07\x07' ==  ostream.getvalue()
 
-def test_cmdloop_dump(M, S, R):
-    istream, ostream = loadbios(M, b'a800\r 3Q\r')
-    M.deposit(0xA800, b'ABCDEFGH')
+def test_cmdloop_dump(m, S, R):
+    istream, ostream = loadbios(m, b'a800\r 3Q\r')
+    m.deposit(0xA800, b'ABCDEFGH')
 
-    M.setregs(R(pc=S.cmdloop))
-    M.stepto(stopat=[S['cmdloop.rts']], stopon=[0x00])
-    M.stepto(stopat=[S['cmdloop.rts']], stopon=[0x00])  # skip space
+    m.setregs(R(pc=S.cmdloop))
+    m.stepto(stopat=[S['cmdloop.rts']], stopon=[0x00])
+    m.stepto(stopat=[S['cmdloop.rts']], stopon=[0x00])  # skip space
 
-    print(M.regs, M.bytes(M.regs.sp-8, 8))
+    print(m.regs, m.bytes(m.regs.sp-8, 8))
     output = ostream.getvalue()
     print(output)
 
@@ -179,29 +179,29 @@ def test_cmdloop_dump(M, S, R):
     assert b'\n0003: ' in output
 
 @pytest.mark.skip
-def test_cmdloop_eachrts(M, S, R):
+def test_cmdloop_eachrts(m, S, R):
     ''' A (currently non-working) hack to do "selective trace," printing
         the current instruction, stack contents and buffer contents at a
         few points during execution.
     '''
     input = b'a800\r3Q\r'
     input = b'~ ~~Q\r'
-    istream, ostream = loadbios(M, input)
-    M.deposit(0xA800, b'ABCDEFGH')
+    istream, ostream = loadbios(m, input)
+    m.deposit(0xA800, b'ABCDEFGH')
 
-    stackbase = M.regs.sp + 1
+    stackbase = m.regs.sp + 1
     def showstack():
         return '{:02X}{:02X} {:02X}{:02X} {:02X}{:02X} {:02X}{:02X}' \
-            .format(*M.bytes(stackbase-8, 8))
+            .format(*m.bytes(stackbase-8, 8))
 
-    M.setregs(R(pc=S.cmdloop))
+    m.setregs(R(pc=S.cmdloop))
     level = 0
-    print('{}                {}'.format(M.regs, showstack()))
+    print('{}                {}'.format(m.regs, showstack()))
     while True:
-        M.stepto(stopon=[I.JSR, I.BSR, I.RTS, I.PSHA],
+        m.stepto(stopon=[I.JSR, I.BSR, I.RTS, I.PSHA],
             stopat=[ S['cmdloop.rts'], S['cmdloop.parse'] - 1 ])
-        r = M.regs
-        opcode = M.byte(r.pc)
+        r = m.regs
+        opcode = m.byte(r.pc)
         if   opcode == I.PSHA:
             level += 1
             inst = 'PSH'
@@ -209,16 +209,16 @@ def test_cmdloop_eachrts(M, S, R):
         elif opcode == I.JSR:
             level += 1
             inst = 'JSR'
-            dest = M.word(r.pc+1)
+            dest = m.word(r.pc+1)
         elif opcode == I.BSR:
             level += 1
             inst = 'BSR'
-            dest = r.pc + 2 + M.byte(r.pc+1)
+            dest = r.pc + 2 + m.byte(r.pc+1)
         else:
             level -= 1
             inst = 'RTS'
             dest = 0
         print('{} {:3d} {} {:04X}   {}   {}'
-            .format(r, level, inst, dest, showstack(), M.bytes(r.x, 6)))
+            .format(r, level, inst, dest, showstack(), m.bytes(r.x, 6)))
 
     assert 0

@@ -9,10 +9,10 @@ def loadbios(m, input=None, output=None):
     assert S['charinport'] == S['charoutport']
     return m.setiostreams(S.charinport, input, output)
 
-def test_hello(M, S, R):
-    istream, ostream = loadbios(M, b'a0\rb1\x03')
-    M.setregs(R(pc=S.hello))
-    M.stepto(stopon=[0x02])
+def test_hello(m, S, R):
+    istream, ostream = loadbios(m, b'a0\rb1\x03')
+    m.setregs(R(pc=S.hello))
+    m.stepto(stopon=[0x02])
 
     expected = (
         b'\nHello: '

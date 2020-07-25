@@ -2,31 +2,31 @@ from    testmc.mc6800  import  Machine
 
 object_file = 'src/mc68/simple.p'
 
-def test_machine_type(M, R):
+def test_machine_type(m, R):
     ' Confirm the framework loaded the correct machine '
     print('Expected Machine =', Machine)
-    assert Machine is type(M)
+    assert Machine is type(m)
 
     #   Ensure we can set and read 6800 registers.
-    M.setregs(R(b=13, x=0xABCD, H=True))
+    m.setregs(R(b=13, x=0xABCD, H=True))
     assert R(a=0, b=13, x=0xABCD, H=1, I=0, N=0, Z=0, V=0, C=0)
 
-def test_loaded_object_file(M, S, R):
+def test_loaded_object_file(m, S, R):
     ' Confirm that the correct object file was loaded. '
     ident_str = b'mc68/simple.a68'
-    assert ident_str == M.bytes(S.ident, len(ident_str))
+    assert ident_str == m.bytes(S.ident, len(ident_str))
     assert 0x180 == S.ident
 
     #   Asert loader set `pc` to entry point specified by END directive.
-    assert R(pc=S.set_a_ff) == M.regs
+    assert R(pc=S.set_a_ff) == m.regs
 
-def test_step(M, S, R):
-    assert R(a=0) == M.regs
-    M.setregs(R(pc=S.set_a_ff))
-    M.step(1)
-    assert R(a=0xFF) == M.regs
+def test_step(m, S, R):
+    assert R(a=0) == m.regs
+    m.setregs(R(pc=S.set_a_ff))
+    m.step(1)
+    assert R(a=0xFF) == m.regs
 
-def test_call(M, S, R):
-    assert R(a=0) == M.regs
-    M.call(S.set_a_ff)
-    assert R(a=0xFF) == M.regs
+def test_call(m, S, R):
+    assert R(a=0) == m.regs
+    m.call(S.set_a_ff)
+    assert R(a=0xFF) == m.regs

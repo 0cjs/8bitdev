@@ -2,11 +2,11 @@ from    testmc.mc6800  import  Machine, Instructions as I
 
 object_file = 'src/mc68/cpxtest.p'
 
-def test_cpxtest(M, S):
+def test_cpxtest(m, S):
     otlen = int((S.argstable_end - S.argstable) / 4)
-    assert b'\x00'*otlen == M.bytes(S.outtable, otlen), 'outtable before'
-    M.call(S.cpxtest)
-    assert S.outtable + otlen == M.word(S.outptr)
+    assert b'\x00'*otlen == m.bytes(S.outtable, otlen), 'outtable before'
+    m.call(S.cpxtest)
+    assert S.outtable + otlen == m.word(S.outptr)
 
     # Flag register bits: 11hiNZVc
     #    Flag bit values: N=8  Z=4  V=2
@@ -31,10 +31,10 @@ def test_cpxtest(M, S):
         b'\xC8',
         ])
 
-    assert testmc_expected == M.bytes(S.outtable, otlen), 'after'
+    assert testmc_expected == m.bytes(S.outtable, otlen), 'after'
 
 
-def test_cpxtest_debug(M, S, R):
+def test_cpxtest_debug(m, S, R):
     ''' This "test" executes to a breakpoint, printing out a trace of
         information at that point.
 
@@ -47,18 +47,18 @@ def test_cpxtest_debug(M, S, R):
     print('inptr x    arg  pcr outptr')
     data   = '{:04X}  {:04X} {:04X} {:02X}  {:04X}'
 
-    M.setregs(R(pc=S.cpxtest))
+    m.setregs(R(pc=S.cpxtest))
     breakpoint = S['cpxtest.breakpoint']
     while True:
-        M.stepto(stopat=[breakpoint], stopon=[I.RTS])
-        if M.regs.pc != breakpoint:
+        m.stepto(stopat=[breakpoint], stopon=[I.RTS])
+        if m.regs.pc != breakpoint:
             break   # not breakpoint; we're done
         print(data.format(
-            M.word(S.inptr),
-            M.regs.x,
-            M.word(S.arg),
-            M.regs.a,
-            M.word(S.outptr),
+            m.word(S.inptr),
+            m.regs.x,
+            m.word(S.arg),
+            m.regs.a,
+            m.word(S.outptr),
             ))
 
    #assert 0, 'done'    # print stdout, where we logged our trace

@@ -4,7 +4,7 @@ import  pytest
 from    testmc.pytest  import pytest_assertrepr_compare
 
 @pytest.fixture
-def M(request):
+def m(request):
     ''' A simulated machine with the object file loaded.
 
         The caller must have two global variables defined in its
@@ -15,28 +15,28 @@ def M(request):
           into the machine, relative to ``.build/obj/``.
     '''
     Machine = getattr(request.module, 'Machine')
-    M = Machine()
+    m = Machine()
     #   XXX This is probably not the best way to find this file; it makes
     #   this dependent on the CWD being the project root dir above .build/.
-    M.load('.build/obj/' + getattr(request.module, 'object_file'))
-    return M
+    m.load('.build/obj/' + getattr(request.module, 'object_file'))
+    return m
 
-#   These rely on pytest running the M() fixture only once per test, even
+#   These rely on pytest running the m() fixture only once per test, even
 #   though both these fixtures and the test itself use it. I'm not sure if
 #   this behaviour is documented, but it makes sense given that pytest
 #   maintains careful control over the scope (test/module/etc.) in which a
 #   fixture is used.
 
 @pytest.fixture
-def S(M):
+def S(m):
     ''' The `Machine.symtab` attribute of the machine object produced by
-        the `M` fixture.
+        the `m` fixture.
     '''
-    return M.symtab
+    return m.symtab
 
 @pytest.fixture
-def R(M):
+def R(m):
     ''' The `Machine.registers` attribute of the machine object produced by
-        the `M` fixture.
+        the `m` fixture.
     '''
-    return M.Registers
+    return m.Registers

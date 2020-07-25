@@ -1,0 +1,16 @@
+;   "Hello, world" for JR-200
+;
+;   This uses the default stack configuration.
+;   It ignores (we hope) the invalid opcode $02 at the end and continues
+;   on to the RTS, which returns to the monitor.
+
+            cpu 6800
+
+;   Place this 4K below the end of RAM, where it's unlikely
+;   to get stomped by small BASIC programs.
+;
+            org $7000
+
+            include "src/jr200/bios.a68"
+            include "src/mc68/hello.a68"
+            end hello

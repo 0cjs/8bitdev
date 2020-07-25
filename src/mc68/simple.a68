@@ -3,7 +3,7 @@
             cpu 6800
             org $180
 
-ident       byt "simple-a68.a68"    ; we use this to check that we've loaded
+ident       byt "mc68/simple.a68"   ; we use this to check that we've loaded
                                     ; the correct binary data and symbol table.
 
 ; ----------------------------------------------------------------------

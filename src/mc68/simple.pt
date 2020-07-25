@@ -1,6 +1,6 @@
 from    testmc.mc6800  import  Machine
 
-object_file = 'src/mc68/simple-a68.p'
+object_file = 'src/mc68/simple.p'
 
 def test_machine_type(M, R):
     ' Confirm the framework loaded the correct machine '
@@ -13,7 +13,7 @@ def test_machine_type(M, R):
 
 def test_loaded_object_file(M, S, R):
     ' Confirm that the correct object file was loaded. '
-    ident_str = b'simple-a68.a68'
+    ident_str = b'mc68/simple.a68'
     assert ident_str == M.bytes(S.ident, len(ident_str))
     assert 0x180 == S.ident
 

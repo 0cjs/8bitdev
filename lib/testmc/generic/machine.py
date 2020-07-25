@@ -73,46 +73,71 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
     ####################################################################
     #   Object code loading
 
-    def load_memimage(self, memimage):
+    def load_memimage(self, memimage, setPC=False):
+        ''' Load the given memimage. If `setPC` is `True` and
+            `memimage` has an entry point, the machine's program counter
+            will be set to that entry point. The entry point (or `None`)
+            is always returned.
+        '''
         for addr, data in memimage:
             self.deposit(addr, data)
-        self.setregs(self.Registers(pc=memimage.entrypoint))
+        if memimage.entrypoint is not None:
+            self.setregs(self.Registers(pc=memimage.entrypoint))
+        return memimage.entrypoint
 
-    def load(self, path):
-        ''' Load the given file and, if available, symbols. The Machine's
-            ``pc`` register will be set to the entry point of the loaded
-            binary. (XXX Currently this may be `None`.)
+    def load(self, path, mergestyle='prefcur', setPC=True):
+        ''' Load the given file and, if available, symbols. If the file
+            has an entry point it will be returned (otherwise `None`
+            is returned) and, if `setPC` is `True`, the program counter
+            will be set to that entry point.
 
-            The types of files this understands are:
+            The symbol table for the binary, if available, will be merged
+            with the machine's existing symbol table using `SymTab.merge()`
+            with the given `mergestyle` (default ``prefcur`` to add new
+            symbols only if they wouldn't override an existing symbol).
+
+            The symbols file is loaded from the same directory and base
+            filename as the input file. The types of files this understands
+            are:
             * ``.p`` output from Macroassembler AS and its associated
               ``.map`` file.
             * ``.bin`` CoCo binary format and associated ASxxxx ``.rst``
               linker listing file.
-
-            The symbol file is loaded from the same directory and base
-            filename as the input file.
         '''
         if path.lower().endswith('.p'):
             #   Assume it's Macro Assembler AS output.
-            self.load_memimage(asl.parse_obj_fromfile(path))
-            mapfile_path = path[0:-2] + '.map'
-            try:
-                self.symtab = asl.parse_symtab_fromfile(mapfile_path)
-            except FileNotFoundError as err:
-                print('WARNING: could not read symbol table file from path ' \
-                    + mapfile_path, file=stderr)
-                print('FileNotFoundError: ' + str(err), file=stderr)
+            image, symtab = self._load_asl(path)
         else:
             #   Assume it's the basename of ASxxxx toolchain output.
             #   (This should probably be changed to require something
             #   indicating this explicitly.)
-            self.load_memimage(asxxxx.parse_cocobin_fromfile(path + '.bin'))
-            try:
-                self.symtab = asxxxx.AxSymTab.readsymtabpath(path)
-            except FileNotFoundError as err:
-                print('WARNING: could not read symbol table file from path ' \
-                    + path, file=stderr)
-                print('FileNotFoundError: ' + str(err), file=stderr)
+            image, symtab = self._load_asxxxx(path)
+
+        entrypoint = self.load_memimage(image, setPC)
+        self.symtab.merge(symtab, style=mergestyle)
+        return entrypoint
+
+    def _load_asl(self, path):
+        image = asl.parse_obj_fromfile(path)
+        symtab = None
+        mapfile_path = path[0:-2] + '.map'
+        try:
+            symtab = asl.parse_symtab_fromfile(mapfile_path)
+        except FileNotFoundError as err:
+            print('WARNING: could not read symbol table file from path ' \
+                + mapfile_path, file=stderr)
+            print('FileNotFoundError: ' + str(err), file=stderr)
+        return image, symtab
+
+    def _load_asxxxx(self, path):
+        image = asxxxx.parse_cocobin_fromfile(path + '.bin')
+        try:
+            symtab = asxxxx.AxSymTab.readsymtabpath(path)
+        except FileNotFoundError as err:
+            print('WARNING: could not read symbol table file from path ' \
+                + path, file=stderr)
+            print('FileNotFoundError: ' + str(err), file=stderr)
+        return image, symtab
 
     ####################################################################
     #   Execution - abstract methods

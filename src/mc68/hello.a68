@@ -17,8 +17,8 @@ hello       jsr prnl
             bra .nextchar
 
 .exit       jsr prnl                ; simulator output starts on new line
-            fcb $02                 ; invalid opcode
--           bra -                   ; infinite loop
+            fcb $02                 ; invalid opcode causes simulator exit
+            rts                     ; JR-200 falls through and ret to monitor
 
 message     fcb "Hello: \0"
 

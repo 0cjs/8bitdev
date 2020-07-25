@@ -14,3 +14,8 @@ def test_rdchar(M, S, R):
     for char in ('~', '\n'):
         M.call(S.rdchar)
         assert R(a=ord(char)) == M.regs
+
+def test_prnl(M, S, R):
+    _, outchars = M.setiostreams(S.charoutport)
+    M.call(S.prnl)
+    assert b'\n' == outchars.getvalue()

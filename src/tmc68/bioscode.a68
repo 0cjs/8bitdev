@@ -47,4 +47,13 @@ rdchar      lda A,charinport
             rts
             assertdef rdchar
 
+;   Print a platform-appropriate newline.
+;   For Unix this is just an LF because output is not raw mode.
+            org prnl
+prnl        lda A,#$0A              ; LF
+            bsr prchar
+            rts
+
+
+
             endsection  ; tmc68_BIOS

@@ -5,23 +5,22 @@
 ;   opcode which should abort in a simulator; if it doesn't abort (as it
 ;   wouldn't on real hardware) the program goes into an infinite loop.
 
-hello       ldx #message
+hello       jsr prnl
+            ldx #message
             bsr prstr
 .nextchar   jsr rdchar
-            jsr prchar              ; echo char
             cmp A,#$03              ; Ctrl-C exits
             beq .exit
             cmp A,#$0D              ; CR prints hello again
-            bne .nextchar
-            lda A,#$0A              ; print LF (CR already echoed)
-            jsr prchar
-            bra hello
+            beq hello
+            jsr prchar              ; echo char
+            bra .nextchar
 
-.exit       bsr prnl                ; simulator output starts on new line
+.exit       jsr prnl                ; simulator output starts on new line
             fcb $02                 ; invalid opcode
 -           bra -                   ; infinite loop
 
-message     fcb "Hello, world.\r\n\0"
+message     fcb "Hello: \0"
 
 ;   Print the 0-terminated string pointed to by X.
 prstr       lda A,0,X
@@ -30,11 +29,3 @@ prstr       lda A,0,X
             inx
             bra prstr
 .done       rts
-
-prnl        lda A,#$0D              ; CR
-            jsr prchar
-            lda A,#$0A              ; LF
-            jsr prchar
-            rts
-
-

@@ -15,10 +15,10 @@ def test_hello(M, S, R):
     M.stepto(stopon=[0x02])
 
     expected = (
-        b'Hello, world.\r\n'
-        b'a0\r'
-        b'\n' b'Hello, world.\r\n'
-        b'b1\x03'
-        b'\r\n'
+        b'\nHello: '
+        b'a0'
+        b'\nHello: '
+        b'b1'
+        b'\n'
         )
     assert expected == ostream.getvalue()

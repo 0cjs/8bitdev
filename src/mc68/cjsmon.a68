@@ -1,0 +1,220 @@
+;   XXX something that should become a machine-language monitor one day
+
+            cpu 6800
+
+;   ASCII character definitions
+BEL         equ $07                 ; bell ('\a')
+BS          equ $08                 ; backspace ('\b')
+LF          equ $0A                 ; line feed ('\n')
+CR          equ $0D                 ; carriage return ('\r')
+SPACE       equ ' '
+DEL         equ $FF
+
+;   ♣A Print value in a as hex to the character output port.
+;   Falls through to prnyb.
+prhex       psh A
+            lsr A
+            lsr A
+            lsr A
+            lsr A
+            bsr prnyb
+            pul A
+            ; fallthrough
+
+;   ♣A Print lower nybble of A to the character output port.
+prnyb       and A,#$0F
+            add A,#'0'
+            cmp A,#'9'+1
+            bmi .digit
+            add A,#'A'-'9'-1
+.digit      jsr prchar
+            rts
+
+;   ♣A Print a space.
+prspace     lda A,#SPACE
+            jsr prchar
+            rts
+
+;   ♠X ♣A ♡B Read a line of user input, echoing each character.
+;   On return X will point to the chars read, terminated by $00,
+;   and the carry will be clear for CR termination, set for ^C termination.
+;
+;   The following characters are interpreted specially:
+;     - BS, DEL: if not at start of input, echo a BS and delete the
+;       previously entered character.
+;     - CR: echo a newline and return with C=0.
+;     - ^C: beep, echo a newline and return with C=1.
+;
+;   This uses its own buffer, rdlinebuf, which is overwritten with every call.
+;   When the buffer is full rdline will beep instead of accepting input chars.
+;
+rdline      ldx #rdlinebuf
+.nextchar   jsr rdchar
+            cmp A,#CR           ; done?
+            bne .continue
+            jsr prnl
+            clr ,X              ; clears carry
+.ret        ldx #rdlinebuf      ; no effect on carry
+            rts
+
+.continue   cmp  A,#$03         ; Ctrl-C
+            beq  .cancel
+            ;   If we're on the last byte of the buffer, we need to save that
+            ;   for the termination char. So just reject input at that point.
+            cpx #(rdlinebuf_end - 1)
+            bne .accept
+            jsr errbeep
+            bra .nextchar
+
+.accept     cmp  A,#$00         ; ignore NUL
+            beq  .nextchar
+            cmp  A,#BS
+            beq .backspace
+            cmp  A,#DEL
+            beq .backspace
+            sta A,0,X
+            inx
+.echo       jsr prchar
+            bra .nextchar
+
+.backspace  cpx #rdlinebuf
+            beq +               ; don't backspace past beginning of buffer
+            dex
++           lda A,#BS
+            bra .echo
+
+.cancel     ;   We terminate without storing the Ctrl-C char mainly
+            ;   because we don't know if we have space for it. We might
+            ;   be on the last byte of the buffer already.
+            clr ,X
+            jsr errbeep         ; beep to indicate cancel
+            jsr prnl
+            sec                 ; indicate input cancelled
+            bra .ret
+
+rdlinebuf   ds 160
+rdlinebuf_end
+
+; ----------------------------------------------------------------------
+
+tmp0        equ $E8             ; temp storage
+hexword     equ $EE             ; result location
+
+            include "src/mc68/qdigit.a68"
+
+;   ♠X,hexword ♣AB,tmp0 Parse an ASCII hex word at X, N=0 on success.
+;
+;   0-4 ASCII characters are parsed and X is left pointing at the first
+;   unparsed char. The parsed word, if any, is left in `hexword`.
+;   The N flag is clear if at least one digit is successfully parsed,
+;   set otherwise.
+;
+;   TODO Consider an alternative implementation (parametrizing the test to
+;   test both versions) to see if it may be shorter or faster to store by
+;   nybble to do less shifting. First digit goes into hexword nybble 3,
+;   second (if present) combines nybble 2 with 3, third (if present) goes
+;   straight into hexword nybble 1, and last, if present, combines into
+;   hexword nybble 0. Less ROL.
+;
+qhexword2 rts ; XXX
+;
+qhexword    lda B,#4            ; max digits to read
+qhex        clr A               ; current result: $0000
+            sta A,hexword
+            sta A,hexword+1
+            tpa                 ; current exit status: error (bit 7 set)
+            sta A,tmp0
+.nextchar   lda A,,X
+            bsr qdigit
+            bmi .exit           ; bad digit, return
+            cmp A,#$0F+1
+            bcc .exit           ; digit in base >16
+
+            clr tmp0            ; read at least 1 char; clear error status
+            inx                 ; consume this character
+            asl A               ; shift value to upper nybble
+            asl A
+            asl A
+            asl A
+            psh B
+            lda B,#4
+.shiftin    asl A               ; upper bit to carry
+            rol hexword+1       ; low bit into LSB
+            rol hexword         ; high bit into MSB
+            dec B
+            bne .shiftin
+            pul B
+            dec B
+            bne .nextchar
+.exit       lda A,tmp0          ; update error status flag
+            rts
+
+; ----------------------------------------------------------------------
+
+LSB         function addr,(addr & $FF)
+MSB         function addr,((addr & $FF00) >> 8)
+
+cmdqptr     rmb 2               ; current parsing loc in command input buffer
+
+;   A simple command loop to demo this stuff.
+cmdloop
+            jsr prnl
+            lda A,#'?'
+            jsr prchar
+            jsr prspace
+            jsr rdline
+            stx cmdqptr
+.parse      lda A,#LSB(.parse)  ; We jump to service routines and they
+            psh A               ;   RTS back to .parse to continue parsing
+            lda A,#MSB(.parse)  ;   the command line.
+            psh A
+            ldx cmdqptr         ; routines that consume must update cmdqptr
+            ;   From here, we branch to routines that return to .parse with RTS.
+            jsr qhexword
+            bpl hexdump         ; parsed hexword
+            ;   Consume a char and parse it as a command.
+            ;   (Callees who need to know the char parsed may DEX to get it.)
+            lda A,0,X
+            inx
+            stx cmdqptr
+            cmp A,#' '
+            beq .rts            ; ignore spaces
+            cmp A,#'~'
+            beq beepcmd
+            ;   No subroutine to call; take .parse return address off stack.
+            pul B
+            pul B
+            ;   We must have a quit command or an error.
+            cmp A,#'Q'
+            beq .rts
+            jsr errbeep         ; bad command
+            bra cmdloop
+.quit       pul A               ; get rid of .parse return address
+            pul A
+.rts        rts
+
+beepcmd:    ;   "null" command just beeps; used by unit tests
+            jsr errbeep
+            rts
+
+hexdump     stx cmdqptr         ; XXX because not done by main for qhexword
+            lda A,hexword       ; addr hi
+            jsr prhex
+            lda A,hexword+1     ; addr lo
+            jsr prhex
+            lda A,#':'
+            jsr prchar
+
+            ldx hexword
+            lda B,#8            ; bytes to print
+.loop       jsr prspace
+            lda A,,X
+            jsr prhex
+            inx
+            dec B
+            bne .loop
+            jsr prnl
+            rts
+
+
+; ----------------------------------------------------------------------

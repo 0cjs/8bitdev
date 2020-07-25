@@ -184,6 +184,7 @@ asbuild src/asl/simple.a65  ';  Unit Test Assembly' '   org $240'
 asbuild src/mc68/simple-a68.a68
 asbuild src/tmc68/bioscode.a68
 
+asbuild src/m65/qdigit.a65      '  cpu 6502' '  org $400'
 asbuild src/m65/stdtest.a65     \
     '   cpu 6502' '   include "src/m65/std.a65"' '   org $240'
 asbuild src/m65/objects.a65     \
@@ -191,6 +192,7 @@ asbuild src/m65/objects.a65     \
 asbuild src/m65/bigint.a65      \
     '   cpu 6502' '   include "src/m65/std.a65"' '   org $1000'
 
+asbuild src/mc68/qdigit.a68     '  cpu 6800' '  org $400'
 asbuild src/mc68/hello.a68      \
     '   cpu 6800' '    include "src/tmc68/bios.a68"' '   org $800'
 

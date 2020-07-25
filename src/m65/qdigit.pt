@@ -1,0 +1,12 @@
+from    testmc.m6502 import  Machine
+import  pytest
+
+object_file = 'src/m65/qdigit.p'
+
+pytest.register_assert_rewrite('qdigit')
+from qdigit import (
+    test_qdigit_good                as test_qdigit_good_6502,
+    test_qdigit_good_exhaustive     as test_qdigit_good_exhaustive_6502,
+    test_qdigit_error               as test_qdigit_error_6502,
+    test_qdigit_error_exhaustive    as test_qdigit_error_exhaustive_6502,
+    )

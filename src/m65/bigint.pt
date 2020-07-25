@@ -5,18 +5,6 @@ from    itertools import chain, count
 object_file = 'src/m65/bigint.p'
 
 ####################################################################
-#   Tests: convascdigit
-
-pytest.register_assert_rewrite('bigint')
-from bigint import (
-    test_convascdigit_good as test_convascdigit_good_6502,
-    test_convascdigit_good_exhaustive as test_convascdigit_good_exhaustive_6502,
-    test_convascdigit_error as test_convascdigit_error_6502,
-    test_convascdigit_error_exhaustive as test_convascdigit_error_exhaustive_6502,
-    )
- 
-
-####################################################################
 #   Tests: readhex
 
 #   Buffers used for testing deliberately cross page boundaries.

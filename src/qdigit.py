@@ -1,10 +1,5 @@
-''' bigint tests common to 6502, 6800, etc.
-'''
 from    itertools import chain, count
 import  pytest
-
-####################################################################
-#   Tests: convascdigit
 
 @pytest.mark.parametrize('char, num', [
     ('0', 0),  ('1', 1),    ('8', 8),  ('9', 9),
@@ -12,8 +7,8 @@ import  pytest
     ('G',16),  ('g',16),    ('Z',35),  ('z',35),
     ('_', 40), ('\x7F', 40)
 ])
-def test_convascdigit_good(M, R, char, num):
-    M.call(M.symtab.convascdigit, R(a=ord(char), N=1))
+def test_qdigit_good(M, R, char, num):
+    M.call(M.symtab.qdigit, R(a=ord(char), N=1))
     assert R(a=num, N=0) == M.regs
 
 @pytest.mark.parametrize('char', [
@@ -22,11 +17,11 @@ def test_convascdigit_good(M, R, char, num):
     '\xAF', '\xB0', '\xB9', '\xBa',     # MSb set: '/', '0', '9', ':'
     '\xDA', '\xFa', '\xFF',             # MSb set: 'Z', 'z'
     ])
-def test_convascdigit_error(M, R, char):
-    M.call(M.symtab.convascdigit, R(a=ord(char), N=0))
+def test_qdigit_error(M, R, char):
+    M.call(M.symtab.qdigit, R(a=ord(char), N=0))
     assert R(N=1) == M.regs
 
-def test_convascdigit_good_exhaustive(M, R):
+def test_qdigit_good_exhaustive(M, R):
     ''' Exhaustive test of all good values.
 
         Not just because we're nervous types, but also because these are
@@ -41,7 +36,7 @@ def test_convascdigit_good_exhaustive(M, R):
         return range(ord(a), ord(z)+1)
     def readasc(a):
         print('{:02X}'.format(char), end=' ')
-        M.call(M.symtab.convascdigit, R(a=a, N=1))
+        M.call(M.symtab.qdigit, R(a=a, N=1))
         return M.regs
 
     for num,char in zip(count(0), ordrange('0','9')):
@@ -54,9 +49,9 @@ def test_convascdigit_good_exhaustive(M, R):
         assert R(a=num, N=0) == readasc(char), \
             'failed on input ${:02X} {}'.format(char, repr(chr(char)))
 
-def test_convascdigit_error_exhaustive(M, R):
+def test_qdigit_error_exhaustive(M, R):
     ''' Exhaustive test of all bad values.
-        See further comments on `test_convascdigit_good_exhaustive`.
+        See further comments on `test_qdigit_good_exhaustive`.
     '''
     badchars = chain(
         range(0,          ord('0')),
@@ -65,6 +60,6 @@ def test_convascdigit_error_exhaustive(M, R):
         range(ord('\x7F')+1,  255 ),
         )
     for char in badchars:
-        M.call(M.symtab.convascdigit, R(a=char, N=0))
+        M.call(M.symtab.qdigit, R(a=char, N=0))
         assert R(N=1) == M.regs, \
             'input ${:02X} {} should be bad'.format(char, repr(chr(char)))

@@ -1,0 +1,16 @@
+;   ♠A ♡BX Convert ASCII character to binary number in bases up to 41.
+;   Returns N flag clear and binary digit in A, or N set on error.
+;
+;   This translates A-Z[\]^_ and a-z{|}~DEL as 10, 11...40. The caller
+;   must check the returned value if the intended base was less than 41.
+;
+qdigit      cmp A,#'9'+1
+            bcc .letter         ; >9, convert letter
+            sub A,#'0'          ; convert digit, N set if <0
+            rts
+.letter
+            and A,#%11011111    ; clear bit 5 to convert to upper-case
+            bmi .exit           ; high bit set, error
+            sub A,#'A'-$0A
+            cmp A,#$0A          ; set N if < $0A
+.exit       rts

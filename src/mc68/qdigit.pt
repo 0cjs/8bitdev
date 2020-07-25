@@ -1,0 +1,14 @@
+from    testmc.mc6800 import  Machine
+import  pytest
+
+object_file = 'src/mc68/qdigit.p'
+
+
+pytest.register_assert_rewrite('qdigit')
+from qdigit import (
+    test_qdigit_good                as test_qdigit_good_6800,
+    test_qdigit_good_exhaustive     as test_qdigit_good_exhaustive_6800,
+    test_qdigit_error               as test_qdigit_error_6800,
+    test_qdigit_error_exhaustive    as test_qdigit_error_exhaustive_6800,
+    )
+

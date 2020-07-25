@@ -132,25 +132,10 @@ rdlinebuf_end
 
 ; ----------------------------------------------------------------------
 
-;   ♠A ♡BX Same interface as convascdigit in bigint.a65.
-;   Returns N flag clear and binary digit in A, or N set on error.
-;
-convascdigit
-            cmp A,#'9'+1
-            bcc .letter         ; >9, convert letter
-            sub A,#'0'          ; convert digit, N set if <0
-            rts
-.letter
-            and A,#%11011111    ; clear bit 5 to convert to upper-case
-            bmi .exit           ; high bit set, error
-            sub A,#'A'-$0A
-            cmp A,#$0A          ; set N if < $0A
-.exit       rts
-
-; ----------------------------------------------------------------------
-
 tmp0        equ $E8             ; temp storage
 hexword     equ $EE             ; result location
+
+            include "src/mc68/qdigit.a68"
 
 ;   ♠X,hexword ♣AB,tmp0 Parse an ASCII hex word at X, N=0 on success.
 ;
@@ -175,7 +160,7 @@ qhex        clr A               ; current result: $0000
             tpa                 ; current exit status: error (bit 7 set)
             sta A,tmp0
 .nextchar   lda A,,X
-            bsr convascdigit
+            bsr qdigit
             bmi .exit           ; bad digit, return
             cmp A,#$0F+1
             bcc .exit           ; digit in base >16

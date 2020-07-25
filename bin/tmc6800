@@ -43,9 +43,11 @@ def consoleio(_addr, char):
         stdout.buffer.flush()
 
 def setupIO(m):
-    ''' Set up `charoutport` for writes to stdout and `charinport` for
-        blocking reads from stdin.
+    ''' Load the BIOS and set up `charoutport` for writes to stdout and
+        `charinport` for blocking reads from stdin.
     '''
+    bioscode = join(BASEDIR, '.build/obj/src/tmc68/bioscode.p')
+    m.load(bioscode, mergestyle='prefcur', setPC=False)
     m.setio(0xC000, consoleio)
 
 def exec(fname):

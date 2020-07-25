@@ -51,8 +51,12 @@ rdchar      lda A,charinport
 ;   For Unix this is just an LF because output is not raw mode.
             org prnl
 prnl        lda A,#$0A              ; LF
-            bsr prchar
-            rts
+            bra prchar              ; RTS
             assertdef prnl
+
+            org errbeep
+errbeep     lda A,#$07              ; BEL
+            bra prchar              ; RTS
+            assertdef errbeep
 
             endsection  ; tmc68_BIOS

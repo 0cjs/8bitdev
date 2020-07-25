@@ -21,4 +21,4 @@ prstr8          equ $EFF9   ; ♠X print bit-7-set-terminated string
 prstr0b         equ $F002   ; ♠X prstr0 unless prb_quiet ≠ $00
 prstr0          equ $F006   ; ♠X print $00-terminated string
 prnl            equ $F00F   ;    print a newline
-errbeep         equ $F05F
+errbeep         equ $F05F   ; ♣ABX sound an error tone

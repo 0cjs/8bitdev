@@ -210,7 +210,6 @@ def stabm(m):   m.mem[readword(m)]  = logicNZV(m, m.b)
 def stabx(m):   m.mem[readindex(m)] = logicNZV(m, m.b)
 
 def st16target(m, val, target0):
-    print('val=${:04X}'.format(val))
     target1 = incword(target0, 1)
     m.mem[target0] = val >> 8
     m.mem[target1] = val & 0xFF

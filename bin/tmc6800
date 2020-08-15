@@ -56,8 +56,11 @@ def setupIO(m):
 
 def exec(fname):
     m = Machine()
-    m.load(fname)
+    entrypoint = m.load(fname)
     setupIO(m)
+    if entrypoint is None:
+        #   No entrypoint in object file; start at reset vector.
+        m.setregs(m.Registers(pc=m.word(0xFFFE)))
     try:
         while True: m.step()
     except Exception as ex:

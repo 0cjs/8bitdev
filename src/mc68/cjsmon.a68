@@ -1,5 +1,12 @@
 ;   XXX something that should become a machine-language monitor one day
 
+; ----------------------------------------------------------------------
+;   Standard functions, macros and definitions
+;   (Much of this should probably be moved to `stddef`.)
+
+LSB         function addr,(addr & $FF)
+MSB         function addr,((addr & $FF00) >> 8)
+
 ;   ASCII character definitions
 BEL         equ $07                 ; bell ('\a')
 BS          equ $08                 ; backspace ('\b')
@@ -8,30 +15,77 @@ CR          equ $0D                 ; carriage return ('\r')
 SPACE       equ ' '
 DEL         equ $FF
 
-;   ♣A Print value in a as hex to the character output port.
-;   Falls through to prnyb.
-prhex       psh A
-            lsr A
-            lsr A
-            lsr A
-            lsr A
-            bsr prnyb
-            pul A
-            ; fallthrough
+; ----------------------------------------------------------------------
+;   Command loop
 
-;   ♣A Print lower nybble of A to the character output port.
-prnyb       and A,#$0F
-            add A,#'0'
-            cmp A,#'9'+1
-            bmi .digit
-            add A,#'A'-'9'-1
-.digit      jsr prchar
-            rts
-
-;   ♣A Print a space.
-prspace     lda A,#SPACE
+;   A simple command loop to demo this stuff.
+cmdloop
+            jsr prnl
+            lda A,#'?'
             jsr prchar
+            jsr prspace
+            jsr rdline
+            stx cmdqptr
+.parse      lda A,#LSB(.parse)  ; We jump to service routines and they
+            psh A               ;   RTS back to .parse to continue parsing
+            lda A,#MSB(.parse)  ;   the command line.
+            psh A
+            ldx cmdqptr         ; routines that consume must update cmdqptr
+            ;   From here, we branch to routines that return to .parse with RTS.
+            jsr qhexword
+            bpl hexdump         ; parsed hexword
+            ;   Consume a char and parse it as a command.
+            ;   (Callees who need to know the char parsed may DEX to get it.)
+            lda A,0,X
+            inx
+            stx cmdqptr
+            cmp A,#' '
+            beq .rts            ; ignore spaces
+            cmp A,#'~'
+            beq beepcmd
+            ;   No subroutine to call; take .parse return address off stack.
+            pul B
+            pul B
+            ;   We must have a quit command or an error.
+            cmp A,#'Q'
+            beq .rts
+            jsr errbeep         ; bad command
+            bra cmdloop
+.quit       pul A               ; get rid of .parse return address
+            pul A
+.rts        rts
+
+cmdqptr     rmb 2               ; current parsing loc in command input buffer
+
+; ----------------------------------------------------------------------
+;   Commands
+
+;   "null" command just beeps; used by unit tests
+beepcmd:    jsr errbeep
             rts
+
+;
+hexdump     stx cmdqptr         ; XXX because not done by main for qhexword
+            lda A,hexword       ; addr hi
+            jsr prhex
+            lda A,hexword+1     ; addr lo
+            jsr prhex
+            lda A,#':'
+            jsr prchar
+
+            ldx hexword
+            lda B,#8            ; bytes to print
+.loop       jsr prspace
+            lda A,,X
+            jsr prhex
+            inx
+            dec B
+            bne .loop
+            jsr prnl
+            rts
+
+; ----------------------------------------------------------------------
+;   rd* - read input
 
 ;   ♠X ♣A ♡B Read a line of user input, echoing each character.
 ;   On return X will point to the chars read, terminated by $00,
@@ -94,6 +148,7 @@ rdlinebuf   ds 160
 rdlinebuf_end
 
 ; ----------------------------------------------------------------------
+;   q* - parsing
 
 tmp0        equ $E8             ; temp storage
 hexword     equ $EE             ; result location
@@ -148,71 +203,30 @@ qhex        clr A               ; current result: $0000
             rts
 
 ; ----------------------------------------------------------------------
+;   pr* - printing output
 
-LSB         function addr,(addr & $FF)
-MSB         function addr,((addr & $FF00) >> 8)
-
-cmdqptr     rmb 2               ; current parsing loc in command input buffer
-
-;   A simple command loop to demo this stuff.
-cmdloop
-            jsr prnl
-            lda A,#'?'
-            jsr prchar
-            jsr prspace
-            jsr rdline
-            stx cmdqptr
-.parse      lda A,#LSB(.parse)  ; We jump to service routines and they
-            psh A               ;   RTS back to .parse to continue parsing
-            lda A,#MSB(.parse)  ;   the command line.
-            psh A
-            ldx cmdqptr         ; routines that consume must update cmdqptr
-            ;   From here, we branch to routines that return to .parse with RTS.
-            jsr qhexword
-            bpl hexdump         ; parsed hexword
-            ;   Consume a char and parse it as a command.
-            ;   (Callees who need to know the char parsed may DEX to get it.)
-            lda A,0,X
-            inx
-            stx cmdqptr
-            cmp A,#' '
-            beq .rts            ; ignore spaces
-            cmp A,#'~'
-            beq beepcmd
-            ;   No subroutine to call; take .parse return address off stack.
-            pul B
-            pul B
-            ;   We must have a quit command or an error.
-            cmp A,#'Q'
-            beq .rts
-            jsr errbeep         ; bad command
-            bra cmdloop
-.quit       pul A               ; get rid of .parse return address
+;   ♣A Print value in a as hex to the character output port.
+;   Falls through to prnyb.
+prhex       psh A
+            lsr A
+            lsr A
+            lsr A
+            lsr A
+            bsr prnyb
             pul A
-.rts        rts
+            ; fallthrough
 
-beepcmd:    ;   "null" command just beeps; used by unit tests
-            jsr errbeep
+;   ♣A Print lower nybble of A to the character output port.
+prnyb       and A,#$0F
+            add A,#'0'
+            cmp A,#'9'+1
+            bmi .digit
+            add A,#'A'-'9'-1
+.digit      jsr prchar
             rts
 
-hexdump     stx cmdqptr         ; XXX because not done by main for qhexword
-            lda A,hexword       ; addr hi
-            jsr prhex
-            lda A,hexword+1     ; addr lo
-            jsr prhex
-            lda A,#':'
+;   ♣A Print a space.
+prspace     lda A,#SPACE
             jsr prchar
-
-            ldx hexword
-            lda B,#8            ; bytes to print
-.loop       jsr prspace
-            lda A,,X
-            jsr prhex
-            inx
-            dec B
-            bne .loop
-            jsr prnl
             rts
 
-
-; ----------------------------------------------------------------------

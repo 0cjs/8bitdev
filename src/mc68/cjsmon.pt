@@ -12,6 +12,7 @@ def loadbios(m, input=None, output=None):
     return m.setiostreams(S.charinport, input, output)
 
 ####################################################################
+#   pr* - printing output
 
 @pytest.mark.parametrize('val, char', (
     (0x00, b'0'), (0x01, b'1'), (0x0E, b'E'), (0x0F, b'F'),
@@ -31,6 +32,37 @@ def test_prhex(m, S, R, val, chars):
     assert chars == outchars.getvalue()
 
 ####################################################################
+#   q* - parsing
+
+@pytest.mark.parametrize('testno, N, result, consumed, input', (
+    ( 0,  1, 0xDEAD,  0, b''),
+    ( 1,  1, 0xDEAD,  0, b'G'),
+    ( 2,  1, 0xDEAD,  0, b'g'),
+    ( 3,  0, 0x000F,  1, b'F'),
+    ( 4,  0, 0x00A0,  2, b'A0'),
+    ( 5,  0, 0x0B19,  3, b'B19'),
+    ( 6,  0, 0x1234,  4, b'1234'),
+    ( 7,  0, 0x0123,  4, b'01234'),
+    ( 8,  0, 0xabcd,  4, b'aBcdE'),
+), ids=tmc_tid)
+def test_qhexword(m, S, R, testno, N, result, consumed, input):
+    #   We re-use another routine's space.
+    #   Change the address from test to test.
+    buf = S.rdlinebuf + testno
+    m.deposit(buf, input + b'\x00')
+    print('buf=${:04X} {}'.format(buf, m.bytes(buf, len(input))), end='')
+    m.depword(S.hexword, 0x9999)    # definitely not our output value
+
+    m.call(S.qhexword, R(x=buf))
+    hexword = m.word(S.hexword)
+    print('\t\tX={:04X} N={} hexword=${:04X}'.format(m.x, m.N, hexword))
+
+    assert R(x=buf+consumed) == m.regs
+    assert R(N=N) == m.regs
+    if N == 0: assert result == hexword
+
+####################################################################
+#   rd* - read input
 
 def test_rdchar(m, R, S):
     ' Mostly confirms that our test framework works. '
@@ -113,35 +145,7 @@ def test_rdline_overflow(m, R, S):
     assert bufinput + b'\a\a\n' == ostream.getvalue()
 
 ####################################################################
-
-@pytest.mark.parametrize('testno, N, result, consumed, input', (
-    ( 0,  1, 0xDEAD,  0, b''),
-    ( 1,  1, 0xDEAD,  0, b'G'),
-    ( 2,  1, 0xDEAD,  0, b'g'),
-    ( 3,  0, 0x000F,  1, b'F'),
-    ( 4,  0, 0x00A0,  2, b'A0'),
-    ( 5,  0, 0x0B19,  3, b'B19'),
-    ( 6,  0, 0x1234,  4, b'1234'),
-    ( 7,  0, 0x0123,  4, b'01234'),
-    ( 8,  0, 0xabcd,  4, b'aBcdE'),
-), ids=tmc_tid)
-def test_qhexword(m, S, R, testno, N, result, consumed, input):
-    #   We re-use another routine's space.
-    #   Change the address from test to test.
-    buf = S.rdlinebuf + testno
-    m.deposit(buf, input + b'\x00')
-    print('buf=${:04X} {}'.format(buf, m.bytes(buf, len(input))), end='')
-    m.depword(S.hexword, 0x9999)    # definitely not our output value
-
-    m.call(S.qhexword, R(x=buf))
-    hexword = m.word(S.hexword)
-    print('\t\tX={:04X} N={} hexword=${:04X}'.format(m.x, m.N, hexword))
-
-    assert R(x=buf+consumed) == m.regs
-    assert R(N=N) == m.regs
-    if N == 0: assert result == hexword
-
-####################################################################
+#   Command loop
 
 def test_cmdloop_quitcmd(m, S, R):
     ' Minimal path that gets us through to exit. '

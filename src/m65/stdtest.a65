@@ -4,12 +4,7 @@
             ;cpu 6502
             ;include "src/m65/std.a65"
 
-;   DS/DB/DW
-defalloctest
-dstest0     ds  3
-dstest1     ds  1
-dbtest      db  $00,"abc",[2]$FF
-dwtest      dw  $ABCD
+            include src/stdtest.asm
 
 ;   ZDS
 zdstest0    db  $F0     ; byte at current location

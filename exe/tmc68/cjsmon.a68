@@ -1,0 +1,11 @@
+;   cjsmon for `testmc.mc6800` simulator.
+
+            cpu 6800
+            include "src/mc68/std.a68"
+            include "src/tmc68/bios.a68"    ; bin/tmc6800 will load bioscode
+
+            org $F000       ; monitor in top 4 KB
+            include "src/mc68/cjsmon.a68"
+
+            ds mvec_RESET-*
+            dw cmdloop          ; reset vector: monitor entry point

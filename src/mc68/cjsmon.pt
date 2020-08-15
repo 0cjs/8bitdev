@@ -154,7 +154,7 @@ def test_cmdloop_quitcmd(m, S, R):
     #   call(). But we do have a single exit point, so we can stop there.
     m.setregs(R(pc=S.cmdloop))
     m.stepto(stopat=[S['cmdloop.rts']], stopon=[0x00], maxsteps=10000, trace=0)
-    assert b'\n? Q\n' ==  ostream.getvalue()
+    assert b'\n> Q\n' ==  ostream.getvalue()
 
 def test_cmdloop_multicmd(m, S, R):
     ' Multiple command processing of the simplest possible commands. '
@@ -165,7 +165,7 @@ def test_cmdloop_multicmd(m, S, R):
     #   but uses it for return to .parse, we need to run again to finish
     #   the command line parsing.
     m.stepto(stopat=[S['cmdloop.rts']], stopon=[0x00], maxsteps=10000)
-    assert b'\n? ~~ ~Q\n\x07\x07\x07' ==  ostream.getvalue()
+    assert b'\n> ~~ ~Q\n\x07\x07\x07' ==  ostream.getvalue()
 
 def test_cmdloop_dump(m, S, R):
     istream, ostream = loadbios(m, b'a800\r 3Q\r')

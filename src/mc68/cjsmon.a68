@@ -18,20 +18,32 @@ DEL         equ $FF
 ; ----------------------------------------------------------------------
 ;   Command loop
 
+PROMPT      equ '>'
+
 ;   A simple command loop to demo this stuff.
 cmdloop
-            jsr prnl
-            lda A,#'?'
+            jsr prnl            ; Not clear that we should always be starting
+                                ;   with a newline, rather than having commands
+                                ;   terminate their output with one.
+            lda A,#PROMPT
             jsr prchar
             jsr prspace
             jsr rdline
             stx cmdqptr
-.parse      lda A,#LSB(.parse)  ; We jump to service routines and they
-            psh A               ;   RTS back to .parse to continue parsing
-            lda A,#MSB(.parse)  ;   the command line.
+
+.parse      ;   Standard commands will RTS when done; we set up the stack
+            ;   so that after we JMP to them they will come back here where
+            ;   we will continue parsing the remainder of the command line.
+            ;   (Essentially, continuation-passing style.)
+            lda A,#LSB(.parse)
             psh A
-            ldx cmdqptr         ; routines that consume must update cmdqptr
-            ;   From here, we branch to routines that return to .parse with RTS.
+            lda A,#MSB(.parse)
+            psh A
+            ;   So that commands need not worry about preserving X, we share
+            ;   the current parsing position with them in cmdqptr, which they
+            ;   must update if they do further parsing.
+            ldx cmdqptr
+
             jsr qhexword
             bpl hexdump         ; parsed hexword
             ;   Consume a char and parse it as a command.
@@ -40,7 +52,7 @@ cmdloop
             inx
             stx cmdqptr
             cmp A,#' '
-            beq .rts            ; ignore spaces
+            beq .rts            ; ignore spaces: return to .parse
             cmp A,#'~'
             beq beepcmd
             ;   No subroutine to call; take .parse return address off stack.
@@ -55,6 +67,9 @@ cmdloop
             pul A
 .rts        rts
 
+;   Current parse point in command input buffer.
+;   This may be updated by commands that parse data after the command letter,
+;   but it must not be moved past the terminating `0`.
 cmdqptr     rmb 2               ; current parsing loc in command input buffer
 
 ; ----------------------------------------------------------------------

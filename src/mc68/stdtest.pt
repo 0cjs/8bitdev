@@ -1,0 +1,9 @@
+from    testmc.mc6800  import Machine
+import  pytest
+
+object_file = 'src/mc68/stdtest.p'
+
+pytest.register_assert_rewrite('stdtest')
+from stdtest import (
+    test_ds_db_dw               as test_ds_db_dw_6800
+    )

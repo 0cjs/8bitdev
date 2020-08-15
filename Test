@@ -214,9 +214,11 @@ asbuild src/mc68/simple.a68
 asbuild src/tmc68/bioscode.a68
 
 #   "Library" routines
-astest src/m65/stdtest.a65
+astest  src/m65/stdtest.a65
+astest src/mc68/stdtest.a68
 astest  src/m65/qdigit.a65
 astest src/mc68/qdigit.a68
+
 astest src/m65/objects.a65
 astest src/m65/bigint.a65
 

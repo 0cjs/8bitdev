@@ -1,0 +1,7 @@
+;   test code for std.a68 include file
+
+            ;   This is done automatically by the test framework.
+            ;cpu 6800
+            ;include "src/mc68/std.a68"
+
+            include src/stdtest.asm

@@ -70,7 +70,7 @@ cmdloop
 ;   Current parse point in command input buffer.
 ;   This may be updated by commands that parse data after the command letter,
 ;   but it must not be moved past the terminating `0`.
-cmdqptr     rmb 2               ; current parsing loc in command input buffer
+cmdqptr     ds  2               ; current parsing loc in command input buffer
 
 ; ----------------------------------------------------------------------
 ;   Commands

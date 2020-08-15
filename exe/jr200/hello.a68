@@ -5,6 +5,7 @@
 ;   on to the RTS, which returns to the monitor.
 
             cpu 6800
+            include "src/mc68/std.a68"
 
 ;   Place this 4K below the end of RAM, where it's unlikely
 ;   to get stomped by small BASIC programs.

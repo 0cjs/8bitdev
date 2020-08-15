@@ -17,10 +17,10 @@ hello       jsr prnl
             bra .nextchar
 
 .exit       jsr prnl                ; simulator output starts on new line
-            fcb $02                 ; invalid opcode causes simulator exit
+            db  $02                 ; invalid opcode causes simulator exit
             rts                     ; JR-200 falls through and ret to monitor
 
-message     fcb "Hello: \0"
+message     db  "Hello: \0"
 
 ;   Print the 0-terminated string pointed to by X.
 prstr       lda A,0,X

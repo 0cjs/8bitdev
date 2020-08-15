@@ -3,6 +3,8 @@
 ;   This uses the default stack configuration.
 
             cpu 6800
+            include "src/mc68/std.a68"
+
             org $100
 
             include "src/tmc68/bios.a68"    ; bin/tmc6800 will load bioscode

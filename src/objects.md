@@ -41,23 +41,24 @@ determine the type.
      MSB  LSBs  Type
      $00  %00   Fixed constant; type and value determined by bits 7-2
     ≠$00  %00   Pointer to a cons cell or object data
-     any  %01   (unused)
-     any  %10   Smallint: 14-bit signed integer
+     any  %01   Smallint: 14-bit signed integer
+     any  %10   (unused)
      any  %11   Obdata header; never an object reference
 
 Notes:
 - Bit 0 of the LSB indicates whether an object in memory is a cons
-  cell (clear) or obdata (set). ANDing the LSB with $01 will leave
-  zero flag clear for cons cell, set for obdata.
+  cell/smallint (clear) or obdata (set). ANDing the LSB with $01 will leave
+  zero flag clear for cons cell/smallint, set for obdata.
 - Because the fixed constants (MS=$00 LSBs=%00) share the format of
   pointers, addresses the lowest 256 memory locations ($00nn) cannot
   be used for object data storage. Most 8-bit processors have other
   more important uses for this page anyway (zero page for 6800/6502;
   interrupt vectors for 8080).
-- A pointer may point to either a cons cell or obdata; the type of the
-  pointer's target is determined by whether or not the first two bytes
-  of the target are tagged as an obdata header.
-- Details of the smallint type are given below.
+- A pointer may point to either a cons cell or obdata (unless two heaps are
+  used; see below); the type of the pointer's target is determined by
+  whether or not the first two bytes of the target are tagged as an obdata
+  header.
+- smallint has tag %01 for easier arithmetic; see the further details below.
 
 It's not clear what the best use of the unused tag is. Options include:
 - A second heap in a separate bank.
@@ -77,21 +78,24 @@ recursively followed by the GC.
     00   000001-00     true, t
     00   ??????-00     (other special values?)
     AA   aaaaaa-00  R  (AA≠00) pointer to object, address AAaaaaaa00.
-    NN   nnnnnn-10     smallint: -8192 to 8191
-    xx   ??????-01     (unused)
+    NN   nnnnnn-01     smallint: -8192 to 8191
+    xx   ??????-10     (unused)
     LL   ffffff-11  R  obdata header: length LL, format number ffffff
 
-A smallint is a two's complement signed 14-bit value (range decimal
--8192 to 8191). Bits 0-7 are taken from the MSB of the reference and
-bits 8-13 are taken from bits 7-2 of the LSB of the reference. (i.e.,
-do two arithmetic shifts right on the reference's LSB). Looking at the
-two sequential locations in memory:
+A smallint is a two's complement signed 14-bit value (range decimal -8192
+to 8191). As shown below, bits 13-6 are taken from the MSB of the reference
+and bits 5-0 are taken from bits 7-2 of the LSB of the reference. (i.e., do
+two arithmetic shifts right on the reference's LSB). The two LSBits being
+01 allows you to do additions and subtractions with no preprocessing of the
+values (since they will become 10 or 00 respectively) and correct the LSB
+after subtraction with `OR #$01` and after addition with that followed by
+`AND $FD`.
 
            Reference LSB                 Reference MSB
     |  7  6  5  4  3  2  1  0 |   |  7  6  5  4  3  2  1  0 |
     ---------------------------------------------------------
-    | 13 12 11 10 09 08 xx xx |   | 07 06 05 04 03 02 01 00 |
-           smallint MSB                  smallint LSB
+    | 05 04 03 02 01 00 xx xx |   | 13 12 11 10 09 08 07 06 |
+           smallint LSB                  smallint MSB
 
 
 Heaps
@@ -134,11 +138,10 @@ investigated.
 
 __Split heap:__ this is effectively two heaps of variable size with cons
 cells in the top half and obdata in the bottom half. Each grows towards the
-other and is GC'd separately. This should make allocatio more efficient and
-also removes the need to have separate tags to distinguish obdata blocks
-from cons cells, since we know them by which heap they're in. Given that
-the %01 tag is currently unused, smallint could be moved to that and it
-frees up bit 1 (%1x and %0x), which could be used for GC or perhaps to help
+other and is GC'd separately. This should make allocation more efficient
+and also removes the need to have separate tags to distinguish obdata
+blocks from cons cells, since we know them by which heap they're in. This
+would free up bit 1 (tags %1x and %0x) to be used for GC or perhaps to help
 extend the address space.
 
 __Tiny Heap__ for very small memory systems:
@@ -398,6 +401,10 @@ Considerations and Alternatives
   testing these comes "for free" when testing a third or more bits
   with the `BIT` instruction. (N=bit 7, V=bit 6, Z=all bits tested
   with the operand are zero.)
+
+- Making the smallint tag just `1` in the LSBit (i.e., smallints use tags
+  `%00` and `%01`) would allow them to be 15 bits instead of 14, expanding
+  their range to -16384 to +16383.
 
 - To avoid duplicate symbols, and just for general symbol lookup, we
   need to be able to search through all symbols in memory. This

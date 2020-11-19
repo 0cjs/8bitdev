@@ -88,8 +88,8 @@ and bits 5-0 are taken from bits 7-2 of the LSB of the reference. (i.e., do
 two arithmetic shifts right on the reference's LSB). The two LSBits being
 01 allows you to do additions and subtractions with no preprocessing of the
 values (since they will become 10 or 00 respectively) and correct the LSB
-after subtraction with `OR #$01` and after addition with that followed by
-`AND $FD`.
+after addition with `DEC` (or `OR #$01`, `AND $FD`) and after subtraction
+with `INC` (or `OR #$01`).
 
            Reference LSB                 Reference MSB
     |  7  6  5  4  3  2  1  0 |   |  7  6  5  4  3  2  1  0 |

@@ -42,7 +42,7 @@ determine the type.
      $00  %00   Fixed constant; type and value determined by bits 7-2
     ≠$00  %00   Pointer to a cons cell or object data
      any  %01   Smallint: 14-bit signed integer
-     any  %10   (unused)
+     any  %10   sym1 or sym2
      any  %11   Obdata header; never an object reference
 
 Notes:
@@ -60,10 +60,6 @@ Notes:
   header.
 - smallint has tag %01 for easier arithmetic; see the further details below.
 
-It's not clear what the best use of the unused tag is. Options include:
-- A second heap in a separate bank.
-- A char/unsigned-byte type.
-
 ### Tag Format and Reference Data Types
 
 The following table summarizes the details of tagging and determining
@@ -79,7 +75,8 @@ recursively followed by the GC.
     00   ??????-00     (other special values?)
     AA   aaaaaa-00  R  (AA≠00) pointer to object, address AAaaaaaa00.
     NN   nnnnnn-01     smallint: -8192 to 8191
-    xx   ??????-10     (unused)
+    cc   000000-10     sym1 (1-char symbol)
+    BB   bbbbbb-10     sym2 (2-char symbol)
     LL   ffffff-11  R  obdata header: length LL, format number ffffff
 
 A smallint is a two's complement signed 14-bit value (range decimal -8192
@@ -96,6 +93,25 @@ with `INC` (or `OR #$01`).
     ---------------------------------------------------------
     | 05 04 03 02 01 00 xx xx |   | 13 12 11 10 09 08 07 06 |
            smallint LSB                  smallint MSB
+
+A sym1 or sym2 is a 1- or 2-character symbol packed into a tagged
+reference. If the LSB is all zeros (excepting the tag) the reference is a
+sym1 with the symbol character ($00-$FF) in the MSB. If the LSB is anything
+else, the top 7 bits of the MSB are the first character of the symbol
+($00-$7FF) and bit 0 of the MSB and bits 7-2 of the LSB are the second
+character of the symbol (also $00-$7F). Below, `c7`-`c0` are the bits of
+the character of a sym1, and `c6`-`c0` and `d6`-`d0` are the bits of the
+first and second respectively characters of a sym2.
+
+                LSB                           MSB
+    |  7  6  5  4  3  2  1  0 |   |  7  6  5  4  3  2  1  0 |
+    ---------------------------------------------------------
+    |  0  0  0  0  0  0  1  0 |   | c7 c6 c5 c4 c3 c2 c1 c0 |  sym1
+    | d5 d4 d3 d2 d1 d0  1  0 |   | c6 c5 c4 c3 c2 c1 c0 d6 |  sym1
+
+Two-character symbols where either character has the high bit set or where
+the second character is $00 must be stored as allocated symbols with an
+entry in the heap, referenced by a standard pointer to a heap object.
 
 
 Heaps
@@ -158,6 +174,8 @@ __Tiny Heap__ for very small memory systems:
   4/20 (ٍ±8/6 digits).
 - Symbols are limited to ASCII numeric/punctuation and one case of alpha
   sticks; symbols of up to 4 chars packed as 4×6-bit in 24 bits.
+  Alternatively, limit symbols to 2 chars each $01-$7F and all will be
+  "packed" sym1 or sym2 references.
 
 
 Obdata Types and Formats
@@ -235,10 +253,10 @@ Format details:
   entry in the environment.
 
 - __symbol__ (or __string__). Data are vector of _len_ bytes, usually
-  interpreted as ASCII characters but they may be any byte values.
-  Symbols are immutable once created in order to allow storage in ROM.
-  Generally symbols would be unique, with new symbols being intern'd
-  to maintain uniqueness.
+  interpreted as ASCII characters but they may be any byte values
+  (including $00). Symbols are immutable once created in order to allow
+  storage in ROM. Generally symbols would be unique, with new symbols being
+  intern'd to maintain uniqueness.
 
 - __symbol__ substring: _len=4_. Data are a pointer to a symbol, start
   point and length. Start point (0-based) plus length must not extend
@@ -364,7 +382,7 @@ section above.
   vs. machine code (SUBR), à la LISP 1.5.
 
 - __symbol__, __string__: Actually the same thing.
-  - "Escaped chars" are `\c` combinations; see below.
+  - "Escaped chars" in literals are `\c` combinations; see below.
   - Literal: `"…"`.
   - Literal: `'` followed by chars; any "auto-quoted" literal above is
     parsed as that type instead. Use `"…"` to create a symbol instead

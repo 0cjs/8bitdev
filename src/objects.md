@@ -13,43 +13,43 @@ bits) will make it clear which is meant.
 Representation of Object References and Data
 --------------------------------------------
 
-_Object references_ are 16-bit _words_ (in native byte order)
-containing _[tagged]_ values that determine the type. When the value
-of a reference is a _pointer_, it points to either a _cons cell_ or
-object data _obdata_ in memory. Otherwise the reference alone
-represents the object itself.
+_Object references_ are 16-bit _words_ (in native byte order) containing
+_[tagged]_ values that determine the type of the reference. When the value
+of a reference is a _pointer_, it points to either a _cons cell_ or object
+data _obdata_ in memory (but not necessarily in a dynamically allocated
+_heap_). Otherwise the reference is _intrinsic_ and it alone contains all
+information about the object itself. (Intrinsic constants, smallints, and
+sym1/sym2 references are intrinsic references.)
 
 In memory, cons cells and obdata are [aligned] to _dword_ (32-bit or
 4-byte) addresses. They may be stored anywhere in the full address
 space except for the first page (MSB=$00, address=$00nn). The storage
-may be part of a dynamically allocated and freed heap or may be static
+may be part of a dynamically allocated and freed _heap_ or may be static
 data, possibly in ROM.
 
-A cons cell is fixed size and consists of two object reference words,
+A cons cell is fixed size and consists of two references (words),
 a _car_ followed by a _cdr_.
 
 Obdata is variable length and starts with a header giving format and
 length information, followed by further data that varies depending on
-the format or obdata type.
+the obdata type and format. (A single object type may have multiple
+storage formats.)
 
 ### Reference and Data Types and Tagging
 
-The two least significant bits (LSBs) and, in some cases, the most
-significant byte (MSB) of a reference or the first two bytes of obdata
+The two least significant bits (LSBs) and in some cases the most
+significant byte (MSB) of a reference, or the first two bytes of obdata,
 determine the type.
 
      MSB  LSBs  Type
-     $00  %00   Fixed constant; type and value determined by bits 7-2
+     $00  %00   Intrinsic constant; type and value determined by bits 7-2
     ≠$00  %00   Pointer to a cons cell or object data
      any  %01   Smallint: 14-bit signed integer
      any  %10   sym1 or sym2
      any  %11   Obdata header; never an object reference
 
 Notes:
-- Bit 0 of the LSB indicates whether an object in memory is a cons
-  cell/smallint (clear) or obdata (set). ANDing the LSB with $01 will leave
-  zero flag clear for cons cell/smallint, set for obdata.
-- Because the fixed constants (MS=$00 LSBs=%00) share the format of
+- Because the intrinsic constants (MS=$00 LSBs=%00) share the format of
   pointers, addresses the lowest 256 memory locations ($00nn) cannot
   be used for object data storage. Most 8-bit processors have other
   more important uses for this page anyway (zero page for 6800/6502;

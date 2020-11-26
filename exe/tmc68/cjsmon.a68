@@ -5,7 +5,14 @@
             include "src/tmc68/bios.a68"    ; bin/tmc6800 will load bioscode
 
             org $F000       ; monitor in top 4 KB
+
+reset:      ldx #$EFFF      ; default stack immediately below monitor
+            txs
+            jsr cmdloop
+            db  $02         ; invalid opcode should cause simulator exit
+            jmp reset       ; failing that, restart monitor
+
             include "src/mc68/cjsmon.a68"
 
             ds mvec_RESET-*
-            dw cmdloop          ; reset vector: monitor entry point
+            dw reset        ; reset vector to monitor setup

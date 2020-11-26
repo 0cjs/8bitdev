@@ -160,9 +160,9 @@ def test_cmdloop_quitcmd(m, S, R):
 
 def test_cmdloop_cancel(m, S, R):
     ' Confirm that ctrl-C terminates input, ignores line. '
-    istream, ostream = loadbios(m, b'~~123~~\x03' b'Q\r')
+    istream, ostream = loadbios(m, b'^~123~^\x03' b'Q\r')
     m.call(S.cmdloop)
-    assert b'\n> ~~123~~\x07\n' b'> Q\n' ==  ostream.getvalue()
+    assert b'\n> ^~123~^\x07\n' b'> Q\n' ==  ostream.getvalue()
     #   Make sure we exited at the point where we expected.
     assert R(pc=S.rtscmd) == m.regs
 
@@ -180,9 +180,9 @@ def cmdloop(m, S, R):
 
 def test_cmdloop_multicmd(m, S, R):
     ' Multiple command processing of the simplest possible commands. '
-    istream, ostream = loadbios(m, b'~~ ~Q\r')
+    istream, ostream = loadbios(m, b'^^ ^Q\r')
     cmdloop(m, S, R)
-    assert b'\n> ~~ ~Q\n\x07\x07\x07' ==  ostream.getvalue()
+    assert b'\n> ^^ ^Q\n' b'\n\n\n' ==  ostream.getvalue()
 
 def test_cmdloop_dump(m, S, R):
     istream, ostream = loadbios(m, b'a800\r 3Q\r')
@@ -201,7 +201,7 @@ def test_cmdloop_eachrts(m, S, R):
         few points during execution.
     '''
     input = b'a800\r3Q\r'
-    input = b'~ ~~Q\r'
+    input = b'^ ^^Q\r'
     istream, ostream = loadbios(m, input)
     m.deposit(0xA800, b'ABCDEFGH')
 

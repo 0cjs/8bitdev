@@ -113,9 +113,9 @@ default_cmdtbl
 ;   `cmdqptr` to consume what it has parsed. RTS will continue parsing
 ;   from `cmdptr`.
 
-quitcmd:    pul B               ; remove continuation address so that we
+quitcmd     pul B               ; remove continuation address so that we
             pul B               ;   return to what called the monitor
-rtscmd:     rts
+rtscmd      rts
 
 ;   print a newline; useful for separating output and unit tests
 nlcmd       jmp prnl            ; RTS (TCO)

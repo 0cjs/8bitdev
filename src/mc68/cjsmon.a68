@@ -25,10 +25,11 @@ cmdloop
             jsr prnl            ; Not clear that we should always be starting
                                 ;   with a newline, rather than having commands
                                 ;   terminate their output with one.
-            lda A,#PROMPT
+.skipnl     lda A,#PROMPT
             jsr prchar
             jsr prspace
             jsr rdline
+            bcs .skipnl         ; if ^C, ignore line
             stx cmdqptr
 
 .parse      ;   Standard commands will RTS when done; we set up the stack

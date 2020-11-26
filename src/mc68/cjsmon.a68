@@ -57,12 +57,12 @@ PROMPT      equ '>'
 default_cmdtbl
             db ' '
             dw      rtscmd      ; do nothing
-            db '^'
-            dw      nlcmd       ; print newline
             db 'Q'
             dw      quitcmd     ; "quit"; exit to monitor's caller
             db 'x'
             dw      hexdump     ; examine memory
+            db '^'
+            dw      nlcmd       ; print newline
             db $00
             dw      $0000       ; end of table
 
@@ -96,7 +96,7 @@ cmdloop
 
             ;   Start by attempting to parse a hexword, handling it if found.
             jsr qhexword
-            bpl setcurcmd       ; parsed hexword, store in Mcur
+            bpl setcur          ; parsed hexword, store in Mcur
 
             ;   Consume a char and parse it as a command.
             ;   (Callees who need to know the char parsed may DEX to get it.)
@@ -124,6 +124,13 @@ cmdloop
             jsr errbeep         ; beep for error (XXX should show err msg)
             bra cmdloop
 
+;   Copy hexword (last read of qhexword) to Mcur
+;   This not a standard command; it's called differently.
+setcur      stx cmdqptr         ; caller can't do this because STX clears N flag
+            ldx hexword
+            stx Mcur
+            rts
+
 ; ----------------------------------------------------------------------
 ;   Commands
 ;
@@ -136,12 +143,6 @@ cmdloop
 quitcmd     pul B               ; remove continuation address so that we
             pul B               ;   return to what called the monitor
 rtscmd      rts
-
-;   Copy hexword (last read of qhexword) to Mcur
-setcurcmd   stx cmdqptr         ; caller can't do this because STX clears N flag
-            ldx hexword
-            stx Mcur
-            rts
 
 ;   print a newline; useful for separating output and unit tests
 nlcmd       jmp prnl            ; RTS (TCO)

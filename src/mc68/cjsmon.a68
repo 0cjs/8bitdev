@@ -13,7 +13,7 @@ BS          equ $08                 ; backspace ('\b')
 LF          equ $0A                 ; line feed ('\n')
 CR          equ $0D                 ; carriage return ('\r')
 SPACE       equ ' '
-DEL         equ $FF
+DEL         equ $7F
 
 ; ----------------------------------------------------------------------
 ;   Command loop

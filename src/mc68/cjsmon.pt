@@ -80,9 +80,9 @@ def test_rdchar(m, R, S):
 @pytest.mark.parametrize('buf, input', (
     (b'',                   b'\r'),
     (b'a',                  b'a\r'),
-    (b'jklm',               b'j_\bk_\xFFl__\b\bm\r'),
-    (b'',                   b'\b\xFF\b\r'),
-    (b'ij',                 b'\b\xFFgh\b\b\b\bij\r'),
+    (b'jklm',               b'j_\bk_\x7Fl__\b\bm\r'),
+    (b'',                   b'\b\x7F\b\r'),
+    (b'ij',                 b'\b\x7Fgh\b\b\b\bij\r'),
     (b'\x01\n\x1F\x7E',     b'\x01\x00\n\x00\x1F\x00\x7E\r'),
 ))
 def test_rdline(m, R, S, input, buf):
@@ -100,7 +100,7 @@ def test_rdline(m, R, S, input, buf):
         out = []
         for i in readchars:
             if   i == 0:    pass                # NUL not echoed
-            elif i == 0xFF: out.append(0x08)    # DEL echoes backspace
+            elif i == 0x7F: out.append(0x08)    # DEL echoes backspace
             elif i == 0x0D: out.append(0x0A)    # CR echos newline
             else:           out.append(i)
         return bytes(out)

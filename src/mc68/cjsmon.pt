@@ -16,7 +16,7 @@ def loadbios(m, input=None, output=None):
 
 @pytest.mark.parametrize('val, char', (
     (0x00, b'0'), (0x01, b'1'), (0x0E, b'E'), (0x0F, b'F'),
-    (0x10, b'0'), (0xFF, b'F'),
+    (0x10, b'0'), (0xFE, b'E'),
 ), ids=tmc_tid)
 def test_prnyb(m, S, R, val, char):
     _, output = loadbios(m)

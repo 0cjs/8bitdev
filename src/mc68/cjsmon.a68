@@ -63,8 +63,6 @@ cmdloop
             beq .rts
             jsr errbeep         ; bad command
             bra cmdloop
-.quit       pul A               ; get rid of .parse return address
-            pul A
 .rts        rts
 
 ;   Current parse point in command input buffer.

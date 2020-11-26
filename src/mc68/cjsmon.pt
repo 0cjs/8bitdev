@@ -235,8 +235,13 @@ def test_cmdloop_multiline(m, S, R):
         )
     assert expected ==  ostream.getvalue()
 
+def test_cmdloop_setcur(m, S, R):
+    istream, ostream = loadbios(m, b'a800 Q\r')
+    cmdloop(m, S, R)
+    assert 0xA800 == m.word(S.Mcur)
+
 def test_cmdloop_dump(m, S, R):
-    istream, ostream = loadbios(m, b'a800\r 3Q\r')
+    istream, ostream = loadbios(m, b'a800x\r 3xQ\r')
     m.deposit(0xA800, b'ABCDEFGH')
     cmdloop(m, S, R)
 

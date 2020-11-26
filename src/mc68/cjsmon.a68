@@ -17,6 +17,7 @@ DEL         equ $7F
 
 ; ----------------------------------------------------------------------
 ;   Storage for variables that must be in RAM.
+;   Monitor variables are prefixed with `M`.
 
 ;   Current parse point in command input buffer.
 ;   This may be updated by commands that parse data after the command letter,
@@ -26,6 +27,7 @@ cmdqptr     ds  2               ; current parsing loc in command input buffer
 ;   Other parser storage locations.
 tmp0        equ $E1             ; temp storage (1 byte)
 hexword     equ $E2             ; qhexword result location (2 bytes)
+Mcur        equ $E4             ; monitor `*` variable: current location
 
 ;   Location of command table; this can be overridden by the user.
 ;   Each entry is three bytes, one of:
@@ -59,6 +61,8 @@ default_cmdtbl
             dw      nlcmd       ; print newline
             db 'Q'
             dw      quitcmd     ; "quit"; exit to monitor's caller
+            db 'x'
+            dw      hexdump     ; examine memory
             db $00
             dw      $0000       ; end of table
 
@@ -92,7 +96,7 @@ cmdloop
 
             ;   Start by attempting to parse a hexword, handling it if found.
             jsr qhexword
-            bpl hexdump         ; parsed hexword
+            bpl setcurcmd       ; parsed hexword, store in Mcur
 
             ;   Consume a char and parse it as a command.
             ;   (Callees who need to know the char parsed may DEX to get it.)
@@ -133,19 +137,24 @@ quitcmd     pul B               ; remove continuation address so that we
             pul B               ;   return to what called the monitor
 rtscmd      rts
 
+;   Copy hexword (last read of qhexword) to Mcur
+setcurcmd   stx cmdqptr         ; caller can't do this because STX clears N flag
+            ldx hexword
+            stx Mcur
+            rts
+
 ;   print a newline; useful for separating output and unit tests
 nlcmd       jmp prnl            ; RTS (TCO)
 
-;   XXX currently designed to be called after qhexword, not as a command
-hexdump     stx cmdqptr         ; XXX because not done by main for qhexword
-            lda A,hexword       ; addr hi
+;   examine memory in hexadecimal starting at Mcur
+hexdump     lda A,Mcur          ; addr hi
             jsr prhex
-            lda A,hexword+1     ; addr lo
+            lda A,Mcur+1        ; addr lo
             jsr prhex
             lda A,#':'
             jsr prchar
 
-            ldx hexword
+            ldx Mcur
             lda B,#8            ; bytes to print
 .loop       jsr prspace
             lda A,,X

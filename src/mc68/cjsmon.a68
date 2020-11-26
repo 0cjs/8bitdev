@@ -32,7 +32,11 @@ cmdloop
             bcs .skipnl         ; if ^C, ignore line
             stx cmdqptr
 
-.parse      ;   Standard commands will RTS when done; we set up the stack
+.parse      ldx cmdqptr
+            lda A,0,X           ; reached terminator?
+            beq cmdloop         ; yes, read another line of commands
+
+            ;   Standard commands will RTS when done; we set up the stack
             ;   so that after we JMP to them they will come back here where
             ;   we will continue parsing the remainder of the command line.
             ;   (Essentially, continuation-passing style.)
@@ -40,29 +44,35 @@ cmdloop
             psh A
             lda A,#MSB(.parse)
             psh A
-            ;   So that commands need not worry about preserving X, we share
-            ;   the current parsing position with them in cmdqptr, which they
-            ;   must update if they do further parsing.
-            ldx cmdqptr
 
+            ;   Start by attempting to parse a hexword, handling it if found.
             jsr qhexword
             bpl hexdump         ; parsed hexword
+
             ;   Consume a char and parse it as a command.
             ;   (Callees who need to know the char parsed may DEX to get it.)
-            lda A,0,X
+            lda A,0,X           ; load char we're checking
+            inx                 ; move input pointer to next char
+            stx cmdqptr         ;   for later
+
+.search     ldx cmdtbl
+.next       lda B,0,X           ; load next command char from table
+            cmp B,#00           ; end of table?
+            beq .unkcmd         ; yes, unknown command
+            cba                 ; found command?
+            beq .callcmd        ; yes, call it
+            inx                 ; skip past command char in table
+            inx                 ;   and its address
             inx
-            stx cmdqptr
-            cmp A,#' '
-            beq rtscmd          ; ignore spaces: return to .parse
-            cmp A,#'^'
-            beq nlcmd
-            cmp A,#'Q'
-            beq quitcmd
-            ;   No subroutine to call; take .parse return address off stack.
-            pul B
-            pul B
+            bra .next
+
+.callcmd    ldx 1,X             ; load command address
+            jmp ,X              ; call command (TCO)
+
             ;   No command matched; we have an error
-            jsr errbeep         ; bad command
+.unkcmd     pul B               ; no subroutine to call, so take .parse
+            pul B               ;   address off the stack.
+            jsr errbeep         ; beep for error (XXX should show err msg)
             bra cmdloop
 
 ;   Current parse point in command input buffer.
@@ -71,16 +81,46 @@ cmdloop
 cmdqptr     ds  2               ; current parsing loc in command input buffer
 
 ; ----------------------------------------------------------------------
-;   Commands
+;   Command Tables
 
-quitcmd:    pul B
-            pul B
+;   Location of command table; this can be overridden by the user.
+;   Each entry is three bytes, one of:
+;   • A command character followed by the address of the routine
+;     for that command; the routine should finish with RTS.
+;   • A $00 character and $0000 address indicating end of table.
+;   • XXX need to define entry for continuation address of table.
+cmdtbl      dw default_cmdtbl
+
+;   The default command table. If cmdtbl points to a user-defined table,
+;   likely you want a continuation entry at the end of that table pointing
+;   to this.
+default_cmdtbl
+            db ' '
+            dw      rtscmd      ; do nothing
+            db '^'
+            dw      nlcmd       ; print newline
+            db 'Q'
+            dw      quitcmd     ; "quit"; exit to monitor's caller
+            db $00
+            dw      $0000       ; end of table
+
+; ----------------------------------------------------------------------
+;   Commands
+;
+;   When a command routine is called, A will contain the command char and
+;   `cmdqptr` will point to the first character after the command. If the
+;   command routine does further parsing of arguments, it must increment
+;   `cmdqptr` to consume what it has parsed. RTS will continue parsing
+;   from `cmdptr`.
+
+quitcmd:    pul B               ; remove continuation address so that we
+            pul B               ;   return to what called the monitor
 rtscmd:     rts
 
 ;   print a newline; useful for separating output and unit tests
-nlcmd       jmp prnl
+nlcmd       jmp prnl            ; RTS (TCO)
 
-;
+;   XXX currently designed to be called after qhexword, not as a command
 hexdump     stx cmdqptr         ; XXX because not done by main for qhexword
             lda A,hexword       ; addr hi
             jsr prhex

@@ -147,6 +147,39 @@ def test_rdline_overflow(m, R, S):
 ####################################################################
 #   Command loop
 
+@pytest.mark.parametrize('cmdchar, foundaddr', [
+    ('z', 0x0F0F),
+    ('y', 0x0E0E),
+    ('a', 0x0101),
+    ('w', None),
+    ('@', None),
+])
+def test_cmdloop_search(m, S, R, cmdchar, foundaddr):
+    ' Test the command table search routine embedded in cmdloop. '
+    CMDTBL = 0x3FFE
+    tabledata = [ ('z', 0x0F0F), ('y', 0x0E0E),
+                  ('a', 0x0101), ('\x00', 0x0000),
+                ]
+    for entry, char_addr in enumerate(tabledata):
+        offset = entry * 3; char, addr = char_addr
+        m.deposit(CMDTBL+offset,   [ord(char)])
+        m.depword(CMDTBL+offset+1, [addr])
+    m.depword(S.cmdtbl, CMDTBL)
+
+    callcmd = S['cmdloop.callcmd'] + 2  # instruction after loading address
+    unkcmd  = S['cmdloop.unkcmd']
+
+    m.setregs(R(pc=S['cmdloop.search'], a=ord(cmdchar)))
+    m.stepto(stopat=[callcmd, unkcmd], maxsteps=10000)
+
+    if foundaddr is not None:
+        #   We've loaded the right command address and are about to call it
+        assert R(pc=callcmd, x=foundaddr) == m.regs
+    else:
+        #   We've gone through the entire table and not found the command.
+        lastentry = CMDTBL + 3 * (len(tabledata)-1)
+        assert R(pc=unkcmd, x=lastentry) == m.regs
+
 def test_cmdloop_quitcmd(m, S, R):
     ' Minimal path that gets us through to exit. '
     #   Quit doesn't return to the parser loop; it manually removes the
@@ -183,6 +216,24 @@ def test_cmdloop_multicmd(m, S, R):
     istream, ostream = loadbios(m, b'^^ ^Q\r')
     cmdloop(m, S, R)
     assert b'\n> ^^ ^Q\n' b'\n\n\n' ==  ostream.getvalue()
+
+def test_cmdloop_multiline(m, S, R):
+    ''' Simple commands split across lines.
+
+        This demonstrates some ill-formed behaviour; entering a line causes
+        the input routine to produce a newline, but then the prompt prints
+        another newline even though there was no output on the existing
+        line. When we print newlines needs to be reworked.
+    '''
+    istream, ostream = loadbios(m, b' \r^\rQ\r')
+    cmdloop(m, S, R)
+    expected = bytes(
+        b'\n> '     # initial prompt
+        b' \n\n> '  # space (no command), unwanted NL, following prompt
+        b'^\n\n\n> '  # ^ (print CR), unwanted NL, following prompt
+        b'Q\n'      # quit command
+        )
+    assert expected ==  ostream.getvalue()
 
 def test_cmdloop_dump(m, S, R):
     istream, ostream = loadbios(m, b'a800\r 3Q\r')

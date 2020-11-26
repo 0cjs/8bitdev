@@ -277,6 +277,10 @@ qhex        clr A               ; current result: $0000
 .exit       lda A,tmp0          ; update error status flag
             rts
 
+;   ♠X,hexword ♣AB,tmp0 Parse an ASCII hex byte at X, N=0 on success.
+qhexbyte    lda B,#2
+            jmp qhex
+
 ; ----------------------------------------------------------------------
 ;   pr* - printing output
 

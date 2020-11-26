@@ -16,9 +16,54 @@ SPACE       equ ' '
 DEL         equ $7F
 
 ; ----------------------------------------------------------------------
-;   Command loop
+;   Storage for variables that must be in RAM.
+
+;   Current parse point in command input buffer.
+;   This may be updated by commands that parse data after the command letter,
+;   but it must not be moved past the terminating `0`.
+cmdqptr     ds  2               ; current parsing loc in command input buffer
+
+;   Other parser storage locations.
+tmp0        equ $E1             ; temp storage (1 byte)
+hexword     equ $E2             ; qhexword result location (2 bytes)
+
+;   Location of command table; this can be overridden by the user.
+;   Each entry is three bytes, one of:
+;   • A command character followed by the address of the routine
+;     for that command; the routine should finish with RTS.
+;   • A $00 character and $0000 address indicating end of table.
+;   • XXX need to define entry for continuation address of table.
+;   XXX This needs to be set to the default command table by the monitor
+;   cold start.
+cmdtbl      dw default_cmdtbl
+
+; ----------------------------------------------------------------------
+;   Input buffer. On commerical systems this can probably be re-used
+;   storage from another part of the system, e.g., a BASIC interpreter.
+
+rdlinebuf   ds 160
+rdlinebuf_end
+
+; ----------------------------------------------------------------------
+;   Storage for constants; probably can be in ROM.
 
 PROMPT      equ '>'
+
+;   The default command table. If cmdtbl points to a user-defined table,
+;   likely you want a continuation entry at the end of that table pointing
+;   to this.
+default_cmdtbl
+            db ' '
+            dw      rtscmd      ; do nothing
+            db '^'
+            dw      nlcmd       ; print newline
+            db 'Q'
+            dw      quitcmd     ; "quit"; exit to monitor's caller
+            db $00
+            dw      $0000       ; end of table
+
+; ----------------------------------------------------------------------
+;   Command loop
 
 ;   A simple command loop to demo this stuff.
 cmdloop
@@ -74,35 +119,6 @@ cmdloop
             pul B               ;   address off the stack.
             jsr errbeep         ; beep for error (XXX should show err msg)
             bra cmdloop
-
-;   Current parse point in command input buffer.
-;   This may be updated by commands that parse data after the command letter,
-;   but it must not be moved past the terminating `0`.
-cmdqptr     ds  2               ; current parsing loc in command input buffer
-
-; ----------------------------------------------------------------------
-;   Command Tables
-
-;   Location of command table; this can be overridden by the user.
-;   Each entry is three bytes, one of:
-;   • A command character followed by the address of the routine
-;     for that command; the routine should finish with RTS.
-;   • A $00 character and $0000 address indicating end of table.
-;   • XXX need to define entry for continuation address of table.
-cmdtbl      dw default_cmdtbl
-
-;   The default command table. If cmdtbl points to a user-defined table,
-;   likely you want a continuation entry at the end of that table pointing
-;   to this.
-default_cmdtbl
-            db ' '
-            dw      rtscmd      ; do nothing
-            db '^'
-            dw      nlcmd       ; print newline
-            db 'Q'
-            dw      quitcmd     ; "quit"; exit to monitor's caller
-            db $00
-            dw      $0000       ; end of table
 
 ; ----------------------------------------------------------------------
 ;   Commands
@@ -200,14 +216,8 @@ rdline      ldx #rdlinebuf
             sec                 ; indicate input cancelled
             bra .ret
 
-rdlinebuf   ds 160
-rdlinebuf_end
-
 ; ----------------------------------------------------------------------
 ;   q* - parsing
-
-tmp0        equ $E8             ; temp storage
-hexword     equ $EE             ; result location
 
             include "src/mc68/qdigit.a68"
 

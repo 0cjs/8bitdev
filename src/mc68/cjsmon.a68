@@ -52,18 +52,17 @@ cmdloop
             inx
             stx cmdqptr
             cmp A,#' '
-            beq .rts            ; ignore spaces: return to .parse
+            beq rtscmd          ; ignore spaces: return to .parse
             cmp A,#'~'
             beq beepcmd
+            cmp A,#'Q'
+            beq quitcmd
             ;   No subroutine to call; take .parse return address off stack.
             pul B
             pul B
-            ;   We must have a quit command or an error.
-            cmp A,#'Q'
-            beq .rts
+            ;   No command matched; we have an error
             jsr errbeep         ; bad command
             bra cmdloop
-.rts        rts
 
 ;   Current parse point in command input buffer.
 ;   This may be updated by commands that parse data after the command letter,
@@ -72,6 +71,10 @@ cmdqptr     ds  2               ; current parsing loc in command input buffer
 
 ; ----------------------------------------------------------------------
 ;   Commands
+
+quitcmd:    pul B
+            pul B
+rtscmd:     rts
 
 ;   "null" command just beeps; used by unit tests
 beepcmd:    jsr errbeep

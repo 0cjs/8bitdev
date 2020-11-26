@@ -149,36 +149,40 @@ def test_rdline_overflow(m, R, S):
 
 def test_cmdloop_quitcmd(m, S, R):
     ' Minimal path that gets us through to exit. '
+    #   Quit doesn't return to the parser loop; it manually removes the
+    #   return address that .parse added. This means our JSRs/RTSs will
+    #   match, so in this one case we can use m.call().
     istream, ostream = loadbios(m, b'Q\r')
-    #   Because this plays tricks with the stack and RTS, we can't use
-    #   call(). But we do have a single exit point, so we can stop there.
-    m.setregs(R(pc=S.cmdloop))
-    m.stepto(stopat=[S['cmdloop.rts']], stopon=[0x00], maxsteps=10000, trace=0)
+    m.call(S.cmdloop)
     assert b'\n> Q\n' ==  ostream.getvalue()
+    #   Make sure we exited at the point where we expected.
+    assert R(pc=S.rtscmd) == m.regs
+
+#   Because the parser loop sets up return addresses with PSH (continuation
+#   passing style), m.call() will not see a JSR to match to each command's
+#   RTS and thus exit after the first command. We get around this by
+#   instead adding a quit command at the end of every test input and running
+#   until we reach quitcmd, a unique location before monitor exit. (rtscmd
+#   cannot be used for this because it's also used as a convenient branch
+#   target for conditional RTS by other code.)
+
+def cmdloop(m, S, R):
+    m.setregs(R(pc=S.cmdloop))
+    m.stepto(stopat=[S['quitcmd']], stopon=[0x00], maxsteps=10000)
 
 def test_cmdloop_multicmd(m, S, R):
     ' Multiple command processing of the simplest possible commands. '
     istream, ostream = loadbios(m, b'~~ ~Q\r')
-    m.setregs(R(pc=S.cmdloop))
-    m.stepto(stopat=[S['cmdloop.rts']], stopon=[0x00], maxsteps=10000)
-    #   XXX This is ugly. Because the space processing jumps to cmdloop.rts,
-    #   but uses it for return to .parse, we need to run again to finish
-    #   the command line parsing.
-    m.stepto(stopat=[S['cmdloop.rts']], stopon=[0x00], maxsteps=10000)
+    cmdloop(m, S, R)
     assert b'\n> ~~ ~Q\n\x07\x07\x07' ==  ostream.getvalue()
 
 def test_cmdloop_dump(m, S, R):
     istream, ostream = loadbios(m, b'a800\r 3Q\r')
     m.deposit(0xA800, b'ABCDEFGH')
+    cmdloop(m, S, R)
 
-    m.setregs(R(pc=S.cmdloop))
-    m.stepto(stopat=[S['cmdloop.rts']], stopon=[0x00])
-    m.stepto(stopat=[S['cmdloop.rts']], stopon=[0x00])  # skip space
-
-    print(m.regs, m.bytes(m.regs.sp-8, 8))
-    output = ostream.getvalue()
-    print(output)
-
+    print(m.regs); print(m.bytes(m.regs.sp-8, 8))
+    output = ostream.getvalue(); print(output)
     assert b'\nA800: 41 42 43 44 45 46 47 48\n' in output
     assert b'\n0003: ' in output
 
@@ -203,7 +207,7 @@ def test_cmdloop_eachrts(m, S, R):
     print('{}                {}'.format(m.regs, showstack()))
     while True:
         m.stepto(stopon=[I.JSR, I.BSR, I.RTS, I.PSHA],
-            stopat=[ S['cmdloop.rts'], S['cmdloop.parse'] - 1 ])
+            stopat=[ S['rtscmd'], S['cmdloop.parse'] - 1 ])
         r = m.regs
         opcode = m.byte(r.pc)
         if   opcode == I.PSHA:

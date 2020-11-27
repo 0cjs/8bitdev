@@ -287,15 +287,14 @@ def test_cmdloop_setcur(m, S, R):
     cmdloop(m, S, R)
     assert 0xA800 == m.word(S.Mcur)
 
-def test_cmdloop_dump(m, S, R):
-    istream, ostream = loadbios(m, b'a800x\r 3xQ\r')
-    m.deposit(0xA800, b'ABCDEFGH')
+def test_cmdloop_deposit_examine(m, S, R):
+    ' Simple integration test. '
+    istream, ostream = loadbios(m, b'7655:cd\r7654:ab x Q\r')
     cmdloop(m, S, R)
 
     print(m.regs); print(m.bytes(m.regs.sp-8, 8))
     output = ostream.getvalue(); print(output)
-    assert b'\nA800: 41 42 43 44 45 46 47 48\n' in output
-    assert b'\n0003: ' in output
+    assert b'\n7654: AB CD' in output
 
 @pytest.mark.skip
 def test_cmdloop_eachrts(m, S, R):

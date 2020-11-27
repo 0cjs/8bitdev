@@ -25,9 +25,10 @@ DEL         equ $7F
 cmdqptr     ds  2               ; current parsing loc in command input buffer
 
 ;   Other parser storage locations.
-tmp0        equ $E1             ; temp storage (1 byte)
-hexword     equ $E2             ; qhexword result location (2 bytes)
-Mcur        equ $E4             ; monitor `*` variable: current location
+tmp1        equ $E1             ; temp storage (1 byte)
+tmp2        equ $E2             ; temp storage (2 bytes)
+hexword     equ $E4             ; qhexword result location (2 bytes)
+Mcur        equ $E6             ; monitor `*` variable: current location
 
 ;   Location of command table; this can be overridden by the user.
 ;   Each entry is three bytes, one of:
@@ -57,6 +58,8 @@ PROMPT      equ '>'
 default_cmdtbl
             db ' '
             dw      rtscmd      ; do nothing
+            db ':'
+            dw      deposit     ; enter data into memory
             db 'Q'
             dw      quitcmd     ; "quit"; exit to monitor's caller
             db 'x'
@@ -147,6 +150,28 @@ rtscmd      rts
 ;   print a newline; useful for separating output and unit tests
 nlcmd       jmp prnl            ; RTS (TCO)
 
+; XXX need to sort out the two pointers, one to Mcur+? and one to input buffer+?
+deposit     ldx Mcur            ; current location (*); we leave this unchanged
+            stx tmp2            ; deposit index
+.next       ldx cmdqptr         ; current input pointer
+            jsr qhexbyte
+            bmi .nothex         ; not hexbyte, skip space or end
+            stx cmdqptr         ; save next parse position
+            lda A,hexword+1
+            ldx tmp2            ; current deposit index
+            sta A,,X
+            inx
+            stx tmp2            ; next deposit index
+            bra .next
+
+.nothex     lda A,,X            ; load next character
+            cmp A,#' '          ; is it a space?
+            bne rtscmd          ; no, we're done
+            inx
+            stx cmdqptr         ; skip past space
+            bra .next           ; and continue parsing
+
+
 ;   examine memory in hexadecimal starting at Mcur
 hexdump     lda A,Mcur          ; addr hi
             jsr prhex
@@ -231,7 +256,7 @@ rdline      ldx #rdlinebuf
 
             include "src/mc68/qdigit.a68"
 
-;   ♠X,hexword ♣AB,tmp0 Parse an ASCII hex word at X, N=0 on success.
+;   ♠X,hexword ♣AB,tmp1 Parse an ASCII hex word at X, N=0 on success.
 ;
 ;   0-4 ASCII characters are parsed and X is left pointing at the first
 ;   unparsed char. The parsed word, if any, is left in `hexword`.
@@ -252,14 +277,14 @@ qhex        clr A               ; current result: $0000
             sta A,hexword
             sta A,hexword+1
             tpa                 ; current exit status: error (bit 7 set)
-            sta A,tmp0
+            sta A,tmp1
 .nextchar   lda A,,X
             bsr qdigit
             bmi .exit           ; bad digit, return
             cmp A,#$0F+1
             bcc .exit           ; digit in base >16
 
-            clr tmp0            ; read at least 1 char; clear error status
+            clr tmp1            ; read at least 1 char; clear error status
             inx                 ; consume this character
             asl A               ; shift value to upper nybble
             asl A
@@ -275,10 +300,10 @@ qhex        clr A               ; current result: $0000
             pul B
             dec B
             bne .nextchar
-.exit       lda A,tmp0          ; update error status flag
+.exit       lda A,tmp1          ; update error status flag
             rts
 
-;   ♠X,hexword ♣AB,tmp0 Parse an ASCII hex byte at X, N=0 on success.
+;   ♠X,hexword ♣AB,tmp1 Parse an ASCII hex byte at X, N=0 on success.
 qhexbyte    lda B,#2
             jmp qhex
 

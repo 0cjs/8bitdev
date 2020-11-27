@@ -165,6 +165,33 @@ def test_rdline_overflow(m, R, S):
     assert bufinput + b'\a\a\n' == ostream.getvalue()
 
 ####################################################################
+#   Commands (tested outside of command loop)
+
+@pytest.mark.parametrize('loc, parselen, arg, data', [
+    (0x7000,  0,  b'',                     b''),
+    (0x7001,  2,  b'ff',                   b'\xFF'),
+    (0x7002,  1,  b'1',                    b'\x01'),
+    (0x7003,  4,  b'abcd',                 b'\xAB\xCD'),
+    (0x6FFC, 20,  b'a bc def 0123  4   5', b'\x0A\xBC\xDE\x0F\x01\x23\x04\x05'),
+    (0x7005,  1,  b'6x',                   b'\x06'),
+    (0x7006,  5,  b'6 12 x',               b'\x06\x12'),
+    (     1,  2,  b'34',                   b'\x34'),
+], ids=tmc_tid)
+def test_deposit(m, S, R, loc, parselen, arg, data):
+    inbuf = S.rdlinebuf
+    expected = b'\xEE' + data + b'\xEE'
+
+    m.depword(S.Mcur, loc)
+    m.deposit(inbuf, arg + b'\x00')
+    m.depword(S.cmdqptr, inbuf)
+    m.deposit(loc-1, b'\xEE'*len(expected))
+
+    m.call(S.deposit, R(a=ord(':'), x=S.deposit))
+
+    assert (inbuf,  inbuf + parselen,   expected) \
+        == (inbuf,  m.word(S.cmdqptr),  m.bytes(loc-1, len(expected)))
+
+####################################################################
 #   Command loop
 
 @pytest.mark.parametrize('cmdchar, foundaddr', [

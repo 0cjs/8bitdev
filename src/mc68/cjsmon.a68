@@ -1,5 +1,21 @@
 ;   XXX something that should become a machine-language monitor one day
 
+    ifdef UNIT_TESTING
+;   XXX These definitions should really be coming from the .pt file.
+rdlinebuf       equ $180
+rdlinebuf_end   equ $200
+    endif
+
+; ----------------------------------------------------------------------
+;   External Requirements
+
+    ifndef rdlinebuf                ; input buffer first byte
+        error 'rdlinebuf must be defined'
+    endif
+    ifndef rdlinebuf_end            ; input buffer last byte + 1
+        error 'rdlinebuf_end must be defined'
+    endif
+
 ; ----------------------------------------------------------------------
 ;   Standard functions, macros and definitions
 ;   (Much of this should probably be moved to `stddef`.)
@@ -14,6 +30,9 @@ LF          equ $0A                 ; line feed ('\n')
 CR          equ $0D                 ; carriage return ('\r')
 SPACE       equ ' '
 DEL         equ $7F
+
+;   Monitor definitions
+PROMPT      equ '>'
 
 ; ----------------------------------------------------------------------
 ;   Storage for variables that must be in RAM.
@@ -32,18 +51,6 @@ exlines     equ $E9     ; b examine lines: number of lines to print
 cmdtbl      equ $F0     ; w pointer to command table (see below)
 Mcur        equ $F2     ; W monitor `*` variable: current location
 Mexwidth    equ $F4     ; b examine width: bytes per line to print
-
-; ----------------------------------------------------------------------
-;   Input buffer. On commerical systems this can probably be re-used
-;   storage from another part of the system, e.g., a BASIC interpreter.
-
-rdlinebuf   ds 160
-rdlinebuf_end
-
-; ----------------------------------------------------------------------
-;   Storage for constants; probably can be in ROM.
-
-PROMPT      equ '>'
 
 ; ----------------------------------------------------------------------
 ;   Command Table

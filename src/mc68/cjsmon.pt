@@ -186,6 +186,7 @@ def setinput(m, curaddr, input):
     (0x6FFC, 20,  b'a bc def 0123  4   5', b'\x0A\xBC\xDE\x0F\x01\x23\x04\x05'),
     (0x7005,  1,  b'6x',                   b'\x06'),
     (0x7006,  5,  b'6 12 x',               b'\x06\x12'),
+    (0x7007,  5,  b'6 13:x',               b'\x06\x13'),
     (     1,  2,  b'34',                   b'\x34'),
 ], ids=tmc_tid)
 def test_deposit(m, S, R, loc, parselen, cmd, data):

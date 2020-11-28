@@ -3,7 +3,6 @@ To-do List
 
 #### Monitor, Library
 
-- `:` to terminate deposit data
 - command table continuation which will also test that `cmdtbl` is used
 - fix rdline not accepting backspace when buffer full
 - extract rdline from cjsmon, use only for tmc68 version

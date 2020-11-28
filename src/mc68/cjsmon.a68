@@ -170,6 +170,16 @@ rtscmd      rts
 ;   print a newline; useful for separating output and unit tests
 nlcmd       jmp prnl            ; RTS (TCO)
 
+;   deposit byte arguments to memory at Mcur.
+;
+;   The argument is pairs of ASCII hex digits. Spaces terminate reading of
+;   a single-digit byte and are otherwise ignored. The data are terminated
+;   by any other character, which will be left to be executed as the next
+;   command on the line. The one exception is `:`, which is consumed in
+;   order to provide a convenient way of terminating input when the
+;   following command is a hex number that would otherwise be interpreted
+;   as data to be deposited.
+;
 deposit     ldx Mcur            ; current location (*); we leave this unchanged
             stx tmp2            ; deposit index
 .next       ldx cmdqptr         ; current input pointer
@@ -184,11 +194,17 @@ deposit     ldx Mcur            ; current location (*); we leave this unchanged
             bra .next
 
 .nothex     lda A,,X            ; load next character
+            cmp A,#':'          ; consumed terminator?
+            beq .term           ; yes, we're done
             cmp A,#' '          ; is it a space?
-            bne rtscmd          ; no, we're done
+            bne .rts            ; no, we're done
             inx
             stx cmdqptr         ; skip past space
             bra .next           ; and continue parsing
+
+.term       inx                 ; consume terminator
+            stx cmdqptr
+.rts        rts
 
 
 ;   Examine memory in hexadecimal printing `exlines` of `Mexwidth` bytes

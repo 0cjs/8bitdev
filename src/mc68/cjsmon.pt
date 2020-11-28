@@ -289,22 +289,23 @@ def test_cmdloop_cancel(m, S, R):
 #   cannot be used for this because it's also used as a convenient branch
 #   target for conditional RTS by other code.)
 
-def runmon(m, S, R):
+def runmon(m):
     ''' Run the monitor starting with the standard init routine, up to when
         it quits due to command input. We deliberately do not do extra
         initialization here to help confirm that the monitor's minimal
         initialization is complete enough to avoid problems.
     '''
-    m.setregs(R(pc=S.init))
-    m.stepto(stopat=[S['quitcmd']], stopon=[0x00], maxsteps=10000)
+    S = m.symtab
+    m.setregs(m.Registers(pc=S.init))
+    m.stepto(stopat=[S.quitcmd], stopon=[0x00], maxsteps=10000)
 
-def test_cmdloop_multicmd(m, S, R):
+def test_cmdloop_multicmd(m):
     ' Multiple command processing of the simplest possible commands. '
     istream, ostream = loadbios(m, b'^^ ^q\r')
-    runmon(m, S, R)
+    runmon(m)
     assert b'\n> ^^ ^q\n' b'\n\n\n' ==  ostream.getvalue()
 
-def test_cmdloop_multiline(m, S, R):
+def test_cmdloop_multiline(m):
     ''' Simple commands split across lines.
 
         This demonstrates some ill-formed behaviour; entering a line causes
@@ -313,7 +314,7 @@ def test_cmdloop_multiline(m, S, R):
         line. When we print newlines needs to be reworked.
     '''
     istream, ostream = loadbios(m, b' \r^\rq\r')
-    runmon(m, S, R)
+    runmon(m)
     expected = bytes(
         b'\n> '     # initial prompt
         b' \n\n> '  # space (no command), unwanted NL, following prompt
@@ -322,15 +323,15 @@ def test_cmdloop_multiline(m, S, R):
         )
     assert expected ==  ostream.getvalue()
 
-def test_cmdloop_setcur(m, S, R):
+def test_cmdloop_setcur(m, S):
     istream, ostream = loadbios(m, b'a800 q\r')
-    runmon(m, S, R)
+    runmon(m)
     assert 0xA800 == m.word(S.Mcur)
 
-def test_cmdloop_deposit_examine(m, S, R):
+def test_cmdloop_deposit_examine(m):
     ' Simple integration test. '
     istream, ostream = loadbios(m, b'7655:cd\r7654:ab x q\r')
-    runmon(m, S, R)
+    runmon(m)
 
     print(m.regs); print(m.bytes(m.regs.sp-8, 8))
     output = ostream.getvalue(); print(output)

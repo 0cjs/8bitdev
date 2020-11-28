@@ -1,14 +1,28 @@
 To-do List
 ==========
 
+#### Monitor, Library
+
+- `:` to terminate deposit data
+- command table continuation which will also test that `cmdtbl` is used
+- fix rdline not accepting backspace when buffer full
+- extract rdline from cjsmon, use only for tmc68 version
+
 #### Cleanup
 
+- scr/tmc68/biocode: use `ds prchar-$` (current PC) to org routine locations
 - Make a better `repr()`/`str()` for `testmc.generic.Machine` so that
   `assert R(...) = m.regs` looks nicer (and maybe provides useful info).
 - testmc.generic.machine.Machine.load_memimage() currently sets the
   PC to `None` if there's no entrypoint in the file it's loading. It
   should probably instead set the PC to the reset vector, or the first
   address loaded, or something like that.
+
+#### Build/Test System Fixes
+
+- extract src/mc68/{hello,cjsmon} loadbios() to test framework
+- remove more `  cpu 6502` from files and put in unit test framework?
+- Rewrite Test in Python and replace UNIT_TESTING symbol per comments.
 
 #### Features
 

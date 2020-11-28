@@ -28,19 +28,10 @@ cmdqptr     ds  2               ; current parsing loc in command input buffer
 tmp1        equ $E1     ; b temp storage
 tmp2        equ $E2     ; b temp storage
 hexword     equ $E4     ; W qhexword result location
-Mcur        equ $E6     ; W monitor `*` variable: current location
-Mexwidth    equ $E8     ; b examine width: bytes per line to print
 exlines     equ $E9     ; b examine lines: number of lines to print
-
-;   Location of command table; this can be overridden by the user.
-;   Each entry is three bytes, one of:
-;   • A command character followed by the address of the routine
-;     for that command; the routine should finish with RTS.
-;   • A $00 character and $0000 address indicating end of table.
-;   • XXX need to define entry for continuation address of table.
-;   XXX This needs to be set to the default command table by the monitor
-;   cold start.
-cmdtbl      dw default_cmdtbl
+cmdtbl      equ $F0     ; w pointer to command table (see below)
+Mcur        equ $F2     ; W monitor `*` variable: current location
+Mexwidth    equ $F4     ; b examine width: bytes per line to print
 
 ; ----------------------------------------------------------------------
 ;   Input buffer. On commerical systems this can probably be re-used
@@ -54,10 +45,22 @@ rdlinebuf_end
 
 PROMPT      equ '>'
 
-;   The default command table. If cmdtbl points to a user-defined table,
-;   likely you want a continuation entry at the end of that table pointing
-;   to this.
-default_cmdtbl
+; ----------------------------------------------------------------------
+;   Command Table
+
+;   The `cmdtbl` variable points to the current command table used by the
+;   parser. Each 3-byte entry is one of:
+;   • A command character followed by the address of the routine
+;     for that command; the routine should finish with RTS.
+;   • A $00 character and $0000 address indicating end of table.
+;   • XXX need to define entry for continuation address of table.
+
+;   `init` sets `cmdtbl` to point to `cmdtbl_std`. The user may change this
+;   to point to his own command table to add new commands or override
+;   existing ones; usually the last entry of the user's table would be a
+;   continuation pointer to `cmdtbl_std`.
+
+cmdtbl_std
             db ' '
             dw      rtscmd      ; do nothing
             db ':'
@@ -76,7 +79,9 @@ default_cmdtbl
 
 ;   Do minimum initialization to avoid truly broken behaviour and
 ;   then drop into command loop.
-init        lda A,#$10          ; default examine width: 16 bytes
+init        ldx #cmdtbl_std     ; default command table
+            stx cmdtbl
+            lda A,#$10          ; default examine width: 16 bytes
             sta A,Mexwidth
             lda A,#8            ; default examine size: 8 lines
             sta A,exlines

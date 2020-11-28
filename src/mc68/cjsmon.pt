@@ -262,19 +262,19 @@ def test_cmdloop_quitcmd(m, S, R):
     #   Quit doesn't return to the parser loop; it manually removes the
     #   return address that .parse added. This means our JSRs/RTSs will
     #   match, so in this one case we can use m.call().
-    istream, ostream = loadbios(m, b'Q\r')
+    istream, ostream = loadbios(m, b'q\r')
     m.depword(S.cmdtbl, S.cmdtbl_std)
     m.call(S.cmdloop)
-    assert b'\n> Q\n' ==  ostream.getvalue()
+    assert b'\n> q\n' ==  ostream.getvalue()
     #   Make sure we exited at the point where we expected.
     assert R(pc=S.rtscmd) == m.regs
 
 def test_cmdloop_cancel(m, S, R):
     ' Confirm that ctrl-C terminates input, ignores line. '
-    istream, ostream = loadbios(m, b'^~123~^\x03' b'Q\r')
+    istream, ostream = loadbios(m, b'^~123~^\x03' b'q\r')
     m.depword(S.cmdtbl, S.cmdtbl_std)
     m.call(S.cmdloop)
-    assert b'\n> ^~123~^\x07\n' b'> Q\n' ==  ostream.getvalue()
+    assert b'\n> ^~123~^\x07\n' b'> q\n' ==  ostream.getvalue()
     #   Make sure we exited at the point where we expected.
     assert R(pc=S.rtscmd) == m.regs
 
@@ -300,9 +300,9 @@ def runmon(m, S, R):
 
 def test_cmdloop_multicmd(m, S, R):
     ' Multiple command processing of the simplest possible commands. '
-    istream, ostream = loadbios(m, b'^^ ^Q\r')
+    istream, ostream = loadbios(m, b'^^ ^q\r')
     runmon(m, S, R)
-    assert b'\n> ^^ ^Q\n' b'\n\n\n' ==  ostream.getvalue()
+    assert b'\n> ^^ ^q\n' b'\n\n\n' ==  ostream.getvalue()
 
 def test_cmdloop_multiline(m, S, R):
     ''' Simple commands split across lines.
@@ -312,24 +312,24 @@ def test_cmdloop_multiline(m, S, R):
         another newline even though there was no output on the existing
         line. When we print newlines needs to be reworked.
     '''
-    istream, ostream = loadbios(m, b' \r^\rQ\r')
+    istream, ostream = loadbios(m, b' \r^\rq\r')
     runmon(m, S, R)
     expected = bytes(
         b'\n> '     # initial prompt
         b' \n\n> '  # space (no command), unwanted NL, following prompt
         b'^\n\n\n> '  # ^ (print CR), unwanted NL, following prompt
-        b'Q\n'      # quit command
+        b'q\n'      # quit command
         )
     assert expected ==  ostream.getvalue()
 
 def test_cmdloop_setcur(m, S, R):
-    istream, ostream = loadbios(m, b'a800 Q\r')
+    istream, ostream = loadbios(m, b'a800 q\r')
     runmon(m, S, R)
     assert 0xA800 == m.word(S.Mcur)
 
 def test_cmdloop_deposit_examine(m, S, R):
     ' Simple integration test. '
-    istream, ostream = loadbios(m, b'7655:cd\r7654:ab x Q\r')
+    istream, ostream = loadbios(m, b'7655:cd\r7654:ab x q\r')
     runmon(m, S, R)
 
     print(m.regs); print(m.bytes(m.regs.sp-8, 8))
@@ -344,8 +344,8 @@ def test_cmdloop_eachrts(m, S, R):
         the current instruction, stack contents and buffer contents at a
         few points during execution.
     '''
-    input = b'a800\r3Q\r'
-    input = b'^ ^^Q\r'
+    input = b'a800\r3q\r'
+    input = b'^ ^^q\r'
     istream, ostream = loadbios(m, input)
     m.deposit(0xA800, b'ABCDEFGH')
 

@@ -65,12 +65,12 @@ cmdtbl_std
             dw      rtscmd      ; do nothing
             db ':'
             dw      deposit     ; enter data into memory
-            db 'Q'
+            db '^'
+            dw      nlcmd       ; print newline
+            db 'q'
             dw      quitcmd     ; "quit"; exit to monitor's caller
             db 'x'
             dw      examine     ; examine memory
-            db '^'
-            dw      nlcmd       ; print newline
             db $00
             dw      $0000       ; end of table
 

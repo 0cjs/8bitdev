@@ -8,7 +8,7 @@
 
 reset:      ldx #$EFFF      ; default stack immediately below monitor
             txs
-            jsr cmdloop
+            jsr init
             db  $02         ; invalid opcode should cause simulator exit
             jmp reset       ; failing that, restart monitor
 

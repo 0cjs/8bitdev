@@ -1,6 +1,6 @@
 from    testmc  import tmc_tid
 from    testmc.mc6800  import  Machine, Instructions as I
-import  pytest
+import  pytest, re
 
 object_file = 'src/mc68/cjsmon.p'
 
@@ -167,7 +167,18 @@ def test_rdline_overflow(m, R, S):
 ####################################################################
 #   Commands (tested outside of command loop)
 
-@pytest.mark.parametrize('loc, parselen, arg, data', [
+def setinput(m, curaddr, input):
+    ''' Common test setup:
+        - Set monitor current address `Mcur` to `curaddr`
+        - Load the input buffer `S.rdlinebuf` with `input` and $00 terminator
+        - Set current parse pointer `cmdqptr` to start of input buffer
+    '''
+    S = m.symtab
+    m.depword(S.Mcur, curaddr)
+    m.deposit(S.rdlinebuf, input + b'\x00')
+    m.depword(S.cmdqptr, S.rdlinebuf)
+
+@pytest.mark.parametrize('loc, parselen, cmd, data', [
     (0x7000,  0,  b'',                     b''),
     (0x7001,  2,  b'ff',                   b'\xFF'),
     (0x7002,  1,  b'1',                    b'\x01'),
@@ -177,19 +188,38 @@ def test_rdline_overflow(m, R, S):
     (0x7006,  5,  b'6 12 x',               b'\x06\x12'),
     (     1,  2,  b'34',                   b'\x34'),
 ], ids=tmc_tid)
-def test_deposit(m, S, R, loc, parselen, arg, data):
+def test_deposit(m, S, R, loc, parselen, cmd, data):
     inbuf = S.rdlinebuf
     expected = b'\xEE' + data + b'\xEE'
 
-    m.depword(S.Mcur, loc)
-    m.deposit(inbuf, arg + b'\x00')
-    m.depword(S.cmdqptr, inbuf)
+    setinput(m, loc, cmd)
     m.deposit(loc-1, b'\xEE'*len(expected))
-
     m.call(S.deposit, R(a=ord(':'), x=S.deposit))
-
     assert (inbuf,  inbuf + parselen,   expected) \
         == (inbuf,  m.word(S.cmdqptr),  m.bytes(loc-1, len(expected)))
+
+@pytest.mark.parametrize('loc, width, cmdarg, explines, expmatch', [
+    (0x8003,  8, b'',    2, '8003: 43 44 45 46 47 48 49 4A\n'
+                            '800B: 4B 4C 4D 4E 4F 50 51 52\n'),
+    (0x7FFF,  5, b'1',   1, '7FFF: 00 40 41 42 43\n'),
+    (0x8000,  2, b'1f', 31, '8000: 40 41\n.*803C: 7C 7D\n'),
+], ids=tmc_tid)
+def test_examine(m, S, R, loc, width, cmdarg, explines, expmatch):
+    m.deposit(0x8000, range(0x40, 0x80))    # test data to dump
+    m.deposit(S.exlines, 2)                 # default value for tests
+    m.deposit(S.Mexwidth, width)
+    setinput(m, loc, cmdarg)
+    _, ostream = loadbios(m)
+
+    m.call(S.examine)
+    output = str(ostream.getvalue(), encoding='ASCII')
+    print(output)
+
+    assert re.fullmatch(expmatch, output, re.DOTALL)
+    assert explines == m.byte(S.exlines), 'new explines default not set'
+    assert S.rdlinebuf + len(cmdarg) == m.word(S.cmdqptr), 'cmdarg not consumed'
+    assert explines == len(output.split('\n')) - 1, \
+        'exepcted number of output lines'
 
 ####################################################################
 #   Command loop
@@ -246,6 +276,9 @@ def test_cmdloop_cancel(m, S, R):
     #   Make sure we exited at the point where we expected.
     assert R(pc=S.rtscmd) == m.regs
 
+####################################################################
+#   Integration tests
+
 #   Because the parser loop sets up return addresses with PSH (continuation
 #   passing style), m.call() will not see a JSR to match to each command's
 #   RTS and thus exit after the first command. We get around this by
@@ -254,14 +287,19 @@ def test_cmdloop_cancel(m, S, R):
 #   cannot be used for this because it's also used as a convenient branch
 #   target for conditional RTS by other code.)
 
-def cmdloop(m, S, R):
-    m.setregs(R(pc=S.cmdloop))
+def runmon(m, S, R):
+    ''' Run the monitor starting with the standard init routine, up to when
+        it quits due to command input. We deliberately do not do extra
+        initialization here to help confirm that the monitor's minimal
+        initialization is complete enough to avoid problems.
+    '''
+    m.setregs(R(pc=S.init))
     m.stepto(stopat=[S['quitcmd']], stopon=[0x00], maxsteps=10000)
 
 def test_cmdloop_multicmd(m, S, R):
     ' Multiple command processing of the simplest possible commands. '
     istream, ostream = loadbios(m, b'^^ ^Q\r')
-    cmdloop(m, S, R)
+    runmon(m, S, R)
     assert b'\n> ^^ ^Q\n' b'\n\n\n' ==  ostream.getvalue()
 
 def test_cmdloop_multiline(m, S, R):
@@ -273,7 +311,7 @@ def test_cmdloop_multiline(m, S, R):
         line. When we print newlines needs to be reworked.
     '''
     istream, ostream = loadbios(m, b' \r^\rQ\r')
-    cmdloop(m, S, R)
+    runmon(m, S, R)
     expected = bytes(
         b'\n> '     # initial prompt
         b' \n\n> '  # space (no command), unwanted NL, following prompt
@@ -284,17 +322,19 @@ def test_cmdloop_multiline(m, S, R):
 
 def test_cmdloop_setcur(m, S, R):
     istream, ostream = loadbios(m, b'a800 Q\r')
-    cmdloop(m, S, R)
+    runmon(m, S, R)
     assert 0xA800 == m.word(S.Mcur)
 
 def test_cmdloop_deposit_examine(m, S, R):
     ' Simple integration test. '
     istream, ostream = loadbios(m, b'7655:cd\r7654:ab x Q\r')
-    cmdloop(m, S, R)
+    runmon(m, S, R)
 
     print(m.regs); print(m.bytes(m.regs.sp-8, 8))
     output = ostream.getvalue(); print(output)
     assert b'\n7654: AB CD' in output
+
+####################################################################
 
 @pytest.mark.skip
 def test_cmdloop_eachrts(m, S, R):

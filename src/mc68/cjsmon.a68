@@ -25,10 +25,12 @@ DEL         equ $7F
 cmdqptr     ds  2               ; current parsing loc in command input buffer
 
 ;   Other parser storage locations.
-tmp1        equ $E1             ; temp storage (1 byte)
-tmp2        equ $E2             ; temp storage (2 bytes)
-hexword     equ $E4             ; qhexword result location (2 bytes)
-Mcur        equ $E6             ; monitor `*` variable: current location
+tmp1        equ $E1     ; b temp storage
+tmp2        equ $E2     ; b temp storage
+hexword     equ $E4     ; W qhexword result location
+Mcur        equ $E6     ; W monitor `*` variable: current location
+Mexwidth    equ $E8     ; b examine width: bytes per line to print
+exlines     equ $E9     ; b examine lines: number of lines to print
 
 ;   Location of command table; this can be overridden by the user.
 ;   Each entry is three bytes, one of:
@@ -63,7 +65,7 @@ default_cmdtbl
             db 'Q'
             dw      quitcmd     ; "quit"; exit to monitor's caller
             db 'x'
-            dw      hexdump     ; examine memory
+            dw      examine     ; examine memory
             db '^'
             dw      nlcmd       ; print newline
             db $00
@@ -72,7 +74,13 @@ default_cmdtbl
 ; ----------------------------------------------------------------------
 ;   Command loop
 
-;   A simple command loop to demo this stuff.
+;   Do minimum initialization to avoid truly broken behaviour and
+;   then drop into command loop.
+init        lda A,#$10          ; default examine width: 16 bytes
+            sta A,Mexwidth
+            lda A,#8            ; default examine size: 8 lines
+            sta A,exlines
+
 cmdloop
             jsr prnl            ; Not clear that we should always be starting
                                 ;   with a newline, rather than having commands
@@ -150,7 +158,6 @@ rtscmd      rts
 ;   print a newline; useful for separating output and unit tests
 nlcmd       jmp prnl            ; RTS (TCO)
 
-; XXX need to sort out the two pointers, one to Mcur+? and one to input buffer+?
 deposit     ldx Mcur            ; current location (*); we leave this unchanged
             stx tmp2            ; deposit index
 .next       ldx cmdqptr         ; current input pointer
@@ -172,23 +179,38 @@ deposit     ldx Mcur            ; current location (*); we leave this unchanged
             bra .next           ; and continue parsing
 
 
-;   examine memory in hexadecimal starting at Mcur
-hexdump     lda A,Mcur          ; addr hi
+;   Examine memory in hexadecimal printing `exlines` of `Mexwidth` bytes
+;   per line starting at `Mcur`. (XXX 0 lines should use current range.)
+;   One optional argument, a hexbyte setting `exlines`.
+examine     ldx cmdqptr
+            jsr qhexbyte        ; new exlines value given?
+            bmi .noarg          ; no, use current default
+            stx cmdqptr         ; yes, consume argument
+            lda A,hexword+1     ;   and use arg
+            sta A,exlines       ;   to set new default
+.noarg      lda A,exlines       ; lines to print
+            sta A,tmp1          ; set remaining lines left to print
+            ldx Mcur            ; load start location to examine
+
+.nextline   ;   print current line address
+            stx tmp2
+            lda A,tmp2          ; addr hi
             jsr prhex
-            lda A,Mcur+1        ; addr lo
+            lda A,tmp2+1        ; addr lo
             jsr prhex
             lda A,#':'
             jsr prchar
-
-            ldx Mcur
-            lda B,#8            ; bytes to print
-.loop       jsr prspace
+            ;   print data
+            lda B,Mexwidth      ; bytes per line
+.nexthex    jsr prspace
             lda A,,X
             jsr prhex
             inx
             dec B
-            bne .loop
+            bne .nexthex
             jsr prnl
+            dec tmp1            ; lines left to print
+            bne .nextline
             rts
 
 ; ----------------------------------------------------------------------

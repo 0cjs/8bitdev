@@ -38,6 +38,7 @@ class Machine(GenericMachine):
             Reg('pc', 16), Reg('a'), Reg('b'), Reg('x', 16), Reg('sp', 16) )
         srbits    = ( Bit(1), Bit(1),
             Flag('H'), Flag('I'), Flag('N'), Flag('Z'), Flag('V'), Flag('C') )
+        srname    = 'cc'    # Condition Codes Register
 
     ####################################################################
     #   Instruction Execution

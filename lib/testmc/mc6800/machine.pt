@@ -38,6 +38,17 @@ def test_flags(m, R):
     m.setregs(R(I=1, V=1))
     assert R(H=0, I=1, N=0, Z=0, V=1, C=0) == m.regs
 
+def test_cc(m, R):
+    r = R(H=0, I=1, N=0, Z=1, V=0, C=1);
+    assert 0b11010101 == r.cc
+
+    r = R(cc=0b00101010)
+    assert R(H=1, I=0, N=1, Z=0, V=1, C=0) == r
+    assert 0b00101010 == r.cc   # we are allowed to make top two bits invalid
+
+    r = r.clone()
+    assert 0b11101010 == r.cc   # new properly sets top two bits from flags
+
 ####################################################################
 #   Instruction Execution
 

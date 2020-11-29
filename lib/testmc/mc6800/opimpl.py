@@ -156,6 +156,42 @@ def pulb(m):    m.b = popbyte(m)
 def psha(m):    pushbyte(m, m.a)
 def pshb(m):    pushbyte(m, m.b)
 
+def rti(m):
+    flags = popbyte(m)
+    #   This code is deliberately independent of the Registers object
+    #   to help cross-test, as well as for clarity.
+    m.H  = bool(flags & 0b00100000); m.I  = bool(flags & 0b00010000)
+    m.N  = bool(flags & 0b00001000); m.Z  = bool(flags & 0b00000100)
+    m.V  = bool(flags & 0b00000010); m.C  = bool(flags & 0b00000001)
+
+    m.b  = popbyte(m)
+    m.a  = popbyte(m)
+    m.x  = popword(m)
+    m.pc = popword(m)
+
+def swi(m):
+    ''' The definition of SWI is that it should set the PC to the address
+        at (n-5), "where n is the address corresponding to a high state on
+        all lines of the address bus." (PRM p.100) This should be kept in
+        mind if we introduce emulation of CPUs with <16-bit address buses,
+        though the implementation should still be fine so long as the high
+        bits are ignored.
+    '''
+    #   In the PRM this instruction, unlike the others excepting JSR,
+    #   explicitly shows the PC being incremented past the instruction: "PC
+    #   ← (PC) + 0001". Presumably it shows it here but not elsewhere just
+    #   to make clear which PC value is being pushed on the stack.
+    pushword(m, m.pc)
+    pushword(m, m.x)
+    pushbyte(m, m.a)
+    pushbyte(m, m.b)
+    pushbyte(m, 1 << 7 | 1 << 6 \
+                | m.H << 5 | m.I << 4 | m.N << 3 | m.Z << 2 | m.V << 1 | m.C)
+
+    swivec = 0xFFFF - 5             # PRM definition for 16-bit address bus
+    m.pc = m.word(swivec)
+    m.I = True
+
 ####################################################################
 #   Flag Changes
 

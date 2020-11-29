@@ -456,6 +456,56 @@ def test_PSH(opname, accval):
     runop([I[opname]], initregs=accval(0xEF, sp=0x000F),
         changedregs = R(sp=0x000E), changedmem  = { 0x000F: 0xEF })
 
+### Interrupt Handling
+
+@tc('cc',
+    #   Bits 6,7 set/clear should be ignored so we test with both.
+    0b11000000,                             # All flags clear
+    0b11000001, 0b11000010, 0b11000100,     # Individual flags
+    0b11001000, 0b11010000, 0b00100000,
+    0b11010101, 0b00101010                  # Flag combinations
+)
+def test_RTI(cc):
+    stackframe = {
+        0x0FFA: cc,                 # CC (11HINZVC)
+        0x0FFB: 0xBB, 0x0FFC: 0xAA, # ACCB, ACCA
+        0x0FFD: 0x56, 0x0FFE: 0x78, # XH, XL
+        0x0FFF: 0x12, 0x1000: 0x34, # PCH, PCL
+    }
+    runop([I['RTI']], memsize=0x2000,
+        initmem=stackframe, initregs=R(sp=0x0FF9),
+        changedregs=R(cc=cc, pc=0x1234, x=0x5678, b=0xBB, a=0xAA, sp=0x1000))
+
+@tc('r',
+    #   Same flag sets as RTI test
+    R(sp=0x28FF, H=0, I=0, N=0, Z=0, V=0, C=0, b=0x12, a=0x34, x=0x5678),
+    R(sp=0x2900, H=0, I=0, N=0, Z=0, V=0, C=1, b=0x0f, a=0x0e, x=0x0d0c),
+    R(sp=0x2901, H=0, I=0, N=0, Z=0, V=1, C=0, b=0x01, a=0x02, x=0x0003),
+    R(sp=0x2902, H=0, I=0, N=0, Z=1, V=0, C=0, b=0,    a=0,    x=0),
+    R(sp=0x2903, H=0, I=0, N=1, Z=0, V=0, C=0, b=0,    a=0,    x=0),
+    R(sp=0x2904, H=0, I=1, N=0, Z=0, V=0, C=0, b=0,    a=0,    x=0),
+    R(sp=0x2905, H=1, I=0, N=0, Z=0, V=0, C=0, b=0,    a=0,    x=0),
+    R(sp=0x0016, H=0, I=1, N=0, Z=1, V=0, C=1, b=0,    a=0,    x=0),
+    R(sp=0x0017, H=1, I=0, N=1, Z=0, V=1, C=0, b=0,    a=0,    x=0),
+)
+def test_SWI(r):
+    swivec  = 0xFFFA        # Assumes 16-bit addr bus; see opimpl.swi()
+    swient  = r.sp + 0x20   # SWI entry point
+    instaddr= r.sp + 10
+
+    esp = r.sp - 7  # expected stack pointer after SWI
+    stackdata = {
+        esp+1: r.cc,            esp+2: r.b,             esp+3: r.a,
+        esp+4: MSB(r.x),        esp+5: LSB(r.x),
+        esp+6: MSB(instaddr+1), esp+7: LSB(instaddr+1),
+    }
+    print('expecting sp={:04X} ({}) cc={:02X} ({})\n{}'
+        .format(esp, esp, r.cc, r.cc, sorted(stackdata.items())))
+
+    runop([I['SWI']], memsize=65536, startaddr=instaddr,
+        initregs=r, initmem={ swivec: MSB(swient), swivec+1: LSB(swient) },
+        changedregs=r.clone(sp=esp, pc=swient, I=1), changedmem=stackdata)
+
 ####################################################################
 #   Flag (Condition Code) Changes
 

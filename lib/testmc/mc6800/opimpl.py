@@ -103,6 +103,9 @@ def bne(m): branchif(m, not m.Z)
 def bmi(m): branchif(m, m.N)
 def bpl(m): branchif(m, not m.N)
 
+def bhi(m): branchif(m, not m.C and not m.Z)
+def bls(m): branchif(m, m.C or m.Z)
+
 ####################################################################
 #   Instructions affecting the stack
 

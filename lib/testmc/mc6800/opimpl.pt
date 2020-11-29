@@ -365,6 +365,12 @@ def test_BRA():
     #                       Overflow flag
     (I.BVC, False, R(V=1)),             (I.BVC, True,  R(V=0)),
     (I.BVS, False, R(V=0)),             (I.BVS, True,  R(V=1)),
+    #                       Higher
+    (I.BHI, True,  R(C=0,Z=0)),         (I.BHI, False, R(C=0,Z=1)),
+    (I.BHI, False, R(C=1,Z=1)),         (I.BHI, False, R(C=1,Z=0)),
+    #                       Lower or same
+    (I.BLS, False, R(C=0,Z=0)),         (I.BLS, True,  R(C=0,Z=1)),
+    (I.BLS, True,  R(C=1,Z=1)),         (I.BLS, True,  R(C=1,Z=0)),
 )
 def test_condbranch(op, initregs, taken):
     print('op {} ${:02X}, flag: {}, taken {} expected\n'

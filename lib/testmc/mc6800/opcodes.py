@@ -30,8 +30,8 @@ OPCODES = {
 
     0x20: ('BRA',   bra),           0x30: ('TSX',   tsx),
     0x21: (None,    invalid),       0x31: ('INS',   ins),
-                                    0x32: ('PULA',  pula),
-                                    0x33: ('PULB',  pulb),
+    0x22: ('BHI',   bhi),           0x32: ('PULA',  pula),
+    0x23: ('BLS',   bls),           0x33: ('PULB',  pulb),
     0x24: ('BCC',   bcc),           0x34: ('DES',   des),
     0x25: ('BCS',   bcs),           0x35: ('TXS',   txs),
     0x26: ('BNE',   bne),           0x36: ('PSHA',  psha),

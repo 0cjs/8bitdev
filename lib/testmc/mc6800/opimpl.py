@@ -103,8 +103,23 @@ def bne(m): branchif(m, not m.Z)
 def bmi(m): branchif(m, m.N)
 def bpl(m): branchif(m, not m.N)
 
+#   Unsigned comparisons after CMP/SUB/CBA/SBA.
 def bhi(m): branchif(m, not m.C and not m.Z)
 def bls(m): branchif(m, m.C or m.Z)
+
+#   Signed comparisons after CMP/SUB/CBA/SBA.
+def blt(m): branchif(m, m.N ^ m.V)
+def ble(m): branchif(m, m.Z or (m.N ^ m.V))
+def bge(m): branchif(m, not (m.N ^ m.V))
+def bgt(m): branchif(m, not m.Z and not (m.N ^ m.V))
+#
+#   Definitions from the MC6800 Programmer's Reference Manual:
+#
+#   blt(m): branchif(m, (m.N and not m.V) or (not m.N and m.V))
+#   ble(m): branchif(m, m.Z or ((m.N and not m.V) or (not m.N and m.V)))
+#   bge(m): branchif(m, (m.N and m.V) or (not m.N and not m.V))
+#   bgt(m): branchif(m, not m.Z and ((m.N and m.V) or (not m.N and not m.V)))
+
 
 ####################################################################
 #   Instructions affecting the stack

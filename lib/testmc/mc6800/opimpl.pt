@@ -365,12 +365,28 @@ def test_BRA():
     #                       Overflow flag
     (I.BVC, False, R(V=1)),             (I.BVC, True,  R(V=0)),
     (I.BVS, False, R(V=0)),             (I.BVS, True,  R(V=1)),
-    #                       Higher
+    #                       Unsigned >
     (I.BHI, True,  R(C=0,Z=0)),         (I.BHI, False, R(C=0,Z=1)),
     (I.BHI, False, R(C=1,Z=1)),         (I.BHI, False, R(C=1,Z=0)),
-    #                       Lower or same
+    #                       Unsigned <=
     (I.BLS, False, R(C=0,Z=0)),         (I.BLS, True,  R(C=0,Z=1)),
     (I.BLS, True,  R(C=1,Z=1)),         (I.BLS, True,  R(C=1,Z=0)),
+    #                       Signed <
+    (I.BLT, False, R(N=0, V=0, Z=1)),        (I.BLT, True,  R(N=1, V=0)),
+    (I.BLT, False, R(N=1, V=1, Z=1)),        (I.BLT, True,  R(N=0, V=1)),
+    #                       Signed <=
+    (I.BLE, False, R(N=0, V=0, Z=0)),   (I.BLE, True,  R(N=1, V=0, Z=0)),
+    (I.BLE, False, R(N=1, V=1, Z=0)),   (I.BLE, True,  R(N=0, V=1, Z=0)),
+    (I.BLE, True,  R(N=0, V=0, Z=1)),   (I.BLE, True,  R(N=1, V=0, Z=1)),
+    (I.BLE, True,  R(N=1, V=1, Z=1)),   (I.BLE, True,  R(N=0, V=1, Z=1)),
+    #                       Signed >=
+    (I.BGE, True,  R(N=0, V=0, Z=1)),        (I.BGE, False, R(N=1, V=0)),
+    (I.BGE, True,  R(N=1, V=1, Z=1)),        (I.BGE, False, R(N=0, V=1)),
+    #                       Signed >
+    (I.BGT, True,  R(N=0, V=0, Z=0)),   (I.BGT, False, R(N=1, V=0, Z=0)),
+    (I.BGT, True,  R(N=1, V=1, Z=0)),   (I.BGT, False, R(N=0, V=1, Z=0)),
+    (I.BGT, False, R(N=0, V=0, Z=1)),   (I.BGT, False, R(N=1, V=0, Z=1)),
+    (I.BGT, False, R(N=1, V=1, Z=1)),   (I.BGT, False, R(N=0, V=1, Z=1)),
 )
 def test_condbranch(op, initregs, taken):
     print('op {} ${:02X}, flag: {}, taken {} expected\n'

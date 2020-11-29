@@ -118,9 +118,14 @@ class GenericRegisters:
           lower case for unset and upper case for set in the string
           representation. You must use `Bit(1)` or `Bit(0)` values for bits
           in the status register that do not correspond to flags.
-        * `srname` (optional): The name of the status register, if present
-          in the simulated machine. Typically ``sr`` or ``psr`` (Program
-          Status Register).
+        * `srname` (optional): The name of the status pseudo-register,
+          typically used for flags pushed on the stack. (Common names are
+          ``sr``, ``psr`` (Program Status Register) or ``cc`` (Condition
+          Codes).) This is a word of `srbits` size containing the flags and
+          any constant 1 or 0 bits in the order defined in `srbits`. If
+          present, the `Registers` may be initialized with either
+          individual flag values or an `srname` value and both will be
+          available to be read.
 
         By convention, register names are lower case and flag names are
         upper case.

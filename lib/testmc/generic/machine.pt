@@ -86,6 +86,11 @@ def test_regs_flag_attributes(M, R):
     m.pc = 3; m.B = True
     assert R(pc=3, B=1) == m.regs
 
+    #   We still use flags if property named by `Registers.srname`
+    #   does not exist on the Machine.
+    R.srname = 'psr'
+    assert R(pc=3, B=1) == m.regs
+
 def test_regs_status_register(M, R):
     R.srname = 'psr'
 
@@ -103,6 +108,12 @@ def test_setregs_flag_attributes(M, R):
     m.setregs(R(pc=0xF000));    assert (0xF000, False) == (m.pc, m.B)
     m.setregs(R(B=1));          assert (0xF000,  True) == (m.pc, m.B)
     m.setregs(R(pc=4, B=0));    assert (     4, False) == (m.pc, m.B)
+
+    #   We still use flags if property named by `Registers.srname`
+    #   does not exist on the Machine.
+    R.srname = 'psr'
+    m.setregs(R(B=0));          assert not m.B
+    m.setregs(R(B=1));          assert m.B
 
 def test_setregs_status_register(M, R):
     R.srname = 'psr'

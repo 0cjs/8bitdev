@@ -11,17 +11,25 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
 
         The interface offers the following properties and methods. The ones
         marked with ◑ must be implemented by the subclass; see the
-        attribute/method docstring for details.
+        attribute/method docstrings for details.
 
         - ◑`MemoryAccess` routines: `byte()`, `word()`, `deposit()`, etc.
           (See that class for subclassing information.)
         - ◑`Registers`: The subclass of `GenericRegisters` that defines
           the registers and flags of the machine.
+        - ◑`__init__()`: See method docstring below.
         - `regs`: The current machine registers and flags.
         - `setregs()`: Set some or all machine registers and flags.
     '''
 
     def __init__(self):
+        ''' The subclass `__init__()` should call `super().__init__()` and
+            initialize memory, registers and flags. The registers and flags
+            may be properties on this object itself or on a separate object
+            in the `regsobj` property. Create and initialize properties for
+            either the individual flags *or* the status register named by
+            `Registers.srname`, but not both.
+        '''
         self.symtab = SymTab()      # symtab initially empty
 
     @abstractproperty
@@ -35,7 +43,7 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
                 class Registers(GenericRegisters):
                     registers = (...)
                     srbits = (...)
-                    srname = '...'
+                    srname = '...'      # optional
         '''
 
     def _regsobj(self):
@@ -49,6 +57,11 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
             If the `regsobj` attribute has a value, the register values
             will be read from attributes on that object, otherwise they
             will be read from attributes on `self`.
+
+            If `Registers` has an `srname` property *and* `regsobj`/`self`
+            has the same property, the `Registers` object will be instiated
+            with that property. Otherwise it will be instantiated with the
+            indivdiual flags read from the `regsobj`/`self`.
         '''
         R = self.Registers
         srname = R()._srname()
@@ -56,7 +69,7 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
         vals = {}
         for reg in R.registers:
             vals[reg.name] = getattr(regsobj, reg.name)
-        if srname:
+        if srname and hasattr(regsobj, srname):
             vals[srname] = getattr(regsobj, srname)
         else:
             for flag in R.srbits:
@@ -67,8 +80,13 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
     def setregs(self, r):
         ''' Given a `Registers` object, set the machine's registers and
             flags to the value of any non-`None` values in the `Registers`.
+
+            If `Registers` has a status register name (`srname`) defined,
+            that will be set on the target instead of the individual flags.
+            This can be overridden by specifying `setsr=False`.
         '''
-        r.set_attrs_on(self._regsobj(), setsr=bool(r._srname()))
+        setsr = r._srname() and hasattr(self._regsobj(), r._srname())
+        r.set_attrs_on(self._regsobj(), setsr=setsr)
 
     ####################################################################
     #   Object code loading

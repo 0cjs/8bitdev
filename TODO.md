@@ -3,6 +3,10 @@ To-do List
 
 #### Monitor, Library
 
+- prhex can jump to prnyb+2 instead of prnyb to save an instruction (the
+  LSRs ensure that the top half is already clear, so no AND #$0F necessary)
+- prnyb can JMP instead of JSR+RTS
+- test use of DAA for prnyb
 - command table continuation which will also test that `cmdtbl` is used
 - fix rdline not accepting backspace when buffer full
 - extract rdline from cjsmon, use only for tmc68 version

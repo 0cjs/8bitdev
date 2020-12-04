@@ -46,12 +46,17 @@ cmdqptr     ds  2               ; current parsing loc in command input buffer
 ;   Other parser storage locations.
 tmp1        equ $E1     ; b temp storage
 tmp2        equ $E2     ; W temp storage
-hexword     equ $E4     ; W qhexword result location
-stat        equ $E9     ; b status of last qhex parse (and later, more)
-exlines     equ $EA     ; b examine lines: number of lines to print
+Mpending    equ $E4     ; W last value input before a command
+qhex_out    equ $E6     ; W last qhex result ($0000 if qhex failed)
+stat        equ $E9     ; b status values:
+                        ;   b7:   0=no pending value, 1=pending value available
+                        ;   b6-0: unused
+tmp1a       equ $EA     ; b temp location during refactoring
 cmdtbl      equ $F0     ; w pointer to command table (see below)
-Mcur        equ $F2     ; W monitor `*` variable: current location
-Mexwidth    equ $F4     ; b examine width: bytes per line to print
+Mexamcur    equ $F2     ; W examine command current start addr
+Mexamwidth  equ $F4     ; b examine width: bytes per line to print
+Mexamlines  equ $F5     ; b examine lines: number of lines to print
+Mdepcur     equ $F6     ; W deposit command current start addr
 
 ; ----------------------------------------------------------------------
 ;   Command Table
@@ -90,9 +95,9 @@ cmdtbl_std
 init        ldx #cmdtbl_std     ; default command table
             stx cmdtbl
             lda A,#$10          ; default examine width: 16 bytes
-            sta A,Mexwidth
+            sta A,Mexamwidth
             lda A,#8            ; default examine size: 8 lines
-            sta A,exlines
+            sta A,Mexamlines
 
 cmdloop
             jsr prnl            ; Not clear that we should always be starting
@@ -118,9 +123,9 @@ cmdloop
             lda A,#MSB(.parse)
             psh A
 
-            ;   Start by attempting to parse a hexword, handling it if found.
-            jsr qhexword
-            bpl setcur          ; parsed hexword, store in Mcur
+            ;   Start by attempting to parse a hexword as the pending value.
+            jsr qhexword        ; parsed a hexword?
+            bpl savepending     ; yes, save as pending and carry on parsing
 
             ;   Consume a char and parse it as a command.
             ;   (Callees who need to know the char parsed may DEX to get it.)
@@ -148,12 +153,31 @@ cmdloop
             jsr errbeep         ; beep for error (XXX should show err msg)
             bra cmdloop
 
-;   Copy hexword (last read of qhexword) to Mcur
-;   This not a standard command; it's called differently.
-setcur      stx cmdqptr         ; caller can't do this because STX clears N flag
-            ldx hexword
-            stx Mcur
+savepending stx cmdqptr         ; consume the parsed text
+            ldx qhex_out        ; copy parsed value into pending
+            stx Mpending
+            lda A,stat
+            ora A,#$80          ; ensure pending available bit set
+            sta A,stat
             rts
+
+;   ♠X,stat ♣A  Copy Mpending to (X), if available.
+;
+;   If `stat` has bit 7 clear, indicating that the last call to `qhex` read
+;   a value, copy that value to the location pointed to by X and clear bit
+;   7 of `stat`. Otherwise do nothing.
+
+usepending  tpa                 ; set bit 7 (pending available) in A
+            bit A,stat          ; is it set?
+            bpl .done           ; no, nothing pending
+            lda A,Mpending      ; copy MSB
+            sta A,0,X
+            lda A,Mpending+1    ; copy LSB
+            sta A,1,X
+            lda A,stat
+            and A,#$7F          ; clear pending available bit to indicate
+            sta A,stat          ;   that Mpending has been consumed
+.done       rts
 
 ; ----------------------------------------------------------------------
 ;   Commands
@@ -181,13 +205,15 @@ nlcmd       jmp prnl            ; RTS (TCO)
 ;   following command is a hex number that would otherwise be interpreted
 ;   as data to be deposited.
 ;
-deposit     ldx Mcur            ; current location (*); we leave this unchanged
+deposit     ldx #Mdepcur
+            jsr usepending
+            ldx Mdepcur
             stx tmp2            ; deposit index
 .next       ldx cmdqptr         ; current input pointer
             jsr qhexbyte
             bmi .nothex         ; not hexbyte, skip space or end
             stx cmdqptr         ; save next parse position
-            lda A,hexword+1
+            lda A,qhex_out+1    ; byte we just read
             ldx tmp2            ; current deposit index
             sta A,,X
             inx
@@ -195,12 +221,12 @@ deposit     ldx Mcur            ; current location (*); we leave this unchanged
             bra .next
 
 .nothex     lda A,,X            ; load next character
-            cmp A,#':'          ; consumed terminator?
+            cmp A,#':'          ; terminator to consume?
             beq .term           ; yes, we're done
             cmp A,#' '          ; is it a space?
             bne .rts            ; no, we're done
-            inx
-            stx cmdqptr         ; skip past space
+            inx                 ; skip past space
+            stx cmdqptr
             bra .next           ; and continue parsing
 
 .term       inx                 ; consume terminator
@@ -208,18 +234,27 @@ deposit     ldx Mcur            ; current location (*); we leave this unchanged
 .rts        rts
 
 
-;   Examine memory in hexadecimal printing `exlines` of `Mexwidth` bytes
-;   per line starting at `Mcur`. (XXX 0 lines should use current range.)
-;   One optional argument, a hexbyte setting `exlines`.
-examine     ldx cmdqptr
-            jsr qhexbyte        ; new exlines value given?
+;   Examine memory.
+;
+;   Starting at address `Mexamcur', `Mexamlines` of `Mexamwidth` bytes are
+;   printed in hexadecimal.
+;
+;   If a pending value is available, `Mexamcur` is set to that, otherwise
+;   it's left unchanged. There is one optional argument after the command,
+;   a hex byte setting `Mexamlines`. (XXX Possibly 0 lines should use the
+;   current range?)
+
+examine     ldx #Mexamcur
+            jsr usepending
+            ldx cmdqptr
+            jsr qhexbyte        ; new Mexamlines value given?
             bmi .noarg          ; no, use current default
             stx cmdqptr         ; yes, consume argument
-            lda A,hexword+1     ;   and use arg
-            sta A,exlines       ;   to set new default
-.noarg      lda A,exlines       ; lines to print
+            lda A,qhex_out+1    ;   and use arg
+            sta A,Mexamlines    ;   to set new default
+.noarg      lda A,Mexamlines    ; lines to print
             sta A,tmp1          ; set remaining lines left to print
-            ldx Mcur            ; load start location to examine
+            ldx Mexamcur        ; load start location to examine
 
 .nextline   ;   print current line address
             stx tmp2
@@ -230,7 +265,7 @@ examine     ldx cmdqptr
             lda A,#':'
             jsr prchar
             ;   print data
-            lda B,Mexwidth      ; bytes per line
+            lda B,Mexamwidth    ; bytes per line
 .nexthex    jsr prspace
             lda A,,X
             jsr prhex
@@ -306,8 +341,7 @@ rdline      ldx #rdlinebuf
 ;   q* - parsing
 
 qhex_len    equ tmp1
-qhex_out    equ hexword
-qhex_stat   equ stat
+qhex_stat   equ tmp1a
             include "src/mc68/qhex.a68"
 
 ; ----------------------------------------------------------------------

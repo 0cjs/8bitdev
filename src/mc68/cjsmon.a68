@@ -45,7 +45,7 @@ cmdqptr     ds  2               ; current parsing loc in command input buffer
 
 ;   Other parser storage locations.
 tmp1        equ $E1     ; b temp storage
-tmp2        equ $E2     ; b temp storage
+tmp2        equ $E2     ; W temp storage
 hexword     equ $E4     ; W qhexword result location
 exlines     equ $E9     ; b examine lines: number of lines to print
 cmdtbl      equ $F0     ; w pointer to command table (see below)
@@ -304,7 +304,7 @@ rdline      ldx #rdlinebuf
 ; ----------------------------------------------------------------------
 ;   q* - parsing
 
-            include "src/mc68/qdigit.a68"
+            include "src/mc68/qhex.a68"
 
 ;   ♠X,hexword ♣AB,tmp1 Parse an ASCII hex word at X, N=0 on success.
 ;

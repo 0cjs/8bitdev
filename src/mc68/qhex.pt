@@ -1,7 +1,7 @@
 from    testmc.mc6800 import  Machine
 import  pytest
 
-object_file = 'src/mc68/qdigit.p'
+object_file = 'src/mc68/qhex.p'
 
 
 pytest.register_assert_rewrite('qdigit')

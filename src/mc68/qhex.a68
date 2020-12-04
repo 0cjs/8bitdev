@@ -12,7 +12,7 @@ qhex_tmp                    equ $22     ; BYTE
   endif
 
 ; ----------------------------------------------------------------------
-;   Parse an ASCII hex word at X, N=0 on success.
+;   Parse an ASCII hex byte or word at X, N=0 on success.
 ;   ♠X,qhex_out ♣AB,qhex_tmp
 ;
 ;   0-4 ASCII characters are parsed and X is left pointing at the first
@@ -26,10 +26,14 @@ qhex_tmp                    equ $22     ; BYTE
 ;   second (if present) combines nybble 2 with 3, third (if present) goes
 ;   straight into qhex_out nybble 1, and last, if present, combines into
 ;   qhex_out nybble 0. Less ROL.
-;
-qhexword2 rts ; XXX
-;
+
 qhexword    lda B,#4            ; max digits to read
+            jmp qhex
+
+qhexbyte    lda B,#2
+            ;   fallthrough
+
+            ;   B loaded with number of ASCII digits to parse (max 4)
 qhex        clr A               ; current result: $0000
             sta A,qhex_out
             sta A,qhex_out+1
@@ -60,18 +64,13 @@ qhex        clr A               ; current result: $0000
 .exit       lda A,qhex_tmp      ; update error status flag
             rts
 
-;   Parse an ASCII hex byte at X, N=0 on success.
-;   ♠X,qhex_out ♣AB,qhex_tmp
-qhexbyte    lda B,#2
-            jmp qhex
-
 ; ----------------------------------------------------------------------
 ;   ♠A ♡BX Convert ASCII character to binary number in bases up to 41.
 ;   Returns N flag clear and binary digit in A, or N set on error.
 ;
 ;   This translates A-Z[\]^_ and a-z{|}~DEL as 10, 11...40. The caller
 ;   must check the returned value if the intended base was less than 41.
-;
+
 qdigit      cmp A,#'9'+1
             bcc .letter         ; >9, convert letter
             sub A,#'0'          ; convert digit, N set if <0

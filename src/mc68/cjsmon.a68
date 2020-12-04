@@ -44,11 +44,11 @@ PROMPT      equ '>'
 cmdqptr     ds  2               ; current parsing loc in command input buffer
 
 ;   Other parser storage locations.
-tmp1a       equ $E0     ; b temp storage destroyed by JR-200 ROMs
 tmp1        equ $E1     ; b temp storage
 tmp2        equ $E2     ; W temp storage
 hexword     equ $E4     ; W qhexword result location
-exlines     equ $E9     ; b examine lines: number of lines to print
+stat        equ $E9     ; b status of last qhex parse (and later, more)
+exlines     equ $EA     ; b examine lines: number of lines to print
 cmdtbl      equ $F0     ; w pointer to command table (see below)
 Mcur        equ $F2     ; W monitor `*` variable: current location
 Mexwidth    equ $F4     ; b examine width: bytes per line to print
@@ -305,9 +305,9 @@ rdline      ldx #rdlinebuf
 ; ----------------------------------------------------------------------
 ;   q* - parsing
 
-qhex_len    equ tmp1a
+qhex_len    equ tmp1
 qhex_out    equ hexword
-qhex_tmp    equ tmp1
+qhex_stat   equ stat
             include "src/mc68/qhex.a68"
 
 ; ----------------------------------------------------------------------

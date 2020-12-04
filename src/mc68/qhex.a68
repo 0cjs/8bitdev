@@ -9,22 +9,27 @@ qhex_len                    equ $20     ; BYTE max digits to parse
     ifndef qhex_out
 qhex_out                    equ $21     ; WORD output of qhex*
     endif
-    ifndef qhex_tmp
-qhex_tmp                    equ $23     ; BYTE
+    ifndef qhex_stat
+qhex_stat                   equ $23     ; BYTE
     endif
   endif
 
 ; ----------------------------------------------------------------------
 ;   Parse up to A (1-4) ASCII hex digits at X, N=0 on success.
-;   ♠X,qhex_out ♣AB,qhex_len,qhex_tmp
+;   ♠X,qhex_out,qhex_stat  ♣AB,qhex_len
 ;
-;   A must be 1 through 4; no more than this many ASCII characters are
-;   parsed at X, which is left pointing to the first unparsed char. The
-;   parsed value (or $0000 if no chars were parsed) is left in `qhex_out`.
-;   The N flag is clear if at least one digit is successfully parsed, set
-;   otherwise.
+;   Input:
+;   - X: the start of the text to be parsed.
+;   - A: 1-4, the maximum number of digits to parse
+;   Temps:
+;   - qhex_len
+;   Output:
+;   - X: the first char that failed to parse
+;   - N flag: clear if at least one digit successfully parsed, set otherwise
+;   - qhex_stat: bit 7 same as N; bits 6..0 preserved
+;   - qhex_out: the parsed hex number, or $0000 on failure
 ;
-;   None of the memory locations benefit from being in the zero page.
+;   No locations benefit significantly from being in the zero page.
 
 qhexword    lda A,#4            ; parse up to 4 digits
             bra qhex
@@ -35,15 +40,13 @@ qhexbyte    lda A,#2
 qhex        sta A,qhex_len
             clr qhex_out        ; current result: $0000
             clr qhex_out+1
-            tpa                 ; current exit status: error (bit 7 set)
-            sta A,qhex_tmp
+            lda B,#$FF          ; non-zero indicates no digits read
+
 .nextchar   lda A,,X
             bsr qdigit
             bmi .exit           ; bad digit, return
             cmp A,#$0F+1
             bcc .exit           ; digit in base >16
-
-            clr qhex_tmp        ; read at least 1 char; clear error status
             inx                 ; consume this character
             asl A               ; shift value to upper nybble
             asl A
@@ -55,10 +58,17 @@ qhex        sta A,qhex_len
             rol qhex_out        ; high bit into MSB
             dec B
             bne .shiftin
+            ;   B is now 0, showing that we've read a digit.
             dec qhex_len
             bne .nextchar
 
-.exit       lda A,qhex_tmp      ; update error status flag
+.exit       lda A,qhex_stat
+            tst B               ; did we consume at least one char?
+            beq .exitgood       ; yes, good exit
+            ora A,#$80          ; no, set high bit for failure exit
+            bra .exitwrite
+.exitgood   and A,#$7F          ; clear high bit for success exit
+.exitwrite  sta A,qhex_stat     ; update stat location and N flag
             rts
 
 ; ----------------------------------------------------------------------

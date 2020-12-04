@@ -1,3 +1,71 @@
+; ----------------------------------------------------------------------
+;   qhex - hexadecimal number parsing and related routines
+; ----------------------------------------------------------------------
+
+  ifdef UNIT_TESTING
+    ifndef qhex_out
+qhex_out                    equ $20     ; WORD output of qhex*
+    endif
+    ifndef qhex_tmp
+qhex_tmp                    equ $22     ; BYTE
+    endif
+  endif
+
+; ----------------------------------------------------------------------
+;   Parse an ASCII hex word at X, N=0 on success.
+;   ♠X,qhex_out ♣AB,qhex_tmp
+;
+;   0-4 ASCII characters are parsed and X is left pointing at the first
+;   unparsed char. The parsed word, if any, is left in `qhex_out`. The N
+;   flag is clear if at least one digit is successfully parsed, set
+;   otherwise.
+;
+;   TODO Consider an alternative implementation (parametrizing the test to
+;   test both versions) to see if it may be shorter or faster to store by
+;   nybble to do less shifting. First digit goes into qhex_out nybble 3,
+;   second (if present) combines nybble 2 with 3, third (if present) goes
+;   straight into qhex_out nybble 1, and last, if present, combines into
+;   qhex_out nybble 0. Less ROL.
+;
+qhexword2 rts ; XXX
+;
+qhexword    lda B,#4            ; max digits to read
+qhex        clr A               ; current result: $0000
+            sta A,qhex_out
+            sta A,qhex_out+1
+            tpa                 ; current exit status: error (bit 7 set)
+            sta A,qhex_tmp
+.nextchar   lda A,,X
+            bsr qdigit
+            bmi .exit           ; bad digit, return
+            cmp A,#$0F+1
+            bcc .exit           ; digit in base >16
+
+            clr qhex_tmp        ; read at least 1 char; clear error status
+            inx                 ; consume this character
+            asl A               ; shift value to upper nybble
+            asl A
+            asl A
+            asl A
+            psh B
+            lda B,#4
+.shiftin    asl A               ; upper bit to carry
+            rol qhex_out+1      ; low bit into LSB
+            rol qhex_out        ; high bit into MSB
+            dec B
+            bne .shiftin
+            pul B
+            dec B
+            bne .nextchar
+.exit       lda A,qhex_tmp      ; update error status flag
+            rts
+
+;   Parse an ASCII hex byte at X, N=0 on success.
+;   ♠X,qhex_out ♣AB,qhex_tmp
+qhexbyte    lda B,#2
+            jmp qhex
+
+; ----------------------------------------------------------------------
 ;   ♠A ♡BX Convert ASCII character to binary number in bases up to 41.
 ;   Returns N flag clear and binary digit in A, or N set on error.
 ;

@@ -304,58 +304,9 @@ rdline      ldx #rdlinebuf
 ; ----------------------------------------------------------------------
 ;   q* - parsing
 
+qhex_out    equ hexword
+qhex_tmp    equ tmp1
             include "src/mc68/qhex.a68"
-
-;   ♠X,hexword ♣AB,tmp1 Parse an ASCII hex word at X, N=0 on success.
-;
-;   0-4 ASCII characters are parsed and X is left pointing at the first
-;   unparsed char. The parsed word, if any, is left in `hexword`.
-;   The N flag is clear if at least one digit is successfully parsed,
-;   set otherwise.
-;
-;   TODO Consider an alternative implementation (parametrizing the test to
-;   test both versions) to see if it may be shorter or faster to store by
-;   nybble to do less shifting. First digit goes into hexword nybble 3,
-;   second (if present) combines nybble 2 with 3, third (if present) goes
-;   straight into hexword nybble 1, and last, if present, combines into
-;   hexword nybble 0. Less ROL.
-;
-qhexword2 rts ; XXX
-;
-qhexword    lda B,#4            ; max digits to read
-qhex        clr A               ; current result: $0000
-            sta A,hexword
-            sta A,hexword+1
-            tpa                 ; current exit status: error (bit 7 set)
-            sta A,tmp1
-.nextchar   lda A,,X
-            bsr qdigit
-            bmi .exit           ; bad digit, return
-            cmp A,#$0F+1
-            bcc .exit           ; digit in base >16
-
-            clr tmp1            ; read at least 1 char; clear error status
-            inx                 ; consume this character
-            asl A               ; shift value to upper nybble
-            asl A
-            asl A
-            asl A
-            psh B
-            lda B,#4
-.shiftin    asl A               ; upper bit to carry
-            rol hexword+1       ; low bit into LSB
-            rol hexword         ; high bit into MSB
-            dec B
-            bne .shiftin
-            pul B
-            dec B
-            bne .nextchar
-.exit       lda A,tmp1          ; update error status flag
-            rts
-
-;   ♠X,hexword ♣AB,tmp1 Parse an ASCII hex byte at X, N=0 on success.
-qhexbyte    lda B,#2
-            jmp qhex
 
 ; ----------------------------------------------------------------------
 ;   pr* - printing output

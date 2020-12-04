@@ -1,8 +1,11 @@
+from    testmc  import tmc_tid
 from    testmc.mc6800 import  Machine
 import  pytest
 
 object_file = 'src/mc68/qhex.p'
 
+####################################################################
+#   qdigit
 
 pytest.register_assert_rewrite('qdigit')
 from qdigit import (
@@ -12,3 +15,53 @@ from qdigit import (
     test_qdigit_error_exhaustive    as test_qdigit_error_exhaustive_6800,
     )
 
+####################################################################
+#   qhexword, qhexbyte
+
+@pytest.mark.parametrize('testno, N, result, consumed, input', (
+    ( 0,  1, 0xDEAD,  0, b''),
+    ( 1,  1, 0xDEAD,  0, b'G'),
+    ( 2,  1, 0xDEAD,  0, b'g'),
+    ( 3,  0, 0x000F,  1, b'F'),
+    ( 4,  0, 0x00A0,  2, b'A0'),
+    ( 5,  0, 0x0B19,  3, b'B19'),
+    ( 6,  0, 0x1234,  4, b'1234'),
+    ( 7,  0, 0x0123,  4, b'01234'),
+    ( 8,  0, 0xabcd,  4, b'aBcdE'),
+), ids=tmc_tid)
+def test_qhexword(m, S, R, testno, N, result, consumed, input):
+    #   We re-use another routine's space.
+    #   Change the address from test to test.
+    buf = 0x220 + testno
+    m.deposit(buf, input + b'\x00')
+    print('buf=${:04X} {}'.format(buf, m.bytes(buf, len(input))), end='')
+    m.depword(S.qhex_out, 0x9999)   # definitely not our output value
+
+    m.call(S.qhexword, R(x=buf))
+    qhex_out = m.word(S.qhex_out)
+    print('\t\tX={:04X} N={} qhex_out=${:04X}'.format(m.x, m.N, qhex_out))
+
+    assert R(x=buf+consumed) == m.regs
+    assert R(N=N) == m.regs
+    if N == 0: assert result == qhex_out
+
+def test_qhexbyte(m, S, R):
+    #   Most testing of internal details is done by test_qhexword.
+    input    =  b'0 1 23 45 6789a bcd'
+    inbuf    = 0x200
+    expected = (0x00, None, 0x01, None, 0x23, None, 0x45, None,
+                0x67, 0x89, 0x0A, None, 0xBC, 0x0D)
+    m.deposit(inbuf, input)
+    print(input)
+    x = inbuf
+    for ex in expected:
+        m.call(S.qhexbyte, R(x=x))
+        print('at={:04X} next={:04X} '.format(x, m.regs.x), end='')
+        if ex is None:
+            print('ex=None')
+            assert R(N=1) == m.regs
+            x += 1
+        else:
+            print('ex={:X}'.format(ex))
+            assert (R(N=0), ex) == (m.regs, m.word(S.qhex_out))
+            x = m.regs.x

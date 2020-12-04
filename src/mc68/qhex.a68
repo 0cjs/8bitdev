@@ -3,34 +3,38 @@
 ; ----------------------------------------------------------------------
 
   ifdef UNIT_TESTING
+    ifndef qhex_len
+qhex_len                    equ $20     ; BYTE max digits to parse
+    endif
     ifndef qhex_out
-qhex_out                    equ $20     ; WORD output of qhex*
+qhex_out                    equ $21     ; WORD output of qhex*
     endif
     ifndef qhex_tmp
-qhex_tmp                    equ $22     ; BYTE
+qhex_tmp                    equ $23     ; BYTE
     endif
   endif
 
 ; ----------------------------------------------------------------------
-;   Parse up to B (1-4) ASCII hex chars at X, N=0 on success.
-;   ♠X,qhex_out ♣AB,qhex_tmp
+;   Parse up to A (1-4) ASCII hex digits at X, N=0 on success.
+;   ♠X,qhex_out ♣AB,qhex_len,qhex_tmp
 ;
-;   B must be 1 through 4; no more than this many ASCII characters starting
-;   at X are parsed. X is left pointing at the first unparsed char. Word
-;   `qhex_out` will contain the parsed value or $0000 if no digits were
-;   parsed. The N flag is clear if at least one digit is successfully
-;   parsed, set otherwise.
+;   A must be 1 through 4; no more than this many ASCII characters are
+;   parsed at X, which is left pointing to the first unparsed char. The
+;   parsed value (or $0000 if no chars were parsed) is left in `qhex_out`.
+;   The N flag is clear if at least one digit is successfully parsed, set
+;   otherwise.
+;
+;   None of the memory locations benefit from being in the zero page.
 
-qhexword    lda B,#4            ; max digits to read
+qhexword    lda A,#4            ; parse up to 4 digits
             bra qhex
 
-qhexbyte    lda B,#2
+qhexbyte    lda A,#2
             ;   fallthrough
 
-            ;   B loaded with number of ASCII digits to parse (max 4)
-qhex        clr A               ; current result: $0000
-            sta A,qhex_out
-            sta A,qhex_out+1
+qhex        sta A,qhex_len
+            clr qhex_out        ; current result: $0000
+            clr qhex_out+1
             tpa                 ; current exit status: error (bit 7 set)
             sta A,qhex_tmp
 .nextchar   lda A,,X
@@ -45,16 +49,15 @@ qhex        clr A               ; current result: $0000
             asl A
             asl A
             asl A
-            psh B
             lda B,#4
 .shiftin    asl A               ; upper bit to carry
             rol qhex_out+1      ; low bit into LSB
             rol qhex_out        ; high bit into MSB
             dec B
             bne .shiftin
-            pul B
-            dec B
+            dec qhex_len
             bne .nextchar
+
 .exit       lda A,qhex_tmp      ; update error status flag
             rts
 

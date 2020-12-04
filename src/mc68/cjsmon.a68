@@ -44,6 +44,7 @@ PROMPT      equ '>'
 cmdqptr     ds  2               ; current parsing loc in command input buffer
 
 ;   Other parser storage locations.
+tmp1a       equ $E0     ; b temp storage destroyed by JR-200 ROMs
 tmp1        equ $E1     ; b temp storage
 tmp2        equ $E2     ; W temp storage
 hexword     equ $E4     ; W qhexword result location
@@ -304,6 +305,7 @@ rdline      ldx #rdlinebuf
 ; ----------------------------------------------------------------------
 ;   q* - parsing
 
+qhex_len    equ tmp1a
 qhex_out    equ hexword
 qhex_tmp    equ tmp1
             include "src/mc68/qhex.a68"

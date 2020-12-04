@@ -12,13 +12,14 @@ qhex_tmp                    equ $22     ; BYTE
   endif
 
 ; ----------------------------------------------------------------------
-;   Parse an ASCII hex byte or word at X, N=0 on success.
+;   Parse up to B (1-4) ASCII hex chars at X, N=0 on success.
 ;   ♠X,qhex_out ♣AB,qhex_tmp
 ;
-;   0-4 ASCII characters are parsed and X is left pointing at the first
-;   unparsed char. The parsed word, if any, is left in `qhex_out`. The N
-;   flag is clear if at least one digit is successfully parsed, set
-;   otherwise.
+;   B must be 1 through 4; no more than this many ASCII characters starting
+;   at X are parsed. X is left pointing at the first unparsed char. Word
+;   `qhex_out` will contain the parsed value or $0000 if no digits were
+;   parsed. The N flag is clear if at least one digit is successfully
+;   parsed, set otherwise.
 
 qhexword    lda B,#4            ; max digits to read
             bra qhex

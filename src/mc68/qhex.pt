@@ -19,15 +19,17 @@ from qdigit import (
 #   qhexword, qhexbyte
 
 @pytest.mark.parametrize('testno, N, result, consumed, input', (
-    ( 0,  1, 0xDEAD,  0, b''),
-    ( 1,  1, 0xDEAD,  0, b'G'),
-    ( 2,  1, 0xDEAD,  0, b'g'),
-    ( 3,  0, 0x000F,  1, b'F'),
-    ( 4,  0, 0x00A0,  2, b'A0'),
-    ( 5,  0, 0x0B19,  3, b'B19'),
+    ( 0,  1, 0x0000,  0, b'\x00'),
+    ( 1,  1, 0x0000,  0, b'G'),
+    ( 2,  1, 0x0000,  0, b'g'),
+    ( 3,  0, 0x000F,  1, b'F\x00'),
+    ( 4,  0, 0x00A0,  2, b'A0\x00'),
+    ( 5,  0, 0x0B19,  3, b'B19\x00'),
     ( 6,  0, 0x1234,  4, b'1234'),
     ( 7,  0, 0x0123,  4, b'01234'),
     ( 8,  0, 0xabcd,  4, b'aBcdE'),
+    (10,  0, 0x0000,  1, b'0\x00'),
+    (11,  0, 0x0000,  4, b'00000'),
 ), ids=tmc_tid)
 def test_qhexword(m, S, R, testno, N, result, consumed, input):
     #   We re-use another routine's space.

@@ -19,16 +19,9 @@ qhex_tmp                    equ $22     ; BYTE
 ;   unparsed char. The parsed word, if any, is left in `qhex_out`. The N
 ;   flag is clear if at least one digit is successfully parsed, set
 ;   otherwise.
-;
-;   TODO Consider an alternative implementation (parametrizing the test to
-;   test both versions) to see if it may be shorter or faster to store by
-;   nybble to do less shifting. First digit goes into qhex_out nybble 3,
-;   second (if present) combines nybble 2 with 3, third (if present) goes
-;   straight into qhex_out nybble 1, and last, if present, combines into
-;   qhex_out nybble 0. Less ROL.
 
 qhexword    lda B,#4            ; max digits to read
-            jmp qhex
+            bra qhex
 
 qhexbyte    lda B,#2
             ;   fallthrough

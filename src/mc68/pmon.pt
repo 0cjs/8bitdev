@@ -2,7 +2,7 @@ from    testmc  import tmc_tid
 from    testmc.mc6800  import  Machine, Instructions as I
 import  pytest, re
 
-object_file = 'src/mc68/cjsmon.p'
+object_file = 'src/mc68/pmon.p'
 
 def loadbios(m, input=None, output=None):
     bioscode = '.build/obj/src/tmc68/bioscode.p'

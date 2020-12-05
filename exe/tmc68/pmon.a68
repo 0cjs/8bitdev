@@ -1,4 +1,4 @@
-;   cjsmon for `testmc.mc6800` simulator.
+;   pmon for `testmc.mc6800` simulator.
 
             cpu 6800
             include "src/mc68/std.a68"
@@ -15,7 +15,7 @@ reset:      ldx #$EFFF      ; default stack immediately below monitor
             db  $02         ; invalid opcode should cause simulator exit
             jmp reset       ; failing that, restart monitor
 
-            include "src/mc68/cjsmon.a68"
+            include "src/mc68/pmon.a68"
 
             ds mvec_RESET-*
             dw reset        ; reset vector to monitor setup

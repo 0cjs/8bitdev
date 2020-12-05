@@ -1,4 +1,4 @@
-;   XXX something that should become a machine-language monitor one day
+;   pmon: a machine-language monitor
 
     ifdef UNIT_TESTING
 ;   XXX These definitions should really be coming from the .pt file.

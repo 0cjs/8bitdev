@@ -6,7 +6,7 @@ To-do List
 - test use of DAA for prnyb
 - command table continuation which will also test that `cmdtbl` is used
 - fix rdline not accepting backspace when buffer full
-- extract rdline from cjsmon, use only for tmc68 version
+- extract rdline from pmon, use only for tmc68 version
 
 #### Cleanup
 

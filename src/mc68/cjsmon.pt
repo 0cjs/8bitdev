@@ -139,8 +139,8 @@ def test_usepending_available(m, S, R):
 ####################################################################
 #   Commands (tested outside of command loop)
 
-def setinput(m, pendingval, input):
-    ''' Common test setup:
+def command_setup(m, pendingval, input=b''):
+    ''' Common setup for command unit tests:
         - Set pending value if not none, and stat appropriately
         - Load the input buffer `S.rdlinebuf` with `input` and $00 terminator
         - Set current parse pointer `cmdqptr` to start of input buffer
@@ -154,6 +154,23 @@ def setinput(m, pendingval, input):
         m.deposit(S.stat, 0xAA)             # bit 7 set: pending value available
     m.deposit(S.rdlinebuf, input + b'\x00')
     m.depword(S.cmdqptr, S.rdlinebuf)
+
+@pytest.mark.parametrize(
+    'pending, curloc', [
+    ( 0x7050, 0x2222, ),
+    (   None, 0x7055, ),
+], ids=tmc_tid)
+def test_call(m, S, R, pending, curloc):
+    m.depword(S.Mcallcur, curloc)
+    command_setup(m, pending)
+    m.deposit(curloc, 0x02)     # invalid opcode for when curloc is not target
+
+    target = pending if pending is not None else curloc
+    print('target={:04X}'.format(target))
+    m.deposit(target, [I.LDAA, 0xAA, I.RTS])
+
+    m.call(S.call, R(a=0x55))
+    assert R(a=0xAA) == m.regs
 
 @pytest.mark.parametrize(
     'pending, curloc, parselen, cmd,       data', [
@@ -174,7 +191,7 @@ def test_deposit(m, S, R, pending, curloc, parselen, cmd, data):
     guarded = b'\xEE' + data + b'\xEE'
 
     m.depword(S.Mdepcur, curloc)
-    setinput(m, pending, cmd)
+    command_setup(m, pending, cmd)
     loc = curloc if pending is None else pending
     m.deposit(loc-1, b'\xEE'*len(guarded))
 
@@ -195,7 +212,7 @@ def test_examine(m, S, R, pending, curloc, width, cmdarg, lines, expmatch):
     m.depword(S.Mexamcur, curloc)           # overwritten by pending if avail.
     m.deposit(S.Mexamwidth, width)
     m.deposit(S.Mexamlines, 2)              # default value for tests
-    setinput(m, pending, cmdarg)
+    command_setup(m, pending, cmdarg)
     _, ostream = loadbios(m)
 
     m.call(S.examine)

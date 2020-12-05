@@ -56,6 +56,7 @@ Mexamcur    equ $F2 ;$F2  examine command current start addr
 Mexamwidth  equ $F4     ; examine width: bytes per line to print
 Mexamlines  equ $F5     ; examine lines: number of lines to print
 Mdepcur     equ $F6 ;$F7  deposit command current start addr
+Mcallcur    equ $F8 ;$F9  call command address to call
 
 ; ----------------------------------------------------------------------
 ;   Command loop
@@ -170,6 +171,8 @@ cmdtbl_std
             dw      deposit     ; enter data into memory
             db '^'
             dw      nlcmd       ; print newline
+            db 'k'
+            dw      call        ; JSR to address ("kall")
             db 'q'
             dw      quitcmd     ; "quit"; exit to monitor's caller
             db 'x'
@@ -192,6 +195,23 @@ rtscmd      rts
 
 ;   print a newline; useful for separating output and unit tests
 nlcmd       jmp prnl            ; RTS (TCO)
+
+;   Call ("kall") to an address.
+;
+;   This leaves the monitor stack and other data in place so that an RTS
+;   will continue parsing the command line.
+;
+;   WARNING: This assumes that the code being called will not change the
+;   input buffer or move the stack! The monitor may also break if other
+;   locations it depends upon are overwritten.
+;
+;   XXX Register values are undefined at call time. We should be setting
+;   up the saved registers and flags on the stack and "calling" with RTI.
+
+call        ldx #Mcallcur
+            bsr usepending
+            ldx Mcallcur
+            jmp ,X              ; RTS (TCO)
 
 ;   deposit byte arguments to memory at Mcur.
 ;

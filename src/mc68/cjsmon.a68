@@ -51,7 +51,6 @@ qhex_out    equ $E6 ;$E7  last qhex result ($0000 if qhex failed)
 stat        equ $E9     ; status values:
                         ;   b7:   0=no pending value, 1=pending value available
                         ;   b6-0: unused
-tmp1a       equ $EA     ; temp location during refactoring
 cmdtbl      equ $F0 ;$F1  pointer to command table (see below)
 Mexamcur    equ $F2 ;$F2  examine command current start addr
 Mexamwidth  equ $F4     ; examine width: bytes per line to print
@@ -340,7 +339,6 @@ rdline      ldx #rdlinebuf
 ;   q* - parsing
 
 qhex_len    equ tmp1
-qhex_stat   equ tmp1a
             include "src/mc68/qhex.a68"
 
 ; ----------------------------------------------------------------------

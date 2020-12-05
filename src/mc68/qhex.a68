@@ -9,14 +9,11 @@ qhex_len                    equ $20     ; BYTE max digits to parse
     ifndef qhex_out
 qhex_out                    equ $21     ; WORD output of qhex*
     endif
-    ifndef qhex_stat
-qhex_stat                   equ $23     ; BYTE
-    endif
   endif
 
 ; ----------------------------------------------------------------------
 ;   Parse up to A (1-4) ASCII hex digits at X, N=0 on success.
-;   ♠X,qhex_out,qhex_stat  ♣AB,qhex_len
+;   ♠X,qhex_out  ♣AB,qhex_len
 ;
 ;   Input:
 ;   - X: the start of the text to be parsed.
@@ -26,8 +23,7 @@ qhex_stat                   equ $23     ; BYTE
 ;   Output:
 ;   - X: the first char that failed to parse
 ;   - N flag: clear if at least one digit successfully parsed, set otherwise
-;   - qhex_stat: bit 7 same as N; bits 6..0 preserved
-;   - qhex_out: the parsed hex number, or $0000 on failure
+;   - qhex_out: the parsed hex number, or $0000 on failure to parse any digits
 ;
 ;   No locations benefit significantly from being in the zero page.
 
@@ -62,13 +58,7 @@ qhex        sta A,qhex_len
             dec qhex_len
             bne .nextchar
 
-.exit       lda A,qhex_stat
-            tst B               ; did we consume at least one char?
-            beq .exitgood       ; yes, good exit
-            ora A,#$80          ; no, set high bit for failure exit
-            bra .exitwrite
-.exitgood   and A,#$7F          ; clear high bit for success exit
-.exitwrite  sta A,qhex_stat     ; update stat location and N flag
+.exit       tst B               ; did we consume at least one char?
             rts
 
 ; ----------------------------------------------------------------------

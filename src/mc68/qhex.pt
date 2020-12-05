@@ -18,40 +18,32 @@ from qdigit import (
 ####################################################################
 #   qhexword, qhexbyte
 
-@pytest.mark.parametrize('testno, statval, N, result, consumed, input', (
-    ( 0, 0x00,  1, 0x0000,  0, b'\x00'),
-    ( 1, 0xFF,  1, 0x0000,  0, b'G'),
-    ( 2, 0x55,  1, 0x0000,  0, b'g'),
-    ( 3, 0x00,  0, 0x000F,  1, b'F\x00'),
-    ( 4, 0xFF,  0, 0x00A0,  2, b'A0\x00'),
-    ( 5, 0x55,  0, 0x0B19,  3, b'B19\x00'),
-    ( 6, 0xAA,  0, 0x1234,  4, b'1234'),
-    ( 7, 0x55,  0, 0x0123,  4, b'01234'),
-    ( 8, 0xAA,  0, 0xabcd,  4, b'aBcdE'),
-    (10, 0x80,  0, 0x0000,  1, b'0'),
-    (11, 0x81,  0, 0x0000,  4, b'00000'),
+@pytest.mark.parametrize('testno, N, result, consumed, input', (
+    ( 0,  1, 0x0000,  0, b'\x00'),
+    ( 1,  1, 0x0000,  0, b'G'),
+    ( 2,  1, 0x0000,  0, b'g'),
+    ( 3,  0, 0x000F,  1, b'F\x00'),
+    ( 4,  0, 0x00A0,  2, b'A0\x00'),
+    ( 5,  0, 0x0B19,  3, b'B19\x00'),
+    ( 6,  0, 0x1234,  4, b'1234'),
+    ( 7,  0, 0x0123,  4, b'01234'),
+    ( 8,  0, 0xabcd,  4, b'aBcdE'),
+    (10,  0, 0x0000,  1, b'0'),
+    (11,  0, 0x0000,  4, b'00000'),
 ), ids=tmc_tid)
-def test_qhexword(m, S, R, testno, statval, N, result, consumed, input):
+def test_qhexword(m, S, R, testno, N, result, consumed, input):
     #   We re-use another routine's space.
     #   Change the address from test to test.
     buf = 0x220 + testno
     m.deposit(buf, input + b'\x00')
     print('buf=${:04X} {}'.format(buf, m.bytes(buf, len(input))), end='')
-    m.deposit(S.qhex_stat, statval) # bits 6..0 should be preserved
     m.depword(S.qhex_out, 0x9999)   # definitely not our output value
 
     m.call(S.qhexword, R(x=buf))
-    qhex_out = m.word(S.qhex_out)
-    qhex_stat = m.byte(S.qhex_stat)
-    print('\t\tX={:04X} N={} qhex_out=${:04X} qhex_stat=${:02X}'
-        .format(m.x, m.N, qhex_out, qhex_stat))
-
+    print('\t\tX={:04X} N={} qhex_out=${:04X}'
+        .format(m.x, m.N, m.word(S.qhex_out)))
     assert R(x=buf+consumed) == m.regs
-    assert (result,                 # result is correct or $0000 on error
-            R(N=N, a=qhex_stat),    # N flag error state, A contains qhex_stat
-            N,                      # N flag matches top bit of qhex_stat
-            statval & 0x7F          # rest of statval unchanged
-      ) == (qhex_out, m.regs, qhex_stat >> 7, qhex_stat & 0x7F)
+    assert (R(N=N), result) == (m.regs, m.word(S.qhex_out))
 
 def test_qhexbyte(m, S, R):
     #   Most testing of internal details is done by test_qhexword.

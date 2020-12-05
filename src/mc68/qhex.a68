@@ -3,40 +3,48 @@
 ; ----------------------------------------------------------------------
 
   ifdef UNIT_TESTING
-    ifndef qhex_len
-qhex_len                    equ $20     ; BYTE max digits to parse
-    endif
     ifndef qhex_out
 qhex_out                    equ $21     ; WORD output of qhex*
     endif
   endif
 
 ; ----------------------------------------------------------------------
-;   Parse up to A (1-4) ASCII hex digits at X, N=0 on success.
+;   Parse up to A (1-4) ASCII hex digits at X, Z=1 on success.
 ;   ♠X,qhex_out  ♣AB,qhex_len
 ;
 ;   Input:
 ;   - X: the start of the text to be parsed.
-;   - A: 1-4, the maximum number of digits to parse
+;   - B: 1-4, the maximum number of digits to parse
 ;   Temps:
 ;   - qhex_len
 ;   Output:
 ;   - X: the first char that failed to parse
-;   - N flag: clear if at least one digit successfully parsed, set otherwise
+;   - Z flag: set (BEQ) if ≥1 digit successfully parsed; clear (BNE) otherwise
 ;   - qhex_out: the parsed hex number, or $0000 on failure to parse any digits
 ;
 ;   No locations benefit significantly from being in the zero page.
+;
+;   2-3 bytes of code and some complexity can be saved by using a memory
+;   location to store the max digit count, but it's better not to require
+;   the caller to co-ordinate the memory usage, especially in systems with
+;   minimal RAM.
 
-qhexword    lda A,#4            ; parse up to 4 digits
+qhexword    lda B,#4            ; parse up to 4 digits
             bra qhex
 
-qhexbyte    lda A,#2
+qhexbyte    lda B,#2
             ;   fallthrough
 
-qhex        sta A,qhex_len
-            clr qhex_out        ; current result: $0000
+qhex        clr qhex_out        ; current result: $0000
             clr qhex_out+1
-            lda B,#$FF          ; non-zero indicates no digits read
+            asl B               ; remaining max digit count in B[7‥3]
+            asl B
+            asl B
+            ;   A non-zero value in B[2‥0] indicates no digits were read.
+            ;   (The shift loop below reduces this to 0.) Additionally,
+            ;   we must here not set any bits not in the shift count below,
+            ;   or they will be added to the shift count.
+            ora B,#4
 
 .nextchar   lda A,,X
             bsr qdigit
@@ -48,18 +56,19 @@ qhex        sta A,qhex_len
             asl A
             asl A
             asl A
-            lda B,#4
+            ora B,#4            ; set rotate count in B[2‥0]
 .shiftin    asl A               ; upper bit to carry
             rol qhex_out+1      ; low bit into LSB
             rol qhex_out        ; high bit into MSB
             dec B
-            bne .shiftin
-            ;   B is now 0, showing that we've read a digit.
-            dec qhex_len
-            bne .nextchar
+            bit B,#%111         ; test remaining count in bits 2‥0
+            bne .shiftin        ; not yet 0, shift remaining bits
+            ;   B[2‥0] is now %000, showing that we've read a digit.
+            sub B,#(1<<3)       ; decremnt max digit count
+            bne .nextchar       ; if not 0, try to parse another digit
 
-.exit       tst B               ; did we consume at least one char?
-            rts
+.exit       bit B,#%111         ; set Z flag: B[2‥0] will be 0 if we consumed
+            rts                 ;   at least one char
 
 ; ----------------------------------------------------------------------
 ;   ♠A ♡BX Convert ASCII character to binary number in bases up to 41.

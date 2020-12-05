@@ -94,7 +94,7 @@ cmdloop     jsr prnl            ; Not clear that we should always be starting
 
             ;   Start by attempting to parse a hexword as the pending value.
             jsr qhexword        ; parsed a hexword?
-            bpl savepending     ; yes, save as pending and carry on parsing
+            beq savepending     ; yes, save as pending and carry on parsing
 
             ;   Consume a char and parse it as a command.
             ;   (Callees who need to know the char parsed may DEX to get it.)
@@ -209,7 +209,7 @@ deposit     ldx #Mdepcur
             stx tmp2            ; deposit index
 .next       ldx cmdqptr         ; current input pointer
             jsr qhexbyte
-            bmi .nothex         ; not hexbyte, skip space or end
+            bne .nothex         ; not hexbyte, skip space or end
             stx cmdqptr         ; save next parse position
             lda A,qhex_out+1    ; byte we just read
             ldx tmp2            ; current deposit index
@@ -246,7 +246,7 @@ examine     ldx #Mexamcur
             bsr usepending
             ldx cmdqptr
             jsr qhexbyte        ; new Mexamlines value given?
-            bmi .noarg          ; no, use current default
+            bne .noarg          ; no, use current default
             stx cmdqptr         ; yes, consume argument
             lda A,qhex_out+1    ;   and use arg
             sta A,Mexamlines    ;   to set new default
@@ -338,7 +338,6 @@ rdline      ldx #rdlinebuf
 ; ----------------------------------------------------------------------
 ;   q* - parsing
 
-qhex_len    equ tmp1
             include "src/mc68/qhex.a68"
 
 ; ----------------------------------------------------------------------

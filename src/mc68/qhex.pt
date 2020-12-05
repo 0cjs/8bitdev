@@ -18,20 +18,20 @@ from qdigit import (
 ####################################################################
 #   qhexword, qhexbyte
 
-@pytest.mark.parametrize('testno, N, result, consumed, input', (
-    ( 0,  1, 0x0000,  0, b'\x00'),
-    ( 1,  1, 0x0000,  0, b'G'),
-    ( 2,  1, 0x0000,  0, b'g'),
-    ( 3,  0, 0x000F,  1, b'F\x00'),
-    ( 4,  0, 0x00A0,  2, b'A0\x00'),
-    ( 5,  0, 0x0B19,  3, b'B19\x00'),
-    ( 6,  0, 0x1234,  4, b'1234'),
-    ( 7,  0, 0x0123,  4, b'01234'),
-    ( 8,  0, 0xabcd,  4, b'aBcdE'),
-    (10,  0, 0x0000,  1, b'0'),
-    (11,  0, 0x0000,  4, b'00000'),
+@pytest.mark.parametrize('testno, Z, result, consumed, input', (
+    ( 0,  0, 0x0000,  0, b'\x00'),
+    ( 1,  0, 0x0000,  0, b'G'),
+    ( 2,  0, 0x0000,  0, b'g'),
+    ( 3,  1, 0x000F,  1, b'F\x00'),
+    ( 4,  1, 0x00A0,  2, b'A0\x00'),
+    ( 5,  1, 0x0B19,  3, b'B19\x00'),
+    ( 6,  1, 0x1234,  4, b'1234'),
+    ( 7,  1, 0x0123,  4, b'01234'),
+    ( 8,  1, 0xabcd,  4, b'aBcdE'),
+    (10,  1, 0x0000,  1, b'0'),
+    (11,  1, 0x0000,  4, b'00000'),
 ), ids=tmc_tid)
-def test_qhexword(m, S, R, testno, N, result, consumed, input):
+def test_qhexword(m, S, R, testno, Z, result, consumed, input):
     #   We re-use another routine's space.
     #   Change the address from test to test.
     buf = 0x220 + testno
@@ -39,11 +39,11 @@ def test_qhexword(m, S, R, testno, N, result, consumed, input):
     print('buf=${:04X} {}'.format(buf, m.bytes(buf, len(input))), end='')
     m.depword(S.qhex_out, 0x9999)   # definitely not our output value
 
-    m.call(S.qhexword, R(x=buf))
-    print('\t\tX={:04X} N={} qhex_out=${:04X}'
-        .format(m.x, m.N, m.word(S.qhex_out)))
+    m.call(S.qhexword, R(x=buf), maxsteps=10000)
+    print('\t\tX={:04X} Z={} qhex_out=${:04X}'
+        .format(m.x, m.Z, m.word(S.qhex_out)))
     assert R(x=buf+consumed) == m.regs
-    assert (R(N=N), result) == (m.regs, m.word(S.qhex_out))
+    assert (R(Z=Z), result) == (m.regs, m.word(S.qhex_out))
 
 def test_qhexbyte(m, S, R):
     #   Most testing of internal details is done by test_qhexword.
@@ -59,9 +59,9 @@ def test_qhexbyte(m, S, R):
         print('at={:04X} next={:04X} '.format(x, m.regs.x), end='')
         if ex is None:
             print('ex=None')
-            assert R(N=1) == m.regs
+            assert R(Z=0) == m.regs
             x += 1
         else:
             print('ex={:X}'.format(ex))
-            assert (R(N=0), ex) == (m.regs, m.word(S.qhex_out))
+            assert (R(Z=1), ex) == (m.regs, m.word(S.qhex_out))
             x = m.regs.x

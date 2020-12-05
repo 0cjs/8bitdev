@@ -32,7 +32,7 @@ SPACE       equ ' '
 DEL         equ $7F
 
 ;   Monitor definitions
-PROMPT      equ '>'
+PROMPT      equ '^'
 
 ; ----------------------------------------------------------------------
 ;   Storage for variables that must be in RAM.

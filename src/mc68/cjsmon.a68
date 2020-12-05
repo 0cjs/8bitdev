@@ -44,48 +44,19 @@ PROMPT      equ '>'
 cmdqptr     ds  2               ; current parsing loc in command input buffer
 
 ;   Other parser storage locations.
-tmp1        equ $E1     ; b temp storage
-tmp2        equ $E2     ; W temp storage
-Mpending    equ $E4     ; W last value input before a command
-qhex_out    equ $E6     ; W last qhex result ($0000 if qhex failed)
-stat        equ $E9     ; b status values:
+tmp1        equ $E1     ; temp storage
+tmp2        equ $E2 ;$E3  temp storage
+Mpending    equ $E4 ;$E5  last value input before a command
+qhex_out    equ $E6 ;$E7  last qhex result ($0000 if qhex failed)
+stat        equ $E9     ; status values:
                         ;   b7:   0=no pending value, 1=pending value available
                         ;   b6-0: unused
-tmp1a       equ $EA     ; b temp location during refactoring
-cmdtbl      equ $F0     ; w pointer to command table (see below)
-Mexamcur    equ $F2     ; W examine command current start addr
-Mexamwidth  equ $F4     ; b examine width: bytes per line to print
-Mexamlines  equ $F5     ; b examine lines: number of lines to print
-Mdepcur     equ $F6     ; W deposit command current start addr
-
-; ----------------------------------------------------------------------
-;   Command Table
-
-;   The `cmdtbl` variable points to the current command table used by the
-;   parser. Each 3-byte entry is one of:
-;   • A command character followed by the address of the routine
-;     for that command; the routine should finish with RTS.
-;   • A $00 character and $0000 address indicating end of table.
-;   • XXX need to define entry for continuation address of table.
-
-;   `init` sets `cmdtbl` to point to `cmdtbl_std`. The user may change this
-;   to point to his own command table to add new commands or override
-;   existing ones; usually the last entry of the user's table would be a
-;   continuation pointer to `cmdtbl_std`.
-
-cmdtbl_std
-            db ' '
-            dw      rtscmd      ; do nothing
-            db ':'
-            dw      deposit     ; enter data into memory
-            db '^'
-            dw      nlcmd       ; print newline
-            db 'q'
-            dw      quitcmd     ; "quit"; exit to monitor's caller
-            db 'x'
-            dw      examine     ; examine memory
-            db $00
-            dw      $0000       ; end of table
+tmp1a       equ $EA     ; temp location during refactoring
+cmdtbl      equ $F0 ;$F1  pointer to command table (see below)
+Mexamcur    equ $F2 ;$F2  examine command current start addr
+Mexamwidth  equ $F4     ; examine width: bytes per line to print
+Mexamlines  equ $F5     ; examine lines: number of lines to print
+Mdepcur     equ $F6 ;$F7  deposit command current start addr
 
 ; ----------------------------------------------------------------------
 ;   Command loop
@@ -99,8 +70,7 @@ init        ldx #cmdtbl_std     ; default command table
             lda A,#8            ; default examine size: 8 lines
             sta A,Mexamlines
 
-cmdloop
-            jsr prnl            ; Not clear that we should always be starting
+cmdloop     jsr prnl            ; Not clear that we should always be starting
                                 ;   with a newline, rather than having commands
                                 ;   terminate their output with one.
 .skipnl     lda A,#PROMPT
@@ -180,6 +150,35 @@ usepending  tpa                 ; set bit 7 (pending available) in A
 .done       rts
 
 ; ----------------------------------------------------------------------
+;   Command Table
+
+;   The `cmdtbl` variable points to the current command table used by the
+;   parser. Each 3-byte entry is one of:
+;   • A command character followed by the address of the routine
+;     for that command; the routine should finish with RTS.
+;   • A $00 character and $0000 address indicating end of table.
+;   • XXX need to define entry for continuation address of table.
+
+;   `init` sets `cmdtbl` to point to `cmdtbl_std`. The user may change this
+;   to point to his own command table to add new commands or override
+;   existing ones; usually the last entry of the user's table would be a
+;   continuation pointer to `cmdtbl_std`.
+
+cmdtbl_std
+            db ' '
+            dw      rtscmd      ; do nothing
+            db ':'
+            dw      deposit     ; enter data into memory
+            db '^'
+            dw      nlcmd       ; print newline
+            db 'q'
+            dw      quitcmd     ; "quit"; exit to monitor's caller
+            db 'x'
+            dw      examine     ; examine memory
+            db $00
+            dw      $0000       ; end of table
+
+; ----------------------------------------------------------------------
 ;   Commands
 ;
 ;   When a command routine is called, A will contain the command char and
@@ -206,7 +205,7 @@ nlcmd       jmp prnl            ; RTS (TCO)
 ;   as data to be deposited.
 ;
 deposit     ldx #Mdepcur
-            jsr usepending
+            bsr usepending
             ldx Mdepcur
             stx tmp2            ; deposit index
 .next       ldx cmdqptr         ; current input pointer
@@ -245,7 +244,7 @@ deposit     ldx #Mdepcur
 ;   current range?)
 
 examine     ldx #Mexamcur
-            jsr usepending
+            bsr usepending
             ldx cmdqptr
             jsr qhexbyte        ; new Mexamlines value given?
             bmi .noarg          ; no, use current default

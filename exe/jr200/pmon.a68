@@ -1,0 +1,39 @@
+;   pmon in RAM for Panasonic/National JR-200
+
+            cpu 6800
+            include "src/mc68/std.a68"
+            include "src/jr200/bios.a68"    ; bin/tmc6800 will load bioscode
+
+pmon_ramlo  equ $E1     ; $E1-$FF not used by monitor or BASIC
+pmon_org    equ $7000   ; Monitor at top of built-in RAM;
+pmon_ramhi  equ $7F80   ;   `CLEAR $7000` to keep BASIC from stomping it.
+
+rdlinebuf     equ $18E  ; BIOS readline buffer:
+rdlinebuf_end equ $1E0  ;   52 characters.
+
+            ;    MLOAD leaves the BASIC program intact; it's not clear what
+            ;    happens if the loaded code overwrites part of the existing
+            ;    BASIC text or variables. (The stack is in low memory below
+            ;    $800 so should not be affected.)
+
+            ;   XXX We should ideally do any checks necessary to ensure
+            ;   we're not trashing things and then set himem ($6B,$6C) or
+            ;   probably better call the BASIC CLEAR command to keep BASIC
+            ;   from stomping on us. But we need to make sure that if space
+            ;   has been reserved below us we do _not_ move that up in case
+            ;   a developer was reserving that space for this own code.
+            ;
+            ;   XXX But in the meantime we just ignore all this and use
+            ;   whatever configuration has been set up. (I.e., the
+            ;   developer should do a `CLEAR $7000` before the MLOAD.)
+
+            include "src/mc68/pmon.a68"
+
+            if pmon_ramlo_end >= $100
+                error 'Direct page overflow: last addr=\{pmon_ramlo_end}'
+            endif
+            ds pmon_ramhi-*     ; detect code area overflow
+            if pmon_ramhi_end >= $8000
+                error 'JR-200 RAM overflow: last addr=\{pmon_ramhi_end}'
+            endif
+

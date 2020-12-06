@@ -272,7 +272,7 @@ def test_cmdloop_quitcmd(m, S, R):
     istream, ostream = loadbios(m, b'q\r')
     m.depword(S.cmdtbl, S.cmdtbl_std)
     m.call(S.cmdloop)
-    assert b'\n^ q\n' ==  ostream.getvalue()
+    assert b'\n^q\n' ==  ostream.getvalue()
     #   Make sure we exited at the point where we expected.
     assert R(pc=S.rtscmd) == m.regs
 
@@ -281,7 +281,7 @@ def test_cmdloop_cancel(m, S, R):
     istream, ostream = loadbios(m, b'^~123~^\x03' b'q\r')
     m.depword(S.cmdtbl, S.cmdtbl_std)
     m.call(S.cmdloop)
-    assert b'\n^ ^~123~^\x07\n' b'^ q\n' ==  ostream.getvalue()
+    assert b'\n^^~123~^\x07\n' b'^q\n' ==  ostream.getvalue()
     #   Make sure we exited at the point where we expected.
     assert R(pc=S.rtscmd) == m.regs
 
@@ -310,7 +310,7 @@ def test_cmdloop_pending(m, S):
     ' Ensure that pending values are loaded properly. '
     istream, ostream = loadbios(m, b'3039q\r')
     runmon(m)
-    assert b'\n^ 3039q\n' ==  ostream.getvalue()
+    assert b'\n^3039q\n' ==  ostream.getvalue()
     pendingbit = m.byte(S.stat) & 0x80  # isolate pending bit
     assert (0x80, 0x3039) == (pendingbit, m.word(S.Mpending))
 
@@ -318,7 +318,7 @@ def test_cmdloop_multicmd(m):
     ' Multiple command processing of the simplest possible commands. '
     istream, ostream = loadbios(m, b'^^ ^q\r')
     runmon(m)
-    assert b'\n^ ^^ ^q\n' b'\n\n\n' ==  ostream.getvalue()
+    assert b'\n^^^ ^q\n' b'\n\n\n' ==  ostream.getvalue()
 
 def test_cmdloop_multiline(m):
     ''' Simple commands split across lines.
@@ -331,9 +331,9 @@ def test_cmdloop_multiline(m):
     istream, ostream = loadbios(m, b' \r^\rq\r')
     runmon(m)
     expected = bytes(
-        b'\n^ '         # initial prompt
-        b' \n\n^ '      # space (no command), unwanted NL, following prompt
-        b'^\n\n\n^ '    # ^ (print CR), unwanted NL, following prompt
+        b'\n^'          # initial prompt
+        b' \n\n^'       # space (no command), unwanted NL, following prompt
+        b'^\n\n\n^'     # ^ (print CR), unwanted NL, following prompt
         b'q\n'          # quit command
         )
     assert expected ==  ostream.getvalue()

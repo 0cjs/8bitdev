@@ -2,19 +2,36 @@
 
     ifdef UNIT_TESTING
 ;   XXX These definitions should really be coming from the .pt file.
-rdlinebuf       equ $180
-rdlinebuf_end   equ $200
+pmon_ramlo      equ $80
+rdlinebuf       equ $110
+rdlinebuf_end   equ $140    ; 48 chars
+pmon_ramhi      equ $180
+pmon_org        equ $1000
     endif
 
 ; ----------------------------------------------------------------------
-;   External Requirements
+;   Memory Configuration
 
-    ifndef rdlinebuf                ; input buffer first byte
-        error 'rdlinebuf must be defined'
-    endif
-    ifndef rdlinebuf_end            ; input buffer last byte + 1
-        error 'rdlinebuf_end must be defined'
-    endif
+;   The memory areas used by the monitor are configured by constants that
+;   must be defined before this file included.
+;
+;   `pmon_ramlo`, `pmon_ramhi` and `rdlinebuf`-`rdlinebuf_end` are the
+;   three blocks of RAM storage required by the monitor. They all may be
+;   anywhere in memory, but there is a slight code size and performance
+;   benefit to having `pmon_ramlo` in the direct page.
+;
+;   `pmon_ramhi` may be left undefined to place that area immediately after
+;   `pmon_ramlo`
+;
+;   `pmon_org` sets the start of the code.
+;
+;   XXX define pmon_ramlo_end and pmon_ramhi_end? Test usefulness with
+;   usage of these forward definitions.
+
+;   Abort assembly with a clear message if an essential definition is missing.
+    set ______,
+    pushv , pmon_ramlo, rdlinebuf, rdlinebuf_end, pmon_org
+    popv  , ______,     ______,    ______,        ______
 
 ; ----------------------------------------------------------------------
 ;   Standard functions, macros and definitions
@@ -38,25 +55,42 @@ PROMPT      equ '^'
 ;   Storage for variables that must be in RAM.
 ;   Monitor variables are prefixed with `M`.
 
-;   Current parse point in command input buffer.
-;   This may be updated by commands that parse data after the command letter,
-;   but it must not be moved past the terminating `0`.
-cmdqptr     ds  2               ; current parsing loc in command input buffer
+; ----------------------------------------
+;   "Low" area aimed at maximum gain from minimum direct page usage.
+            org pmon_ramlo
 
-;   Other parser storage locations.
-tmp1        equ $E1     ; temp storage
-tmp2        equ $E2 ;$E3  temp storage
-Mpending    equ $E4 ;$E5  last value input before a command
-qhex_out    equ $E6 ;$E7  last qhex result ($0000 if qhex failed)
-stat        equ $E9     ; status values:
+tmp1        ds  1       ; temp storage
+tmp2        ds  2       ; temp storage
+qhex_out    ds  2       ; last qhex result ($0000 if qhex failed)
+cmdqptr     ds  2       ; Current parsing point in command input buffer.
+                        ; Update this to consume parsed text, but do not
+                        ; ever move it past the terminating $00.
+Mpending    ds  2       ; last value input before a command
+stat        ds  1       ; status values:
                         ;   b7:   0=no pending value, 1=pending value available
                         ;   b6-0: unused
-cmdtbl      equ $F0 ;$F1  pointer to command table (see below)
-Mexamcur    equ $F2 ;$F2  examine command current start addr
-Mexamwidth  equ $F4     ; examine width: bytes per line to print
-Mexamlines  equ $F5     ; examine lines: number of lines to print
-Mdepcur     equ $F6 ;$F7  deposit command current start addr
-Mcallcur    equ $F8 ;$F9  call command address to call
+
+pmon_ramlo_end equ *
+
+; ----------------------------------------
+;   "High" area that gains little from being in the direct page.
+        if defined(pmon_ramhi)
+            org pmon_ramhi
+        endif
+
+cmdtbl      ds  2       ; pointer to command table (see below)
+Mexamcur    ds  2       ; examine command current start addr
+Mexamwidth  ds  1       ; examine width: bytes per line to print
+Mexamlines  ds  1       ; examine lines: number of lines to print
+Mdepcur     ds  2       ; deposit command current start addr
+Mcallcur    ds  2       ; call command address to call
+
+pmon_ramhi_end equ *
+
+; ----------------------------------------------------------------------
+;   Code
+
+            org pmon_org
 
 ; ----------------------------------------------------------------------
 ;   Command loop

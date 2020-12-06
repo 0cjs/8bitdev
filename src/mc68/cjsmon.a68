@@ -380,8 +380,7 @@ prnyb       and A,#$0F
             cmp A,#'9'+1
             bmi .digit
             add A,#'A'-'9'-1
-.digit      jsr prchar
-            rts
+.digit      jmp prchar          ; RTS (TCO)
 
 ;   ♣A Print a space.
 prspace     lda A,#SPACE

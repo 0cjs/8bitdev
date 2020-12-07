@@ -22,7 +22,7 @@ if __name__ == '__main__':
     if len(argv) < 4:
         err('Convert binary data to JR-200 tape output\n' +
             'Usage: %s object_file output_file file_name' % argv[0])
-        exit(-1)
+        exit(1)
 
     obj_fname = argv[1]
     outfile = argv[2]
@@ -61,4 +61,3 @@ if __name__ == '__main__':
         channels        = 1,
     )
     audio.export(outfile, format="wav")
-    exit(0)

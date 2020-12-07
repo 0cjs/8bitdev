@@ -15,8 +15,7 @@ BASEDIR = dirname(dirname(abspath(__file__)))
 addsitedir(join(BASEDIR, 'lib'))
 
 from cmtconv.jr200 import \
-    info, debug, err, cjr_to_file, FileEncoder, \
-    checksums_valid, edges_to_samples
+    info, debug, err, cjr_to_file, FileEncoder, edges_to_samples
 
 if len(argv) < 3:
     err('Convert binary data to JR-200 tape output\n' +
@@ -30,10 +29,6 @@ outfile = argv[2]
 with open(fname, 'rb') as f:
     data = f.read()
     cjr_file = cjr_to_file(data)
-
-if not checksums_valid(cjr_file.blocks):
-    raise Exception( 'Invalid checksum' )
-
 
 # Convert File to edges
 encoder = FileEncoder()

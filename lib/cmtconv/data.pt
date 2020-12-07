@@ -6,7 +6,7 @@ TESTBLOCK = bytes([
     0x03, 0x04,             # block no., length
     0x78, 0x80,             # address (big-endian)
     0xAA, 0x55, 0xAA, 0x55, # data
-    0x27                    # checksum
+    0x29                    # checksum
 ])
 
 def test_badmagic():
@@ -39,4 +39,4 @@ def test_block_from_bytes():
 def test_checksum():
     block = Block(
         BlockHeader.from_bytes(TESTBLOCK), TESTBLOCK[6:-1], TESTBLOCK[-1])
-#   assert TESTBLOCK[-1] == block.checksum()
+    assert TESTBLOCK[-1] == block.calc_checksum()

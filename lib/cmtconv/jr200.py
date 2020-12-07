@@ -393,6 +393,9 @@ class FileReader(object):
 
         # Read the block header
         (i_next, block_header_bytes) = bit_decoder.eat_bytes(edges, i_next, 6)
+        #   XXX bit_decoder.eat_bytes is no longer returning a `bytes`!
+        #   instead it's a list of ints.
+        block_header_bytes = bytes(block_header_bytes)
         block_hdr = BlockHeader.from_bytes(block_header_bytes)
         #debug(block_hdr)
         if block_hdr.is_tail():

@@ -300,21 +300,24 @@ examine     ldx #Mexamcur
 
 .nextarg    ldx cmdqptr
             lda A,0,X
-            cmp A,#'l'
+            cmp A,#'l'          ; length opt?
             beq .linearg
             cmp A,#'L'
             beq .linearg
-            cmp A,#'w'
+            cmp A,#'w'          ; width opt?
             beq .widtharg
             cmp A,#'W'
             beq .widtharg
+            jsr qhexbyte        ; standalone number for length?
+            beq .linearg1
             bra .noarg
 
+            ;   XXX obviously this duplicated code could be refactored somehow
 .linearg    inx                 ; consume option letter
             stx cmdqptr
             jsr qhexbyte        ; try to parse argument
             bne .nextarg        ; no parse, ignore the option letter
-            stx cmdqptr         ; consume parsed text
+.linearg1   stx cmdqptr         ; consume parsed text
             lda A,qhex_out+1
             sta A,Mexamlines    ; set argument
             bra .nextarg

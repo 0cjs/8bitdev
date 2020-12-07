@@ -191,6 +191,7 @@ def test_deposit(m, S, R, addr, parselen, cmdarg, data):
     (0x8001, b'W3',      3,   2, '8001: 41 42 43\n8004: 44 45 46\n'),
     (0x8002, b'L1fW2',   2,  31, '8002: 42 43\n.*803E: 7E 7F\n'),
     (0x8003, b'l3w10',  16,   3, '8003: 43 .* 52\n8013: 53.*\n8023: 63.*72\n'),
+    (0x8004, b'w031',    3,   1, '8004: 44 45 46\n'),
 ], ids=tmc_tid)
 def test_examine(m, S, R, addr, width, cmdarg, lines, expmatch):
     m.deposit(0x8000, range(0x40, 0x80))    # test data to dump

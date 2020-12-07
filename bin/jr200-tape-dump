@@ -19,7 +19,7 @@ from cmtconv.jr200 import \
 if len(argv) < 3:
     err('Dumps binary data from JR-200 cassette output\n' +
         'Usage: %s audio_file output_file' % argv[0])
-    exit(-1)
+    exit(1)
 
 fname = argv[1]
 outfile = argv[2]
@@ -54,12 +54,11 @@ info('Max cycle length: %f' % max(cycle_lengths))
 freader = FileReader()
 (i_next, f) = freader.read_file(edges, 0)
 
-if checksums_valid(f.blocks):
+if not checksums_valid(f.blocks):
+    exit(1)
+else:
     data = blocks_to_bytes(f.blocks)
     info('Ouput file: %s' % outfile)
     f = open(outfile, 'w+b')
     f.write(data)
     f.close()
-    exit(0)
-else:
-    exit(1)

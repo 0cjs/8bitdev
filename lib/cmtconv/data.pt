@@ -14,6 +14,15 @@ def test_badmagic():
         BlockHeader.from_bytes(b'\x02\x2B')
     assert ex.match('Bad magic')
 
+def test_makeblock():
+    block = BlockHeader.make(3, 4, 0x7880)
+    assert                3 == block.block_number
+    assert                4 == block.length
+    assert           0x7880 == block.addr
+    assert            False is block.is_tail()
+    assert             0x2B == block.calc_checksum()  # XXX header-only checksum
+    assert   TESTBLOCK[0:6] == block.raw_bytes
+
 def test_checksum():
     block = Block(
         BlockHeader.from_bytes(TESTBLOCK), TESTBLOCK[6:-1], TESTBLOCK[-1])

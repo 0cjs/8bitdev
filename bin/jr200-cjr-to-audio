@@ -4,7 +4,7 @@
 '''
 
 from    os.path  import abspath, dirname, join
-import  sys
+from    sys  import argv, exit
 from    site  import addsitedir
 from    pydub import AudioSegment
 
@@ -16,13 +16,13 @@ from cmtconv.jr200 import \
     info, debug, err, cjr_to_file, FileEncoder, \
     checksums_valid, edges_to_samples
 
-if len(sys.argv) < 3:
+if len(argv) < 3:
     err('Convert binary data to JR-200 tape output\n' +
-        'Usage: %s data_file output_file' % sys.argv[0])
-    sys.exit(-1)
+        'Usage: %s data_file output_file' % argv[0])
+    exit(-1)
 
-fname = sys.argv[1]
-outfile = sys.argv[2]
+fname = argv[1]
+outfile = argv[2]
 
 # Convert cjr file to File
 with open(fname, 'rb') as f:
@@ -53,4 +53,3 @@ audio = AudioSegment(
         channels        = 1,
 )
 audio.export(outfile, format="wav")
-exit(0)

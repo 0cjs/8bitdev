@@ -16,12 +16,25 @@ def test_badmagic():
 
 def test_makeblock():
     block = BlockHeader.make(3, 4, 0x7880)
-    assert                3 == block.block_number
+    assert                3 == block.blockno
     assert                4 == block.length
     assert           0x7880 == block.addr
     assert            False is block.is_tail()
     assert             0x2B == block.calc_checksum()  # XXX header-only checksum
     assert   TESTBLOCK[0:6] == block.to_bytes()
+
+def test_block_from_bytes():
+    block = BlockHeader.from_bytes(TESTBLOCK)
+    assert                3 == block.blockno
+    assert                4 == block.length
+    assert           0x7880 == block.addr
+    assert            False is block.is_tail()
+    assert             0x2B == block.calc_checksum()  # XXX header-only checksum
+
+    s = 'cmtconv.data.BlockHeader(blockno=0x3, length=0x4, addr=0x7880)'
+    assert                s == repr(block)
+    assert                s == str(block)
+
 
 def test_checksum():
     block = Block(

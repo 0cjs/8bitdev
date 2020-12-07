@@ -28,20 +28,18 @@ class BlockHeader(object):
 
     '''
 
-    def __init__(self, header, block_number, length, addr, raw_bytes):
+    def __init__(self, header, block_number, length, addr):
         '''Caller is responsible for ensuring bytes match interpretation'''
         self.header         = header
         self.block_number   = block_number
         self.length         = length
         self.addr           = addr
-        self.raw_bytes_private = raw_bytes
 
     MAGIC = b'\x02\x2A'
 
     @classmethod
-    def from_bytes(self, raw_bytes):
+    def from_bytes(self, b):
         ' Construct the block header from raw bytes '
-        b = raw_bytes
         if b[0:2] != self.MAGIC:
             raise ValueError(
                 'Bad magic number: ${:02X} ${:02X}'.format(b[0], b[1]))
@@ -52,7 +50,7 @@ class BlockHeader(object):
             length = 256
         addr = b[4] * 256 + b[5]
 
-        return BlockHeader(header, b[2], length, addr, raw_bytes)
+        return BlockHeader(header, b[2], length, addr)
 
     @classmethod
     def make(self, block_number, length, addr):
@@ -65,14 +63,8 @@ class BlockHeader(object):
         if addr < 0 or addr > 0xffff:
             raise ValueError('Address must be in range 0x0000-0xffff: {}' %
                 addr)
-        b = bytearray()
-        b.extend(self.MAGIC)
-        b.append(block_number)
-        b.append(0 if length == 256 else length)
-        b.append(addr // 256)
-        b.append(addr % 256)
         return BlockHeader(
-            (self.MAGIC[0], self.MAGIC[1]), block_number, length, addr, b)
+            (self.MAGIC[0], self.MAGIC[1]), block_number, length, addr)
 
     @staticmethod
     def make_tail():
@@ -94,7 +86,12 @@ class BlockHeader(object):
         return self.block_number == 255 and self.length == 255
 
     def to_bytes(self):
-        return self.raw_bytes_private
+        b = bytearray(self.MAGIC)
+        b.append(self.block_number)
+        b.append(0 if self.length == 256 else self.length)
+        b.append(self.addr >> 8)
+        b.append(self.addr & 0xFF)
+        return b
 
     def calc_checksum(self):
         if self.is_tail():

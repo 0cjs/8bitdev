@@ -4,6 +4,8 @@
             include "src/mc68/std.a68"
             include "src/jr200/bios.a68"    ; bin/tmc6800 will load bioscode
 
+EXWIDTH     equ $08     ; make default fit 32-column screen
+
 pmon_ramlo  equ $E1     ; $E1-$FF not used by monitor or BASIC
 pmon_org    equ $7000   ; Monitor at top of built-in RAM;
 pmon_ramhi  equ $7F80   ;   `CLEAR $7000` to keep BASIC from stomping it.

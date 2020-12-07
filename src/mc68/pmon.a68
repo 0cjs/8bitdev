@@ -51,6 +51,10 @@ DEL         equ $7F
 ;   Monitor definitions
 PROMPT      equ '^'
 
+    ifndef EXWIDTH
+EXWIDTH     equ $10                 ; 16 lines, unless overridden
+    endif
+
 ; ----------------------------------------------------------------------
 ;   Storage for variables that must be in RAM.
 ;   Monitor variables are prefixed with `M`.
@@ -99,7 +103,7 @@ pmon_ramhi_end equ *
 ;   then drop into command loop.
 init        ldx #cmdtbl_std     ; default command table
             stx cmdtbl
-            lda A,#$10          ; default examine width: 16 bytes
+            lda A,#EXWIDTH      ; default examine width: 16 bytes
             sta A,Mexamwidth
             lda A,#8            ; default examine size: 8 lines
             sta A,Mexamlines

@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+#
+#   Temporary integration tests for the commnand-line tape manipulation
+#   programs until we have unit test coverage for most of this.
+#
+#   This is fragile and noisy, and is not expected to be run as part
+#   of the regular top-level tests.
+#
+#   That output is often just the exit code; you need to test that to
+#   see if it passed or failed. E.g., `./cmt-test; echo EXITCODE $?`
+#
+
+set -eu -o pipefail
+
+die() { echo 2>&1 FAILURE: "$@"; exit 1; }
+
+test_ptowav() {
+    echo ====================================
+    bin/jr200-obj-to-audio .build/obj/exe/jr200/hello.p $ttdir/hello.wav hello \
+        || die run jr-200-obj-to-audio
+    file $ttdir/hello.wav | grep -s 'mono 44100 Hz' || die ofile jr200-obj-to-audio
+}
+
+test_cjrtowav() {
+    echo ====================================
+    # header: magic, magic, block#, len, addrhi, addrlo
+    # data: indented, last line is checksum byte
+    # tail block has $FF blockno and len; contents ???
+    cat <<____ | xxd -r -p >$ttdir/2.cjr
+    02 42 00 26   00 00
+        41 42 43 44 45 46 47 48 00 00 00 00 00 00 00 00
+        01
+        00
+        00 00 00 00 00 00 00 00
+        8F
+    02 2A 01 04   78 80
+        aa 55 aa 55
+        27
+    02 2A FF FF   00 00
+        FF
+____
+    bin/jr200-cjr-to-audio $ttdir/2.cjr $ttdir/2.wav \
+        || die run jr200-obj-to-audio
+    file $ttdir/2.wav | grep -s 'mono 44100 Hz' \
+        || die ofile jr200-obj-to-audio
+}
+
+test_wavtodump() {
+    echo ====================================
+    bin/jr200-tape-dump $ttdir/hello.wav $ttdir/hello.dump \
+        || die run jr-200-tape-dump
+    # Don't know how to check this yet.
+    false ||  die ofile jr-200-tape-dump
+}
+
+####################################################################
+
+basedir=$(cd "$(dirname "$0")" && pwd -P)
+cd "$basedir"
+. ./activate -q -p python3
+python -c 'import pydub' || pip install pydub
+
+ttdir=tmp/tapetest
+mkdir -p $ttdir
+
+test_ptowav
+test_cjrtowav
+test_wavtodump
+
+echo ====================================
+echo SUCCESS?

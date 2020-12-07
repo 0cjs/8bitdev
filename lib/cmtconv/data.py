@@ -17,7 +17,16 @@ from    logging  import debug
 #   Tape Blocks
 
 class BlockHeader(object):
-    '''Interprets the block header'''
+    ''' JR-200 Tape Block
+
+        0-1: magic number $02 $2A (2,42)
+          2: block number: 0-254; 255 indicates end block
+          3: length in bytes; 0=256 bytes
+        4-5: load address ($0000 if not used)
+        6…n: data
+        n+1: checksum: sum of bytes 0…n modulo 256
+
+    '''
 
     def __init__(self, header, block_number, length, addr, raw_bytes):
         '''Caller is responsible for ensuring bytes match interpretation'''
@@ -27,13 +36,16 @@ class BlockHeader(object):
         self.addr           = addr
         self.raw_bytes      = raw_bytes
 
-    @staticmethod
-    def from_bytes(raw_bytes):
-        '''Construct the block header from raw bytes'''
+    MAGIC = b'\x02\x2A'
+
+    @classmethod
+    def from_bytes(self, raw_bytes):
+        ' Construct the block header from raw bytes '
         b = raw_bytes
+        if b[0:2] != self.MAGIC:
+            raise ValueError(
+                'Bad magic number: ${:02X} ${:02X}'.format(b[0], b[1]))
         header = (b[0], b[1])
-        if header != (2, 42):
-            raise ValueError('Invalid signature in header: {}'.format(header))
 
         length = b[3]
         if length == 0:

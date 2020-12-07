@@ -630,9 +630,9 @@ class FileEncoder(object):
         # silence, leader, header, data
         leader_edges = self.leader(200) # measured from actual recording
         if blk.header.is_tail():
-            data = blk.header.raw_bytes
+            data = blk.header.to_bytes()
         if not blk.header.is_tail():
-            data = blk.header.raw_bytes + blk.data + bytearray((blk.checksum,))
+            data = blk.header.to_bytes() + blk.data + bytearray((blk.checksum,))
         debug(len(data))
         debug(' '.join(hex(x) for x in data))
         data_edges = encoder.encode_bytes(data)

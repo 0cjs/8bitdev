@@ -34,7 +34,7 @@ class BlockHeader(object):
         self.block_number   = block_number
         self.length         = length
         self.addr           = addr
-        self.raw_bytes      = raw_bytes
+        self.raw_bytes_private = raw_bytes
 
     MAGIC = b'\x02\x2A'
 
@@ -54,8 +54,8 @@ class BlockHeader(object):
 
         return BlockHeader(header, b[2], length, addr, raw_bytes)
 
-    @staticmethod
-    def make(block_number, length, addr):
+    @classmethod
+    def make(self, block_number, length, addr):
         '''Build a block header from details'''
         if block_number < 0 or block_number > 255:
             raise ValueError('Block number must be in range 0-255: {}' %
@@ -65,14 +65,14 @@ class BlockHeader(object):
         if addr < 0 or addr > 0xffff:
             raise ValueError('Address must be in range 0x0000-0xffff: {}' %
                 addr)
-        header = (2, 42)
         b = bytearray()
-        b.extend(header)
+        b.extend(self.MAGIC)
         b.append(block_number)
         b.append(0 if length == 256 else length)
         b.append(addr // 256)
         b.append(addr % 256)
-        return BlockHeader(header, block_number, length, addr, b)
+        return BlockHeader(
+            (self.MAGIC[0], self.MAGIC[1]), block_number, length, addr, b)
 
     @staticmethod
     def make_tail():
@@ -93,11 +93,14 @@ class BlockHeader(object):
         #Is the block number alone enough?
         return self.block_number == 255 and self.length == 255
 
+    def to_bytes(self):
+        return self.raw_bytes_private
+
     def calc_checksum(self):
         if self.is_tail():
             return 0
         else:
-            return sum(self.raw_bytes) % 256
+            return sum(self.to_bytes()) % 256
 
 class Block(object):
     '''Represents a block of data'''

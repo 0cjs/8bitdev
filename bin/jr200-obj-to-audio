@@ -3,7 +3,7 @@
     Convert as output to JR-200 tape audio
 '''
 
-import  sys
+from    sys  import argv, exit
 from    os.path  import abspath, dirname, join
 from    site  import addsitedir
 from    pydub import AudioSegment
@@ -19,14 +19,14 @@ if __name__ == '__main__':
 
     from testmc.tool import asl
 
-    if len(sys.argv) < 4:
+    if len(argv) < 4:
         err('Convert binary data to JR-200 tape output\n' +
-            'Usage: %s object_file output_file file_name' % sys.argv[0])
-        sys.exit(-1)
+            'Usage: %s object_file output_file file_name' % argv[0])
+        exit(-1)
 
-    obj_fname = sys.argv[1]
-    outfile = sys.argv[2]
-    fname = sys.argv[3]
+    obj_fname = argv[1]
+    outfile = argv[2]
+    fname = argv[3]
 
     image = asl.parse_obj_fromfile(obj_fname)
     length = image.contiglen()

@@ -4,7 +4,7 @@
 '''
 
 from    os.path  import abspath, dirname, join
-import  sys
+from    sys  import argv, exit
 from    site  import addsitedir
 from    pydub import AudioSegment
 
@@ -16,13 +16,13 @@ from cmtconv.jr200 import \
     info, debug, err, samples_to_levels, levels_to_timed_edges, FileReader, \
     checksums_valid, blocks_to_bytes
 
-if len(sys.argv) < 3:
+if len(argv) < 3:
     err('Dumps binary data from JR-200 cassette output\n' +
-        'Usage: %s audio_file output_file' % sys.argv[0])
-    sys.exit(-1)
+        'Usage: %s audio_file output_file' % argv[0])
+    exit(-1)
 
-fname = sys.argv[1]
-outfile = sys.argv[2]
+fname = argv[1]
+outfile = argv[2]
 
 audio = AudioSegment.from_file(fname)
 rate = audio.frame_rate
@@ -60,6 +60,6 @@ if checksums_valid(f.blocks):
     f = open(outfile, 'w+b')
     f.write(data)
     f.close()
-    sys.exit(0)
+    exit(0)
 else:
-    sys.exit(1)
+    exit(1)

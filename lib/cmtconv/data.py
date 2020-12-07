@@ -85,37 +85,20 @@ class BlockHeader(object):
         b.append(self.addr & 0xFF)
         return b
 
-    def calc_checksum(self):
-        if self.is_tail():
-            return 0
-        else:
-            return sum(self.to_bytes()) % 256
-
 class Block(object):
     '''Represents a block of data'''
 
-    def __init__(self, header, data, checksum):
+    def __init__(self, header, data):
         self.header     = header
         self.data       = data
-        self.checksum   = checksum
 
-    def __str__(self):
-        s = ''
-        s += str(self.header)
-        for (i, x) in enumerate(self.data):
-            if i % 20 == 0:
-                s+= '\n'
-            s += '  {0:02x}'.format(x)
-        s += '\n\nChecksum: %x' % self.checksum
-        return s
+    def __repr__(self):
+        return '{}.{}(header={}, data={})'.format(
+            self.__class__.__module__, self.__class__.__name__,
+            self.header, self.data)
 
-    def calc_checksum(self):
+    def checksum(self):
         if self.header.is_tail():
             return 0
         else:
-            header_chksum = self.header.calc_checksum()
-            data_chksum = sum(self.data) % 256
-            chksum = (header_chksum + data_chksum) % 256
-            debug('header_chksum: %d, data_chksum: %d, chksum: %d' %
-                  (header_chksum,data_chksum, chksum))
-            return chksum
+            return sum(list(self.header.to_bytes() + self.data)) & 0xFF

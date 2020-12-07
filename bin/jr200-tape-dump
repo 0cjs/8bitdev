@@ -14,7 +14,7 @@ addsitedir(join(BASEDIR, 'lib'))
 
 from cmtconv.jr200 import \
     info, debug, err, samples_to_levels, levels_to_timed_edges, FileReader, \
-    checksums_valid, blocks_to_bytes
+    blocks_to_bytes
 
 if len(argv) < 3:
     err('Dumps binary data from JR-200 cassette output\n' +
@@ -51,11 +51,8 @@ info('Max cycle length: %f' % max(cycle_lengths))
 freader = FileReader()
 (i_next, f) = freader.read_file(edges, 0)
 
-if not checksums_valid(f.blocks):
-    exit(1)
-else:
-    data = blocks_to_bytes(f.blocks)
-    info('Ouput file: %s' % outfile)
-    f = open(outfile, 'w+b')
-    f.write(data)
-    f.close()
+data = blocks_to_bytes(f.blocks)
+info('Ouput file: %s' % outfile)
+f = open(outfile, 'w+b')
+f.write(data)
+f.close()

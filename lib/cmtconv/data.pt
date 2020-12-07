@@ -20,7 +20,6 @@ def test_makeblock():
     assert                4 == block.length
     assert           0x7880 == block.addr
     assert            False is block.is_tail()
-    assert             0x2B == block.calc_checksum()  # XXX header-only checksum
     assert   TESTBLOCK[0:6] == block.to_bytes()
 
 def test_block_from_bytes():
@@ -29,7 +28,6 @@ def test_block_from_bytes():
     assert                4 == block.length
     assert           0x7880 == block.addr
     assert            False is block.is_tail()
-    assert             0x2B == block.calc_checksum()  # XXX header-only checksum
 
     s = 'cmtconv.data.BlockHeader(blockno=0x3, length=0x4, addr=0x7880)'
     assert                s == repr(block)
@@ -38,5 +36,6 @@ def test_block_from_bytes():
 
 def test_checksum():
     block = Block(
-        BlockHeader.from_bytes(TESTBLOCK), TESTBLOCK[6:-1], TESTBLOCK[-1])
-    assert TESTBLOCK[-1] == block.calc_checksum()
+        BlockHeader.from_bytes(TESTBLOCK), TESTBLOCK[6:-1])
+    assert TESTBLOCK[-1] == block.checksum()
+    assert str(block)

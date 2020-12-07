@@ -3,7 +3,6 @@
     Dump binary data from National JR-200 tape output.
 '''
 
-from    __future__ import print_function
 from    os.path  import abspath, dirname, join
 import  sys
 from    site  import addsitedir

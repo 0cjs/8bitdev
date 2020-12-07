@@ -21,7 +21,7 @@ def test_makeblock():
     assert           0x7880 == block.addr
     assert            False is block.is_tail()
     assert             0x2B == block.calc_checksum()  # XXX header-only checksum
-    assert   TESTBLOCK[0:6] == block.raw_bytes
+    assert   TESTBLOCK[0:6] == block.to_bytes()
 
 def test_checksum():
     block = Block(

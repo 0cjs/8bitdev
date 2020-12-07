@@ -140,8 +140,11 @@ def test_usepending_available(m, S, R):
 #   Commands (tested outside of command loop)
 
 def set_rdlinebuf(m, input=b''):
-    ''' Load the input buffer `S.rdlinebuf` with `input` and $00 terminator
-        and set current parse pointer `cmdqptr` to start of input buffer.
+    ''' Set up the input buffer with args to be parsed by a command.
+
+        This deposits `input` into ``rdlinebuf`` at a deterministic offset
+        0-7 (based on the contents of `input`), appends a $00 terminator,
+        and sets the current parse pointer `cmdqptr` to that offset.
     '''
     S = m.symtab
     inbuf = S.rdlinebuf + sum(input) % 8
@@ -181,29 +184,33 @@ def test_deposit(m, S, R, addr, parselen, cmdarg, data):
         == (inbuf,  m.word(S.cmdqptr),  m.bytes(addr-1, len(guarded)))
 
 @pytest.mark.parametrize(
-    '  addr, width, cmdarg, lines, expmatch', [
-    (0x8003,   8,   b'',       2,  '8003: 43 44 45 46 47 48 49 4A\n'
-                                   '800B: 4B 4C 4D 4E 4F 50 51 52\n'),
-    (0x7FFF,   5,   b'1',      1,  '7FFF: 00 40 41 42 43\n'),
-    (0x8000,   2,   b'1f',    31,  '8000: 40 41\n.*803C: 7C 7D\n'),
+    '  addr, cmdarg, width, lines, expmatch', [
+    (0x7FFF, b'',        8,   2, '7FFF: 00 40 41 42 43 44 45 46\n'
+                                 '8007: 47 48 49 4A 4B 4C 4D 4E\n'),
+    (0x8000, b'L1',      8,   1, '8000: 40 41 42 43 44 45 46 47\n'),
+    (0x8001, b'W3',      3,   2, '8001: 41 42 43\n8004: 44 45 46\n'),
+    (0x8002, b'L1fW2',   2,  31, '8002: 42 43\n.*803E: 7E 7F\n'),
+    (0x8003, b'l3w10',  16,   3, '8003: 43 .* 52\n8013: 53.*\n8023: 63.*72\n'),
 ], ids=tmc_tid)
 def test_examine(m, S, R, addr, width, cmdarg, lines, expmatch):
     m.deposit(0x8000, range(0x40, 0x80))    # test data to dump
     m.depword(S.Mexamcur, addr)
-    m.deposit(S.Mexamwidth, width)
-    m.deposit(S.Mexamlines, 2)              # default value for tests
+    m.deposit(S.Mexamwidth, 8)              # default values for tests
+    m.deposit(S.Mexamlines, 2)
     inbuf = set_rdlinebuf(m, cmdarg)
     _, ostream = loadbios(m)
 
     m.call(S.examine)
+    print('updated: lines={:02X} width={:02X}'.format(
+        m.byte(S.Mexamlines), m.byte(S.Mexamwidth)))
     output = str(ostream.getvalue(), encoding='ASCII')
-    print(output[0:300])
+    print(output)
 
+    assert (inbuf + len(cmdarg), lines, width, lines) \
+        == (m.word(S.cmdqptr), m.byte(S.Mexamlines), m.byte(S.Mexamwidth),
+            len(output.split('\n')) - 1,
+        ), 'consumed, lines, width, outlines'
     assert re.fullmatch(expmatch, output, re.DOTALL)
-    assert lines == m.byte(S.Mexamlines), 'new lines default not set'
-    assert inbuf + len(cmdarg) == m.word(S.cmdqptr), 'cmdarg not consumed'
-    assert lines == len(output.split('\n')) - 1, \
-        'exepcted number of output lines'
 
 @pytest.mark.parametrize('command, curloc', [
     ('deposit', 'Mdepcur'),

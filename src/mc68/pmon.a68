@@ -297,12 +297,37 @@ deposit     ldx #Mdepcur
 
 examine     ldx #Mexamcur
             bsr usepending
-            ldx cmdqptr
-            jsr qhexbyte        ; new Mexamlines value given?
-            bne .noarg          ; no, use current default
-            stx cmdqptr         ; yes, consume argument
-            lda A,qhex_out+1    ;   and use arg
-            sta A,Mexamlines    ;   to set new default
+
+.nextarg    ldx cmdqptr
+            lda A,0,X
+            cmp A,#'l'
+            beq .linearg
+            cmp A,#'L'
+            beq .linearg
+            cmp A,#'w'
+            beq .widtharg
+            cmp A,#'W'
+            beq .widtharg
+            bra .noarg
+
+.linearg    inx                 ; consume option letter
+            stx cmdqptr
+            jsr qhexbyte        ; try to parse argument
+            bne .nextarg        ; no parse, ignore the option letter
+            stx cmdqptr         ; consume parsed text
+            lda A,qhex_out+1
+            sta A,Mexamlines    ; set argument
+            bra .nextarg
+
+.widtharg   inx                 ; consume option letter
+            stx cmdqptr
+            jsr qhexbyte        ; try to parse argument
+            bne .nextarg        ; no parse, ignore the option letter
+            stx cmdqptr         ; consume parsed text
+            lda A,qhex_out+1
+            sta A,Mexamwidth    ; set argument
+            bra .nextarg
+
 .noarg      lda A,Mexamlines    ; lines to print
             sta A,tmp1          ; set remaining lines left to print
             ldx Mexamcur        ; load start location to examine

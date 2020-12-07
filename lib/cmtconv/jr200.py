@@ -451,7 +451,7 @@ def checksums_valid(blocks):
         chksum = block.calc_checksum()
         if block.checksum != chksum:
             err('Block %d has checksum %d, calculated checksum is %d'
-                % (block.header.block_number, block.checksum, chksum))
+                % (block.header.blockno, block.checksum, chksum))
             return False
     return True
 

@@ -83,6 +83,14 @@ pmon_ramlo_end equ *
         endif
 
 cmdtbl      ds  2       ; pointer to command table (see below)
+;   Saved register values (same memory order as interrupt stack frame):
+Rcc         ds  1       ; condition codes
+Rb          ds  1       ; accumulator B
+Ra          ds  1       ; accumulator A
+Rx          ds  2       ; index register X
+Rpc         ds  2       ; program counter
+Rsp         ds  2       ; stack pointer
+;   Command data
 Mexamcur    ds  2       ; examine command current start addr
 Mexamwidth  ds  1       ; examine width: bytes per line to print
 Mexamlines  ds  1       ; examine lines: number of lines to print
@@ -212,6 +220,8 @@ cmdtbl_std
             dw      call        ; JSR to address ("kall")
             db 'q'
             dw      quitcmd     ; "quit"; exit to monitor's caller
+            db 's'
+            dw      regscmd     ; show/set saved registers
             db 'x'
             dw      examine     ; examine memory
             db $00
@@ -288,7 +298,6 @@ deposit     ldx #Mdepcur
             stx cmdqptr
 .rts        rts
 
-
 ;   Examine memory.
 ;
 ;   Starting at address `Mexamcur', `Mexamlines` of `Mexamwidth` bytes are
@@ -359,6 +368,52 @@ examine     ldx #Mexamcur
             dec tmp1            ; lines left to print
             bne .nextline
             rts
+
+;   show/set saved registers
+;
+;   Registers are printed as (space-prefixed) ` n=vv` pairs of name
+;   character and 2- or 4-character value.
+;
+regscmd     lda A,#'p'
+            lda B,Rpc
+            bsr prcheqval
+            lda A,Rpc+1
+            jsr prhex
+
+            lda A,#'a'
+            lda B,Ra
+            bsr prcheqval
+
+            lda A,#'b'
+            lda B,Rb
+            bsr prcheqval
+
+            lda A,#'x'
+            lda B,Rx
+            bsr prcheqval
+            lda A,Rx+1
+            jsr prhex
+
+            lda A,#'c'
+            lda B,Rcc
+            bsr prcheqval
+
+            lda A,#'s'
+            lda B,Rsp
+            bsr prcheqval
+            lda A,Rsp+1
+            jsr prhex
+
+            jmp prnl            ; RTS TCO
+
+;   ♣A print space, char in A, byte in B as hex
+prcheqval   psh B               ; some platforms's prchar may not preserve this
+            psh A
+            jsr prspace
+            pul A
+            jsr prchar
+            pul A               ; previous B value
+            jmp prhex           ; RTS TCO
 
 ; ----------------------------------------------------------------------
 ;   rd* - read input

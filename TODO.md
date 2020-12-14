@@ -1,13 +1,6 @@
 To-do List
 ==========
 
-#### Monitor, Library
-
-- test use of DAA for prnyb
-- command table continuation which will also test that `cmdtbl` is used
-- fix rdline not accepting backspace when buffer full
-- extract rdline from pmon, use only for tmc68 version
-
 #### Cleanup
 
 - scr/tmc68/biocode: use `ds prchar-$` (current PC) to org routine locations

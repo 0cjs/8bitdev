@@ -47,8 +47,8 @@ class Machine(GenericMachine):
     _RTS_opcodes    = set([I.RTS])
     _ABORT_opcodes  = set([0x00])   # not an opcode and test mem init'd to this
 
-    def _getpc(self):
-        return self.pc
+    def _getpc(self):   return self.pc
+    def _getsp(self):   return self.sp
 
     InvalidOpcode = InvalidOpcode
 
@@ -63,6 +63,13 @@ class Machine(GenericMachine):
                 'opcode=${:02X} pc=${:04X}'
                 .format(opcode, incword(self.pc, -1)))
         f(self)
+
+    def pushretaddr(self, word):
+        self.sp -= 2
+        self.depword(self.sp+1, word)
+
+    def getretaddr(self):
+        return self.word(self.sp+1)
 
     ####################################################################
     #   Tracing and similar information

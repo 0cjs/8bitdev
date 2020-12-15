@@ -43,6 +43,10 @@ def m():
             self.pc &= 0xFFFF
             self._steps_taken += 1
 
+        def _getsp():               raise RuntimeError('Tested in subclasses.')
+        def pushretaddr(self, _):   raise RuntimeError('Tested in subclasses.')
+        def getretaddr(self):       raise RuntimeError('Tested in subclasses.')
+
     return Machine
 
 @pytest.fixture

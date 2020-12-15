@@ -83,6 +83,20 @@ def test_step(m):
     m.step(2);  assert R(pc=start+3) == m.regs
     m.step();   assert R(pc=start+4) == m.regs
 
+def test_getsp_pushretaddr_getretaddr(m):
+    ''' Use RTS to confirm we correctly push and read a return address on
+        the stack.
+    '''
+    m.setregs(R(pc=0x1234, sp=0x5678))
+    assert 0x5678 == m._getsp()
+    m.pushretaddr(0xABCD)
+    assert (0x5676, R(sp=0x5676)) == (m._getsp(), m.regs)
+    retaddr = m.getretaddr()
+
+    m.deposit(0x1234, I.RTS)
+    m.step()
+    assert (0xABCD, R(pc=0xABCD))  == (retaddr, m.regs)
+
 def test_call(m):
     ' Integration test: multiple instruction execution. '
     start = 0x200

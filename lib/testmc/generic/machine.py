@@ -197,8 +197,25 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
         '''
 
     @abstractmethod
+    def _getsp(self):
+        ''' Efficiently return the current stack pointer register value.
+            (This should be the register contents, not the address, if they
+            differ.) See `_getpc()` for further information.
+        '''
+
+    @abstractmethod
     def _step(self):
         ' Execute current opcode (and its arguments), updating machine state. '
+
+    @abstractmethod
+    def pushretaddr(self, addr):
+        ''' Push return address `addr` on to the stack, such that an RTS
+            will return to this address.
+        '''
+
+    @abstractmethod
+    def getretaddr(self):
+        ' Return the address at the top of the stack that RTS would use. '
 
     ####################################################################
     #   Execution - implementation

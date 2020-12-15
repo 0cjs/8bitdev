@@ -25,9 +25,8 @@ Commands list (✓=implemented; ☆=proposed):
 - ✓ `k`: Call (JSR) address (must not change input buffer or move stack)
 - ☆ `l`: List disassembled instructions
 - ✓ `q`: Quit (return to caller)
-- ☆ `r`: Read data from device
-- ☆ `s`: Show/set registers
-- ☆ `v`: Verify data written to device
+- ✓ `r`: Show/set registers
+- ☆ `t`: Transfer or verify data to/from device
 - ☆ `w`: Write data to device
 - ✓ `x`: eXamine memory
 

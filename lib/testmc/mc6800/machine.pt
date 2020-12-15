@@ -50,15 +50,26 @@ def test_cc(m):
 ####################################################################
 #   Instruction Execution
 
-def test_step_notimplemented(m):
-    ''' This should be replaced with a "bad opcode" test once we've no
-        longer got unimplemented opcodes.
+@pytest.mark.parametrize('opcode', [ 0x19, 0x3E, ])   # DAA, WAI
+def test_step_notimplemented(m, opcode):
+    ''' This can be removed, along with the exception itself, when all
+        opcodes are implemented.
     '''
-    m.deposit(0x100, [I.NOP, 0x3E])  # $3E = SWI
+    m.deposit(0x100, [I.NOP, opcode])
     m.setregs(R(pc=0x100))
     with pytest.raises(Machine.NotImplementedError) as ex:
         m.step(2)
-    assert ex.match(r'^opcode=\$3E pc=\$0101$')
+    assert ex.match(r'^opcode=\${:02X} pc=\$0101$'.format(opcode))
+
+@pytest.mark.parametrize('opcode', [
+    0x00, 0x02, 0x05, 0xFD,     # representative sample
+])
+def test_step_invalid(m, opcode):
+    m.deposit(0x103, [I.NOP, opcode])
+    m.setregs(R(pc=0x103))
+    with pytest.raises(Machine.InvalidOpcode) as ex:
+        m.step(2)
+    assert ex.match(r'^opcode=\${:02X} pc=\$0104$'.format(opcode))
 
 def test_step(m):
     ''' Smoke test; the detailed work of instruction execution is covered

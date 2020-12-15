@@ -264,7 +264,7 @@ cmdtbl_std
             dw      call        ; JSR to address ("kall")
             db 'q'
             dw      quitcmd     ; "quit"; exit to monitor's caller
-            db 's'
+            db 'r'
             dw      regscmd     ; show/set saved registers
             db 'x'
             dw      examine     ; examine memory
@@ -423,43 +423,115 @@ examine     ldx #Mexamcur
 
 ;   show/set saved registers
 ;
-;   Registers are printed as (space-prefixed) ` n=vv` pairs of name
-;   character and 2- or 4-character value.
+;   XXX ♣tmp2
 ;
-regscmd     lda A,#'p'
+;   The registers are named with single letters `pabxcs`. With no args, the
+;   registers are printed as (space-prefixed) ` n=vv` pairs of name
+;   character and 2- or 4-character value. Otherwise arguments of a
+;   register letter followed immediately by a hexbyte or hexword (depending
+;   on register size) set register values. The argument list must be
+;   terminated by whitespace or end of input.
+;
+regscmd     jsr qwspace         ; check args after command
+            bcc .nextarg        ; not whitespace, we show instead of set
+
+.show       lda A,#'p'
             lda B,Rpc
-            bsr prcheqval
+            jsr prchval
             lda A,Rpc+1
             jsr prhex
 
             lda A,#'a'
             lda B,Ra
-            bsr prcheqval
+            jsr prchval
 
             lda A,#'b'
             lda B,Rb
-            bsr prcheqval
+            jsr prchval
 
             lda A,#'x'
             lda B,Rx
-            bsr prcheqval
+            jsr prchval
             lda A,Rx+1
             jsr prhex
 
             lda A,#'c'
             lda B,Rcc
-            bsr prcheqval
+            jsr prchval
 
             lda A,#'s'
             lda B,Rsp
-            bsr prcheqval
+            jsr prchval
             lda A,Rsp+1
             jsr prhex
 
             jmp prnl            ; RTS TCO
 
+.nextarg    ldx #Rpc
+            lda A,#'p'
+            bsr .setword
+            ldx #Ra
+            lda A,#'a'
+            bsr .setbyte
+            ldx #Rb
+            lda A,#'b'
+            bsr .setbyte
+            ldx #Rx
+            lda A,#'x'
+            bsr .setword
+            ldx #Rcc
+            lda A,#'c'
+            bsr .setbyte
+            ldx #Rsp
+            lda A,#'s'
+            bsr .setword
+            ldx cmdqptr
+            jsr qwspace         ; parsed no valid arg; wspace ending arg list?
+            bcc .argerr1        ; no, error
+.rts        rts                 ; otherwise command is complete
+
+.argerr     pul B               ; unstack setbyte/setword RTS
+            pul B
+.argerr1    jmp prperr_up
+
+.setbyte    ;   If next char matches A, parse a hexbyte and write to [X].
+            stx tmp2            ; save location
+            ldx cmdqptr
+            lda B,0,X           ; get next char
+            cba                 ; matches the arg?
+            bne .rts            ; no, carry on
+            inx                 ; consume matched char
+            jsr qhexbyte
+            bne .argerr         ; no word, die
+            stx cmdqptr         ; consume parsed value
+            ldx tmp2            ; target location
+            lda B,qhex_out+1
+            sta B,0,X           ; save parsed LSB
+            pul B               ; remove continuation
+            pul B
+            bra .nextarg        ;    because we directly continue arg loop
+
+.setword    ;   If next char matches A, parse a hexword and write to [X].
+            stx tmp2            ; save location
+            ldx cmdqptr
+            lda B,0,X           ; get next char
+            cba                 ; matches the arg?
+            bne .rts            ; no, carry on
+            inx                 ; consume matched char
+            jsr qhexword        ;
+            bne .argerr         ; no word, die
+            stx cmdqptr         ; consume parsed value
+            ldx tmp2            ; target location
+            lda B,qhex_out
+            sta B,0,X           ; save parsed MSB
+            lda B,qhex_out+1
+            sta B,1,X           ; save parsed LSB
+            pul B               ; remove continuation
+            pul B
+            bra .nextarg        ;    because we directly continue arg loop
+
 ;   ♣A print space, char in A, byte in B as hex
-prcheqval   psh B               ; some platforms's prchar may not preserve this
+prchval     psh B               ; some platforms's prchar may not preserve this
             psh A
             jsr prspace
             pul A
@@ -563,7 +635,7 @@ qwspace     ldx cmdqptr
 ; ----------------------------------------------------------------------
 ;   pr* - printing output
 
-;   ♣A Print value in a as hex to the character output port.
+;   ♣A Print value in A as hex to the character output port.
 ;   Falls through to prnyb.
 prhex       psh A
             lsr A

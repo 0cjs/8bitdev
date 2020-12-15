@@ -317,19 +317,28 @@ def test_examine_output(m, S, R, addr, width, cmdarg, lines, expmatch):
         ), 'consumed, lines, width, outlines'
     assert re.fullmatch(expmatch, output, re.DOTALL)
 
+def depregs(m, regs):
+    ' Deposit `regs` to the save registers area. '
+    S = m.symtab
+    m.depword(S.Rsp, regs.sp);  m.depword(S.Rpc, regs.pc)
+    m.deposit(S.Ra,  regs.a);   m.deposit(S.Rb,  regs.b)
+    m.depword(S.Rx,  regs.x);   m.deposit(S.Rcc, regs.cc)
+
+def examregs(m):
+    ' Return a Registers containing the in-memory register copies. '
+    S = m.symtab
+    return R(sp=m.word(S.Rsp), pc=m.word(S.Rpc), cc=m.byte(S.Rcc),
+             a=m.byte(S.Ra),    b=m.byte(S.Rb),   x=m.word(S.Rx),
+            )
+
 @pytest.mark.parametrize('regs', [
     R(pc=0x5678, a=0x9A, b=0xBC, x=0xDEF0, cc=0xFF, sp=0x1234),
     R(pc=0x0002, a=0x03, b=0x04, x=0x0005, cc=0x00, sp=0x0001),
 ])
-def test_show_registers(m, S, R, regs):
+def test_regscmd_show(m, S, R, regs):
     print(regs)
-    m.depword(S.Rpc, regs.pc)
-    m.deposit(S.Ra,  regs.a)
-    m.deposit(S.Rb,  regs.b)
-    m.depword(S.Rx,  regs.x)
-    m.deposit(S.Rcc, regs.cc)
-    m.depword(S.Rsp, regs.sp)
-
+    depregs(m, regs)
+    inbuf = set_rdlinebuf(m)
     _, ostream = loadbios(m)
     m.call(S.regscmd)
     output = str(ostream.getvalue(), encoding='ASCII')
@@ -337,12 +346,43 @@ def test_show_registers(m, S, R, regs):
 
     #   XXX flags should be in more human-readable format
     #   But it may be difficult to do this with expanding beyond 32 chars:
-    #        p5678 a9A bBC xDEF0 cFF s1234
+    #       p5678 a9A bBC xDEF0 cFF s1234
     #       1--------10--------20--------30-|------40
 
     expected = ' p{:04X} a{:02X} b{:02X} x{:04X} c{:02X} s{:04X}\n' \
         .format(regs.pc, regs.a, regs.b, regs.x, regs.cc, regs.sp)
-    assert expected == output
+    assert (inbuf, expected) == (m.word(S.cmdqptr), output)
+
+@pytest.mark.parametrize('success, cmdarg, consumed, changedregs', [
+    ( True, b'pFEDC',   5, R(pc=0xFEDC)      ),
+    ( True, b'aFF',     3, R(a=0xFF)         ),
+    ( True, b'bE0 ',    4, R(b=0xE0)         ), # first trailing wspc consumed
+    ( True, b'x7778',   5, R(x=0x7778)       ),
+    ( True, b'c31',     3, R(cc=0x31)        ),
+    ( True, b's123',    4, R(sp=0x123)       ),
+    ( True, b'b1  ',    3, R(b=0x01)         ), # first trailing wspc consumed
+    ( True, b'a07b9',   5, R(a=0x07, b=0x09) ),
+    (False, b'x',       0, R()               ),
+    (False, b'z',       0, R()               ),
+    (False, b'a1x2y',   4, R(a=1, x=2)       ),
+    ( True, b'bBBaAA',  6, R(a=0xAA, b=0xBB) ), # reversed register order
+    ( True, b'aAAaBB',  6, R(a=0xBB)         ), # multiple sets
+])
+def test_regscmd_set(m, S, R, success, cmdarg, consumed, changedregs):
+    initregs = R(pc=0x0102, a=0x03, b=0x04, x=0x0506, cc=0xFF, sp=0x0708)
+    depregs(m, initregs)
+    inbuf = set_rdlinebuf(m, cmdarg)
+    _, ostream = loadbios(m)
+
+    initsp = m.sp       # XXX per test_examine_parseargs()
+    m.call(S.regscmd, stopat=[S.prperr])
+    assert (initregs.clone(**changedregs.valued()), hex(inbuf + consumed)
+      ) == (examregs(m),                            hex(m.word(S.cmdqptr)))
+    if not success:
+        #   XXX Same issues as arg parsing for test_examine_parseargs?
+        assert R(pc=S.prperr, sp=initsp) == m.regs, '''
+            On error exit, stack should not have cmdloop.parse continuation.
+        '''
 
 @pytest.mark.parametrize('command, curloc', [
     ('deposit', 'Mdepcur'),

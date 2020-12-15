@@ -79,6 +79,9 @@ def test_Machine_examine_stack(m):
 ####################################################################
 #   Machine execution
 
+##############################
+#   step
+
 def test_Machine_step(m):
     ''' Test a little program we've hand assembled here to show
         that we're using the MPU API correctly.
@@ -135,6 +138,26 @@ def test_machine_stepto_brk(m):
     m.setregs(R(pc=0x710))
     m.stepto(stopon=(I.BRK,))
     assert R(pc=0x712) == m.regs
+
+##############################
+#   pushretaddr/getretaddr
+
+def test_getsp_pushretaddr_getretaddr(m):
+    ''' Use RTS to confirm we correctly push and read a return address on
+        the stack.
+    '''
+    m.setregs(R(pc=0x1234, sp=0x81))
+    assert 0x81 == m._getsp()
+    m.pushretaddr(0xABCD)
+    assert (0x7F, R(sp=0x7F)) == (m._getsp(), m.regs)
+    retaddr = m.getretaddr()
+
+    m.deposit(0x1234, I.RTS)
+    m.step()
+    assert (0xABCD, R(pc=0xABCD)) == (retaddr, m.regs)
+
+####################
+#   call
 
 def test_Machine_call_rts(m):
     m.deposit(0x580, [I.RTS])

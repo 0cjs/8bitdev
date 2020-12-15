@@ -34,6 +34,9 @@ class Machine(GenericMachine):
         self.regsobj = self.mpu
 
     def _stackaddr(self, depth, size):
+        ''' Return the address of `size` bytes of data on the stack
+            at `depth` bytes above the current head of the stack.
+        '''
         addr = 0x100 + self.mpu.sp + 1 + depth
         if addr >= 0x201 - size:
             raise IndexError("stack underflow: addr={:04X} size={}" \
@@ -54,6 +57,19 @@ class Machine(GenericMachine):
     _ABORT_opcodes      = set([I.BRK])
 
     def _getpc(self):   return self.mpu.pc
+    def _getsp(self):   return self.mpu.sp
     def _step(self):    self.mpu.step()
 
+    def pushretaddr(self, addr):
+        ''' Like JSR, this pushes `addr` - 1; RTS compensates for this.
+            See MC6800 Family Programming Manual §8.1 p.108.
+        '''
+        self.mpu.sp -= 2
+        self.depword(self._stackaddr(0, 2), addr - 1)
 
+    def getretaddr(self):
+        ''' Like RTS, we compensate for the return address pointing to the
+            last byte of the JSR operand instead of the first byte of the
+            next instruction. See MC6800 Family Programming Manual §8.2 p.108.
+        '''
+        return self.word(self._stackaddr(0, 2)) + 1

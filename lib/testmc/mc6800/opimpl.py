@@ -9,16 +9,6 @@
 
 from struct import unpack
 
-#   The official home of these is testmc.mc6800 but we use them
-#   here and so need to define them here.
-
-def LSB(n):
-    ' Return the least significant byte of a 16-bit value. '
-    return n & 0xFF
-
-def MSB(n):
-    ' Return the most significant byte of a 16-bit value. '
-    return (n >> 8) & 0xFF
 
 ####################################################################
 

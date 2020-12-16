@@ -2,8 +2,8 @@ from    itertools  import chain
 from    testmc.generic  import *
 from    testmc.mc6800.opcodes  import OPCODES, Instructions as I
 from    testmc.mc6800.opimpl  import (
-    LSB, MSB, InvalidOpcode, incword, readbyte, signedbyteat,
-    )
+            InvalidOpcode, incword, readbyte, signedbyteat,
+            )
 
 class Machine(GenericMachine):
 

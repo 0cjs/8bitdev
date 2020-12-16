@@ -9,7 +9,7 @@
 
 from struct import unpack
 
-#   The official home of these is mc6800.machine, but we use them
+#   The official home of these is testmc.mc6800 but we use them
 #   here and so need to define them here.
 
 def LSB(n):

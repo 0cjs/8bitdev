@@ -2,7 +2,7 @@ from    testmc.mc6800.opcodes   import Instructions as I
 from    testmc.mc6800.opcodes   import *
 from    testmc.mc6800.opimpl    import *
 from    testmc.mc6800           import Machine
-from    testmc                  import LSB, MSB, tmc_tid
+from    testmc                  import LB, MB, tmc_tid
 import  pytest
 
 ############################################################################
@@ -248,7 +248,7 @@ def rununary(instr, arg, res, N, Z, V, C, inflags=R()):
         initregs=inflags.clone(b=arg), changedregs=outflags.clone(b=res))
 
     addr = v16(arg)
-    runop([I[instr + 'm'], MSB(addr), LSB(addr)],
+    runop([I[instr + 'm'], MB(addr), LB(addr)],
         initmem={ addr:arg }, initregs=inflags,
         changedmem={ addr:res }, changedregs=outflags)
 
@@ -279,12 +279,12 @@ def runbinary(instr, arg0, arg1, res, N, Z, V, C, *, H=None, inflags=R()):
             changedregs=outflags.clone(**outacc))
 
         addr = v8(arg1)
-        runop([I[instr + acc + 'z'], LSB(addr)],
+        runop([I[instr + acc + 'z'], LB(addr)],
             initmem={ addr:arg1 }, initregs=inflags.clone(**inacc),
             changedregs=outflags.clone(**outacc))
 
         addr = v16(arg1)
-        runop([I[instr + acc + 'm'], MSB(addr), LSB(addr)],
+        runop([I[instr + acc + 'm'], MB(addr), LB(addr)],
             initmem={ addr:arg1 }, initregs=inflags.clone(**inacc),
             changedregs=outflags.clone(**outacc))
 
@@ -486,14 +486,14 @@ def test_SWI(r):
     esp = r.sp - 7  # expected stack pointer after SWI
     stackdata = {
         esp+1: r.cc,            esp+2: r.b,             esp+3: r.a,
-        esp+4: MSB(r.x),        esp+5: LSB(r.x),
-        esp+6: MSB(instaddr+1), esp+7: LSB(instaddr+1),
+        esp+4: MB(r.x),        esp+5: LB(r.x),
+        esp+6: MB(instaddr+1), esp+7: LB(instaddr+1),
     }
     print('expecting sp={:04X} ({}) cc={:02X} ({})\n{}'
         .format(esp, esp, r.cc, r.cc, sorted(stackdata.items())))
 
     runop([I['SWI']], memsize=65536, startaddr=instaddr,
-        initregs=r, initmem={ swivec: MSB(swient), swivec+1: LSB(swient) },
+        initregs=r, initmem={ swivec: MB(swient), swivec+1: LB(swient) },
         changedregs=r.clone(sp=esp, pc=swient, I=1), changedmem=stackdata)
 
 ####################################################################
@@ -583,22 +583,22 @@ def test_LD16(reg, arg, N, Z):
     instr = 'LD' + reg[0].upper()
     changedregs = R(**{ reg: arg}).clone(N=N, Z=Z, V=0)
 
-    runop([I[instr], MSB(arg), LSB(arg)], changedregs=changedregs)
+    runop([I[instr], MB(arg), LB(arg)], changedregs=changedregs)
 
     addr = v8(arg)
     runop([I[instr + 'z'], addr],
-        initmem={ addr: MSB(arg), addr+1: LSB(arg) },
+        initmem={ addr: MB(arg), addr+1: LB(arg) },
         changedregs=changedregs)
 
     addr = v16(arg)
-    runop([I[instr + 'm'], MSB(addr), LSB(addr)],
-        initmem={ addr: MSB(arg), addr+1: LSB(arg) },
+    runop([I[instr + 'm'], MB(addr), LB(addr)],
+        initmem={ addr: MB(arg), addr+1: LB(arg) },
         changedregs=changedregs)
 
     addr = v16(arg); offset = v8(arg)
     runop([I[instr + 'x'], offset],
         initregs    = R(x=addr),
-        initmem     = { addr+offset: MSB(arg), addr+offset+1: LSB(arg) },
+        initmem     = { addr+offset: MB(arg), addr+offset+1: LB(arg) },
         changedregs = changedregs)
 
 @tc('arg', 0x0000, 0x1234, 0xFFED)
@@ -628,7 +628,7 @@ def test_STA(opname, accval, arg, N, Z):
         changedmem={ addr: arg }, changedregs=R(N=N, Z=Z, V=0))
 
     addr = v16(arg)
-    runop([I[opname + 'm'], MSB(addr), LSB(addr)], initregs=accval(arg),
+    runop([I[opname + 'm'], MB(addr), LB(addr)], initregs=accval(arg),
         changedmem={ addr: arg }, changedregs=R(N=N, Z=Z, V=0))
 
     addr = v16(arg); offset = v8(arg)
@@ -644,13 +644,13 @@ def test_ST16(reg, arg, N, Z):
     changedregs = R(N=N, Z=Z, V=0)
 
     addr = v16(arg)
-    runop([I[instr + 'm'], MSB(addr), LSB(addr)], initregs=initregs,
-        changedmem={ addr: MSB(arg), addr+1: LSB(arg) },
+    runop([I[instr + 'm'], MB(addr), LB(addr)], initregs=initregs,
+        changedmem={ addr: MB(arg), addr+1: LB(arg) },
         changedregs=changedregs)
 
     addr = v8(arg)
     runop([I[instr + 'z'], addr], initregs=initregs,
-        changedmem={ addr: MSB(arg), addr+1: LSB(arg) },
+        changedmem={ addr: MB(arg), addr+1: LB(arg) },
         changedregs=changedregs)
 
     offset = v8(arg)
@@ -663,14 +663,14 @@ def test_ST16(reg, arg, N, Z):
         #   into two tests, which doesn't seem worthwhile given the
         #   commonality in the code under test.
         initregs=initregs.clone(x=arg),
-        changedmem={ addr: MSB(arg), addr+1: LSB(arg) },
+        changedmem={ addr: MB(arg), addr+1: LB(arg) },
         changedregs=changedregs)
 
 def test_STXz_rollover():
     ' XXX This should be confirmed on a real 6800. ' # XXX
     arg = 0x1234
     runop([I.STXz, 0xFF], initregs=R(x=arg),
-        changedmem={ 0xFF: MSB(arg), 0x100: LSB(arg) },
+        changedmem={ 0xFF: MB(arg), 0x100: LB(arg) },
         changedregs=R(N=0, Z=0, V=0))
 
 def test_STXm_rollover():
@@ -1040,17 +1040,17 @@ def test_CBA(inC):
     (0x121, 0x8000, 0x0100, 0, 0, 1),
 )
 def test_CPX(addr, x, arg, N, Z, V):
-    runop([I.CPX, MSB(arg), LSB(arg)],
+    runop([I.CPX, MB(arg), LB(arg)],
         initregs=R(x=x), changedregs=R(N=N, Z=Z, V=V))
 
     addr -= 0x40
     runop([I.CPXz, addr],
-        initmem     = { addr: MSB(arg), addr+1: LSB(arg) },
+        initmem     = { addr: MB(arg), addr+1: LB(arg) },
         initregs    = R(x=x),
         changedregs = R(N=N, Z=Z, V=V))
 
-    runop([I.CPXm, MSB(addr), LSB(addr)],
-        initmem     = { addr: MSB(arg), addr+1: LSB(arg) },
+    runop([I.CPXm, MB(addr), LB(addr)],
+        initmem     = { addr: MB(arg), addr+1: LB(arg) },
         initregs    = R(x=x),
         changedregs = R(N=N, Z=Z, V=V))
 

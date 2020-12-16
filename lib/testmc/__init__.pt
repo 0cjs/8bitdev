@@ -8,8 +8,8 @@ import  pytest
     ( 0xFEDC, 0xFE, 0xDC),
     (0x12340, 0x23, 0x40),
 ))
-def test_LSB_MSB(value, l, m):
-    assert (m, l) == (MSB(value), LSB(value))
+def test_LB_MB(value, l, m):
+    assert (m, l) == (MB(value), LB(value))
 
 @pytest.mark.parametrize('input, expected', [
     (   True,   True),

@@ -3,13 +3,13 @@
 
 from    numbers  import Number
 
-__all__ = ['LSB', 'MSB', 'tmc_tid']
+__all__ = ['LB', 'MB', 'tmc_tid']
 
-def LSB(n):
+def LB(n):
     ' Return the lowest byte (LSB) of a value. '
     return n & 0xFF
 
-def MSB(n):
+def MB(n):
     ''' Return the "middle" or 2nd-lowest byte of a value.
         This is the MSB of a 16-bit value.
     '''

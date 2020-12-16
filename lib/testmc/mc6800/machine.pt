@@ -1,4 +1,5 @@
 from    testmc.mc6800  import Machine, Instructions as I
+from    testmc  import LB, MB
 import  pytest
 
 @pytest.fixture
@@ -50,6 +51,9 @@ def test_cc(m):
 ####################################################################
 #   Instruction Execution
 
+#######################################
+#   step
+
 @pytest.mark.parametrize('opcode', [ 0x19, 0x3E, ])   # DAA, WAI
 def test_step_notimplemented(m, opcode):
     ''' This can be removed, along with the exception itself, when all
@@ -83,6 +87,9 @@ def test_step(m):
     m.step(2);  assert R(pc=start+3) == m.regs
     m.step();   assert R(pc=start+4) == m.regs
 
+#######################################
+#   getsp/pushretaddr/getretaddr
+
 def test_getsp_pushretaddr_getretaddr(m):
     ''' Use RTS to confirm we correctly push and read a return address on
         the stack.
@@ -97,19 +104,60 @@ def test_getsp_pushretaddr_getretaddr(m):
     m.step()
     assert (0xABCD, R(pc=0xABCD))  == (retaddr, m.regs)
 
-def test_call(m):
-    ' Integration test: multiple instruction execution. '
-    start = 0x200
-    m.deposit(start, [
-        I.BSR,     4,           # 0200: to LDAA below
-        I.NOP,                  # 0202:
-        I.JMP,  0x02, 0x08,     # 0203: to RTS below
-        I.LDAA, 0xCC,           # 0206:
-        I.RTS,                  # 0208:
+#######################################
+#   call()
+
+@pytest.mark.parametrize('opcode, aborts', [
+    (0x00, None),               # default abort opcode
+    (0x08, 0x08),               # scalar abort argument
+    (0x29, [0x28, 0x29, 0x30]), # collection abort arguments
+   #(I.RTS, I.RTS),             # XXX cannot currently abort on RTS
+])
+def test_call_abort(m, opcode, aborts):
+    p = 0x201
+    with pytest.raises(m.Abort) as ex:
+        m.deposit(p, [opcode])
+        m.call(p, aborts=aborts, trace=1)
+    assert R(pc=p) == m.regs
+    assert ex.match('Abort on opcode=\${:02X}: '.format(opcode))
+
+def test_call_rts_registers(m):
+    p = 0x202
+
+    m.deposit(p, [I.RTS])
+    m.call(p, R(pc=0x0000, a=0x55, C=1))
+    assert R(pc=p, a=0x55, C=1) == m.regs, \
+        'expected regs set but start overrides PC, RTS not executed'
+
+    m.deposit(p, [I.NOP, I.NOP, I.RTS])
+    m.call(p, R(pc=0xFFFF, a=0xAA, C=0))
+    assert R(pc=p+2, a=0xAA, C=0) == m.regs, \
+        'expected NOPs but not RTS executed'
+
+def test_call_shallow(m):
+    p = 0x203
+
+    m.deposit(p, [I.BSR, 0x01, I.RTS, I.LDAA, 0x55, I.RTS])
+    m.call(p, R(a=0xAA), trace=1)
+    assert R(pc=p+2, a=0x55) == m.regs
+
+    m.deposit(p, [I.JSR, MB(p+4), LB(p+4), I.RTS, I.LDAA, 0x66, I.RTS])
+    m.call(p, R(a=0xAA), trace=1)
+    assert R(pc=p+3, a=0x66) == m.regs
+
+def test_call_deep(m):
+    p = 0x204
+    m.deposit(p, [                  # after top-level call:
+        I.JSR, MB(p+9), LB(p+9),    #   a=1 b=1
+        I.BSR, 0x00,    # 03:               b=3
+        I.BSR, 0x00,    # 05:               b=4
+        I.BRA, 0x01,    # 07:
+        I.INCA,         # 09:
+        I.INCB,         # 0A:               b=5
+        I.RTS           # 0B:
         ])
-    m.setregs(R(pc=start))
-    m.call(start, trace=True); print(m.regs)
-    assert R(pc=0x0208, a=0xCC) == m.regs
+    m.call(p, R(a=0, b=0), trace=1)
+    assert R(pc=p+0x0B, a=1, b=5) == m.regs
 
 ####################################################################
 #   Tracing and similar information

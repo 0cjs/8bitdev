@@ -1,5 +1,6 @@
 from    testmc.m6502  import Machine, Instructions as I
 from    testmc.memimage  import  MemImage
+from    testmc  import LB, MB
 import  pytest
 
 @pytest.fixture
@@ -159,27 +160,53 @@ def test_getsp_pushretaddr_getretaddr(m):
 ####################
 #   call
 
-def test_Machine_call_rts(m):
-    m.deposit(0x580, [I.RTS])
-    assert R(          a=0,    x=0) == m.regs
-    m.call(     0x580, R(a=0xFE, x=8))
-    assert R(pc=0x580,   a=0xFE, x=8) == m.regs
+@pytest.mark.parametrize('opcode, aborts', [
+    (0x00, None),               # default abort opcode
+    (0x30, 0x30),               # scalar abort argument
+    (0xB0, [0x90, 0xB0, 0xD0]), # collection abort arguments
+   #(I.RTS, I.RTS),             # XXX cannot currently abort on RTS
+])
+def test_call_abort(m, opcode, aborts):
+    p = 0x401
+    with pytest.raises(m.Abort) as ex:
+        m.deposit(p, [opcode])
+        m.call(p, aborts=aborts, trace=1)
+    assert R(pc=p) == m.regs
+    assert ex.match('Abort on opcode=\${:02X}: '.format(opcode))
 
-def test_Machine_call_shallow(m):
-    m.deposit(0x590, [I.INX, I.RTS])
-    m.call(0x590, R(x=3))
-    assert R(pc=0x591, x=4) == m.regs
+def test_call_rts_registers(m):
+    p = 0x402
 
-def test_Machine_call_deep(m):
-    m.deposit(0x500, [I.JSR, 0x20, 0x05, I.JSR, 0x10, 0x05, I.RTS])
-    m.deposit(0x510, [I.INY, I.JSR, 0x20, 0x05, I.RTS])
-    m.deposit(0x520, [I.INX, I.RTS])
+    m.deposit(p, [I.RTS])
+    m.call(p, R(pc=0x0000, a=0x55, C=1))
+    assert R(pc=p, a=0x55, C=1) == m.regs, \
+        'expected regs set but start overrides PC, RTS not executed'
 
-    m.call(     0x500, R(x=0x03, y=0x13))
-    assert R(pc=0x506,   x=0x05, y=0x14) == m.regs
+    m.deposit(p, [I.NOP, I.NOP, I.RTS])
+    m.call(p, R(pc=0xFFFF, a=0xAA, C=0))
+    assert R(pc=p+2, a=0xAA, C=0) == m.regs, \
+        'expected NOPs but not RTS executed'
 
-def test_Machine_call_aborts(m):
-    m.deposit(0x570, [I.NOP, I.NOP, I.BRK, I.NOP, I.RTS])
-    with pytest.raises(m.Abort):
-        m.call(0x570)
-    assert R(pc=0x572) == m.regs
+def test_call_shallow(m):
+    p = 0x403
+    m.deposit(p, [I.JSR, LB(p+4), MB(p+4), I.RTS, I.LDA, 0x66, I.RTS])
+    m.call(p, R(a=0xAA), trace=1)
+    assert R(pc=p+3, a=0x66) == m.regs
+
+def test_call_deep(m):
+    p   = 0x404
+    inx = p + 0x0C     # INX instruction
+    iny = p + 0x0D     # INY instruction
+    m.deposit(p, [                  # rel   after top-level call:
+        I.JSR, LB(inx), MB(inx),    # 00:   x=1 y=1
+        I.JSR, LB(p+6), MB(p+6),    # 03:       y=3
+        I.JSR, LB(p+9), MB(p+9),    # 06:       y=4
+        I.JMP, LB(iny), MB(iny),    # 09:       y=5
+        I.INX,                      # 0C:
+        I.INY,                      # 0D:
+        I.RTS,                      # 0E:
+        ])
+    for i in (0, 3, 6, 9, 0x0C):    # hacky code dump
+        print('{:04X}: {}'.format(p+i, m.bytes(p+i, 3).hex()))
+    m.call(p, R(x=0, y=0), trace=1)
+    assert R(pc=p+0x0E, x=1, y=5) == m.regs

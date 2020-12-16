@@ -1,6 +1,16 @@
 from    testmc  import *
 import  pytest
 
+
+@pytest.mark.parametrize(
+    '  value,    m,    l', (
+    ( 0x0000, 0x00, 0x00),
+    ( 0xFEDC, 0xFE, 0xDC),
+    (0x12340, 0x23, 0x40),
+))
+def test_LSB_MSB(value, l, m):
+    assert (m, l) == (MSB(value), LSB(value))
+
 @pytest.mark.parametrize('input, expected', [
     (   True,   True),
     (  False,   False),

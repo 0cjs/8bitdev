@@ -3,7 +3,17 @@
 
 from    numbers  import Number
 
-__all__ = ['tmc_tid']
+__all__ = ['LSB', 'MSB', 'tmc_tid']
+
+def LSB(n):
+    ' Return the lowest byte (LSB) of a value. '
+    return n & 0xFF
+
+def MSB(n):
+    ''' Return the "middle" or 2nd-lowest byte of a value.
+        This is the MSB of a 16-bit value.
+    '''
+    return (n >> 8) & 0xFF
 
 def tmc_tid(x):
     ''' `testmc` pytest ID. This helps generate nicer test IDs for pytest

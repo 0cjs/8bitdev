@@ -3,7 +3,7 @@
 
 from    numbers  import Number
 
-__all__ = ['hexid', 'LSB', 'MSB']
+__all__ = ['tmc_tid']
 
 def tmc_tid(x):
     ''' `testmc` pytest ID. This helps generate nicer test IDs for pytest

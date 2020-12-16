@@ -1,1 +1,12 @@
-from  testmc  import *
+from    testmc  import *
+import  pytest
+
+@pytest.mark.parametrize('input, expected', [
+    (   True,   True),
+    (  False,   False),
+    (     12,   '$0C'),
+    (   1023,   '$3FF'),
+    (   '0A',   "'0A'"),
+])
+def test_tmc_tid(input, expected):
+    assert expected == tmc_tid(input)

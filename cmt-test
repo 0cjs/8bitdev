@@ -58,7 +58,7 @@ test_wavtodump() {
 basedir=$(cd "$(dirname "$0")" && pwd -P)
 cd "$basedir"
 . ./activate -q -p python3
-python -c 'import pydub' || pip install pydub
+python -c 'import scipy.io' || pip install scipy
 
 ttdir=tmp/tapetest
 mkdir -p $ttdir

@@ -6,7 +6,9 @@
 from    os.path  import abspath, dirname, join
 from    sys  import argv, exit
 from    site  import addsitedir
-from    pydub import AudioSegment
+from    scipy.io import wavfile
+import  numpy as np
+
 
 
 BASEDIR = dirname(dirname(abspath(__file__)))
@@ -41,15 +43,11 @@ debug(len(edges))
 # Convert edges to samples
 rate        = 44100
 sample_dur  = 1.0 / rate
-samples     = edges_to_samples(edges, sample_dur, 0, -127, +127)
+amp         = 127
+mid         = 128
+samples     = edges_to_samples(edges, sample_dur, mid, mid-amp, mid+amp)
 
 debug(len(samples))
 
-# Convert samples to audio file
-audio = AudioSegment(
-        data            = bytearray(127 + x for x in samples),
-        sample_width    = 1,
-        frame_rate      = rate,
-        channels        = 1,
-)
-audio.export(outfile, format="wav")
+# Write out WAV file
+wavfile.write(outfile, rate, np.asarray(samples, np.uint8))

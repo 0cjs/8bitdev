@@ -6,6 +6,7 @@ import sys
 from collections import namedtuple
 from enum import Enum
 from testmc.memimage import MemImage
+import itertools
 
 # General approach is to use layered abstractions in
 # a simple top-down parser.
@@ -759,17 +760,17 @@ class FileEncoder(object):
 # high      : float
 # ->
 # samples   : tuple( float )
-def edges_to_samples(edges, sample_dur, silence, low, high):
+def edges_to_samples(chunks, sample_dur, silence, low, high):
     res = []
     lvl = True
-    for chunk in edges:
+    for chunk in chunks:
         if chunk[0] == AudioMarker.SILENCE:
             dur = chunk[1]
             res.extend(silence for _ in range(int(dur/sample_dur)))
             lvl = True
         elif chunk[0] == AudioMarker.SOUND:
-            edges_ = chunk[1]
-            for dur in edges_:
+            edges = chunk[1]
+            for dur in itertools.chain(edges, (0.01,)):
                 sample_lvl = high if lvl else low
                 res.extend(sample_lvl for _ in range(int(dur/sample_dur)))
                 lvl = not lvl

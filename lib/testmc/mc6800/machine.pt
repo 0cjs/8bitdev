@@ -5,9 +5,7 @@ import  pytest
 def m():
     return Machine()
 
-@pytest.fixture
-def R(m):
-    return m.Registers
+R = Machine.Registers
 
 ####################################################################
 
@@ -17,12 +15,12 @@ def test_super_init(m):
 ####################################################################
 #   Registers
 
-def test_mem(m, R):
+def test_mem(m):
     assert 65536 == len(m.mem)
     assert 0 == m.mem[0]
     assert 0 == m.mem[65535]
 
-def test_regs(m, R):
+def test_regs(m):
     r0 = R(pc=0, a=0, b=0, x=0, sp=0xBFFF, H=0, I=0, N=0, Z=0, V=0, C=0)
     assert r0 == m.regs
 
@@ -32,13 +30,13 @@ def test_regs(m, R):
     with pytest.raises(ValueError):  m.setregs(R(pc=0x10000))
     with pytest.raises(ValueError):  m.setregs(R(a=0x100))
 
-def test_flags(m, R):
+def test_flags(m):
     assert R(H=0, I=0, N=0, Z=0, V=0, C=0) == m.regs
 
     m.setregs(R(I=1, V=1))
     assert R(H=0, I=1, N=0, Z=0, V=1, C=0) == m.regs
 
-def test_cc(m, R):
+def test_cc(m):
     r = R(H=0, I=1, N=0, Z=1, V=0, C=1);
     assert 0b11010101 == r.cc
 
@@ -52,7 +50,7 @@ def test_cc(m, R):
 ####################################################################
 #   Instruction Execution
 
-def test_step_notimplemented(m, R):
+def test_step_notimplemented(m):
     ''' This should be replaced with a "bad opcode" test once we've no
         longer got unimplemented opcodes.
     '''
@@ -62,7 +60,7 @@ def test_step_notimplemented(m, R):
         m.step(2)
     assert ex.match(r'^opcode=\$3E pc=\$0101$')
 
-def test_step(m, R):
+def test_step(m):
     ''' Smoke test; the detailed work of instruction execution is covered
         by the mc6800.opcodes tests, which also use step().
     '''
@@ -74,7 +72,7 @@ def test_step(m, R):
     m.step(2);  assert R(pc=start+3) == m.regs
     m.step();   assert R(pc=start+4) == m.regs
 
-def test_call(m, R):
+def test_call(m):
     ' Integration test: multiple instruction execution. '
     start = 0x200
     m.deposit(start, [
@@ -103,7 +101,7 @@ def test_call(m, R):
     ([I.PSHB,   ],              'PSHB'),
     ([I.NOP,    ],              'NOP'),
 ))
-def test_disasm(m, R, ops, disasm):
+def test_disasm(m, ops, disasm):
     start = ops[0] + 0x80   # pseudo-random start address
     m.deposit(start, ops)
     m.setregs(R(pc=start))

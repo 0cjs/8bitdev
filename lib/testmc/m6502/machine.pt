@@ -6,9 +6,9 @@ import  pytest
 def m():
     return Machine()
 
-@pytest.fixture
-def R(m):
-    return m.Registers
+R = Machine.Registers
+
+####################################################################
 
 def test_super_init(m):
     assert 0 == len(m.symtab)
@@ -16,7 +16,7 @@ def test_super_init(m):
 def test_Machine_memory_zeroed(m):
     assert [0]*0x10000 == m.mpu.memory
 
-def test_Machine_setregs(m, R):
+def test_Machine_setregs(m):
     m.setregs(R(y=4, a=2))
     assert  R(y=4, a=2) == m.regs
 
@@ -25,7 +25,7 @@ def test_Machine_setregs(m, R):
     r     = R(pc=0x1234, a=0x56, x=0x78, y=0x9a, sp=0xbc, p=0b01010101)
     assert r == m.regs
 
-def test_Machine_setregs_flags(m, R):
+def test_Machine_setregs_flags(m):
     initflags = 0b00110000  # Emulator has unused/how stacked flags set to 1.
     assert       initflags  == m.mpu.p     # emulator internal status register
     assert R(p=initflags) == m.regs      # make sure we read the same
@@ -49,7 +49,7 @@ def test_Machine_setregs_flags(m, R):
         m.setregs(R(C=2))
     assert ex.match(r"^Status bit 'C' value 2 not in set")
 
-def test_Machine_examine_stack(m, R):
+def test_Machine_examine_stack(m):
     #   Confirm the emulator's internal format is the bottom 8 bits of the SP.
     assert 0xff == m.mpu.sp
 
@@ -79,7 +79,7 @@ def test_Machine_examine_stack(m, R):
 ####################################################################
 #   Machine execution
 
-def test_Machine_step(m, R):
+def test_Machine_step(m):
     ''' Test a little program we've hand assembled here to show
         that we're using the MPU API correctly.
     '''
@@ -100,7 +100,7 @@ def test_Machine_step(m, R):
     m.step(); assert R(pc=0x404, x=0x7E) == m.regs
     m.step(); assert R(pc=0x405, a=0xEE, x=0x7E, y=0x00) == m.regs
 
-def test_Machine_stepto(m, R):
+def test_Machine_stepto(m):
     m.deposit(0x300, [I.NOP, I.LDA, 2, I.NOP, I.RTS, I.BRK])
 
     m.setregs(R(pc=0x300))
@@ -119,7 +119,7 @@ def test_Machine_stepto(m, R):
         #   but it's still >100 ms.
         m.stepto(stopon=(0x02,), maxsteps=10000)
 
-def test_Machine_stepto_multi(m, R):
+def test_Machine_stepto_multi(m):
     m.deposit(0x700, [I.NOP, I.INX, I.NOP, I.INY, I.RTS, I.BRK])
 
     m.setregs(R(pc=0x700))
@@ -130,24 +130,24 @@ def test_Machine_stepto_multi(m, R):
     m.stepto(stopon=(I.INY, I.INX))
     assert R(pc=0x701) == m.regs
 
-def test_machine_stepto_brk(m, R):
+def test_machine_stepto_brk(m):
     m.deposit(0x710, [I.NOP, I.INX, I.BRK])
     m.setregs(R(pc=0x710))
     m.stepto(stopon=(I.BRK,))
     assert R(pc=0x712) == m.regs
 
-def test_Machine_call_rts(m, R):
+def test_Machine_call_rts(m):
     m.deposit(0x580, [I.RTS])
     assert R(          a=0,    x=0) == m.regs
     m.call(     0x580, R(a=0xFE, x=8))
     assert R(pc=0x580,   a=0xFE, x=8) == m.regs
 
-def test_Machine_call_shallow(m, R):
+def test_Machine_call_shallow(m):
     m.deposit(0x590, [I.INX, I.RTS])
     m.call(0x590, R(x=3))
     assert R(pc=0x591, x=4) == m.regs
 
-def test_Machine_call_deep(m, R):
+def test_Machine_call_deep(m):
     m.deposit(0x500, [I.JSR, 0x20, 0x05, I.JSR, 0x10, 0x05, I.RTS])
     m.deposit(0x510, [I.INY, I.JSR, 0x20, 0x05, I.RTS])
     m.deposit(0x520, [I.INX, I.RTS])
@@ -155,7 +155,7 @@ def test_Machine_call_deep(m, R):
     m.call(     0x500, R(x=0x03, y=0x13))
     assert R(pc=0x506,   x=0x05, y=0x14) == m.regs
 
-def test_Machine_call_aborts(m, R):
+def test_Machine_call_aborts(m):
     m.deposit(0x570, [I.NOP, I.NOP, I.BRK, I.NOP, I.RTS])
     with pytest.raises(m.Abort):
         m.call(0x570)

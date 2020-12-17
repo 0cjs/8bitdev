@@ -6,7 +6,7 @@
 from    os.path  import abspath, dirname, join
 from    sys  import argv, exit
 from    site  import addsitedir
-from    pydub import AudioSegment
+from    scipy.io import wavfile
 
 
 BASEDIR = dirname(dirname(abspath(__file__)))
@@ -18,25 +18,22 @@ from cmtconv.jr200 import \
 
 if len(argv) < 3:
     err('Dumps binary data from JR-200 cassette output\n' +
-        'Usage: %s audio_file output_file' % argv[0])
-    exit(1)
+        'Usage: %s wav_file output_file' % sys.argv[0])
+    sys.exit(0)
 
 fname = argv[1]
 outfile = argv[2]
 
-audio = AudioSegment.from_file(fname)
-rate = audio.frame_rate
+rate, samples = wavfile.read(fname)
 sample_dur = 1.0 / rate
-samples = audio.get_array_of_samples()
-
+n_samples = len(samples)
 info('Input file: %s' % fname)
-info('Channels: %d ' % audio.channels)
-info('Sample width: %d' % audio.sample_width)
-info('Frame rate: %d' % audio.frame_rate)
-info('Max: %d' % audio.max)
-info('Duration: %d' % audio.duration_seconds)
+info('Rate: %d' % rate)
+info('Duration: %f' % (sample_dur * n_samples))
 debug('Sample duration: %f microseconds' % (1000000 * sample_dur))
-debug('Samples: %d' % len(samples))
+debug('Samples: %d' % n_samples)
+info('Samples min: %d' % min(samples))
+info('Samples max: %d' % max(samples))
 
 levels = samples_to_levels(samples)
 edges = levels_to_timed_edges(levels, sample_dur)

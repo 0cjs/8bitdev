@@ -123,16 +123,22 @@ def test_call_abort(m, opcode, aborts):
 
 def test_call_rts_registers(m):
     p = 0x202
+    defaultsp = m.regs.sp
 
     m.deposit(p, [I.RTS])
     m.call(p, R(pc=0x0000, a=0x55, C=1))
-    assert R(pc=p, a=0x55, C=1) == m.regs, \
-        'expected regs set but start overrides PC, RTS not executed'
+    assert R(pc=p, sp=defaultsp, a=0x55, C=1) == m.regs, '''
+        Expected:
+        - addr argument _p_ overrides PC in register settings
+        - stack restored to original address on successful exit, but
+        - RTS not executed
+        '''
 
+    testsp = 0x8123
     m.deposit(p, [I.NOP, I.NOP, I.RTS])
-    m.call(p, R(pc=0xFFFF, a=0xAA, C=0))
-    assert R(pc=p+2, a=0xAA, C=0) == m.regs, \
-        'expected NOPs but not RTS executed'
+    m.call(p, R(pc=0xFFFF, sp=testsp, a=0xAA, C=0))
+    assert R(pc=p+2, sp=testsp, a=0xAA, C=0) == m.regs, \
+        'expected testsp used, NOPs but not RTS executed'
 
 def test_call_shallow(m):
     p = 0x203
@@ -158,6 +164,85 @@ def test_call_deep(m):
         ])
     m.call(p, R(a=0, b=0), trace=1)
     assert R(pc=p+0x0B, a=1, b=5) == m.regs
+
+def test_call_pull(m):
+    p   = 0x205
+    m.deposit(p, [
+        I.BSR, 0,                   # 0205: push next addr as return addr
+        I.INCA,                     # 0207:
+        I.PULB,                     # 0208: remove return addr 408 MSB
+        I.PULB,                     # 0209: remove return addr 408 LSB
+        I.RTS,                      # 020A: return to call()
+        ])
+    m.call(p, R(a=0xAE), trace=1)
+    print(m.hexdump(m.regs.sp-3, 8))
+    assert R(pc=p+5, a=0xAF) == m.regs, 'INCA should have executed only once'
+
+def test_call_push(m):
+    p   = 0x206
+    cont = 0x20d            # Address of continuation below
+    m.deposit(p, [
+        I.LDAA, LB(cont),   # 0206: put continuation addr on stack
+        I.PSHA,             # 0208:
+        I.LDAA, MB(cont),   # 0209:
+        I.PSHA,             # 020b:
+        I.RTS,              # 020C: jump to continuation below
+        I.LDAA, 0xA5,       # 020d: continuation
+        I.RTS,              # 020E: return to call()
+        ])
+    m.call(p, trace=1)
+    assert R(pc=cont+2, a=0xA5) == m.regs
+
+def test_call_changedstack(m):
+    ''' Copy the RTS address set by `call()` to another address in the
+        stack and confirm execution stops when we RTS to that address with
+        the stack at that new address, throwing an exception indicating the
+        inconsistency.
+    '''
+    p = 0x207
+    isp = 0x3007                # initial stack pointer
+    m.deposit(p, [
+        I.TSX,      I.INX,      # 0207: point X to word on top of stack
+        I.LDAAx, 1, I.PSHA,     # 0209: return addr LSB
+        I.LDAAx, 0, I.PSHA,     # 020C: return addr MSB
+        I.RTS,                  # 020F: return to call() w/new stack ptr
+        ])
+    with pytest.raises(m.UnexpectedCallStack) as ex:
+        m.call(p, R(sp=isp), trace=1)
+    print(ex); print(m.hexdump(isp-5, 7))
+    assert bytes([0x00, 0xFF, 0xFd, 0xFF, 0xFd, 0x00]) == m.bytes(isp-4, 6), '''
+        Stack should contain two copies of the address for RTS with
+        guard bytes $00 (never-written data) on either side. '''
+    assert R(pc=0x20F, sp=isp-4) == m.regs, '''
+        Should have stopped on RTS with unpopped stack pointing to
+        the pushed copy of the address for RTS. '''
+    assert ex.match('initsp=3005 sp=3003 retaddr=FFFD spretaddr=FFFD')
+
+def test_call_changedretaddr(m):
+    ''' Change the RTS address set by `call()` and confirm execution stops
+        when we RTS with the stack stack at that point, throwing an
+        exception indicating the inconsistency.
+    '''
+    p = 0x208
+    isp = 0x3008        # initial stack pointer
+    m.deposit(p, [
+        I.TSX, I.INX,   # 0208: point to word on top of stack
+        I.CLRx, 0,      # 020A: return addr MSB
+        I.CLRx, 1,      # 020C: return addr LSB
+        I.RTS,          # 020E: return to call() w/wrong ret addr
+        ])
+    with pytest.raises(m.UnexpectedCallStack) as ex:
+        m.call(p, R(sp=isp), retaddr=0x01F2, trace=1)
+    print(m.hexdump(isp-4, 6))
+    assert bytes([0,0]) == m.bytes(isp-3, 2), 'changed RTS addr at top of stack'
+    assert R(pc=0x20E, sp=isp-2) == m.regs
+    assert ex.match('initsp=3006 sp=3006 retaddr=01F2 spretaddr=0000'), '''
+        Should be:
+        - initsp: isp - 2 for return addr placed by call()
+        - sp: same as initsp
+        - retaddr: as specified in call() arguments
+        - spretaddr: as modified by code under test
+    '''
 
 ####################################################################
 #   Tracing and similar information

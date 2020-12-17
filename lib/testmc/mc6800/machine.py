@@ -43,7 +43,6 @@ class Machine(GenericMachine):
     ####################################################################
     #   Instruction Execution
 
-    _JSR_opcodes    = set([I.JSR, I.JSRx, I.BSR])
     _RTS_opcodes    = set([I.RTS])
     _ABORT_opcodes  = set([0x00])   # not an opcode and test mem init'd to this
 

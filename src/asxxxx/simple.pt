@@ -120,9 +120,11 @@ def test_stk(m, R, S):
     #   No return address was pushed or popped by our call() above
     #   because it executes up to, but not including the final RTS.
     #            $1FB  $1FC  $1FD  $1FE  $1FF  guard
-    expected = b'\x24\x23\x22\x21\x20\x00'
-    assert expected == m.bytes(0x1FB, len(expected))
-    assert 0x25 != m.byte(0x1FA)    # Didn't stack too much
+    print(m.hexdump(0x1F4, 12))
+    expected = b'\x24\x23\x22\x21\x20' \
+             + b'\xFC\xFF'  # sentinel return address pushed by m.call()
+    assert expected == m.bytes(0x1F9, len(expected))
+    assert 0x25 != m.byte(0x1F8)    # Didn't stack too much
 
     #   Ensure the stack pointer was left where it started
     assert R(sp=0xFF) == m.regs
@@ -131,5 +133,5 @@ def test_stk(m, R, S):
     assert 0x23 == m.byte(S.stkval_i1)
 
     #   Variable offset using Y
-    assert 0x1FB == m.word(S.stkframe)
+    assert 0x1F9 == m.word(S.stkframe)
     assert 0x21 == m.byte(S.stkval_i3)

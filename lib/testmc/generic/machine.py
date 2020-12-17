@@ -161,11 +161,6 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
     #   Execution - abstract methods
 
     @abstractproperty
-    def _JSR_opcodes(self):
-        ''' Opcodes that execute an unconditional call. This must be a `set()`
-            or other object that supports the `|` operator for set union.
-        '''
-    @abstractproperty
     def _RTS_opcodes(self):
         ''' Opcodes that execute an unconditional return from a called
             subroutine. This must be a `set()` or other object that
@@ -265,60 +260,86 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
             if remaining <= 0:
                 raise self.Timeout(
                     'Timeout after {} opcodes: {} opcode={}' \
-                    .format(maxsteps, self.regs, self.byte(self.regs.pc)))
+                    .format(maxsteps, self.regs, self.byte(self._getpc())))
             remaining -= 1
         return maxsteps - remaining
 
-    def call(self, addr, regs=None, *,
+    def call(self, addr, regs=None, *, retaddr=0xFFFD,
             maxsteps=MAXSTEPS, aborts=None, trace=False):
-        ''' Simulate a JSR to `addr`, after setting any `registers`
-            specified, returning when its corresponding RTS is reached.
+        ''' Set the given registers, push `retaddr` on the stack, and start
+            execution at `addr`. Execution stops when:
+            - `maxsteps` instructions have been executed, raising `Timeout`,
+            - an opcode in `aborts` is about to be executed, raising `Abort`,
+            - an `RTS` is about to be executed and either the return address on
+              the stack is `retaddr` or the SP is the starting SP after
+              call()'s initial push of `retaddr`. If both are the case this
+              function returns normally, otherwise it raises
+              `UnexpectedCallStack`.
 
-            A `Timeout` will be raised if `maxsteps` opcodes are executed.
-            An `Abort` will be raised if any opcodes in the `aborts`
-            collection are about to be executed. (By default this list
-            contains all instructions in `_ABORT_opcodes`.) `step()`
-            tracing will be enabled if `trace` is `True`.
+            On successful exit:
+            - The program counter will be left at the final (unexecuted) RTS
+              opcode. Thus, unlike `step()`, this may execute no opcodes if the
+              PC is initially pointing to an RTS or an instruction in the abort
+              list.
+            - The stack pointer, however, will be restored to the value before
+              call() pushed the sentinel return address `retaddr`. This avoids
+              overflowing the stack if call() is used multiple times on a
+              single Machine instance.
 
-            The PC will be left at the final (unexecuted) RTS opcode. Thus,
-            unlike `step()`, this may execute no opcodes if the PC is
-            initially pointing to an RTS.
+            Default parameter values are:
+            - Stack pointer: the the `Machine.Registers`'s default initial
+              stack pointer value, which should have been set to something
+              usable at initialization.
+            - `retaddr`: an address unlikely to be a valid return address,
+              such as one within the CPU's vector table.
+            - `aborts`: the set of instructions in `_ABORT_opcodes`.
+            - `trace`: False; `step()` tracing will be enabled if True.
 
-            JSR and RTS opcodes will be tracked to allow the routine to
-            call subroutines, but tricks with the stack (such as pushing an
-            address and executing RTS, with no corresponding JSR) will
-            confuse this routine and may cause it to terminate early or not
-            at all.
+            `addr` may be set to `None` to use the program counter in
+            `regs`, but will aways override the `regs` PC otherwise.
         '''
         if regs is None: regs = self.Registers()
         self.setregs(regs)
 
-        if aborts is None:
-            aborts = self._ABORT_opcodes
-        if not isinstance(aborts, Container):
-            aborts = (aborts,)
-
         if addr is not None:
-            self.setregs(self.Registers(pc=addr))   # Overrides regs
+            #   `addr` always overrides the PC in `regs`, but `addr`
+            #   may be explicitly set to `None` to use it.
+            self.setregs(self.Registers(pc=addr))
 
-        stopon = self._JSR_opcodes | self._RTS_opcodes | set(aborts)
-        depth = 0
+        if aborts is None:                      aborts = self._ABORT_opcodes
+        if not isinstance(aborts, Container):   aborts = (aborts,)
+        aborts = set(aborts)                    # should be faster lookup
+
+        stopon = self._RTS_opcodes | set(aborts)
+        maxremain = maxsteps
+        self.pushretaddr(retaddr)
+        initsp = self._getsp()
         while True:
             opcode = self.byte(self._getpc())
-            if opcode in self._RTS_opcodes:
-                if depth > 0:
-                    depth -=1
-                else:
-                    #   We don't execute the RTS because no JSR was called
-                    #   to come in, so we may have nothing on the stack.
-                    return
-            elif opcode in self._JSR_opcodes:
-                #   Enter the new level with the next execution
-                depth += 1
-            elif opcode in stopon:   # Abort
+            if maxremain <= 0:
+                raise self.Timeout(
+                    'Timeout after {} opcodes: {} opcode={}' \
+                    .format(maxsteps, self.regs, self.byte(self._getpc())))
+            if opcode in aborts:
                 raise self.Abort('Abort on opcode=${:02X}: {}' \
-                    .format(self.byte(self.regs.pc), self.regs))
-            self.stepto(stopon=stopon, maxsteps=maxsteps, trace=trace)
+                    .format(self.byte(self._getpc()), self.regs))
+            if opcode in self._RTS_opcodes:
+                isretsp   = self._getsp() == initsp
+                isretaddr = self.getretaddr() == retaddr
+                if isretsp or isretaddr:
+                    if isretsp and isretaddr:
+                        #   Restore stack pointer to original value.
+                        self.setregs(self.Registers(sp=self._getsp()+2))
+                        return
+                    #   We considered making this a warning, but it most likely
+                    #   indicates a problem with the code under test and, when
+                    #   it's expected, it can fairly easily be caught.
+                    raise self.UnexpectedCallStack('initsp={:04X} sp={:04X}'
+                        ' retaddr={:04X} spretaddr={:04X}'
+                        .format(initsp, self._getsp(), retaddr,
+                            self.getretaddr()))
+            maxremain -= \
+                self.stepto(stopon=stopon, maxsteps=maxremain, trace=trace)
 
     ####################################################################
     #   Tracing and similar information
@@ -328,6 +349,13 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
 
     class Abort(RuntimeError):
         ' The emulator encoutered an instruction on which to abort.'
+
+    class UnexpectedCallStack(RuntimeError):
+        ''' The stack after a call() was in an unpexected state, either:
+            * Stack pointer at return was not stack pointer at call
+              (return address was not taken from where it was pushed); or
+            * Return address at call stack pointer was changed.
+        '''
 
     def traceline(self):
         ''' Return a line of tracing information about the current step of

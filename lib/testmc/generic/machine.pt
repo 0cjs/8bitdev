@@ -4,6 +4,10 @@ import  pytest
 
 @pytest.fixture
 def m():
+    ''' Create a new Machine class and return it. This ensures that changes
+        made to a Machine or Registers class in a test are not leaked to
+        other tests.
+    '''
     class Machine(GenericMachine):
 
         class Registers(GenericRegisters):

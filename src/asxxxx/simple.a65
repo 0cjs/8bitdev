@@ -156,7 +156,7 @@ rab_error:  brk                 ; let the test framework catch this
 ;--------------------------------------------------------------------------
 ;   Stack addressing
 
-stk_main:   lda #1F         ; starting with $20, $21, ...
+stk_main:   lda #1F         ; pushing $20, $21, ...
 1$:         clc
             adc #1
             pha

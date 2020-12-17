@@ -43,7 +43,7 @@ def m():
         def pushretaddr(self, _):   raise RuntimeError('Tested in subclasses.')
         def getretaddr(self):       raise RuntimeError('Tested in subclasses.')
 
-        _JSR_opcodes = _RTS_opcodes = _ABORT_opcodes = None
+        _RTS_opcodes = _ABORT_opcodes = None
 
     return Machine
 

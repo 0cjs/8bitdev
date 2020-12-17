@@ -52,7 +52,6 @@ class Machine(GenericMachine):
     ####################################################################
     #   Execution
 
-    _JSR_opcodes        = set([I.JSR])
     _RTS_opcodes        = set([I.RTS])
     _ABORT_opcodes      = set([I.BRK])
 

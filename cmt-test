@@ -49,8 +49,13 @@ test_wavtodump() {
     echo ====================================
     bin/jr200-tape-dump $ttdir/hello.wav $ttdir/hello.dump \
         || die run jr-200-tape-dump
-    # Don't know how to check this yet.
-    false ||  die ofile jr-200-tape-dump
+    cat > $ttdir/hello.dump.expected <<_____
+00000000: bd f0 0f ce 70 1d 8d 1d bd e8 fe 81 03 27 09 81  ....p........'..
+00000010: 0d 27 ed bd eb e7 20 f0 bd f0 0f 02 39 48 65 6c  .'.... .....9Hel
+00000020: 6c 6f 3a 20 00 a6 00 27 06 bd eb e7 08 20 f6 39  lo: ...'..... .9
+_____
+    xxd -g1 $ttdir/hello.dump | diff -u $ttdir/hello.dump.expected - \
+        || die ofile jr-200-tape-dump
 }
 
 ####################################################################

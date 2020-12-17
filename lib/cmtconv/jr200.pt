@@ -1,5 +1,6 @@
 from    cmtconv.jr200  import *
 import  pytest
+import  random
 
 LL  = -32768
 L   = -32600
@@ -153,3 +154,29 @@ def test_eat_bytes():
 
     assert baud2400_decoder.eat_bytes(
         edges(mark(2) + space(8) + space(3)), 0, 1) == (13, (255,))
+
+
+def test_roundtrip():
+    encoder     = FileEncoder()
+    rate        = 44100
+    sample_dur  = 1.0 / rate
+    amp         = 127
+    mid         = 128
+    freader     = FileReader()
+    for br in (BaudRate.BAUD_600, BaudRate.BAUD_2400):
+        l = random.randrange(0,16384)
+        #bs = random.randbytes(l)
+        bs = bytearray(random.randint(0,255) for _ in range(l))
+        f = bytes_to_file('Roundtrip', bs, 1024, FileType.BINARY, br)
+        edges = encoder.encode_file(f)
+        samples = edges_to_samples(edges, sample_dur, mid, mid - amp, mid + amp)
+
+        levels = samples_to_levels(samples)
+        edges2 = levels_to_timed_edges(levels, sample_dur)
+        (i_next, f2) = freader.read_file(edges2, 0)
+        #assert f == f2
+        assert f.header.filename == 'Roundtrip'
+        assert f.header.length == 26
+        assert f.header.baud_rate == br
+        assert f.header.filetype == FileType.BINARY
+        assert blocks_to_bytes(f.blocks) == blocks_to_bytes(f2.blocks)

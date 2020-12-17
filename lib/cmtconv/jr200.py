@@ -526,7 +526,7 @@ class FileReader(object):
     # returns ( int, File )
     def read_file(self, edges, i_next):
         (i_next, file_hdr) = self.read_file_header(edges, i_next)
-        if file_hdr.baud_rate == 0:
+        if file_hdr.baud_rate == BaudRate.BAUD_2400:
             bit_decoder = self.baud2400_decoder
         else:
             bit_decoder = self.baud600_decoder

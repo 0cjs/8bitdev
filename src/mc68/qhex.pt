@@ -36,7 +36,9 @@ def test_qhexword(m, S, R, testno, Z, result, consumed, input):
     #   Change the address from test to test.
     buf = 0x220 + testno
     m.deposit(buf, input + b'\x00')
-    print('buf=${:04X} {}'.format(buf, m.bytes(buf, len(input))), end='')
+    bufdebug = 'buf {} = {}'.format(
+        m.hexdump(buf, len(input)), m.bytes(buf, len(input)))
+    print(bufdebug, end='')
     m.depword(S.qhex_out, 0x9999)   # definitely not our output value
 
     m.call(S.qhexword, R(x=buf), maxsteps=10000)

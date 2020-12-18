@@ -43,7 +43,7 @@ signeq_neg = [0x80, 0x81, 0xFE, 0xFF]
 def test_signeq(m, R, S, match, a, b):
     m.deposit(S.signeq_a, a)
     m.deposit(S.signeq_b, b)
-    print('[a,b] = {}'.format(list(map(hex, (m.bytes(S.signeq_a, 2))))))
+    print('[a,b] = {}'.format(m.hexdump(S.signeq_a, 2)))
     m.call(S.signeq, R(N=int(match)))
     assert R(N=int(not match)) == m.regs
 
@@ -66,7 +66,7 @@ def test_jmpptr(m, R, S):
     assert 0x9abc == m.word(S.jmpptr)
     m.step()                 # jmp [jmpptr]
     assert R(pc=0x9ABC) == m.regs
-    #print(hex(m.mpu.pc), hex(m.mpu.a), hex(m.mpu.x))
+    print('pc={:04X} a={:02X} x={:02X}'.format(m.mpu.pc, m.mpu.a, m.mpu.x))
 
 def test_jmpabsrts(m, R, S):
     m.setregs(R(pc=S.jmpabsrts, a=1))

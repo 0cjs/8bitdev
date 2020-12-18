@@ -179,8 +179,8 @@ def test_bi_read_decdigits(m, R, S, sign, input, buf):
         m.call(S.bi_read_decdigits, R(x=xpreserved))
     finally:
         print(m.regs)
-        print('di={} buf0={}'.format(m.byte(S.curdigit),
-            list(map(hex, m.bytes(TOUT_ADDR-1, osize+2)))))
+        print('di={} buf0={}'.format(
+            m.byte(S.curdigit), m.hexdump(TOUT_ADDR-1, osize+2)))
     assert b'\xF0' + buf + b'\xF2' == m.bytes(TOUT_ADDR-1, osize+2)
     assert b'\xFA' == m.bytes(TSCR_ADDR-1, 1)
     assert b'\xFB' == m.bytes(TSCR_ADDR+osize, 1)
@@ -280,12 +280,11 @@ def test_bi_read_dec(m, R, S, input, output):
         print(ex)
         assert 0
     finally:
-       #print('buf1ptr', hex(m.word(S.buf1ptr)), list(map(hex, m.bytes(m.word(S.buf1ptr), 8))))
-        print('buf0ptr', hex(m.word(S.buf0ptr)), list(map(hex, m.bytes(m.word(S.buf0ptr), 8))))
+       #print('buf1ptr', m.hexdump(m.word(S.buf1ptr), 8))
+        print('buf0ptr', m.hexdump(m.word(S.buf0ptr), 8))
         print('buf0len', hex(m.byte(S.buf0len)))
-        print('   buf0       ', list(map(hex, m.bytes(m.word(S.buf0ptr), 8))))
        #print(' buf0 TTMP-1', list(map(hex, m.bytes(TTMP_ADDR-1, 12)))) #XXX
-        print('buf2ptr', hex(m.word(S.buf2ptr)), list(map(hex, m.bytes(m.word(S.buf2ptr), 8))))
+        print('buf2ptr', m.hexdump(m.word(S.buf2ptr), 8))
        #print(' buf2 TOUT-1', list(map(hex, m.bytes(TOUT_ADDR-1, 12)))) #XXX
 
     #   Assert scratch buffers were not written out of bounds

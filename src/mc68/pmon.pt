@@ -386,7 +386,7 @@ def test_cmdloop_deposit_examine(m):
     ' Simple integration test. '
     istream, ostream = loadbios(m, b'7654x 7655:ab:x :cd:x q\r')
     runmon(m)
-    print(m.regs); print(m.bytes(m.regs.sp-8, 8))
+    print(m.regs); print(m.hexdump(m.regs.sp-8, 8))
     output = ostream.getvalue(); print(output)
     assert b'\n7654: 00 AB 00' in output
     assert b'\n7654: 00 CD 00' in output

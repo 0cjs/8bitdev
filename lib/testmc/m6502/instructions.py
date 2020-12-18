@@ -45,8 +45,10 @@ class Instructions():
     STYa    = 0x8C
     STAzy   = 0x91
     STAay   = 0x99
+    STAax   = 0x9d
     LDXz    = 0xA6
     LDA     = 0xA9
     LDYa    = 0xAC
+    LDAax   = 0xBD
     CMP     = 0xC9
     SBC     = 0xE9

@@ -149,6 +149,18 @@ class MemoryAccess(ABC):
 
         return self.bytes(addr, len(words)*2)
 
+    def hexdump(self, addr, length):
+        ''' Return a human-readable hexadecimal dump of of `length` bytes
+            of this memory starting at `addr`.
+
+            This is useful for printing debugging information in unit tests.
+        '''
+        s = '{:04X}:'.format(addr)
+        for b in self.bytes(addr, length):
+            s += ' {:02X}'.format(b)
+        return s
+
+
 ####################################################################
 #   "Static" methods; external to class for easier calling
 

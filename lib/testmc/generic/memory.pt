@@ -176,3 +176,12 @@ def test_deposit_little_endian(lem):
         lem.depword(0x0006, 2, [1, -1, 0], 0)
     assert ex.match('^memory @\\$0006: invalid word value \\$-1$')
     with pytest.raises(ValueError): lem.depword(0x0014, 0, 0x10000)
+
+####################################################################
+#   Utility and debug routines
+
+def test_hexdump():
+    m = RAM(bytearray(0x400))
+    m.deposit(0x320, b'\xFF\x01\x23\xAB\xCD\xEF')
+    assert b'\x01\x23\xAB\xCD' ==   m.bytes(0x321, 4)
+    assert '0321: 01 23 AB CD' == m.hexdump(0x321, 4)

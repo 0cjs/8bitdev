@@ -224,7 +224,8 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
         trace=False):
         ''' Step an opcode and then continue until an address in `stopat`
             or an opcode in `stopon` is reached, or until we have done
-            `maxsteps`. (At least one opcode is always executed.)
+            `maxsteps`. (At least one opcode is always executed.) Return
+            the number of steps executed.
 
             An attempt to exceed `maxsteps` will raise a `Timeout`
             exception; if you want to run just a specific number of steps
@@ -249,6 +250,7 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
                     'Timeout after {} opcodes: {} opcode={}' \
                     .format(maxsteps, self.regs, self.byte(self.regs.pc)))
             remaining -= 1
+        return maxsteps - remaining
 
     def call(self, addr, regs=None, *,
             maxsteps=MAXSTEPS, aborts=None, trace=False):

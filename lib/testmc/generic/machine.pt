@@ -238,8 +238,8 @@ def test_stepto_stopon(m, stopon, steps, pc):
     m = m(); m.B = False
     m.deposit(m.pc, b'\x00\x01\xFD\xFD\x00\x00')
     print('stop on', type(stopon), stopon)   # test name not obvious
-    m.stepto(stopon=stopon)
-    assert (steps, pc) == (m._steps_taken, m.pc)
+    stepsret = m.stepto(stopon=stopon)
+    assert (steps, stepsret, pc) == (m._steps_taken, m._steps_taken, m.pc)
 
 @pytest.mark.parametrize('initpc, steps, finalpc, stopat', (
     #  init  st   fin   stopat
@@ -263,8 +263,8 @@ def test_stepto_stopat(m, R, initpc, steps, finalpc, stopat):
 
     print('start at {} stop at {} {}'.format(initpc, stopat, type(stopat)))
     m.setregs(R(pc=initpc))
-    m.stepto(stopat=stopat, stopon=(0xFF,), trace=0)
-    assert (steps, finalpc) == (m._steps_taken, m.pc)
+    stepsret = m.stepto(stopat=stopat, stopon=(0xFF,), trace=0)
+    assert (steps, stepsret, finalpc) == (m._steps_taken, m._steps_taken, m.pc)
 
 ####################################################################
 #   Execution - call()

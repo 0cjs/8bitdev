@@ -1,17 +1,29 @@
-;   6809 code to be tested on Fujitsu FM-7
+;   6809 code for playing w/BIOS calls on Fujitsu FM-7
+;
+;   Below, `(SS n-m)` refers to _富士通\ FM-7\ ユーザーズマニュアル\
+;   システム仕様_ (FM-7 system specification) page n-m.
 
             cpu 6809
 
-BIOS        equ $FBFA   ; holds address of BIOS request routine
-MON         equ $ABF9   ; entry point of monitor in BASIC ROM
+MON         equ $ABF9   ; entry point of monitor in BASIC ROM (SS 2-1)
+BIOS        equ $FBFA   ; location holding address of BIOS request routine
+
+;   BIOS RCB (Request Control Block) offsets
+RQNO        equ 0       ; request number (SS 2-4)
+RCBSTA      equ 1       ; error code put here if carry set on return (SS 2-19)
+;   Bytes 2-7 (variable number) depend on the BIOS request number.
 
             org $7020
 
-bios        ldx #$7000
+bios        ldx #$7000  ; BIOS RCB (8 byte Request Control Block) address,
+                        ;   assumed to be filled in before this routine called
             jsr [BIOS]
-            tfr cc,a
-            sta $701F
-            jmp MON     ; RTS goes back to BASIC, often generating an error
+            tfr cc,a    ; save condition codes returned from BIOS call:
+            sta $701F   ;   success: carry clear
+                        ;   error: carry set and error code stored in RCBSTA
+            jmp MON     ; directly back to monitor so we can examine results
 
+            ;   If you NOP out the above, this RTS would return back to
+            ;   BASIC, often generating an error.
 return      rts
 -           bra -

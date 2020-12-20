@@ -244,6 +244,28 @@ def test_call_changedretaddr(m):
         - spretaddr: as modified by code under test
     '''
 
+@pytest.mark.parametrize('maxsteps, a', [
+    (0, 0), (1, 0), (3, 0),
+    (4, 1), (6, 1), (8, 1),
+    (9, 2), (28, 5),
+])
+def test_call_maxsteps(m, maxsteps, a):
+    ' generic.Machine test that need not be run on every CPU implementation. '
+    p = 0x284
+    ral = m.sp - 2      # LSB of stacked return address used by RTS below
+    m.deposit(p, [
+        I.BSR, 0,                   # 0284: push 0222 on stack
+        I.DECm, MB(ral), LB(ral),   # 0286: decrement RTS addr on stack to 0221
+        I.DECm, MB(ral), LB(ral),   # 0289: decrement RTS addr on stack to 0220
+        I.INCA,                     # 028C:
+        I.RTS,                      # 028d: infinite loop
+        ])
+    with pytest.raises(m.Timeout) as ex:
+        m.call(p, R(a=0), maxsteps=maxsteps, trace=1)
+    print(m.hexdump(ral-3, 8))
+    assert R(a=a) == m.regs
+    assert ex.match('Timeout after {} opcodes: .* opcode=.*'.format(maxsteps))
+
 ####################################################################
 #   Tracing and similar information
 

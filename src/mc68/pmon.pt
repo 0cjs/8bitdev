@@ -137,6 +137,27 @@ def test_usepending_available(m, S, R):
     assert (0xC355, 0xC355) == (m.word(curval), m.word(S.Mpending))
     assert 0x55 == m.byte(S.stat), 'pendingval not marked as consumed'
 
+def test_prperr_offset(m, S, R):
+    ' Test the segment that calculates current offset into rdline buffer. '
+    m.depword(S.cmdqptr, S.rdlinebuf+7)
+    m.setregs(R(pc=S['prperr.tp0']))
+    m.stepto(stopat=[S['prperr.tp1']])
+    assert R(a=7) == m.regs
+
+@pytest.mark.parametrize('input', [
+    #   set_rdlinebuf automatically provides different buffer offsets for these.
+    b'abc', b'def',
+])
+def test_prperr(m, S, R, input):
+    inbuf = set_rdlinebuf(m, input)
+    _, ostream = loadbios(m)
+
+    m.setregs(R(pc=S.prperr))
+    m.stepto(stopat=[S.cmdloop])
+
+    offset = inbuf - S.rdlinebuf
+    expected = '\n\a?{:02X} {:c}'.format(offset, input[0])
+    assert bytes(expected, encoding='ASCII') == ostream.getvalue()
 
 ####################################################################
 #   Commands (tested outside of command loop)
@@ -150,7 +171,7 @@ def set_rdlinebuf(m, input=b''):
     '''
     S = m.symtab
     inbuf = S.rdlinebuf + sum(input) % 8
-    print('rdlinebuf:{:04X}:{}'.format(inbuf, input))
+    print('rdlinebuf:{:04X} input@{:04X} {}'.format(S.rdlinebuf, inbuf, input))
     m.deposit(inbuf, input + b'\x00')
     m.depword(S.cmdqptr, inbuf)
     return inbuf
@@ -328,6 +349,24 @@ def test_cmdloop_cancel(m, S, R):
     assert b'\n^^~123~^\x07\n' b'^q\n' ==  ostream.getvalue()
     #   Make sure we exited at the point where we expected.
     assert R(pc=S.rtscmd) == m.regs
+
+def test_cmdloop_parse_error(m, S, R):
+    ''' This checks not only the error message, but also, by showing that
+        `q` works properly after a parse error, that the stack is handled
+        correctly when we abort parsing the command line.
+    '''
+    istream, ostream = loadbios(m, b'\xC0z\xC0\xC0\rq\r')
+    m.depword(S.cmdtbl, S.cmdtbl_std)
+    m.call(S.cmdloop)
+    assert (
+        b'\n^'              # prompt
+        b'\xC0z\xC0\xC0\n'  # first input line echoed
+        b'@'                # output of ^ command
+        b'\n\a?01 z'        # error message
+                            # `\xC0` commands after error are ignored
+        b'\n^'              # prompt
+        b'q\n'              # second input line echoed
+      ) == ostream.getvalue()
 
 ####################################################################
 #   Integration tests

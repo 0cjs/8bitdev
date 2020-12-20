@@ -62,7 +62,7 @@ There are three ways to enter the monitor:
 Todo
 ----
 
-- improve error messages (and space/$00 to term args?)
+- space/$00 to term args?
 - fix rdline not accepting backspace when buffer full
 - extract rdline from pmon, use only for tmc68 version
 - command table continuation which will also test that `cmdtbl` is used

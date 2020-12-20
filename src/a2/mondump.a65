@@ -20,10 +20,35 @@
 ;---------------------------------------------------------------------
 ;   Memory dump in hexadecimal and characters.
 ;   For use instead of the standard monitor `D` command.
-;   Store start location at $3F8 to execute with Ctrl-Y in the monitor.
+;
+;   Store a JMP to the start location at $3F8 to execute this with the
+;   monitor's Ctrl-Y command, e.g., `3F8: 4C 00 03`.
 
-hexdump     rts
+mnext       equ A1L         ; next location to be printed;
+                            ;    set by entering an address.
+mcur        equ A2L         ; temporary storage usable while hexdump
+                            ;    routine is running
 
+hexdump     jsr PRA1        ; print A1 followed by hyphen
+            ldy #0
+.nextbyte   lda #AA(' ')
+            jsr COUT
+            lda (mnext),y
             jsr PRBYTE
-            ;jsr CROUT1
+            iny
+            cpy #8          ; always dump 8 bytes, for the moment
+            bne .nextbyte
+            ;   Print the char values.
+            ;   This also increments mnext as we go along, to leave
+            ;   the correct value there at the end.
+            lda #AA(' ')    ; leading space
+            jsr COUT
+            ldy #0
+.nextchar   lda (mnext),y
+            jsr COUT
+            inc mnext
+            bcc .nocarry
+            inc mnext+1
+.nocarry
+            ;   XXX need to figure out here where to stop printing chars
             rts

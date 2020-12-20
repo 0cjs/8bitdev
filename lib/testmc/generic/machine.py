@@ -232,8 +232,8 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
             if trace: print(self.traceline())
             self._step()
 
-    def stepto(self, *, stopat=set(), stopon=set(), maxsteps=MAXSTEPS,
-        trace=False):
+    def stepto(self, *, stopat=set(), stopon=set(), trace=False,
+        maxsteps=MAXSTEPS, raisetimeout=True):
         ''' Step an opcode and then continue until an address in `stopat`
             or an opcode in `stopon` is reached, or until we have done
             `maxsteps`. (At least one opcode is always executed.) Return
@@ -258,11 +258,17 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
             if pc in stopat or self.byte(pc) in stopon:
                 break
             if remaining <= 0:
-                raise self.Timeout(
-                    'Timeout after {} opcodes: {} opcode={}' \
-                    .format(maxsteps, self.regs, self.byte(self._getpc())))
+                if raisetimeout:
+                    self._raiseTimeout(maxsteps)
+                else:
+                    return maxsteps
             remaining -= 1
         return maxsteps - remaining
+
+    def _raiseTimeout(self, n):
+        raise self.Timeout(
+            'Timeout after {} opcodes: {} opcode={}' \
+            .format(n, self.regs, self.byte(self._getpc())))
 
     def call(self, addr, regs=None, *, retaddr=0xFFFD,
             maxsteps=MAXSTEPS, aborts=None, trace=False):
@@ -317,9 +323,7 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
         while True:
             opcode = self.byte(self._getpc())
             if maxremain <= 0:
-                raise self.Timeout(
-                    'Timeout after {} opcodes: {} opcode={}' \
-                    .format(maxsteps, self.regs, self.byte(self._getpc())))
+                self._raiseTimeout(maxsteps)
             if opcode in aborts:
                 raise self.Abort('Abort on opcode=${:02X}: {}' \
                     .format(self.byte(self._getpc()), self.regs))

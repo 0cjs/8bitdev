@@ -1,4 +1,4 @@
-from    testmc.m6502 import  Machine, Instructions as I
+from    testmc.m6502  import *
 from    os.path import exists
 import  pytest
 

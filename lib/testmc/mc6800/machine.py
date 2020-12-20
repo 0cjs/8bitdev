@@ -1,6 +1,6 @@
 from    itertools  import chain
 from    testmc.generic  import *
-from    testmc.mc6800.opcodes  import OPCODES, Instructions as I
+from    testmc.mc6800.opcodes  import OPCODES, Instructions
 from    testmc.mc6800.opimpl  import (
             InvalidOpcode, incword, readbyte, signedbyteat,
             )
@@ -43,7 +43,7 @@ class Machine(GenericMachine):
     ####################################################################
     #   Instruction Execution
 
-    _RTS_opcodes    = set([I.RTS])
+    _RTS_opcodes    = set([Instructions.RTS])
     _ABORT_opcodes  = set([0x00])   # not an opcode and test mem init'd to this
 
     def _getpc(self):   return self.pc

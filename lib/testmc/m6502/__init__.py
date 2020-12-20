@@ -6,4 +6,6 @@
 from    testmc.m6502.instructions  import Instructions
 from    testmc.m6502.machine  import Machine
 
-__all__ = ['Machine', 'Instructions']
+I = Instructions
+
+__all__ = ['Machine', 'Instructions', 'I']

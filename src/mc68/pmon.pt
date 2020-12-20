@@ -1,5 +1,5 @@
 from    testmc  import tmc_tid
-from    testmc.mc6800  import  Machine, Instructions as I
+from    testmc.mc6800  import *
 import  pytest, re
 
 R = Machine.Registers

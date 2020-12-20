@@ -7,7 +7,7 @@ from    py65.devices.mpu6502  import MPU
 from    sys import stderr
 
 from    testmc.generic  import *
-from    testmc.m6502.instructions  import Instructions as I
+from    testmc.m6502.instructions  import Instructions
 
 from    testmc.tool import asl, asxxxx
 
@@ -52,8 +52,8 @@ class Machine(GenericMachine):
     ####################################################################
     #   Execution
 
-    _RTS_opcodes        = set([I.RTS])
-    _ABORT_opcodes      = set([I.BRK])
+    _RTS_opcodes        = set([Instructions.RTS])
+    _ABORT_opcodes      = set([Instructions.BRK])
 
     def _getpc(self):   return self.mpu.pc
     def _getsp(self):   return self.mpu.sp

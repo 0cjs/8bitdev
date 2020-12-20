@@ -5,6 +5,7 @@ from    testmc.mc6800  import *
 def test_module_interface():
     assert Machine
     assert Instructions.LDAA
+    assert I.LDAA
 
 def test_Machine():
     m = Machine()

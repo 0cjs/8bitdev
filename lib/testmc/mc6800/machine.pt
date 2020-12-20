@@ -1,4 +1,4 @@
-from    testmc.mc6800  import Machine, Instructions as I
+from    testmc.mc6800  import *
 from    testmc  import LB, MB
 import  pytest
 

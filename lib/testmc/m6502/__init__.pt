@@ -4,6 +4,7 @@ def test_module_interface():
     ' Smoke test of public interface. '
 
     assert 0xA9 == Instructions.LDA
+    assert 0xA9 == I.LDA
 
     r = Machine.Registers(a=0x12, pc=0x3456, C=True)
     assert (0x12, 0x3456, True) == (r.a, r.pc, r.C)

@@ -15,7 +15,7 @@
 
 '''
 
-from    testmc.m6502 import  Machine, Instructions as I
+from    testmc.m6502  import *
 import  pytest
 
 @pytest.fixture

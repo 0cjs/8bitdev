@@ -7,4 +7,6 @@
 from    testmc.mc6800.machine  import Machine
 from    testmc.mc6800.opcodes  import Instructions
 
-__all__ = ['Machine', 'Instructions']
+I = Instructions
+
+__all__ = ['Machine', 'Instructions', 'I']

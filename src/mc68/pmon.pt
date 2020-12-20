@@ -332,39 +332,21 @@ def test_cmdloop_cancel(m, S, R):
 ####################################################################
 #   Integration tests
 
-#   Because the parser loop sets up return addresses with PSH (continuation
-#   passing style), m.call() will not see a JSR to match to each command's
-#   RTS and thus exit after the first command. We get around this by
-#   instead adding a quit command at the end of every test input and running
-#   until we reach quitcmd, a unique location before monitor exit. (rtscmd
-#   cannot be used for this because it's also used as a convenient branch
-#   target for conditional RTS by other code.)
-
-def runmon(m):
-    ''' Run the monitor starting with the standard init routine, up to when
-        it quits due to command input. We deliberately do not do extra
-        initialization here to help confirm that the monitor's minimal
-        initialization is complete enough to avoid problems.
-    '''
-    S = m.symtab
-    m.setregs(m.Registers(pc=S.init))
-    m.stepto(stopat=[S.quitcmd], stopon=[0x00], maxsteps=20000)
-
 def test_cmdloop_pending(m, S):
     ' Ensure that pending values are loaded properly. '
     istream, ostream = loadbios(m, b'3039q\r')
-    runmon(m)
+    m.call(S.init)
     assert b'\n^3039q\n' ==  ostream.getvalue()
     pendingbit = m.byte(S.stat) & 0x80  # isolate pending bit
     assert (0x80, 0x3039) == (pendingbit, m.word(S.Mpending))
 
-def test_cmdloop_multicmd(m):
+def test_cmdloop_multicmd(m, S):
     ' Multiple command processing of the simplest possible commands. '
     istream, ostream = loadbios(m, b'^^ ^q\r')
-    runmon(m)
+    m.call(S.init)
     assert b'\n^^^ ^q\n' b'\n\n\n' ==  ostream.getvalue()
 
-def test_cmdloop_multiline(m):
+def test_cmdloop_multiline(m, S):
     ''' Simple commands split across lines.
 
         This demonstrates some ill-formed behaviour; entering a line causes
@@ -373,7 +355,7 @@ def test_cmdloop_multiline(m):
         line. When we print newlines needs to be reworked.
     '''
     istream, ostream = loadbios(m, b' \r^\rq\r')
-    runmon(m)
+    m.call(S.init)
     expected = bytes(
         b'\n^'          # initial prompt
         b' \n\n^'       # space (no command), unwanted NL, following prompt
@@ -382,10 +364,10 @@ def test_cmdloop_multiline(m):
         )
     assert expected ==  ostream.getvalue()
 
-def test_cmdloop_deposit_examine(m):
+def test_cmdloop_deposit_examine(m, S):
     ' Simple integration test. '
     istream, ostream = loadbios(m, b'7654x 7655:ab:x :cd:x q\r')
-    runmon(m)
+    m.call(S.init)
     print(m.regs); print(m.hexdump(m.regs.sp-8, 8))
     output = ostream.getvalue(); print(output)
     assert b'\n7654: 00 AB 00' in output

@@ -163,11 +163,49 @@ cmdloop     jsr prnl            ; Not clear that we should always be starting
             jmp ,X              ; call command (TCO)
 
             ;   No command matched; we have an error
-.unkcmd     pul B               ; no subroutine to call, so take .parse
-            pul B               ;   address off the stack.
-            jsr errbeep         ; beep for error (XXX should show err msg)
-            bra cmdloop
+.unkcmd     ldx cmdqptr         ; restore parse point because we had consumed
+            dex                 ;   the command
+            stx cmdqptr
+            ;   fallthrough
 
+;   Parse error: beep, print message, start fresh parser loop.
+;
+;   On a parse error we stop parsing (ignoring the remainder of the line)
+;   and print a message `?nn c` where `c` is the offending character and
+;   `nn` is its (zero-based) hex offset in the input buffer.
+;
+;   prperr_up first removes the top word from the stack, used by commands
+;   that have a "continue parsing" continuation loaded and want to abort
+;   parsing.
+;
+
+prperr_up   pul A               ; remove return address from stack
+            pul A
+
+prperr      jsr prnl            ; XXX should be done only if necessary
+            jsr errbeep
+            lda A,#'?'
+            jsr prchar
+.tp0        ;   Subtract rdline buffer head address from current parse
+            ;   position to get current offset into the parse buffer.
+            ;   Since it's an unsigned subtraction, we can ignore the
+            ;   MSB. This produces a wrap-around at $100, but it's unlikely
+            ;   developers will have buffers that long, much less actual
+            ;   command lines that long.
+            lda A,cmdqptr+1
+            sub A,#LSB(rdlinebuf)
+.tp1        jsr prhex
+            jsr prspace
+            ldx cmdqptr
+            lda A,0,X
+            jsr prchar
+            jmp cmdloop
+
+;   Consume just-parsed text and save pending value in qhex_out.
+;
+;   Called after a successful qhexword in a way similar to--but not the
+;   same as-- a command.
+;
 savepending stx cmdqptr         ; consume the parsed text
             ldx qhex_out        ; copy parsed value into pending
             stx Mpending
@@ -316,7 +354,7 @@ deposit     ldx #Mdepcur
 ;   current range?)
 
 examine     ldx #Mexamcur
-            bsr usepending
+            jsr usepending
 
 .nextarg    ldx cmdqptr
             lda A,0,X

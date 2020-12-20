@@ -4,5 +4,11 @@ import  pytest
 object_file = 'src/a2/mondump.p'
 
 def test_dump(m, R, S):
-    m.call(S.hexdump, R(a=0))
-    assert R(a=0) == m.regs
+    addr = 0x01FE
+    m.depword(S.A2L, addr)      # address read by monitor before command
+    m.deposit(addr-1, range(0x0D, 0x21))
+
+    #   Since this use COUT, PRBYTE, etc., we need a mock BIOS with
+    #   similar functions at the same addreses, which we do not yet have.
+
+   #m.call(S.hexdump, R(a=0))

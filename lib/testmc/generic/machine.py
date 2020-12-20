@@ -342,8 +342,8 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
                         ' retaddr={:04X} spretaddr={:04X}'
                         .format(initsp, self._getsp(), retaddr,
                             self.getretaddr()))
-            maxremain -= \
-                self.stepto(stopon=stopon, maxsteps=maxremain, trace=trace)
+            maxremain -= self.stepto(stopon=stopon, trace=trace,
+                maxsteps=maxremain, raisetimeout=False)
 
     ####################################################################
     #   Tracing and similar information

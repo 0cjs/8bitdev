@@ -355,15 +355,18 @@ deposit     ldx #Mdepcur
 ;   printed in hexadecimal.
 ;
 ;   If a pending value is available, `Mexamcur` is set to that, otherwise
-;   it's left unchanged. There is one optional argument after the command,
-;   a hex byte setting `Mexamlines`. (XXX Possibly 0 lines should use the
-;   current range?)
+;   it's left unchanged. Arguments after the command change persistent
+;   seeings and are any of the following, where `NN` indicates a hexbyte.
+;   Whitespace (including EOL) terminates the argument list.
+;   - lNN   number of lines to dump
+;   - wNN   nubmer of bytes dumped per line
 
 examine     ldx #Mexamcur
             jsr usepending
 
-.nextarg    ldx cmdqptr
-            lda A,0,X
+.nextarg    jsr qwspace         ; end of arguments?
+            bcs .print
+            lda A,0,X           ; qwspace returned cmdqptr in X
             cmp A,#'l'          ; length opt?
             beq .linearg
             cmp A,#'L'
@@ -372,9 +375,7 @@ examine     ldx #Mexamcur
             beq .widtharg
             cmp A,#'W'
             beq .widtharg
-            jsr qhexbyte        ; standalone number for length?
-            beq .linearg1
-            bra .noarg
+            jmp prperr_up       ; bad arg: err and abort parsing line
 
             ;   XXX obviously this duplicated code could be refactored somehow
 .linearg    inx                 ; consume option letter
@@ -395,7 +396,7 @@ examine     ldx #Mexamcur
             sta A,Mexamwidth    ; set argument
             bra .nextarg
 
-.noarg      lda A,Mexamlines    ; lines to print
+.print      lda A,Mexamlines    ; lines to print
             sta A,tmp1          ; set remaining lines left to print
             ldx Mexamcur        ; load start location to examine
 

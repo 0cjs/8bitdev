@@ -9,8 +9,11 @@ Hexadecimal numbers are always accpeted in lower or upper case. Commands by
 default are case-sensitive. (XXX: add a build-time option to make them
 case-insensitive.)
 
-(✓=implemented; ☆=proposed)
+Some commands take optional arguments immediately after the command letter.
+With some exceptions described below, these commands ( and their arguments
+are terminated by whitespace (space, tab, NUL/$00, end of line).
 
+Commands list (✓=implemented; ☆=proposed):
 - ✓ ` `: do nothing (useful as separator on input line)
 - ☆ `!`: assemble
 - ☆ `,`: set range end (and start? probably better to leave pending)
@@ -62,7 +65,6 @@ There are three ways to enter the monitor:
 Todo
 ----
 
-- space/$00 to term args?
 - fix rdline not accepting backspace when buffer full
 - extract rdline from pmon, use only for tmc68 version
 - command table continuation which will also test that `cmdtbl` is used

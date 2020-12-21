@@ -236,6 +236,58 @@ def test_deposit(m, S, R, addr, parselen, cmdarg, data):
     assert (inbuf,  inbuf + parselen,   guarded) \
         == (inbuf,  m.word(S.cmdqptr),  m.bytes(addr-1, len(guarded)))
 
+def dep_examine_defaults(m, addr=0x000):
+    ' Default parameter values for test_examine_* '
+    S = m.symtab
+    m.depword(S.Mexamcur, addr)
+    m.deposit(S.Mexamwidth, 8)
+    m.deposit(S.Mexamlines, 2)
+
+@pytest.mark.parametrize('success, consumed, cmdarg', [
+    (True,   0,  b''),
+    (True,   2,  b'w1'),
+    (True,   3,  b'W1 '),   # first trailing whitespace consumed
+    (True,   3,  b'L1  '),
+    (False,  0,  b'x'),
+    (False,  2,  b'w1g'),   # err msg offset includes set_rdlinebuf offset
+])
+def test_examine_parseargs(m, S, R, cmdarg, consumed, success):
+    #   XXX This doesn't test the results of successful arguments; that's
+    #   actually still done by test_examine_output. We should probably
+    #   move the testing of all argument setup here, and then have
+    #   test_examine_output do no arg parsing but instead just use args
+    #   directly set up by the test.
+    inbuf = set_rdlinebuf(m, cmdarg)
+    _, ostream = loadbios(m)
+    dep_examine_defaults(m)
+
+    initsp = m.sp       # We pretend that the RTS address pushed on by
+                        # call() is the continuation that must be removed
+                        # in the case of an error.
+    stopat = [
+        S['examine.print'], # Don't bother executing output routines.
+        S.prperr,           # On error return, stop before doing anything that
+                            # uses the stack, because call() will throw an
+                            # error because its dummy return address was eaten
+                            # by "no error" continuation removal.
+    ]
+    m.call(S.examine, stopat=stopat)
+    #   Here an `EOFError: No more input available from streamiof` usually
+    #   indicates that the stack handling is incorrect and parsing has
+    #   continued past an error.
+    output = str(ostream.getvalue(), encoding='ASCII')
+    assert consumed == m.word(S.cmdqptr) - inbuf
+    if not success:
+        #   XXX This doesn't really properly test that control flow is
+        #   correct, since it defines a specific stack situation rather
+        #   than testing that it works. Perhaps a test similar to
+        #   test_cmdloop_parse_error() should be set up to properly test
+        #   control flow for "generic" argument parsing failures by
+        #   commands (as opposed to the top level).
+        assert R(pc=S.prperr, sp=initsp) == m.regs, '''
+            On error exit, stack should not have cmdloop.parse continuation.
+        '''
+
 @pytest.mark.parametrize(
     '  addr, cmdarg, width, lines, expmatch', [
     (0x7FFF, b'',        8,   2, '7FFF: 00 40 41 42 43 44 45 46\n'
@@ -244,13 +296,12 @@ def test_deposit(m, S, R, addr, parselen, cmdarg, data):
     (0x8001, b'W3',      3,   2, '8001: 41 42 43\n8004: 44 45 46\n'),
     (0x8002, b'L1fW2',   2,  31, '8002: 42 43\n.*803E: 7E 7F\n'),
     (0x8003, b'l3w10',  16,   3, '8003: 43 .* 52\n8013: 53.*\n8023: 63.*72\n'),
-    (0x8004, b'w031',    3,   1, '8004: 44 45 46\n'),
 ], ids=tmc_tid)
-def test_examine(m, S, R, addr, width, cmdarg, lines, expmatch):
+def test_examine_output(m, S, R, addr, width, cmdarg, lines, expmatch):
+    #   XXX Probably this should use direct argument setup and skip
+    #   testing arg parsing, leaving that to test_examine_parseargs().
     m.deposit(0x8000, range(0x40, 0x80))    # test data to dump
-    m.depword(S.Mexamcur, addr)
-    m.deposit(S.Mexamwidth, 8)              # default values for tests
-    m.deposit(S.Mexamlines, 2)
+    dep_examine_defaults(m, addr)
     inbuf = set_rdlinebuf(m, cmdarg)
     _, ostream = loadbios(m)
 

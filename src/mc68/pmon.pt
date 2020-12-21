@@ -342,9 +342,9 @@ def test_cmdloop_pending(m, S):
 
 def test_cmdloop_multicmd(m, S):
     ' Multiple command processing of the simplest possible commands. '
-    istream, ostream = loadbios(m, b'^^ ^q\r')
+    istream, ostream = loadbios(m, b'\xC0\xC0 \xC0q\r')
     m.call(S.init)
-    assert b'\n^^^ ^q\n' b'\n\n\n' ==  ostream.getvalue()
+    assert b'\n^\xC0\xC0 \xC0q\n' b'@@@' ==  ostream.getvalue()
 
 def test_cmdloop_multiline(m, S):
     ''' Simple commands split across lines.
@@ -354,15 +354,19 @@ def test_cmdloop_multiline(m, S):
         another newline even though there was no output on the existing
         line. When we print newlines needs to be reworked.
     '''
-    istream, ostream = loadbios(m, b' \r^\rq\r')
+    istream, ostream = loadbios(m, b' \r\xC0\rq\r')
     m.call(S.init)
-    expected = bytes(
-        b'\n^'          # initial prompt
-        b' \n\n^'       # space (no command), unwanted NL, following prompt
-        b'^\n\n\n^'     # ^ (print CR), unwanted NL, following prompt
-        b'q\n'          # quit command
+    expected = (
+        '\n^'          # prompt
+        ' \n'          # input echo: space EOL NL
+        '\n^'          # prompt
+        '\xC0\n'       # input echo: print @ command, EOL NL
+        '@'            # print @ command output
+        '\n^'          # prompt
+        'q\n'          # input echo: quit command, EOL NL
         )
-    assert expected ==  ostream.getvalue()
+    #   Not actually ISO-8859-1, but just transparent 8-bit pass-through.
+    assert bytes(expected, encoding='ISO-8859-1') ==  ostream.getvalue()
 
 def test_cmdloop_deposit_examine(m, S):
     ' Simple integration test. '
@@ -382,7 +386,7 @@ def test_cmdloop_eachrts(m, S, R):
         few points during execution.
     '''
     input = b'a800\r3q\r'
-    input = b'^ ^^q\r'
+    input = b'^ \xC0\xC0q\r'
     istream, ostream = loadbios(m, input)
     m.deposit(0xA800, b'ABCDEFGH')
 

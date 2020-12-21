@@ -224,6 +224,8 @@ cmdtbl_std
             dw      regscmd     ; show/set saved registers
             db 'x'
             dw      examine     ; examine memory
+            db $C0
+            dw      pratcmd     ; print '@'; used for testing
             db $00
             dw      $0000       ; end of table
 
@@ -239,6 +241,11 @@ cmdtbl_std
 quitcmd     pul B               ; remove continuation address so that we
             pul B               ;   return to what called the monitor
 rtscmd      rts
+
+;   This command is used for testing the command parser; it's usually
+;   bound an unprintable character such as $C0 (`@` with MSbit set).
+pratcmd     lda A,#'@'
+            jmp prchar          ; RTS (TCO)
 
 ;   print a newline; useful for separating output and unit tests
 nlcmd       jmp prnl            ; RTS (TCO)

@@ -531,6 +531,34 @@ rdline      ldx #rdlinebuf
 
             include "src/mc68/qhex.a68"
 
+;   ♠X,cmdqptr  ♣A Parse/consume one whitespace char at cmdqptr
+;   Return C=1 if whitespace is found, C=0 otherwise.
+;
+;   This will consume the whitespace character (by incrementing `cmdqptr`)
+;   if found, also returning the new `cmdqptr` in X. However, $00 is
+;   considered whitespace (because this still terminates command lines and
+;   argument lists) but is not consumed for obvious reasons.
+;
+qwspace     ldx cmdqptr
+            lda A,,X
+            cmp A,#$00
+            beq .noconsume
+            cmp A,#'\t'
+            beq .consume
+            cmp A,#'\n'
+            beq .consume
+            cmp A,#'\r'
+            beq .consume
+            cmp A,#' '
+            beq .consume
+            clc                 ; failure
+            rts
+
+.consume    inx
+            stx cmdqptr
+.noconsume  sec                 ; success
+            rts
+
 ; ----------------------------------------------------------------------
 ;   pr* - printing output
 

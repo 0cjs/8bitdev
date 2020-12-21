@@ -14,6 +14,30 @@ def loadbios(m, input=None, output=None):
     return m.setiostreams(S.charinport, input, output)
 
 ####################################################################
+#   q* - parsing
+
+@pytest.mark.parametrize('char', [ b'\t', b'\n', b'\r', b' ', ])
+def test_qwspace_true(m, S, R, char):
+    inbuf = set_rdlinebuf(m, char)
+    m.call(S.qwspace, R(a=0xFE, b=0xFD, x=0xFCFB))  # B preserved
+    assert (inbuf+1,           R(C=True, b=0xFD, x=inbuf+1)) \
+        == (m.word(S.cmdqptr), m.regs)
+
+@pytest.mark.parametrize('char', [ b'\x01', b'\b', b'@', b'\xFF', ])
+def test_qwspace_false(m, S, R, char):
+    inbuf = set_rdlinebuf(m, char)
+    m.call(S.qwspace, R(a=0xFE, b=0xFD, x=0xFCFB))  # B preserved
+    assert (inbuf,             R(C=False, b=0xFD, x=inbuf)) \
+        == (m.word(S.cmdqptr), m.regs)
+
+def test_qwspace_end(m, S, R):
+    ' End-of-input char $00 is whitespace but must not be consumed. '
+    inbuf = set_rdlinebuf(m, b'\x00')
+    m.call(S.qwspace)
+    assert (inbuf,             R(C=True, x=inbuf)) \
+        == (m.word(S.cmdqptr), m.regs)
+
+####################################################################
 #   pr* - printing output
 
 @pytest.mark.parametrize('val, char', (

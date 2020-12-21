@@ -144,11 +144,16 @@ def test_prperr_offset(m, S, R):
     m.stepto(stopat=[S['prperr.tp1']])
     assert R(a=7) == m.regs
 
-@pytest.mark.parametrize('input', [
+@pytest.mark.parametrize('input, char', [
     #   set_rdlinebuf automatically provides different buffer offsets for these.
-    b'abc', b'def',
+    (b'abc',  'a'),  (b'def',  'd'),
+    (b'\x00', '00'), (b'\x1F', '1F'),   # nonprinting char ranrge
+    (b'\x20', '20'),                    # print space as hex so it's visible
+    (b'\x21', '!'),  (b'\x7E', '~'),    # edges of printable range
+    (b'\x7F', '7F'),
+    (b'\x80', '80'), (b'\xFF', 'FF'),
 ])
-def test_prperr(m, S, R, input):
+def test_prperr(m, S, R, input, char):
     inbuf = set_rdlinebuf(m, input)
     _, ostream = loadbios(m)
 
@@ -156,8 +161,9 @@ def test_prperr(m, S, R, input):
     m.stepto(stopat=[S.cmdloop])
 
     offset = inbuf - S.rdlinebuf
-    expected = '\n\a?{:02X} {:c}'.format(offset, input[0])
-    assert bytes(expected, encoding='ASCII') == ostream.getvalue()
+    expected = '\n\a?{:02X} {}'.format(offset, char)
+    assert bytes(expected, encoding='ISO-8859-1') == ostream.getvalue()
+    #   Not actually ISO-8859-1 encoding; just used for 8-bit straight-through.
 
 ####################################################################
 #   Commands (tested outside of command loop)

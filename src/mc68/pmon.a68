@@ -198,8 +198,14 @@ prperr      jsr prnl            ; XXX should be done only if necessary
             jsr prspace
             ldx cmdqptr
             lda A,0,X
+            cmp A,#' '+1
+            bcs .hexchar        ; space and below prints as hex
+            cmp A,#$7F
+            bcc .hexchar        ; DEL and above prints as hex
             jsr prchar
-            jmp cmdloop
+            bra .exit
+.hexchar    jsr prhex
+.exit       jmp cmdloop
 
 ;   Consume just-parsed text and save pending value in qhex_out.
 ;

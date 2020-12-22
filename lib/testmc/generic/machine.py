@@ -271,11 +271,11 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
             .format(n, self.regs, self.byte(self._getpc())))
 
     def call(self, addr, regs=None, *, retaddr=0xFFFD,
-            stopat=None, aborts=None, maxsteps=MAXSTEPS, trace=False):
+            stopat=None, stopon=None, maxsteps=MAXSTEPS, trace=False):
         ''' Set the given registers, push `retaddr` on the stack, and start
             execution at `addr`. Execution stops when:
             - `maxsteps` instructions have been executed, raising `Timeout`,
-            - an opcode in `aborts` is about to be executed, raising `Abort`,
+            - an opcode in `stopon` is about to be executed, raising `Abort`,
             - an `RTS` is about to be executed and either the return address on
               the stack is `retaddr` or the SP is the starting SP after
               call()'s initial push of `retaddr`. If both are the case this
@@ -298,7 +298,7 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
               usable at initialization.
             - `retaddr`: an address unlikely to be a valid return address,
               such as one within the CPU's vector table.
-            - `aborts`: the set of instructions in `_ABORT_opcodes`.
+            - `stopon`: the set of instructions in `_ABORT_opcodes`.
             - `trace`: False; `step()` tracing will be enabled if True.
 
             `addr` may be set to `None` to use the program counter in
@@ -314,11 +314,11 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
 
         if stopat is None:  stopat = set()
 
-        if aborts is None:                      aborts = self._ABORT_opcodes
-        if not isinstance(aborts, Container):   aborts = (aborts,)
-        aborts = set(aborts)                    # should be faster lookup
+        if stopon is None:                      stopon = self._ABORT_opcodes
+        if not isinstance(stopon, Container):   stopon = (stopon,)
+        stopon = set(stopon)                    # should be faster lookup
 
-        stopon = self._RTS_opcodes | set(aborts)
+        allstopon = self._RTS_opcodes | set(stopon)
         maxremain = maxsteps
         self.pushretaddr(retaddr)
         initsp = self._getsp()
@@ -328,7 +328,7 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
             opcode = self.byte(pc)
             if maxremain <= 0:
                 self._raiseTimeout(maxsteps)
-            if opcode in aborts:
+            if opcode in stopon:
                 raise self.Abort('Abort on opcode=${:02X}: {}' \
                     .format(self.byte(pc), self.regs))
             if opcode in self._RTS_opcodes:
@@ -346,8 +346,8 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
                         ' retaddr={:04X} spretaddr={:04X}'
                         .format(initsp, self._getsp(), retaddr,
                             self.getretaddr()))
-            maxremain -= self.stepto(stopat=stopat, stopon=stopon, trace=trace,
-                maxsteps=maxremain, raisetimeout=False)
+            maxremain -= self.stepto(stopat=stopat, stopon=allstopon,
+                maxsteps=maxremain, raisetimeout=False, trace=trace)
 
     ####################################################################
     #   Tracing and similar information

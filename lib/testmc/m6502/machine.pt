@@ -282,11 +282,11 @@ def test_call_changedretaddr(m):
     p = 0x408
     isp = 0x1EF                 # initial stack pointer (full address)
     m.deposit(p, [
-        I.LDA, 0xAA,            # 0208: new value for RTS return addr
-        I.TSX,                  # 020A: load stack offset into X
-        I.STAax, 0x01, 0x01,    # 020b: clobber RTS addr LSB
-        I.STAax, 0x02, 0x01,    # 020E: clobber RTS addr MSB
-        I.RTS,                  # 0211: return to call() w/wrong ret addr on stk
+        I.LDA, 0xAA,            # 0408: new value for RTS return addr
+        I.TSX,                  # 040A: load stack offset into X
+        I.STAax, 0x01, 0x01,    # 040b: clobber RTS addr LSB
+        I.STAax, 0x02, 0x01,    # 040E: clobber RTS addr MSB
+        I.RTS,                  # 0411: return to call() w/wrong ret addr on stk
         ])
     with pytest.raises(m.UnexpectedCallStack) as ex:
         m.call(p, R(sp=LB(isp)), retaddr=0x01F2, trace=1)

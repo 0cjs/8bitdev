@@ -261,6 +261,7 @@ a2exebuild  exe/a2/charset.a65
 
 #   Other stuff (probably needs sorting into categories above)
 astest  src/mc68/cpxtest.a68
+astest  src/mc68/continuation.a68
 
 
 ####################################################################

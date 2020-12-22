@@ -1,0 +1,72 @@
+from    testmc.mc6800  import *
+from    testmc  import tmc_tid
+import  pytest
+
+object_file = 'src/mc68/continuation.p'
+
+def test_pushcont(m, S, R):
+    isp = m.sp
+    pregs = R(a=55, x=0x6789)               # guards for preserved registers
+    m.pushretaddr(0xABCD)                   # guard on stack
+    m.setregs(pregs.clone(pc=S.Tpushcont))  # the expanded macro
+    m.stepto(stopon=[0])
+    assert (pregs.clone(sp=isp-4), (0x7654, 0xABCD)
+      ) == (m.regs,                m.words(m.sp+1, 2)), ''' Expected that:
+        - ACCA and X are preserved
+        - Stack pointer below guard and continuation addr (sp=isp-4)
+        - Stack contains continuation addr $7654 and guard $ABCD
+      '''
+
+@pytest.mark.parametrize(
+    'jsraddr', [# ← address at which the JSR would be assembled.
+                #    ↓  Return addr pushed on stack
+    0x1FFC,     # $1FFF Only LSB is decremented
+    0x1FFD,     # $2000 MSB decremented on 1st LSB decrement
+    0x1FFE,     # $2001  "       "      "  2nd  "     "
+    0x1FFF,     # $2002  "       "      "  3rd  "     "
+    0x2000,     # $2003 Only LSB is decremented
+], ids=tmc_tid)
+def test_pushcontcur(m, S, R, jsraddr):
+    isp = m.sp
+    m.pushretaddr(jsraddr+3)         # address after JSR $nnnn
+    print(m.hexdump(isp-5, 8))
+
+    m.setregs(R(pc=S.pushcontcur, a=0x55))
+    breaks = range(jsraddr-3, jsraddr+7)      # helps when debugging
+    m.stepto(stopat=breaks)
+    print(m.hexdump(isp-5, 8), '\t', m.regs)
+
+    assert (R(a=0x55, sp=isp-2), hex(jsraddr)
+      ) == (m.regs, hex(m.word(isp-1))), ''' Expected that:
+        - ACCA is preserved
+        - stack has a return address on it (sp=isp-2)
+        - return address is the address of the (simulated) JSR
+    '''
+
+def test_dropcont(m, S, R):
+    isp = m.sp
+    pregs = R(a=55, x=0x6789)               # guards for preserved registers
+    m.pushretaddr(0xABCD)                   # guard on stack
+    m.pushretaddr(0x8887)                   # continuation address to drop
+    m.setregs(pregs.clone(pc=S.Tdropcont))  # the expanded macro
+    m.stepto(stopon=[0])
+    assert (pregs.clone(sp=isp-2), (0x8887, 0xABCD)
+      ) == (m.regs,                m.words(m.sp-1, 2)), ''' Expected that:
+        - ACCA and X are preserved
+        - Stack pointer below guard (sp=isp-2)
+        - Stack has dropped continuation addr $8887 below guard $ABCD at head
+      '''
+
+####################################################################
+
+def test_main_sc(m, S):
+    ' Demonstrate use of pushcont macro. '
+    m.deposit(S.in_main, [0, 0, 0])
+    m.call(S.main)
+    assert [3, 3, 1] == list(m.bytes(S.in_main, 3))
+
+def test_Dpushcontcur(m, S):
+    ' Demonstrate use of pushcontcur subroutine. '
+    m.deposit(S.in_main, [0, 0, 0])
+    m.call(S.main_pcc)
+    assert [3, 3, 1] == list(m.bytes(S.in_main, 3))

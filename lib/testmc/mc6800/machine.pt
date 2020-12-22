@@ -244,13 +244,29 @@ def test_call_changedretaddr(m):
         - spretaddr: as modified by code under test
     '''
 
+#######################################
+#   call() generic tests
+#   These need be run on only one CPU implementation
+#   as they do not depend on machine-specific code.
+
+def test_call_stopat(m):
+    p = 0x280
+    isp = m.sp
+    m.deposit(p, [ I.NOP, I.NOP, I.NOP, I.NOP, I.RTS ])
+    m.call(p, stopat=[0x300, p+2, 0x200])
+   #print(m.hexdump(isp-3, 4), m.regs)
+    assert R(pc=p+2, sp=isp-2) == m.regs, '''
+        Should be:
+        - stopped at correct address
+        - stack left as it was when it stopped
+    '''
+
 @pytest.mark.parametrize('maxsteps, a', [
     (0, 0), (1, 0), (3, 0),
     (4, 1), (6, 1), (8, 1),
     (9, 2), (28, 5),
 ])
 def test_call_maxsteps(m, maxsteps, a):
-    ' generic.Machine test that need not be run on every CPU implementation. '
     p = 0x284
     ral = m.sp - 2      # LSB of stacked return address used by RTS below
     m.deposit(p, [

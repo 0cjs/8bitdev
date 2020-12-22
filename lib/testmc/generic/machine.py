@@ -271,7 +271,7 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
             .format(n, self.regs, self.byte(self._getpc())))
 
     def call(self, addr, regs=None, *, retaddr=0xFFFD,
-            maxsteps=MAXSTEPS, aborts=None, trace=False):
+            stopat=None, aborts=None, maxsteps=MAXSTEPS, trace=False):
         ''' Set the given registers, push `retaddr` on the stack, and start
             execution at `addr`. Execution stops when:
             - `maxsteps` instructions have been executed, raising `Timeout`,
@@ -312,6 +312,8 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
             #   may be explicitly set to `None` to use it.
             self.setregs(self.Registers(pc=addr))
 
+        if stopat is None:  stopat = set()
+
         if aborts is None:                      aborts = self._ABORT_opcodes
         if not isinstance(aborts, Container):   aborts = (aborts,)
         aborts = set(aborts)                    # should be faster lookup
@@ -321,12 +323,14 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
         self.pushretaddr(retaddr)
         initsp = self._getsp()
         while True:
-            opcode = self.byte(self._getpc())
+            pc = self._getpc()
+            if pc in stopat:  return
+            opcode = self.byte(pc)
             if maxremain <= 0:
                 self._raiseTimeout(maxsteps)
             if opcode in aborts:
                 raise self.Abort('Abort on opcode=${:02X}: {}' \
-                    .format(self.byte(self._getpc()), self.regs))
+                    .format(self.byte(pc), self.regs))
             if opcode in self._RTS_opcodes:
                 isretsp   = self._getsp() == initsp
                 isretaddr = self.getretaddr() == retaddr
@@ -342,7 +346,7 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
                         ' retaddr={:04X} spretaddr={:04X}'
                         .format(initsp, self._getsp(), retaddr,
                             self.getretaddr()))
-            maxremain -= self.stepto(stopon=stopon, trace=trace,
+            maxremain -= self.stepto(stopat=stopat, stopon=stopon, trace=trace,
                 maxsteps=maxremain, raisetimeout=False)
 
     ####################################################################

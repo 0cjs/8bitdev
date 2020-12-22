@@ -1,0 +1,175 @@
+;   Proof of concept of continuation-passing style on MC6800.
+;
+;   Directly below are the macros and subroutine for the framework;
+;   examples and explanations of use come after these.
+
+;   XXX These definitely need to go to stddef, and also replace LSB()/MSB()
+LB          function addr,(addr & $FF)
+MB          function addr,((addr & $FF00) >> 8)
+
+; ----------------------------------------------------------------------
+
+;   MACRO ♣B Place given address on stack for use as a continuation.
+;
+;   This embeds the absolute address of the continuation, and so is not
+;   relocatable, and it's also a few bytes longer (but much faster) than a
+;   JSR to pushcontcur below.
+;
+;   You CANNOT preserve ACCB with psh B/pul B around this.
+;
+;   6 bytes, 12 cycles.
+;
+pushcont    macro addr
+            lda B,#LB(addr)     ;                                           2,2
+            psh B               ;                                           1,4
+            lda B,#MB(addr)     ;                                           2,2
+            psh B               ;                                           1,4
+            endm
+
+;   PIC ♣X,B Place caller's address on stack for use as a continuation.
+;
+;   The address of the calling instruction will be placed on the stack and
+;   execution will resume at the following instruction.
+;
+;   22 bytes (excluding call), 58 cycles (including call). This is much
+;   slower than the `pushcont macro, but can be called from relocatable
+;   code and is itself relocatable. Since the call is only 3 bytes, using
+;   this will result in small size savings over the macro if used more than
+;   8 times.
+;
+pushcontcur                     ;         bytes,cycles for caller's JSR:  (3),9
+            tsx                 ;                                           1,4
+            lda B,2,X           ; load return addr LSB                      2,5
+            sub B,#3            ; move back to start of JSR $nnnn instr     2,5
+            sta B,2,X           ; (carry not affected)                      2,6
+            bcc +               ; if no borrow, skip decrement of MSB       2,4
+            dec 1,X             ;                                           2,7
++           ldx 1,X             ; load return address                       6,2
+            inx                 ; incr. to point to instr. after caller     1,4
+            inx                 ;                                           1,4
+            inx                 ;                                           1,4
+            jmp ,X              ;                                           2,4
+
+;   ♣B  Remove a continuation address from the top of the stack.
+;
+;   Normally used sometime after `pushcont` or `pushcontcur` when it's no
+;   longer desired to call the continuation with RTS.
+;
+dropcont    macro
+            pul B
+            pul B
+            endm
+
+; ----------------------------------------------------------------------
+;   Unit test code for macros
+
+Tpushcont   pushcont $7654
+            db $00          ; test execution stops here
+
+Tdropcont   dropcont
+            db $00          ; test execution stops here
+
+; ----------------------------------------------------------------------
+;
+;   Example 1: How pushcont/dropcont works
+;
+;   This demonstrates the _how_ of this continuation system, but not the
+;   _why_; for that see later examples.
+;
+;   Here we a top-level "main" routine that calls a subroutine named
+;   `threetimes`. There are two paths out of the subroutine: the
+;   "continuation" path which goes back to the start of main (essentially
+;   making main a loop) and an "exit" path which returns back to main's
+;   caller, chosen when the subroutine decides it's time to exit.
+;
+;   Each of these routines has a counter: in_main incremented with every
+;   run of main, in_sub incremented with every run of the subroutine, and
+;   in_exit incremented with every run of the exit routine.
+;
+;   The communication and flow control works as follows:
+;   1. main sets a continuation to the start of itself, which is where it
+;      wants the subroutine to return when it is done, assuming it's not
+;      time to exit. It then increments its counter and _jumps_ to (not
+;      _calls_) the subroutine.
+;   2. The subroutine, `threetimes`, increments its count and decides
+;      whether it should continue (at the address set by main) or exit the
+;      program. If it continues, it does so with an RTS, which goes to the
+;      continuation address. Otherwise it takes the alternate path by
+;      jumping to to .exit, below.
+;   3. .exit increments its count and then _drops_ the continuation,
+;      indicating that it won't be used. It then takes its alternate path,
+;      which in this case is an RTS to return to whatever called originally
+;      called main. (It might instead be a jump to some higher top-level
+;      program.)
+;
+;   There are two versions of the main routine below: `main`, which uses
+;   the `pushcont` macro (passing it the continuation address) and
+;   `main_pcc`, which calls the `pushcontcur` subroutine to use the calling
+;   address as the continuation. In this case both produce the same result;
+;   see the unit tests to check the results.
+;
+;   Which one of these you would use in your program depends on the nature
+;   of the program. If you need to push a continuation different from the
+;   point at which you push it you must use `pushcont` because that's the
+;   only one that takes a parameter specifying the continuation. Otherwise
+;   you can use either; see the documentation above for `pushcont` and
+;   pushcontcur` for the advantages and disadvantages of each.
+;
+
+in_main     ds 1            ; count of passes through main code
+in_sub      ds 1            ; passes through continuation-using subroutine
+in_exit     ds 1            ; passes through different route from continuation
+
+main        pushcont *          ; set continuation to this instruction
+            inc in_main         ; show we continue execution in main code
+            bra threetimes      ; sub will execute thrice, then not continue
+            db  $00             ; NOTREACHED cause an abort
+
+main_pcc    jsr pushcontcur     ; set a continuation to this instruction
+            inc in_main         ; show we continue execution in main code
+            bra threetimes      ; sub will execute thrice, then not continue
+            db  $00             ; NOTREACHED cause an abort
+
+threetimes  inc in_sub          ; show we execute subroutine code
+            lda A,in_sub
+            cmp A,#3            ; are we done yet?
+            beq .exit           ; yes, we're done
+            rts                 ; no: follow continuation
+
+.exit       inc in_exit         ; show we execute exit code
+            dropcont            ; remove continuation from stack
+            rts                 ; return to unit test system
+                                ;    (usually would be goto top-level loop)
+
+; ----------------------------------------------------------------------
+;
+;   Example 2: How pushcont/dropcont is useful.
+;
+;   There's no proper example here as of yet, but this is used in
+;   `pmon.a68`, also in this repository. In that case there are several
+;   layers of parsing routines: parsing the top-level command, parsing
+;   arguments to an individual command, and parsing parameters to
+;   arguments.
+;
+;   In most of the cases parsing is done by checking a character against a
+;   set of characters, one by one, and running the correct routine when a
+;   given character matches; if no character matches, we generate an error.
+;
+;   After the routine is run, however, we do _not_ want to return whence it
+;   was called; if we did that and the next command (or argument) was one
+;   that had already been checked for on the previous parse, we would fall
+;   into the error routine. Instead we want to start the list of checks
+;   over again from the top with the next character. Thus, the procedure is
+;   to push a continuation to the start of the current parsing routine so
+;   that, after calling a routine for a matched command, it starts the
+;   higher-level parser over again.
+;
+;   Any of the parsers may fail, however, at which point, regardless of
+;   what level of parsing (command, argument, argument parameter) we are at
+;   we want to abort parsing of the remainder of the input line, print an
+;   error message, and fetch a new input line to parse. This is done by
+;   dropping the continuation (i.e., the address to which we should go
+;   after succeeding in our current action) and instead jumping to the
+;   error routine, which prints a message indicating where the parse failed
+;   and restarts at the top of the parse loop, reading a line to parse.
+;

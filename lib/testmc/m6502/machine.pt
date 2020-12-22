@@ -160,17 +160,17 @@ def test_getsp_pushretaddr_getretaddr(m):
 ####################
 #   call
 
-@pytest.mark.parametrize('opcode, aborts', [
+@pytest.mark.parametrize('opcode, stopon', [
     (0x00, None),               # default abort opcode
-    (0x30, 0x30),               # scalar abort argument
-    (0xB0, [0x90, 0xB0, 0xD0]), # collection abort arguments
-   #(I.RTS, I.RTS),             # XXX cannot currently abort on RTS
+    (0x30, 0x30),               # scalar stopon argument
+    (0xB0, [0x90, 0xB0, 0xD0]), # collection stopon arguments
+   #(I.RTS, I.RTS),             # XXX cannot currently stopon on RTS
 ])
-def test_call_abort(m, opcode, aborts):
+def test_call_abort(m, opcode, stopon):
     p = 0x401
     with pytest.raises(m.Abort) as ex:
         m.deposit(p, [opcode])
-        m.call(p, aborts=aborts, trace=1)
+        m.call(p, stopon=stopon, trace=1)
     assert R(pc=p) == m.regs
     assert ex.match('Abort on opcode=\${:02X}: '.format(opcode))
 

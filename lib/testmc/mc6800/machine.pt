@@ -111,7 +111,7 @@ def test_getsp_pushretaddr_getretaddr(m):
     (0x00, None),               # default abort opcode
     (0x08, 0x08),               # scalar stopon argument
     (0x29, [0x28, 0x29, 0x30]), # collection stopon arguments
-   #(I.RTS, I.RTS),             # XXX cannot currently stopon RTS
+    (I.RTS, I.RTS),
 ])
 def test_call_abort(m, opcode, stopon):
     p = 0x201

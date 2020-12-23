@@ -29,7 +29,7 @@ mvec_IRQ    equ $FFFE
 ;   • Unfortunately, this currently uses the native duplication syntax,
 ;     i.e. a prefixed bracketed count `[8]$FF` on 6502.
 
-ds          macro
+ds          macro {NOEXPAND}
             rmb ALLARGS
             endm
 db          macro

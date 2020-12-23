@@ -41,6 +41,12 @@ dw          macro
 
 ;--------------------------------------------------------------------------
 ;   ZDS macro for "in-line" zero-page allocation.
+;
+;   This macro is not expanded because it's fairly noisy, but an
+;   unfortunate side-effect of this is that one doesn't see the address
+;   assigned to the symbol at the definition point in the listing. The
+;   workaround at the moment is to look up the address in the symbol table
+;   at the end of the listing.
 
 ;   By default we reserve the first 16 bytes of the zero page for use
 ;   by "system" things external to the program, such as the BIOS, 6510

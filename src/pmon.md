@@ -64,6 +64,7 @@ There are three ways to enter the monitor:
 Todo
 ----
 
+- rdline receiving BS/DEL at start of buffer should not backspace over prompt
 - fix rdline not accepting backspace when buffer full
 - extract rdline from pmon, use only for tmc68 version
 - command table continuation which will also test that `cmdtbl` is used

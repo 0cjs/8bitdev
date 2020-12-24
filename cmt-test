@@ -37,7 +37,7 @@ test_cjrtowav() {
         aa 55 aa 55
         27
     02 2A FF FF   00 00
-        FF
+        00
 ____
     bin/jr200-cjr-to-audio $ttdir/2.cjr $ttdir/2.wav \
         || die run jr200-cjr-to-audio

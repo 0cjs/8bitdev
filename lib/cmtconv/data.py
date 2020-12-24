@@ -99,7 +99,7 @@ class Block(object):
     def _check_checksum(self, checksum):
         if checksum is not None and checksum != self.checksum():
             raise self.ChecksumError('expected={:02X} actual={:02X}'
-                .format(checksum, self.checksum()))
+                .format(self.checksum(), checksum))
 
     def checksum(self):
         return sum(self._bytes()) & 0xFF

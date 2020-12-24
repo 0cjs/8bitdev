@@ -21,17 +21,17 @@ class BlockHeader(object):
 
         0-1: magic number $02 $2A (2,42)
           2: block number: 0-254; 255 indicates end block
-          3: length in bytes; 0=256 bytes
+          3: length of the data portion of the block; 0=256 bytes
         4-5: load address ($0000 if not used)
-        6…n: data
+        6…n: data (datalen bytes)
         n+1: checksum: sum of bytes 0…n modulo 256
 
     '''
 
-    def __init__(self, blockno, length, addr):
+    def __init__(self, blockno, datalen, addr):
         '''Caller is responsible for ensuring bytes match interpretation'''
         self.blockno = blockno
-        self.length  = length
+        self._datalen = datalen  # XXX should be removed in favour of len(data)
         self.addr    = addr
 
     MAGIC = b'\x02\x2A'
@@ -43,44 +43,48 @@ class BlockHeader(object):
             raise ValueError(
                 'Bad magic number: ${:02X} ${:02X}'.format(b[0], b[1]))
 
-        length = b[3]
-        if length == 0:
-            length = 256
+        datalen = b[3]
+        if datalen == 0:
+            datalen = 256
         addr = b[4] * 256 + b[5]
-        return BlockHeader(b[2], length, addr)
+        return BlockHeader(b[2], datalen, addr)
 
     @classmethod
-    def make(self, blockno, length, addr):
+    def make(self, blockno, datalen, addr):
         '''Build a block header from details'''
         if blockno < 0 or blockno > 255:
             raise ValueError(
                 'Block number must be in range 0-255: {:02X}'.format(blockno))
-        if length < 0 or length > 256:
-            raise ValueError('Length must be in range 0-256: {}' % length)
+        if datalen < 0 or datalen > 256:
+            raise ValueError('datalen must be in range 0-256: {}' % datalen)
         if addr < 0 or addr > 0xffff:
             raise ValueError('Address must be in range 0x0000-0xffff: {}' %
                 addr)
-        return BlockHeader(blockno, length, addr)
+        return BlockHeader(blockno, datalen, addr)
 
     @staticmethod
     def make_tail():
         '''Make a tail block'''
         return BlockHeader.make(255, 255, 0)
 
+    @property
+    def datalen(self):
+        return self._datalen    # XXX should be len(data)
+
     def __repr__(self):
-        return '{}.{}(blockno={}, length={}, addr={})'.format(
+        return '{}.{}(blockno={}, datalen={}, addr={})'.format(
             self.__class__.__module__, self.__class__.__name__,
-            hex(self.blockno), hex(self.length), hex(self.addr))
+            hex(self.blockno), hex(self.datalen), hex(self.addr))
 
     def is_tail(self):
         #FIXME: what happens when we try to save the whole 64k?
         #Is the block number alone enough?
-        return self.blockno == 255 and self.length == 255
+        return self.blockno == 255 and self.datalen == 255
 
     def to_bytes(self):
         b = bytearray(self.MAGIC)
         b.append(self.blockno)
-        b.append(0 if self.length == 256 else self.length)
+        b.append(0 if self.datalen == 256 else self.datalen)
         b.append(self.addr >> 8)
         b.append(self.addr & 0xFF)
         return b

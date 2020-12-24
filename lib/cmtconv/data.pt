@@ -32,7 +32,7 @@ def test_make_block_with_checksum():
     Block.make(*args, checksum=0x29)
     with pytest.raises(Block.ChecksumError) as ex:
         Block.make(*args, checksum=0xEE)
-    assert ex.match('expected=EE actual=29')
+    assert ex.match('expected=29 actual=EE')
 
 def test_fullsize_block():
     block = Block(8, 0, bytes(0x100))
@@ -54,7 +54,7 @@ def test_setdata_regular():
 
     with pytest.raises(Block.ChecksumError) as ex:
         block.setdata(b'\xAA\x55\xAA\x55', checksum=0xEE)
-    assert ex.match('expected=EE actual=29')
+    assert ex.match('expected=29 actual=EE')
 
 def test_make_tail():
     block = Block.make_tail(0x789A)

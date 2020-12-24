@@ -3,10 +3,6 @@
 ;   Directly below are the macros and subroutine for the framework;
 ;   examples and explanations of use come after these.
 
-;   XXX These definitely need to go to stddef, and also replace LSB()/MSB()
-LB          function addr,(addr & $FF)
-MB          function addr,((addr & $FF00) >> 8)
-
 ; ----------------------------------------------------------------------
 
 ;   MACRO ♣B Place given address on stack for use as a continuation.

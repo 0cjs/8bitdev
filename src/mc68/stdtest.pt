@@ -5,5 +5,6 @@ object_file = 'src/mc68/stdtest.p'
 
 pytest.register_assert_rewrite('stdtest')
 from stdtest import (
-    test_ds_db_dw               as test_ds_db_dw_6800
+    test_LB_MB                  as test_LB_MB,
+    test_ds_db_dw               as test_ds_db_dw_6800,
     )

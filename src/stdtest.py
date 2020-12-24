@@ -1,3 +1,19 @@
+import  pytest
+
+@pytest.mark.parametrize('sym, val', [
+    ('T_LB_8',      0x08),
+    ('T_MB_8',      0x00),
+    ('T_LB_FEDC',   0xDC),
+    ('T_MB_FEDC',   0xFE),
+    ('T_LB_12340',  0x40),
+    ('T_MB_12340',  0x23),
+])
+def test_LB_MB(S, sym, val):
+    ''' The LB and MB macros work on assembler symbol values and so should
+        work the same on every architecture.
+    '''
+    assert S[sym] == val
+
 def test_ds_db_dw(m, S):
     start = S.defalloctest
     assert S.dstest0            == start

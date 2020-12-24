@@ -37,9 +37,6 @@ pmon_org        equ $1000
 ;   Standard functions, macros and definitions
 ;   (Much of this should probably be moved to `stddef`.)
 
-LSB         function addr,(addr & $FF)
-MSB         function addr,((addr & $FF00) >> 8)
-
 ;   ASCII character definitions
 BEL         equ $07                 ; bell ('\a')
 BS          equ $08                 ; backspace ('\b')
@@ -133,9 +130,9 @@ cmdloop     jsr prnl            ; Not clear that we should always be starting
             ;   so that after we JMP to them they will come back here where
             ;   we will continue parsing the remainder of the command line.
             ;   (Essentially, continuation-passing style.)
-            lda A,#LSB(.parse)
+            lda A,#LB(.parse)
             psh A
-            lda A,#MSB(.parse)
+            lda A,#MB(.parse)
             psh A
 
             ;   Start by attempting to parse a hexword as the pending value.
@@ -193,7 +190,7 @@ prperr      jsr prnl            ; XXX should be done only if necessary
             ;   developers will have buffers that long, much less actual
             ;   command lines that long.
             lda A,cmdqptr+1
-            sub A,#LSB(rdlinebuf)
+            sub A,#LB(rdlinebuf)
 .tp1        jsr prhex
             jsr prspace
             ldx cmdqptr

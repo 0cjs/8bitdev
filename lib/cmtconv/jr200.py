@@ -396,13 +396,16 @@ class FileReader(object):
         #   XXX bit_decoder.eat_bytes is no longer returning a `bytes`!
         #   instead it's a list of ints.
         block_header_bytes = bytes(block_header_bytes)
-        block_hdr = BlockHeader.from_bytes(block_header_bytes)
-        #debug(block_hdr)
-        if block_hdr.is_tail():
-            return (i_next, Block(block_hdr, bytes()))
+       #XXX
+       #block_hdr = BlockHeader.from_bytes(block_header_bytes)
+        (block, datalen) = Block.from_header(block_header_bytes)
+        if block.is_tail():
+           #return (i_next, Block(block_hdr, bytes()))
+            return (i_next, block)
         else:
             # Read the data
-            actual_length = block_hdr.datalen if block_hdr.datalen > 0 else 256
+           #actual_length = block_hdr.datalen if block_hdr.datalen > 0 else 256
+            actual_length = datalen
             (i_next, block_data_bytes_cksum) = bit_decoder.eat_bytes(
                 edges, i_next, actual_length + 1)
             #   XXX bit_decoder.eat_bytes is no longer returning a `bytes`!
@@ -410,7 +413,9 @@ class FileReader(object):
             block_data_bytes_cksum = bytes(block_data_bytes_cksum)
             read_cksum = block_data_bytes_cksum[-1]
 
-            blk = Block(block_hdr, block_data_bytes_cksum[:-1])
+           #blk = Block(block_hdr, block_data_bytes_cksum[:-1])
+            block.setdata(block_data_bytes_cksum[:-1], read_cksum)
+            blk = block
             if read_cksum != blk.checksum():
                 raise RuntimeError(
                     'Block ${:02X} bad checksum ${:02X}, expected ${:02X}'
@@ -478,8 +483,7 @@ def bytes_to_file(filename, data, addr, filetype, baud):
     while remaining > 0:
         block_size = min(256, remaining)
         block_data = data[idx:idx + block_size]
-        bh = BlockHeader.make(bn, block_size, a)
-        blocks.append(Block(bh, block_data))
+        blocks.append(Block.make(bn, a, block_data))
         idx += block_size
         a += block_size
         bn += 1
@@ -500,22 +504,26 @@ def cjr_to_file(bytes):
     while True:
         data = bytes[i:i+6]
         debug('Header raw data: {}'.format(tuple(data)))
-        block_hdr = BlockHeader.from_bytes(bytes[i:i+6])
-        debug(block_hdr)
-        if block_hdr.is_tail():
-            blk = Block(block_hdr, ())
-            blocks.append(blk)
+       #block_hdr = BlockHeader.from_bytes(bytes[i:i+6])
+        (block, datalen) = Block.from_header(bytes[i:i+6])
+        debug(block)
+        if block.is_tail():
+            # XXX don't need to do this, can just read (empty) data and
+            # checksum and set_data() as with any other block
+            blocks.append(block)
             break
         else:
             i += 6
-            l = block_hdr.datalen
+            l = datalen
             if l == 0:
                 l = 256 # FIXME: push into class
             block_bytes = bytes[i:i + l]
             i += l
             checksum = bytes[i]
             i += 1
-            blk = Block(block_hdr, block_bytes)
+           #blk = Block(block_hdr, block_bytes)
+            block.setdata(block_bytes, checksum)
+            blk = block
             if checksum != blk.checksum():
                 raise RuntimeError(
                     'Block ${:02X} bad checksum ${:02X}, expected ${:02X}'
@@ -621,10 +629,7 @@ class FileEncoder(object):
     def block(self, encoder, blk):
         # silence, leader, header, data
         leader_edges = self.leader(200) # measured from actual recording
-        if blk.is_tail():
-            data = blk.to_bytes()
-        if not blk.is_tail():
-            data = blk.header.to_bytes() + blk.data + bytes((blk.checksum(),))
+        data = blk.to_bytes()
         debug(len(data))
         debug(' '.join(hex(x) for x in data))
         data_edges = encoder.encode_bytes(data)

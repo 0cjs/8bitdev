@@ -126,20 +126,21 @@ class Block(object):
 class TailBlock(Block):
     ''' Tail blocks are special:
         - The block number is always $FF.
+        - The data are always an empty `bytes`.
         - The datalen byte on tape is $FF, but there are no data bytes.
         - The checksum is $00 instead of the calculated value.
     '''
 
     def __init__(self, addr):
-        super().__init__(None, addr, None)
+        #   `data` as b'' instead of None allows concatenating all the
+        #   data from a series of blocks without having to check if
+        #   there's a TailBlock at the end.
+        super().__init__(None, addr, b'')
 
     def is_tail(self):  return True
 
     @property
     def blockno(self):  return 0xFF
-
-    @property
-    def datalen(self):  return 0
 
     def setdata(self, data, checksum=None):
         if data != b'':  raise ValueError('Tail block data must be empty.')
@@ -148,6 +149,7 @@ class TailBlock(Block):
     def checksum(self): return 0
 
     def to_bytes(self):
+        #   XXX this can probably re-use more from the superclass
         b = bytearray(self.MAGIC)
         b.extend(b'\xFF\xFF')       # blockno and datalen identify tail block
         b.append(self.addr >> 8)

@@ -62,7 +62,7 @@ def test_make_tail():
     assert              255 == block.blockno
     assert                0 == block.datalen
     assert           0x789A == block.addr
-    assert             None is block.data
+    assert              b'' == block.data
     assert                0 == block.checksum()
 
     bb = (  b'\x02\x2A'     # magic
@@ -82,8 +82,8 @@ def test_setdata_tail():
     ' Setting data on the tail would be used to confirm the checksum. '
     block = Block.make_tail(0x0A0B)
     block.setdata(b'', 0)
-    with pytest.raises(Block.ChecksumError):    block.setdata(b'', 0x01)
-    with pytest.raises(ValueError):             block.setdata(b' ')
+    with pytest.raises(Block.ChecksumError): block.setdata(b'', 0x01)
+    with pytest.raises(ValueError):          block.setdata(b' ')
 
 
 ####################################################################
@@ -113,5 +113,5 @@ def test_from_header_tail():
     assert             0xFF == block.blockno
     assert           0x0009 == block.addr
     assert           (0, 0) == (datalen, block.datalen)
-    assert             None == block.data
+    assert              b'' == block.data
     assert             True is block.is_tail()

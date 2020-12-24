@@ -40,9 +40,9 @@ test_cjrtowav() {
         FF
 ____
     bin/jr200-cjr-to-audio $ttdir/2.cjr $ttdir/2.wav \
-        || die run jr200-obj-to-audio
+        || die run jr200-cjr-to-audio
     file $ttdir/2.wav | grep -s 'mono 44100 Hz' \
-        || die ofile jr200-obj-to-audio
+        || die ofile jr200-cjr-to-audio
 }
 
 test_wavtodump() {

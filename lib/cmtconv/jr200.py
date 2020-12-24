@@ -484,8 +484,7 @@ def bytes_to_file(filename, data, addr, filetype, baud):
         a += block_size
         bn += 1
         remaining -= block_size
-    #blocks.append(Block(BlockHeader.make_tail(), b''))
-    blocks.append(Block(BlockHeader.make(255, 255, a), b''))
+    blocks.append(Block.make_tail(a))
     return File(file_header, tuple(blocks))
 
 # Convert a 'cjr' file to a file header and blocks

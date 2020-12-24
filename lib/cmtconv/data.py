@@ -62,11 +62,6 @@ class BlockHeader(object):
                 addr)
         return BlockHeader(blockno, datalen, addr)
 
-    @staticmethod
-    def make_tail():
-        '''Make a tail block'''
-        return BlockHeader.make(255, 255, 0)
-
     @property
     def datalen(self):
         return self._datalen    # XXX should be len(data)
@@ -91,6 +86,15 @@ class BlockHeader(object):
 
 class Block(object):
     '''Represents a block of data'''
+
+    @classmethod
+    def make_tail(cls, addr):
+        ''' Create a tail block.
+
+            Tail blocks have an address (usually the previous block's
+            addr+datalen+1) but no data, and the blockno is always 0xFF.
+        '''
+        return cls(BlockHeader.make(255, 255, addr), None)
 
     def __init__(self, header, data):
         self.header     = header

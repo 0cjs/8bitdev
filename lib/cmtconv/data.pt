@@ -22,6 +22,18 @@ def test_makeblock():
     assert            False is block.is_tail()
     assert   TESTBLOCK[0:6] == block.to_bytes()
 
+def test_make_tail():
+    block = Block.make_tail(0x789A)
+    assert              255 == block.header.blockno
+
+    #   XXX A tail block is identified by having 255 as length value, as well
+    #   as block number, but should we be returning that or 0 in the API?
+    assert              255 == block.header.datalen
+
+    assert           0x789A == block.header.addr
+    assert             True is block.header.is_tail()
+    assert             None is block.data
+
 def test_block_from_bytes():
     block = BlockHeader.from_bytes(TESTBLOCK)
     assert                3 == block.blockno

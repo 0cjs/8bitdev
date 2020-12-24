@@ -8,7 +8,7 @@ from enum import Enum
 from testmc.memimage import MemImage
 import itertools
 
-from    cmtconv.data  import BlockHeader, Block
+from    cmtconv.data  import Block
 
 # General approach is to use layered abstractions in
 # a simple top-down parser.
@@ -428,7 +428,7 @@ class FileReader(object):
             (i_next, blk) = self.read_block(bit_decoder, edges, i_next)
             blocks.append(blk)
             debug(blk)
-            if blk.header.is_tail():
+            if blk.is_tail():
                 break
 
         return (i_next, tuple(blocks))
@@ -535,7 +535,7 @@ def file_to_cjr(f):
     res.extend(file_hdr.raw_bytes)
     for blk in blocks:
         res.extend(blk.header.raw_bytes)
-        if not blk.header.is_tail():
+        if not blk.is_tail():
             res.extend(blk.data)
             res.append(blk.checksum)
     return res
@@ -621,9 +621,9 @@ class FileEncoder(object):
     def block(self, encoder, blk):
         # silence, leader, header, data
         leader_edges = self.leader(200) # measured from actual recording
-        if blk.header.is_tail():
-            data = blk.header.to_bytes()
-        if not blk.header.is_tail():
+        if blk.is_tail():
+            data = blk.to_bytes()
+        if not blk.is_tail():
             data = blk.header.to_bytes() + blk.data + bytes((blk.checksum(),))
         debug(len(data))
         debug(' '.join(hex(x) for x in data))

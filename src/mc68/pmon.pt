@@ -1,4 +1,4 @@
-from    testmc  import tmc_tid
+from    testmc  import *
 from    testmc.mc6800  import *
 import  pytest, re
 
@@ -56,6 +56,18 @@ def test_prhex(m, S, R, val, chars):
     _, outchars = loadbios(m)
     m.call(S.prhex, R(a=val))
     assert chars == outchars.getvalue()
+
+@pytest.mark.parametrize('char, output', [
+    (0x20, ' '), (0x5A, 'Z'), (0x7E, '~'),  # printable range
+    (0xA0, ' '), (0xDA, 'Z'), (0xFE, '~'),  # high bit set
+    (0x00, '@'), (0x1F, '_'),               # control chars
+    (0x80, '@'), (0x9F, '_'),               # hi-bit control chars
+    (0x7F, '?'), (0xFF, '?'),               # DEL is special
+])
+def test_prvischar(m, R, S, char, output):
+    _, ostream = loadbios(m)
+    m.call(S.prvischar, R(a=char))
+    assert output == str(ostream.getvalue(), encoding='ASCII')
 
 ####################################################################
 #   rd* - read input
@@ -205,6 +217,25 @@ def set_rdlinebuf(m, input=b''):
     m.deposit(inbuf, input + b'\x00')
     m.depword(S.cmdqptr, inbuf)
     return inbuf
+
+@pytest.mark.parametrize('val, output', [
+    #   Output is expected to have a trailing space.
+    (0x5071, '5071 Pq '),   # PAB=1 (pending available bit is set)
+    (0x7E20, '7E20 ~  '),   # PAB=0; ends of printable ASCII range
+    (0x019F, '019F A_ '),   # using prvischar (bit 7 ignored, ctl-chars visible)
+])
+def test_query(m, S, R, val, output):
+    #   `status` byte bit 7 (1=pending value available) is set to bit 0 of
+    #   `val` and the rest to some pseudo-random values as a guard.
+    stat = ((val & 1) << 7) | (MB(val) ^ LB(val))
+
+    _, ostream = loadbios(m)
+    m.deposit(S.stat, stat)
+    m.depword(S.Mpending, val)
+
+    m.call(S.query)
+    assert stat == m.byte(S.stat), 'stat value should not be changed'
+    assert output == str(ostream.getvalue(), encoding='ASCII')
 
 @pytest.mark.parametrize( 'target', [ 0x2222, 0x7055, ], ids=tmc_tid)
 def test_call(m, S, R, target):

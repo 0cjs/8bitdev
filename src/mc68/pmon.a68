@@ -255,6 +255,8 @@ cmdtbl_std
             dw      rtscmd      ; do nothing
             db ':'
             dw      deposit     ; enter data into memory
+            db '?'
+            dw      query       ; show representations of pending
             db '^'
             dw      nlcmd       ; print newline
             db 'k'
@@ -345,6 +347,25 @@ deposit     ldx #Mdepcur
 .term       inx                 ; consume terminator
             stx cmdqptr
 .rts        rts
+
+;   "Query" pending, without consuming it. If no pending is available,
+;   this uses the most recent value of pending. The value is printed in
+;   hex, decimal (XXX not yet implemented), ASCII, etc.
+;
+query       lda A,Mpending
+            jsr prhex
+            lda A,Mpending+1
+            tab                 ; saves a reload later
+            jsr prhex
+            jsr prspace
+            lda A,Mpending
+            jsr prvischar
+            tba                 ; saved Mpending+1
+            jsr prvischar
+            ;   Space instead of CR at end of output works better when
+            ;   we have multiple commands per line.
+            jsr prspace
+            rts
 
 ;   Examine memory.
 ;
@@ -656,3 +677,29 @@ prspace     lda A,#SPACE
             jsr prchar
             rts
 
+;   ♣A Print any (8-bit) value "visibly" as one character.
+;
+;   The output is always a character from the printable ASCII range. Bit 7
+;   is ignored, characters in the control sticks ($00-$1F) are shifted
+;   up into the upper-case ASCII sticks, and DEL is printed as `?` (i.e.,
+;   shifted down in the reverse direction from the control chars).
+;
+;   XXX This should be printing control chars in reverse video.
+;
+;   This is a more informative alternative to printing just a `.` for any
+;   non-printing char. It is slightly more subject to confusion in that it
+;   can make non-ASCII look more like ASCII, but it's assumed that the
+;   viewer will also have hex output easily available to help distinguish
+;   the two.
+;
+prvischar   and A,#$7F          ; clear bit 7
+            cmp A,#DEL
+            beq .isctl
+            cmp A,#' '
+            bcc .notctl
+.isctl      ;   Flipping bit 6 of a control character moves it up by $40
+            ;   into the upper-case sticks, except for DEL where it's
+            ;   moved down by 40 into the numeric/symbol stick.
+            eor A,#(1<<6)
+.notctl     jsr prchar
+            rts

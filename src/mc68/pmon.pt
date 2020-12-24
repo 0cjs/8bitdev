@@ -173,6 +173,38 @@ def test_usepending_available(m, S, R):
     assert (0xC355, 0xC355) == (m.word(curval), m.word(S.Mpending))
     assert 0x55 == m.byte(S.stat), 'pendingval not marked as consumed'
 
+def test_startline(m, S):
+    #   The guard has the stat_begline bit set, since that is the state
+    #   we always expect after calling `startline`
+    guard = 0b10110101 | S.stat_begline
+    def clear_begline():
+        ' Set guard, but clear stat_begline bit. '
+        m.deposit(S.stat, guard & (~S.stat_begline & 0xFF))
+    def ast(stat, output, assertmsg):
+        ' Assert state of stat byte and output. '
+        assert (stat,           output,
+          ) == (m.byte(S.stat), ostream.getvalue()), ''' Expected:
+            - stat byte is {:02X}
+            - cummulative output: {}'''.format(stat, repr(output))
+
+    _, ostream = loadbios(m)
+    m.deposit(S.stat, 0)    # memory cleared to 0x00 assumes not at begline
+    m.call(S.startline); ast(S.stat_begline, b'\n', '1: add newline')
+    m.call(S.startline); ast(S.stat_begline, b'\n', '2: no additional output')
+    clear_begline()
+    m.call(S.startline); ast(guard, b'\n\n', '3: add newline')
+    m.call(S.startline); ast(guard, b'\n\n', '4: no additional output')
+
+def test_inline(m, S):
+    guard = 0b10110101 & (~S.stat_begline & 0xFF)   # stat_begline clear
+
+    m.deposit(S.stat, guard | S.stat_begline)
+    m.call(S.inline)
+    assert guard == m.byte(S.stat), 'expected begline clear when set'
+
+    m.call(S.inline)
+    assert guard == m.byte(S.stat), 'expected begline clear when clear'
+
 def test_prperr_offset(m, S, R):
     ' Test the segment that calculates current offset into rdline buffer. '
     m.depword(S.cmdqptr, S.rdlinebuf+7)
@@ -197,7 +229,7 @@ def test_prperr(m, S, R, input, char):
     m.stepto(stopat=[S.cmdloop])
 
     offset = inbuf - S.rdlinebuf
-    expected = '\n\a?{:02X} {}'.format(offset, char)
+    expected = '\n\a?{:02X} {}\n'.format(offset, char)
     assert bytes(expected, encoding='ISO-8859-1') == ostream.getvalue()
     #   Not actually ISO-8859-1 encoding; just used for 8-bit straight-through.
 
@@ -225,16 +257,20 @@ def set_rdlinebuf(m, input=b''):
     (0x019F, '019F A_ '),   # using prvischar (bit 7 ignored, ctl-chars visible)
 ])
 def test_query(m, S, R, val, output):
-    #   `status` byte bit 7 (1=pending value available) is set to bit 0 of
-    #   `val` and the rest to some pseudo-random values as a guard.
-    stat = ((val & 1) << 7) | (MB(val) ^ LB(val))
+    #   `status` byte:
+    #   bit 7: (1=pending value available) is set to bit 0 of `val`
+    #   bit 6: (1=at beginning of line) set to 1, to show it's flipped
+    #   remainder: some pseudo-random values as a guard.
+    #   XXX this way of testing status output needs to be improved
+    stat = ((val & 1) << 7) | S.stat_begline | ((MB(val)^LB(val)) & 0b00111111)
 
     _, ostream = loadbios(m)
     m.deposit(S.stat, stat)
     m.depword(S.Mpending, val)
 
     m.call(S.query)
-    assert stat == m.byte(S.stat), 'stat value should not be changed'
+    assert stat & (~S.stat_begline & 0xFF) == m.byte(S.stat), \
+        'stat value should have stat_begline cleared, otherwise unchanged'
     assert output == str(ostream.getvalue(), encoding='ASCII')
 
 @pytest.mark.parametrize( 'target', [ 0x2222, 0x7055, ], ids=tmc_tid)
@@ -344,9 +380,9 @@ def test_examine_output(m, S, R, addr, width, cmdarg, lines, expmatch):
 
     assert (inbuf + len(cmdarg), lines, width, lines) \
         == (m.word(S.cmdqptr), m.byte(S.Mexamlines), m.byte(S.Mexamwidth),
-            len(output.split('\n')) - 1,
+            len(output.split('\n')) - 2,    # don't count leading/trailing \n
         ), 'consumed, lines, width, outlines'
-    assert re.fullmatch(expmatch, output, re.DOTALL)
+    assert re.fullmatch('\n' + expmatch, output, re.DOTALL)
 
 def depregs(m, regs):
     ' Deposit `regs` to the save registers area. '
@@ -511,12 +547,14 @@ def test_cmdloop_parse_error(m, S, R):
     m.depword(S.cmdtbl, S.cmdtbl_std)
     m.call(S.cmdloop)
     assert (
-        b'\n^'              # prompt
+        b'\n'               # newline due to clear stat byte
+        b'^'                # prompt
         b'\xC0z\xC0\xC0\n'  # first input line echoed
-        b'@'                # output of ^ command
-        b'\n\a?01 z'        # error message
-                            # `\xC0` commands after error are ignored
-        b'\n^'              # prompt
+        b'@'                # output of $C0 command
+        b'\n'               # newline because $C0 prints @ inline
+        b'\a?01 z\n'        # error message
+                            # $C0 commands after error are ignored
+        b'^'                # prompt
         b'q\n'              # second input line echoed
       ) == ostream.getvalue()
 
@@ -548,9 +586,10 @@ def test_cmdloop_multiline(m, S):
     istream, ostream = loadbios(m, b' \r\xC0\rq\r')
     m.call(S.init)
     expected = (
-        '\n^'          # prompt
+        '\n'           # newline due to stat byte being clear
+        '^'            # prompt
         ' \n'          # input echo: space EOL NL
-        '\n^'          # prompt
+        '^'            # prompt
         '\xC0\n'       # input echo: print @ command, EOL NL
         '@'            # print @ command output
         '\n^'          # prompt

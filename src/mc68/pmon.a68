@@ -67,9 +67,12 @@ cmdqptr     ds  2       ; Current parsing point in command input buffer.
                         ; Update this to consume parsed text, but do not
                         ; ever move it past the terminating $00.
 Mpending    ds  2       ; last value input before a command
-stat        ds  1       ; status values:
-                        ;   b7:   0=no pending value, 1=pending value available
-                        ;   b6-0: unused
+
+stat        ds  1       ; status values
+stat_pend   equ $80     ;   b7: 0=no pending value, 1=pending value available
+stat_begline equ $40    ;   b6: 1=we are at the beginning of a line
+                        ;       0=we are in the middle of a line (or don't know)
+                        ;   b5-0: unused
 
 pmon_ramlo_end equ *
 
@@ -113,13 +116,11 @@ init        ldx #cmdtbl_std     ; default command table
             lda A,#8            ; default examine size: 8 lines
             sta A,Mexamlines
 
-cmdloop     jsr prnl            ; Not clear that we should always be starting
-                                ;   with a newline, rather than having commands
-                                ;   terminate their output with one.
-.skipnl     lda A,#PROMPT
+cmdloop     jsr startline
+            lda A,#PROMPT
             jsr prchar
             jsr rdline
-            bcs .skipnl         ; if ^C, ignore line
+            bcs cmdloop         ; if ^C, ignore line
             stx cmdqptr
 
 .parse      ldx cmdqptr
@@ -179,7 +180,7 @@ cmdloop     jsr prnl            ; Not clear that we should always be starting
 prperr_up   pul A               ; remove return address from stack
             pul A
 
-prperr      jsr prnl            ; XXX should be done only if necessary
+prperr      jsr startline
             jsr errbeep
             lda A,#'?'
             jsr prchar
@@ -202,7 +203,8 @@ prperr      jsr prnl            ; XXX should be done only if necessary
             jsr prchar
             bra .exit
 .hexchar    jsr prhex
-.exit       jmp cmdloop
+.exit       jsr nextline
+            jmp cmdloop
 
 ;   Consume just-parsed text and save pending value in qhex_out.
 ;
@@ -234,6 +236,25 @@ usepending  tpa                 ; set bit 7 (pending available) in A
             and A,#$7F          ; clear pending available bit to indicate
             sta A,stat          ;   that Mpending has been consumed
 .done       rts
+
+;   ♣B Indicate to startline that we have text on the current line.
+inline      lda B,stat
+            and B,#(~stat_begline) ; clear begining of line bit
+            sta B,stat
+            rts
+
+;   ♣A Print a newline if we have text on the current line (`inline`).
+startline   lda A,stat
+            and A,#stat_begline ; at beginning of line?
+            beq nextline        ; no, print a newline
+            rts
+
+;   ♣A Print a newline and clear inline state.
+nextline    lda A,stat
+            ora A,#stat_begline ; set beginning of line state
+            sta A,stat
+            jsr prnl
+            rts
 
 ; ----------------------------------------------------------------------
 ;   Command Table
@@ -287,11 +308,13 @@ rtscmd      rts
 
 ;   This command is used for testing the command parser; it's usually
 ;   bound an unprintable character such as $C0 (`@` with MSbit set).
-pratcmd     lda A,#'@'
+pratcmd     jsr inline
+            lda A,#'@'
             jmp prchar          ; RTS (TCO)
 
-;   print a newline; useful for separating output and unit tests
-nlcmd       jmp prnl            ; RTS (TCO)
+;   Print a newline (even if not inline).
+;   This is useful for separating output, and also used by unit tests.
+nlcmd       equ nextline
 
 ;   Call ("kall") to an address.
 ;
@@ -352,7 +375,8 @@ deposit     ldx #Mdepcur
 ;   this uses the most recent value of pending. The value is printed in
 ;   hex, decimal (XXX not yet implemented), ASCII, etc.
 ;
-query       lda A,Mpending
+query       jsr inline
+            lda A,Mpending
             jsr prhex
             lda A,Mpending+1
             tab                 ; saves a reload later
@@ -414,7 +438,8 @@ examine     ldx #Mexamcur
             sta A,Mexamwidth    ; set argument
             bra .nextarg
 
-.print      lda A,Mexamlines    ; lines to print
+.print      jsr startline
+            lda A,Mexamlines    ; lines to print
             sta A,tmp1          ; set remaining lines left to print
             ldx Mexamcur        ; load start location to examine
 

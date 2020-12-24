@@ -402,7 +402,7 @@ class FileReader(object):
             return (i_next, Block(block_hdr, bytes()))
         else:
             # Read the data
-            actual_length = block_hdr.length if block_hdr.length > 0 else 256
+            actual_length = block_hdr.datalen if block_hdr.datalen > 0 else 256
             (i_next, block_data_bytes_cksum) = bit_decoder.eat_bytes(
                 edges, i_next, actual_length + 1)
             #   XXX bit_decoder.eat_bytes is no longer returning a `bytes`!
@@ -509,7 +509,7 @@ def cjr_to_file(bytes):
             break
         else:
             i += 6
-            l = block_hdr.length
+            l = block_hdr.datalen
             if l == 0:
                 l = 256 # FIXME: push into class
             block_bytes = bytes[i:i + l]

@@ -3,7 +3,7 @@ import  pytest
 
 TESTBLOCK = bytes([
     0x02, 0x2A,             # magic number
-    0x03, 0x04,             # block no., length
+    0x03, 0x04,             # block no., datalen
     0x78, 0x80,             # address (big-endian)
     0xAA, 0x55, 0xAA, 0x55, # data
     0x29                    # checksum
@@ -17,7 +17,7 @@ def test_badmagic():
 def test_makeblock():
     block = BlockHeader.make(3, 4, 0x7880)
     assert                3 == block.blockno
-    assert                4 == block.length
+    assert                4 == block.datalen
     assert           0x7880 == block.addr
     assert            False is block.is_tail()
     assert   TESTBLOCK[0:6] == block.to_bytes()
@@ -25,11 +25,11 @@ def test_makeblock():
 def test_block_from_bytes():
     block = BlockHeader.from_bytes(TESTBLOCK)
     assert                3 == block.blockno
-    assert                4 == block.length
+    assert                4 == block.datalen
     assert           0x7880 == block.addr
     assert            False is block.is_tail()
 
-    s = 'cmtconv.data.BlockHeader(blockno=0x3, length=0x4, addr=0x7880)'
+    s = 'cmtconv.data.BlockHeader(blockno=0x3, datalen=0x4, addr=0x7880)'
     assert                s == repr(block)
     assert                s == str(block)
 

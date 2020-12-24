@@ -92,13 +92,6 @@ fillbase    zds 2
 ;
 negoff      function end,(end-$100)
 
-negoffcalc  ;   store calculated address for test/debug
-            lda #LB(negoff(no_data_end))
-            sta no_dbgaddr
-            lda #MB(negoff(no_data_end))
-            sta no_dbgaddr+1
-            rts
-
 negoffdemo
             ldx #-6         ; length of no_data must be 6
 .loop       inc negoff(no_data_end),x
@@ -106,11 +99,12 @@ negoffdemo
             bne .loop
             rts
 
-no_dbgaddr  ds  2           ; read by unit test
             db  $E0         ; guard byte
 no_data     db  "0a5g8s"
 no_data_end
             db  $E1         ; guard byte
+
+negoffcalc  equ negoff(no_data_end)     ; symbol that can be read by tests
 
 ;--------------------------------------------------------------------------
 ;           Chromatix' 65*02 family identification

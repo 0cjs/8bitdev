@@ -40,9 +40,7 @@ def test_fill(m, R, S, len):
 
 def test_negoff(m, R, S):
     #   Show what negoff() calculates.
-    m.call(S.negoffcalc)
-    print('no_data=${:04X} negoff=${:04X}'
-        .format(S.no_data, m.word(S.no_dbgaddr)))
+    print('no_data=${:04X} negoff=${:04X}'.format(S.no_data, S.negoffcalc))
 
     #   Confirm we have correct data in memory.
     assert [0xE0, b'0a5g8s', 0xE1] \

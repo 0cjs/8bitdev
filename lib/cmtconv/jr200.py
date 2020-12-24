@@ -388,54 +388,33 @@ class FileReader(object):
         return (i_next, hdr)
 
     def read_block(self, bit_decoder, edges, i_next):
-        # # Read the leader
         i_next = self.read_leader(edges, i_next)
-
-        # Read the block header
-        (i_next, block_header_bytes) = bit_decoder.eat_bytes(edges, i_next, 6)
+        (i_next, header) = bit_decoder.eat_bytes(edges, i_next, 6)
         #   XXX bit_decoder.eat_bytes is no longer returning a `bytes`!
-        #   instead it's a list of ints.
-        block_header_bytes = bytes(block_header_bytes)
-       #XXX
-       #block_hdr = BlockHeader.from_bytes(block_header_bytes)
-        (block, datalen) = Block.from_header(block_header_bytes)
-        if block.is_tail():
-           #return (i_next, Block(block_hdr, bytes()))
-            return (i_next, block)
-        else:
-            # Read the data
-           #actual_length = block_hdr.datalen if block_hdr.datalen > 0 else 256
-            actual_length = datalen
-            (i_next, block_data_bytes_cksum) = bit_decoder.eat_bytes(
-                edges, i_next, actual_length + 1)
-            #   XXX bit_decoder.eat_bytes is no longer returning a `bytes`!
-            #   instead it's a tuple of ints.
-            block_data_bytes_cksum = bytes(block_data_bytes_cksum)
-            read_cksum = block_data_bytes_cksum[-1]
-
-           #blk = Block(block_hdr, block_data_bytes_cksum[:-1])
-            block.setdata(block_data_bytes_cksum[:-1], read_cksum)
-            blk = block
-            if read_cksum != blk.checksum():
-                raise RuntimeError(
-                    'Block ${:02X} bad checksum ${:02X}, expected ${:02X}'
-                    .format(blk.header.blockno, checksum, blk.checksum()))
-            # debug(blk)
+        #   instead it's a tuple of ints.
+        header = bytes(header)
+        (block, datalen) = Block.from_header(header)
+        (i_next, body) = bit_decoder.eat_bytes(edges, i_next, datalen + 1)
+        #   XXX bit_decoder.eat_bytes is no longer returning a `bytes`!
+        #   instead it's a tuple of ints.
+        body = bytes(body)
+        block.setdata(body[:-1], body[-1])
+        #debug(block)
+        if not block.is_tail():
+            #   The read for a tail block gives IndexError below.
             debug('i_next: %d( %f )' % (i_next, edges[i_next][0]))
-            return (i_next, blk)
+        return (i_next, block)
 
     # read blocks
     # returns ( int, ( block, ) )
     def read_blocks(self, bit_decoder, edges, i_next):
         blocks = []
-
         while True:
             (i_next, blk) = self.read_block(bit_decoder, edges, i_next)
             blocks.append(blk)
             debug(blk)
             if blk.is_tail():
                 break
-
         return (i_next, tuple(blocks))
 
     # read a file header and all blocks
@@ -507,28 +486,15 @@ def cjr_to_file(bytes):
        #block_hdr = BlockHeader.from_bytes(bytes[i:i+6])
         (block, datalen) = Block.from_header(bytes[i:i+6])
         debug(block)
+        blocks.append(block)
+        i += 6
+        block_bytes = bytes[i:i + datalen]
+        i += datalen
+        checksum = bytes[i]
+        i += 1
+        block.setdata(block_bytes, checksum)
         if block.is_tail():
-            # XXX don't need to do this, can just read (empty) data and
-            # checksum and set_data() as with any other block
-            blocks.append(block)
             break
-        else:
-            i += 6
-            l = datalen
-            if l == 0:
-                l = 256 # FIXME: push into class
-            block_bytes = bytes[i:i + l]
-            i += l
-            checksum = bytes[i]
-            i += 1
-           #blk = Block(block_hdr, block_bytes)
-            block.setdata(block_bytes, checksum)
-            blk = block
-            if checksum != blk.checksum():
-                raise RuntimeError(
-                    'Block ${:02X} bad checksum ${:02X}, expected ${:02X}'
-                    .format(blk.header.blockno, checksum, blk.checksum()))
-            blocks.append(blk)
     return File(file_hdr, tuple(blocks))
 
 

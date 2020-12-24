@@ -84,9 +84,6 @@ fillbase    zds 2
 ;--------------------------------------------------------------------------
 ;           Demonstrate use of "negative offset" indexing
 
-LSB         function addr,(addr & $FF)
-MSB         function addr,((addr & $FF00) >> 8)
-
 ;   negoff - calculate base address for use of index reg with negative offset
 ;
 ;   This must be given the END address of the array. You can then load the
@@ -96,9 +93,9 @@ MSB         function addr,((addr & $FF00) >> 8)
 negoff      function end,(end-$100)
 
 negoffcalc  ;   store calculated address for test/debug
-            lda #LSB(negoff(no_data_end))
+            lda #LB(negoff(no_data_end))
             sta no_dbgaddr
-            lda #MSB(negoff(no_data_end))
+            lda #MB(negoff(no_data_end))
             sta no_dbgaddr+1
             rts
 

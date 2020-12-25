@@ -48,9 +48,8 @@ info('Max cycle length: %f' % max(cycle_lengths))
 # fig.tight_layout()
 # plt.show()
 
-(i_next, f) = FileReader().read_file(edges, 0)
-
-data = get_file_bytestream(f.blocks)
+(i_next, blocks) = FileReader().read_file(edges, 0)
+data = get_file_bytestream(blocks)
 info('Ouput file: %s' % outfile)
 f = open(outfile, 'w+b')
 f.write(data)

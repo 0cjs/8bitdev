@@ -3,7 +3,6 @@
 
 from __future__ import print_function
 import sys
-from collections import namedtuple
 from enum import Enum
 from testmc.memimage import MemImage
 import itertools
@@ -242,8 +241,6 @@ class Decoder(object):
             res.append(x)
         return (i_next, tuple(res))
 
-File = namedtuple('File', 'header blocks')
-
 class FileReader(object):
     def __init__(self):
         self.baud600_decoder = Decoder(8, 4)
@@ -306,7 +303,7 @@ class FileReader(object):
         return (i_next, tuple(blocks))
 
     # read a file header and all blocks
-    # returns ( int, File )
+    # returns ( int, [block] )
     def read_file(self, edges, i_next):
         (i_next, file_hdr) = self.read_file_header(edges, i_next)
         if file_hdr.baudrate == file_hdr.B_2400:
@@ -314,7 +311,7 @@ class FileReader(object):
         else:
             bit_decoder = self.baud600_decoder
         (i_next, blocks) = self.read_blocks(bit_decoder, edges, i_next)
-        return (i_next, File(file_hdr, blocks))
+        return (i_next, (file_hdr,) + blocks)
 
     # FIXME: read_files - return ( File, )
 

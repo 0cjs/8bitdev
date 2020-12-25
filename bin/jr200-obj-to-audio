@@ -17,7 +17,7 @@ if __name__ == '__main__':
     addsitedir(join(BASEDIR, 'lib'))
 
     from cmtconv.bytestream import make_blocks_binary
-    from cmtconv.jr200 import info, debug, err, FileEncoder, edges_to_samples
+    from cmtconv.audio import info, debug, err, FileEncoder, edges_to_samples
 
     from testmc.tool import asl
 

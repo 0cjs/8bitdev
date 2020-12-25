@@ -13,7 +13,7 @@ BASEDIR = dirname(dirname(abspath(__file__)))
 addsitedir(join(BASEDIR, 'lib'))
 
 from cmtconv.bytestream  import get_file_bytestream
-from cmtconv.jr200 import \
+from cmtconv.audio import \
     info, debug, err, samples_to_levels, levels_to_timed_edges, FileReader
 
 if len(argv) < 3:

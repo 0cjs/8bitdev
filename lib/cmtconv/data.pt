@@ -14,7 +14,7 @@ TESTBLOCK = bytes([
 
 def test_make_block_without_checksum():
     data  = b'\xAA\x55\xAA\x55'
-    block = Block.make(3, 0x7880, data)
+    block = Block.make(3, 0x7880, tuple(data))  # any sequence should work
     assert            False is block.is_tail()
     assert                3 == block.blockno
     assert           0x7880 == block.addr
@@ -51,6 +51,9 @@ def test_setdata_regular():
 
     block.setdata(b'\xAA\x56\xAA\x57'); assert 0x2C == block.checksum()
     block.setdata(b'\xAA\x56\xAA\x57', checksum=0x2C)
+
+    #   Non-bytes sequences should work, so long as the values fit into a byte.
+    block.setdata((5, 6, 7)); assert b'\x05\x06\x07' == block.data
 
     with pytest.raises(Block.ChecksumError) as ex:
         block.setdata(b'\xAA\x55\xAA\x55', checksum=0xEE)

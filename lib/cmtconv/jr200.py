@@ -400,7 +400,7 @@ class FileReader(object):
         body = bytes(body)
         block.setdata(body[:-1], body[-1])
         #debug(block)
-        if not block.is_tail():
+        if not block.is_eof:
             #   The read for a tail block gives IndexError below.
             debug('i_next: %d( %f )' % (i_next, edges[i_next][0]))
         return (i_next, block)
@@ -413,7 +413,7 @@ class FileReader(object):
             (i_next, blk) = self.read_block(bit_decoder, edges, i_next)
             blocks.append(blk)
             debug(blk)
-            if blk.is_tail():
+            if blk.is_eof:
                 break
         return (i_next, tuple(blocks))
 
@@ -438,7 +438,7 @@ class FileReader(object):
 def blocks_to_bytes(blocks):
     res = bytearray()
     for block in blocks:
-        res.extend(block.data)
+        res.extend(block.filedata)
     return res
 
 
@@ -462,12 +462,12 @@ def bytes_to_file(filename, data, addr, filetype, baud):
     while remaining > 0:
         block_size = min(256, remaining)
         block_data = data[idx:idx + block_size]
-        blocks.append(Block.make(bn, a, block_data))
+        blocks.append(Block.make_block(bn, a, block_data))
         idx += block_size
         a += block_size
         bn += 1
         remaining -= block_size
-    blocks.append(Block.make_tail(a))
+    blocks.append(Block.make_eof_block(a))
     return File(file_header, tuple(blocks))
 
 # Convert a 'cjr' file to a file header and blocks
@@ -487,7 +487,7 @@ def cjr_to_file(bstream):
         block.setdata(bstream[hdrlen:checksum], bstream[checksum])
         blocks.append(block)
         bstream = bstream[checksum+1:]
-        if block.is_tail():
+        if block.is_eof:
             break
     return File(file_hdr, tuple(blocks))
 
@@ -503,8 +503,8 @@ def file_to_cjr(f):
     res.extend(file_hdr.raw_bytes)
     for blk in blocks:
         res.extend(blk.header.raw_bytes)
-        if not blk.is_tail():
-            res.extend(blk.data)
+        if not blk.is_eof:
+            res.extend(blk.filedata)
             res.append(blk.checksum)
     return res
 

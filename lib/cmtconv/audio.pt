@@ -1,4 +1,4 @@
-from    cmtconv.jr200  import *
+from    cmtconv.audio  import *
 import  pytest
 import  random
 
@@ -87,7 +87,7 @@ def test_eat_bit():
     assert baud2400_decoder.eat_bit(( (2, H, m), (4, L, m) ), 0) == (2, 1)
     with pytest.raises(Exception) as ex:
         baud2400_decoder.eat_bit(( (2, H, m), (4, L, s) ), 0)
-    
+
     with pytest.raises(Exception) as ex:
         baud600_decoder.eat_bit((), 0)
 
@@ -104,7 +104,7 @@ def test_eat_bits():
 
     with pytest.raises(Exception) as ex:
         baud2400_decoder.eat_bits((), 0, 1)
-    
+
     assert baud2400_decoder.eat_bits(
         edges(mark(2)), 0, 1) == (2, (1,))
 
@@ -124,7 +124,7 @@ def test_eat_bits():
 def test_start_bits():
     with pytest.raises(Exception) as ex:
         baud2400_decoder.eat_start_bits((), 0)
-    
+
     assert baud2400_decoder.eat_start_bits(edges(mark(2)), 0) == 2
 
     with pytest.raises(Exception) as ex:

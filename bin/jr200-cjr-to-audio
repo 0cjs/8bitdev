@@ -14,7 +14,7 @@ BASEDIR = dirname(dirname(abspath(__file__)))
 addsitedir(join(BASEDIR, 'lib'))
 
 from    cmtconv.bytestream  import read_block_bytestream
-from    cmtconv.jr200  import info, debug, err, FileEncoder, edges_to_samples
+from    cmtconv.audio  import info, debug, err, FileEncoder, edges_to_samples
 
 if len(argv) < 3:
     err('Convert binary data to JR-200 tape output\n' +

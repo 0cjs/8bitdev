@@ -444,19 +444,3 @@ def edges_to_samples(chunks, sample_dur, silence, low, high):
         else:
             raise Exception('Unknown audio marker')
     return res
-
-
-# Convert file to samples
-#
-# f     : File
-# rate  : double
-# ->
-# ( double, )
-def file_to_samples(f, rate):
-    raise NotImplementedError
-
-# Convert MemImage to blocks
-#
-# mi    : MemImage
-# fname : filename
-#

@@ -8,7 +8,7 @@ from enum import Enum
 from testmc.memimage import MemImage
 import itertools
 
-from    cmtconv.data  import Block, FileHeader
+from    cmtconv.block.jr200  import Block, FileHeader
 
 # General approach is to use layered abstractions in
 # a simple top-down parser.
@@ -318,86 +318,6 @@ class FileReader(object):
 
     # FIXME: read_files - return ( File, )
 
-# Convert blocks to bytes
-#
-# blocks : ( block, )
-# ->
-# bytearray
-def blocks_to_bytes(blocks):
-    res = bytearray()
-    for block in blocks:
-        res.extend(block.filedata)
-    return res
-
-
-# Convert bytes to a file
-#
-# filename  : str
-# data      : bytearray
-# addr      : int
-# filetype  : int
-# baud      : int
-# ->
-# File
-def bytes_to_file(filename, data, addr, filetype, baud):
-    '''Convert file info and bytes to File object'''
-    file_header = FileHeader.make_block(filename, filetype, baud)
-    blocks = []
-    idx = 0
-    a = addr
-    bn = 1
-    remaining = len(data)
-    while remaining > 0:
-        block_size = min(256, remaining)
-        block_data = data[idx:idx + block_size]
-        blocks.append(Block.make_block(bn, a, block_data))
-        idx += block_size
-        a += block_size
-        bn += 1
-        remaining -= block_size
-    blocks.append(Block.make_eof_block(a))
-    return File(file_header, tuple(blocks))
-
-# Convert a 'cjr' file to a file header and blocks
-#
-# bytes : bytearray
-# ->
-# File
-def cjr_to_file(bstream):
-    fhlen = FileHeader.blocklen
-    file_hdr = FileHeader.from_bytes(bstream[0:fhlen])
-    debug(file_hdr)
-    blocks = []
-    bstream = bstream[fhlen:]
-    hdrlen = Block.headerlen
-    while True:
-        block, datalen = Block.from_header(bstream[:hdrlen])
-        checksum = hdrlen + datalen
-        block.setdata(bstream[hdrlen:checksum], bstream[checksum])
-        blocks.append(block)
-        bstream = bstream[checksum+1:]
-        if block.is_eof:
-            break
-    return File(file_hdr, tuple(blocks))
-
-
-# Convert a file to a cjr format
-#
-# f : File
-# ->
-# bytes : bytearray
-def file_to_cjr(f):
-    (file_hdr, blocks) = f
-    res = bytearray()
-    res.extend(file_hdr.raw_bytes)
-    for blk in blocks:
-        res.extend(blk.header.raw_bytes)
-        if not blk.is_eof:
-            res.extend(blk.filedata)
-            res.append(blk.checksum)
-    return res
-
-
 # Encoder class
 class Encoder(object):
     # mark_edges    : Int -- number of 2400Hz edges for a mark or '1'
@@ -490,12 +410,12 @@ class FileEncoder(object):
             edges += self.block(encoder, blk)
         return edges
 
-    def encode_file(self, f):
-        fh = f.header
+    def encode_file(self, file_blocks):
+        fh = file_blocks[0]     # FileHeader block
         if    fh.baudrate == fh.B_2400:  encoder = self.baud2400_encoder
         elif  fh.baudrate == fh.B_600:   encoder = self.baud600_encoder
         else: raise RuntimeError('Unknown baudrate: {!r}'.format(fh.baudrate))
-        return self.header(fh) + self.blocks(encoder, f.blocks)
+        return self.header(fh) + self.blocks(encoder, file_blocks[1:])
 
 
 # Convert edges to samples

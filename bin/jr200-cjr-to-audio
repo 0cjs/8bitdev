@@ -10,12 +10,11 @@ from    scipy.io import wavfile
 import  numpy as np
 
 
-
 BASEDIR = dirname(dirname(abspath(__file__)))
 addsitedir(join(BASEDIR, 'lib'))
 
-from cmtconv.jr200 import \
-    info, debug, err, cjr_to_file, FileEncoder, edges_to_samples
+from    cmtconv.bytestream  import read_block_bytestream
+from    cmtconv.jr200  import info, debug, err, FileEncoder, edges_to_samples
 
 if len(argv) < 3:
     err('Convert binary data to JR-200 tape output\n' +
@@ -25,14 +24,13 @@ if len(argv) < 3:
 fname = argv[1]
 outfile = argv[2]
 
-# Convert cjr file to File
+#   Convert cjr file to sequence of Blocks
 with open(fname, 'rb') as f:
-    data = f.read()
-    cjr_file = cjr_to_file(data)
+    file_blocks = read_block_bytestream('JR-200', f)
 
 # Convert File to edges
 encoder = FileEncoder()
-edges = encoder.encode_file(cjr_file)
+edges = encoder.encode_file(file_blocks)
 
 debug(len(edges))
 # Convert edges to samples

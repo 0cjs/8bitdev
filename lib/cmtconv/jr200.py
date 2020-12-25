@@ -475,24 +475,17 @@ def bytes_to_file(filename, data, addr, filetype, baud):
 # bytes : bytearray
 # ->
 # File
-def cjr_to_file(bytes):
-    file_hdr = FileHeader.from_bytes(bytes[0:33])
+def cjr_to_file(bstream):
+    file_hdr = FileHeader.from_bytes(bstream[0:33])
     debug(file_hdr)
     blocks = []
-    i = 33
+    bstream = bstream[33:]
     while True:
-        data = bytes[i:i+6]
-        debug('Header raw data: {}'.format(tuple(data)))
-       #block_hdr = BlockHeader.from_bytes(bytes[i:i+6])
-        (block, datalen) = Block.from_header(bytes[i:i+6])
-        debug(block)
+        block, datalen = Block.from_header(bstream[:6])
+        checksum = 6 + datalen
+        block.setdata(bstream[6:checksum], bstream[checksum])
         blocks.append(block)
-        i += 6
-        block_bytes = bytes[i:i + datalen]
-        i += datalen
-        checksum = bytes[i]
-        i += 1
-        block.setdata(block_bytes, checksum)
+        bstream = bstream[checksum+1:]
         if block.is_tail():
             break
     return File(file_hdr, tuple(blocks))

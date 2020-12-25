@@ -1,11 +1,10 @@
 ''' Library to read/write National JR-200 tape format.
 '''
 
-from __future__ import print_function
-import sys
+from sys import stderr
 from enum import Enum
 from testmc.memimage import MemImage
-import itertools
+from itertools import chain
 
 from    cmtconv.block.jr200  import Block, FileHeader
 
@@ -34,17 +33,9 @@ from    cmtconv.block.jr200  import Block, FileHeader
 # Documentation
 #
 
-def err(*args, **kwargs):
-    print(*args, file=sys.stderr, **kwargs)
-
-def log(*args, **kwargs):
-    print(*args, file=sys.stderr, **kwargs)
-
-def info(*args, **kwargs):
-    print(*args, file=sys.stderr, **kwargs)
-
-def debug(*args, **kwargs):
-    print(*args, file=sys.stderr, **kwargs)
+def err(*args, **kwargs):   print(*args, file=stderr, **kwargs)
+def info(*args, **kwargs):  print(*args, file=stderr, **kwargs)
+def debug(*args, **kwargs): print(*args, file=stderr, **kwargs)
 
 # samples   : [ float ]
 # ->
@@ -434,7 +425,7 @@ def edges_to_samples(chunks, sample_dur, silence, low, high):
             lvl = True
         elif chunk[0] == AudioMarker.SOUND:
             edges = chunk[1]
-            for dur in itertools.chain(edges, (0.01,)):
+            for dur in chain(edges, (0.01,)):
                 sample_lvl = high if lvl else low
                 res.extend(sample_lvl for _ in range(int(dur/sample_dur)))
                 lvl = not lvl

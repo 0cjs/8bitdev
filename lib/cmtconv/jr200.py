@@ -290,7 +290,7 @@ class FileHeader(object):
             b[2],
             b[3],
             (b[4], b[5]),
-            ''.join(chr(x) for x in b[6:22] if x > 0),
+            ''.join(chr(x) for x in b[Block.headerlen:22] if x > 0),
             FileType(b[22]),
             BaudRate(b[23]),
             tuple(b[24:32]),
@@ -389,7 +389,7 @@ class FileReader(object):
 
     def read_block(self, bit_decoder, edges, i_next):
         i_next = self.read_leader(edges, i_next)
-        (i_next, header) = bit_decoder.eat_bytes(edges, i_next, 6)
+        (i_next, header) = bit_decoder.eat_bytes(edges, i_next, Block.headerlen)
         #   XXX bit_decoder.eat_bytes is no longer returning a `bytes`!
         #   instead it's a tuple of ints.
         header = bytes(header)
@@ -480,10 +480,11 @@ def cjr_to_file(bstream):
     debug(file_hdr)
     blocks = []
     bstream = bstream[33:]
+    hdrlen = Block.headerlen
     while True:
-        block, datalen = Block.from_header(bstream[:6])
-        checksum = 6 + datalen
-        block.setdata(bstream[6:checksum], bstream[checksum])
+        block, datalen = Block.from_header(bstream[:hdrlen])
+        checksum = hdrlen + datalen
+        block.setdata(bstream[hdrlen:checksum], bstream[checksum])
         blocks.append(block)
         bstream = bstream[checksum+1:]
         if block.is_tail():

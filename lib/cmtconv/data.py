@@ -46,16 +46,19 @@ class Block(object):
         '''
         return TailBlock(addr)
 
+    headerlen = 6
+
     @classmethod
     def from_header(cls, headerbytes):
-        ''' Create a `Block` from header bytes, returning a pair of the
-            block and the datalen specified by the header. The caller will
-            normally read that many more bytes plus the checksum byte from
-            the source and call `setdata()` with those.
+        ''' Create a `Block` from exactly `headerlen` header bytes, returning
+            a pair ``(block, datalen)`` of the new block and the data
+            length given in the header. The caller will normally read
+            ``datalen`` more bytes plus the checksum byte from the source
+            and call `setdata()` with those.
         '''
-        if len(headerbytes) != 6:
-            raise ValueError('Bad length: expected=6 actual={}'
-                .format(len(headerbytes)))
+        if len(headerbytes) != cls.headerlen:
+            raise ValueError('Bad length: expected={} actual={}'
+                .format(cls.headerlen, len(headerbytes)))
         if headerbytes[0:2] != cls.MAGIC:
             raise ValueError(
                 'Bad magic: expected={:02X}{:02X} actual={:02X}{:02X}'.format(
@@ -70,6 +73,8 @@ class Block(object):
         else:
             if datalen == 0:  datalen = 0x100
             return (cls.make(blockno, addr), datalen)
+
+    ####################################################################
 
     MAGIC = b'\x02\x2A'
 

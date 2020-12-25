@@ -100,7 +100,7 @@ def test_from_header_badmagic():
     assert ex.match('Bad magic: expected=022A actual=022B')
 
 def test_from_header_regular():
-    (block, datalen) = Block.from_header(TESTBLOCK[0:6])
+    (block, datalen) = Block.from_header(TESTBLOCK[0:Block.headerlen])
     assert                3 == block.blockno
     assert           0x7880 == block.addr
     assert           (4, 0) == (datalen, block.datalen)

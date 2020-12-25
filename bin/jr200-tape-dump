@@ -12,9 +12,9 @@ from    scipy.io import wavfile
 BASEDIR = dirname(dirname(abspath(__file__)))
 addsitedir(join(BASEDIR, 'lib'))
 
+from cmtconv.bytestream  import get_file_bytestream
 from cmtconv.jr200 import \
-    info, debug, err, samples_to_levels, levels_to_timed_edges, FileReader, \
-    blocks_to_bytes
+    info, debug, err, samples_to_levels, levels_to_timed_edges, FileReader
 
 if len(argv) < 3:
     err('Dumps binary data from JR-200 cassette output\n' +
@@ -48,10 +48,9 @@ info('Max cycle length: %f' % max(cycle_lengths))
 # fig.tight_layout()
 # plt.show()
 
-freader = FileReader()
-(i_next, f) = freader.read_file(edges, 0)
+(i_next, f) = FileReader().read_file(edges, 0)
 
-data = blocks_to_bytes(f.blocks)
+data = get_file_bytestream(f.blocks)
 info('Ouput file: %s' % outfile)
 f = open(outfile, 'w+b')
 f.write(data)

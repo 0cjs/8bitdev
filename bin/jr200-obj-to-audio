@@ -6,6 +6,8 @@
 from    sys  import argv, exit
 from    os.path  import abspath, dirname, join
 from    site  import addsitedir
+
+from    io  import BytesIO
 from    scipy.io import wavfile
 import  numpy as np
 
@@ -14,10 +16,8 @@ BASEDIR = dirname(dirname(abspath(__file__)))
 if __name__ == '__main__':
     addsitedir(join(BASEDIR, 'lib'))
 
-    from cmtconv.data  import FileHeader
-    from cmtconv.jr200 import \
-        info, debug, err, bytes_to_file, \
-        FileEncoder, edges_to_samples
+    from cmtconv.bytestream import make_blocks_binary
+    from cmtconv.jr200 import info, debug, err, FileEncoder, edges_to_samples
 
     from testmc.tool import asl
 
@@ -38,14 +38,12 @@ if __name__ == '__main__':
     info('Start address: {}'.format(hex(start)))
     info('Contiguous length: {}'.format(length))
 
-    f = bytes_to_file(fname, data, start, FileHeader.BINARY, FileHeader.B_2400)
-    info(f.header)
-    for b in f.blocks:
-        info(b)
+    blocks = make_blocks_binary('JR-200', BytesIO(data), start)
+    info(blocks[0])
+    for b in blocks[1:]: info(b)
 
     # Convert File to edges
-    encoder = FileEncoder()
-    edges = encoder.encode_file(f)
+    edges = FileEncoder().encode_file(blocks)
 
     debug(len(edges))
     # Convert edges to samples

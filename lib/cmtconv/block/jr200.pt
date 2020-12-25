@@ -1,4 +1,4 @@
-from    cmtconv.data  import *
+from    cmtconv.block.jr200  import *
 import  pytest
 
 TESTBLOCK = bytes([
@@ -22,7 +22,7 @@ def test_make_block_without_checksum():
     assert             0x29 == block.checksum
     assert        TESTBLOCK == block.to_bytes()
 
-    assert 'cmtconv.data.Block(blockno=0x3, addr=0x7880, _data={})' \
+    assert 'cmtconv.block.jr200.Block(blockno=0x3, addr=0x7880, _data={})' \
         .format(repr(data)) \
         == repr(block) == str(block)
 
@@ -75,7 +75,8 @@ def test_make_EOF_block():
     )
     assert              bb == block.to_bytes()
 
-    assert 'cmtconv.data.EOFBlock(addr=0x789a)' == repr(block) == str(block)
+    assert 'cmtconv.block.jr200.EOFBlock(addr=0x789a)' \
+        == repr(block) == str(block)
 
     with pytest.raises(AttributeError) as ex:
         block.filedata = b''
@@ -165,7 +166,7 @@ def test_fileheader_from_bytes_good():
     assert        FH.BINARY == block.filetype
     assert         FH.B_600 == block.baudrate
 
-    assert 'cmtconv.data.FileHeader' \
+    assert 'cmtconv.block.jr200.FileHeader' \
            "(filename=b'hello', filetype=BINARY baudrate=B_600)" \
         == repr(block) == str(block)
 

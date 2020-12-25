@@ -37,6 +37,9 @@ class Block(object):
     #   6…n: data (datalen bytes)
     #   n+1: checksum: sum of bytes 0…n modulo 256
 
+    #   The 'short' platform name is just the module name: `jr200`.
+    platform = 'National/Panasonic JR-200'
+
     @classmethod
     def make_block(cls, blockno, addr, data=b'', checksum=None):
         ''' Create a data `Block`. If `checksum` is not `None`, the
@@ -220,12 +223,13 @@ class FileHeader(Block):
     #   18-25: pad: $FF
 
     @classmethod
-    def make_block(cls, filename=b'', filetype=None, baudrate=None):
+    def make_block(cls, filename=None, filetype=None, baudrate=None):
         ''' Create a FileHeader block.
 
             If `filetype` is `None`, `BINARY` will be used. If `baudrate`
             is `None`, `B_2400` will be used.
         '''
+        if filename is None:    filename = b''
         if filetype is None:    filetype = cls.BINARY
         if baudrate is None:    baudrate = cls.B_2400
 

@@ -8,7 +8,7 @@ from enum import Enum
 from testmc.memimage import MemImage
 import itertools
 
-from    cmtconv.data  import Block
+from    cmtconv.data  import Block, FileHeader
 
 # General approach is to use layered abstractions in
 # a simple top-down parser.
@@ -242,118 +242,6 @@ class Decoder(object):
             res.append(x)
         return (i_next, tuple(res))
 
-class FileType(Enum):
-    '''File type as it appears in the file header'''
-    BASIC   = 0
-    BINARY  = 1
-
-class BaudRate(Enum):
-    '''Baud rate as it appears in the file header'''
-    BAUD_2400   = 0
-    BAUD_600    = 1
-
-class FileHeader(object):
-    '''This represents the 33 byte file header.
-
-    Format is as below:
-    0-1: signature/header - should be 2, 42
-    2: block number
-    3: length: 26
-    4-5: pad: 255
-    6-21: file name
-    22: BASIC(0)/Binary(1)
-    23: Baud rate 2400 - 0, 600 - 1
-    24-31: pad: 255
-    32: checksum
-    '''
-
-    def __init__(self, header, block_number, length, pad0, filename, filetype,
-                 baud_rate, pad1, checksum, raw_bytes):
-        '''Caller is responsible for ensuring interpreted values match bytes'''
-        self.header         = header
-        self.block_number   = block_number
-        self.length         = length
-        self.pad0           = pad0
-        self.filename       = filename
-        self.filetype       = filetype
-        self.baud_rate      = baud_rate
-        self.pad1           = pad1
-        self.checksum       = checksum
-        self.raw_bytes      = raw_bytes
-
-    @staticmethod
-    def from_bytes(raw_bytes):
-        '''Construct a block header from bytes'''
-        b = raw_bytes
-        return FileHeader(
-            (b[0], b[1]),
-            b[2],
-            b[3],
-            (b[4], b[5]),
-            ''.join(chr(x) for x in b[Block.headerlen:22] if x > 0),
-            FileType(b[22]),
-            BaudRate(b[23]),
-            tuple(b[24:32]),
-            b[32],
-            b)
-
-    @staticmethod
-    def make(file_name, file_type, baud_rate):
-        '''Construct a block header for given args'''
-        if len(file_name) > 16:
-            raise ValueError('file name too long (16 characters max): "{}"' %
-                             file_name)
-        header          = (2, 42)
-        block_number    = 0
-        length          = 26
-        pad0            = (0xff,) * 2
-        pad1            = (0xff,) * 8
-        filetype        = 0 if file_type == FileType.BASIC else 1
-        baudrate        = 0 if baud_rate == BaudRate.BAUD_2400 else 1
-
-        raw_bytes = bytearray()
-        raw_bytes.extend(header)
-        raw_bytes.append(block_number)
-        raw_bytes.append(26)
-        raw_bytes.extend(pad0)
-        raw_bytes.extend(ord(x) for x in file_name)
-        raw_bytes.extend((0x00,) * (16-len(file_name)))
-        raw_bytes.append(filetype)
-        raw_bytes.append(baudrate)
-        raw_bytes.extend(pad1)
-        chksum = sum(raw_bytes) % 256
-        raw_bytes.append(chksum)
-
-        return FileHeader(
-            header,
-            block_number,
-            length,
-            pad0,
-            file_name,
-            file_type,
-            baud_rate,
-            pad1,
-            chksum,
-            raw_bytes
-        )
-
-    def __str__(self):
-        s = ''
-        s += 'JR-200 File header block\n'
-        s += 'Header: {}\n'.format(tuple(hex(x) for x in self.header))
-        s += 'Block: {}\n'.format(self.block_number)
-        s += 'Length: {}\n'.format(self.length)
-        s += 'Pad0: {}\n'.format(tuple(hex(x) for x in  self.pad0))
-        s += 'Filename: "{}"\n'.format(self.filename)
-        s += 'File type: {}\n'.format(self.filetype)
-        s += 'Baud rate: {}\n'.format(self.baud_rate)
-        s += 'Pad1: {}\n'.format(tuple(hex(x) for x in self.pad1))
-        s += 'Checksum: {} (calculated: {})\n'.format(
-            hex(self.checksum), hex(sum(self.raw_bytes[:-1]) % 256))
-        return s
-
-    # FIXME: add proper checksum calc to allow checking
-
 File = namedtuple('File', 'header blocks')
 
 class FileReader(object):
@@ -379,7 +267,7 @@ class FileReader(object):
         i_next = self.read_leader(edges, i_next)
 
         (i_next, header_bytes) = self.baud600_decoder.eat_bytes(
-            edges, i_next, 33)
+            edges, i_next, FileHeader.blocklen)
         #debug(header_bytes)
         hdr = FileHeader.from_bytes(header_bytes)
         debug(hdr)
@@ -421,7 +309,7 @@ class FileReader(object):
     # returns ( int, File )
     def read_file(self, edges, i_next):
         (i_next, file_hdr) = self.read_file_header(edges, i_next)
-        if file_hdr.baud_rate == BaudRate.BAUD_2400:
+        if file_hdr.baudrate == file_hdr.B_2400:
             bit_decoder = self.baud2400_decoder
         else:
             bit_decoder = self.baud600_decoder
@@ -453,7 +341,7 @@ def blocks_to_bytes(blocks):
 # File
 def bytes_to_file(filename, data, addr, filetype, baud):
     '''Convert file info and bytes to File object'''
-    file_header = FileHeader.make(filename, filetype, baud)
+    file_header = FileHeader.make_block(filename, filetype, baud)
     blocks = []
     idx = 0
     a = addr
@@ -476,10 +364,11 @@ def bytes_to_file(filename, data, addr, filetype, baud):
 # ->
 # File
 def cjr_to_file(bstream):
-    file_hdr = FileHeader.from_bytes(bstream[0:33])
+    fhlen = FileHeader.blocklen
+    file_hdr = FileHeader.from_bytes(bstream[0:fhlen])
     debug(file_hdr)
     blocks = []
-    bstream = bstream[33:]
+    bstream = bstream[fhlen:]
     hdrlen = Block.headerlen
     while True:
         block, datalen = Block.from_header(bstream[:hdrlen])
@@ -582,8 +471,8 @@ class FileEncoder(object):
         #leader_edges = self.leader(3200) # According to web docs
         #leader_edges = self.leader(2400) # Measured from actual recording
         leader_edges = self.leader(1600) # Shorter leader works OK
-        debug(' '.join(hex(x) for x in file_hdr.raw_bytes))
-        header_edges = self.baud600_encoder.encode_bytes(file_hdr.raw_bytes)
+        debug(' '.join(hex(x) for x in file_hdr.to_bytes()))
+        header_edges = self.baud600_encoder.encode_bytes(file_hdr.to_bytes())
         return (silence(1.0), sound(leader_edges + header_edges))
 
     def block(self, encoder, blk):
@@ -602,14 +491,11 @@ class FileEncoder(object):
         return edges
 
     def encode_file(self, f):
-        if f.header.baud_rate == BaudRate.BAUD_2400:
-            encoder = self.baud2400_encoder
-        elif f.header.baud_rate == BaudRate.BAUD_600:
-            encoder = self.baud600_encoder
-        else:
-            raise Exception('Unsupported baud setting: %d' %
-                            f.header.baud_rate)
-        return self.header(f.header) + self.blocks(encoder, f.blocks)
+        fh = f.header
+        if    fh.baudrate == fh.B_2400:  encoder = self.baud2400_encoder
+        elif  fh.baudrate == fh.B_600:   encoder = self.baud600_encoder
+        else: raise RuntimeError('Unknown baudrate: {!r}'.format(fh.baudrate))
+        return self.header(fh) + self.blocks(encoder, f.blocks)
 
 
 # Convert edges to samples

@@ -14,8 +14,9 @@ BASEDIR = dirname(dirname(abspath(__file__)))
 if __name__ == '__main__':
     addsitedir(join(BASEDIR, 'lib'))
 
+    from cmtconv.data  import FileHeader
     from cmtconv.jr200 import \
-        info, debug, err, FileType, BaudRate, bytes_to_file, \
+        info, debug, err, bytes_to_file, \
         FileEncoder, edges_to_samples
 
     from testmc.tool import asl
@@ -27,7 +28,7 @@ if __name__ == '__main__':
 
     obj_fname = argv[1]
     outfile = argv[2]
-    fname = argv[3]
+    fname = bytes(argv[3], encoding='ASCII')
 
     image = asl.parse_obj_fromfile(obj_fname)
     length = image.contiglen()
@@ -37,7 +38,7 @@ if __name__ == '__main__':
     info('Start address: {}'.format(hex(start)))
     info('Contiguous length: {}'.format(length))
 
-    f = bytes_to_file(fname, data, start, FileType.BINARY, BaudRate.BAUD_2400)
+    f = bytes_to_file(fname, data, start, FileHeader.BINARY, FileHeader.B_2400)
     info(f.header)
     for b in f.blocks:
         info(b)

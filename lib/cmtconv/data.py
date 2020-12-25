@@ -69,10 +69,7 @@ class Block(object):
         if len(headerbytes) != cls.headerlen:
             raise ValueError('Bad length: expected={} actual={}'
                 .format(cls.headerlen, len(headerbytes)))
-        if headerbytes[0:2] != cls.MAGIC:
-            raise ValueError(
-                'Bad magic: expected={:02X}{:02X} actual={:02X}{:02X}'.format(
-                    cls.MAGIC[0], cls.MAGIC[1], headerbytes[0], headerbytes[1]))
+        cls._check_magic(headerbytes)
 
         blockno = headerbytes[2]
         datalen = headerbytes[3]
@@ -83,6 +80,16 @@ class Block(object):
         else:
             if datalen == 0:  datalen = 0x100
             return (cls.make(blockno, addr), datalen)
+
+    @classmethod
+    def _check_magic(cls, headerbytes):
+        ''' Raise an exception i the first two values in `headerbytes` are
+            not the correct magic value.
+        '''
+        if bytes(headerbytes[0:2]) != cls.MAGIC:
+            raise ValueError(
+                'Bad magic: expected={:02X}{:02X} actual={:02X}{:02X}'.format(
+                    cls.MAGIC[0], cls.MAGIC[1], headerbytes[0], headerbytes[1]))
 
     ####################################################################
 
@@ -233,6 +240,7 @@ class FileHeader(Block):
         if len(blockbytes) != cls.blocklen:
             raise ValueError('bad length: expected={} actual={}'
                 .format(cls.blocklen, len(blockbytes)))
+        cls._check_magic(blockbytes)
         block = FileHeader(blockbytes[Block.headerlen:-1])
 
         if block.blockno != 0:

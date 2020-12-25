@@ -177,4 +177,5 @@ def test_fileheader_from_bytes_error():
 
     with ve: fb(TESTFH[:-1])            # bad length
     with ve: fb(TESTFH + b'\x00')
+    with ve: fb(b'\x88' + TESTFH[1:])   # bad magic
     with ce: fb(TESTFH[:-1] + b'\xEE')  # bad checksum

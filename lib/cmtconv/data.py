@@ -43,8 +43,6 @@ class Block(object):
             will be verified and a `ChecksumError` will be thrown if
             the checksum is incorrect.
         '''
-        if not isinstance(data, bytes):
-            raise ValueError('`data` must be a `bytes`')
         block = cls(blockno, addr, data)
         block._check_checksum(checksum)
         return block
@@ -96,7 +94,7 @@ class Block(object):
         if blockno is not None:         # XXX hack for subclass
             self.blockno    = blockno
         self.addr       = addr
-        self._data      = data
+        self._data      = bytes(data)
 
     def is_tail(self):
         return False
@@ -110,7 +108,7 @@ class Block(object):
         return self._data
 
     def setdata(self, data, checksum=None):
-        self._data = data
+        self._data = bytes(data)
         self._check_checksum(checksum)
 
     def _check_checksum(self, checksum):

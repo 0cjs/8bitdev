@@ -8,6 +8,17 @@
     second format we'll probably want to make these classes define the API
     and hold common operations (if any), and use subclasses for particular
     implementations.
+
+    Sources:
+    - omff_ Old Machinery Blog, "Panasonic JR200U tape file format"
+    - omwg_ Old Machinery Blog, "Panasonic JR200u tape wave generation"
+    - mr_ Markku Reunanen, "Discovering the Panasonic JR-200U,"
+      section "File Transfer and Creation"
+
+    .. _omff: https://oldmachinery.blogspot.com/2012/01/panasonic-jr200u-tape-file-format.html
+    .. _omwg: https://oldmachinery.blogspot.com/2012/02/panasonic-jr200u-tape-wave-generation.html
+    .. _mr: http://www.kameli.net/marq/?page_id=1270
+
 '''
 
 ####################################################################

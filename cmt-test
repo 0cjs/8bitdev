@@ -27,12 +27,12 @@ test_cjrtowav() {
     # data: indented, last line is checksum byte
     # tail block has $FF blockno and len; contents ???
     cat <<____ | xxd -r -p >$ttdir/2.cjr
-    02 42 00 26   00 00
+    02 2A 00 1A   FF FF
         41 42 43 44 45 46 47 48 00 00 00 00 00 00 00 00
         01
         00
-        00 00 00 00 00 00 00 00
-        8F
+        FF FF FF FF FF FF FF FF
+        61
     02 2A 01 04   78 80
         aa 55 aa 55
         27

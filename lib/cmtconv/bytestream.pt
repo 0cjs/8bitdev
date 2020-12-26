@@ -60,9 +60,10 @@ def test_native_filename():
     assert b'abc' == native_filename(map(ord, 'abc'))
     assert b'abc' == native_filename('abc')
 
-def test_make_blocks_binary():
+def test_blocks_from_bin():
     filedata = bytes(range(0, 0x80)) * 5    # 0x280 bytes: 2.5 blocks
-    blocks = make_blocks_binary('JR-200', BytesIO(filedata), 0x1234, 'a file')
+    blocks = blocks_from_bin(
+        'JR-200', BytesIO(filedata), loadaddr=0x1234, filename='a file')
 
     fh = blocks[0]
     assert (fh.BINARY,   fh.B_2400,   b'a file'

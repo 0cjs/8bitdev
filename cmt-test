@@ -58,6 +58,26 @@ _____
         || die ofile jr-200-tape-dump
 }
 
+test_cmtconv_cas2bin() {
+    local ofile=$ttdir/5.cas.bin
+    echo ====================================
+    bin/cmtconv -o bin $ttdir/2.cjr $ofile
+    echo >$ofile.expected "aa55aa55"
+    xxd -ps $ofile | diff -u $ofile.expected -
+}
+
+test_cmtconv_bin2cas() {
+    local ofile=$ttdir/c.bin.cas
+    echo ====================================
+    echo 'ABCDEFGH' | bin/cmtconv -i bin -f PROG -l 0x810 - $ofile
+    cat > $ofile.expected <<_____
+XXX
+_____
+    xxd -g1 $ofile | diff -u $ofile.expected - \
+        || die cmtconv_bin2cas $ofile
+
+}
+
 ####################################################################
 
 basedir=$(cd "$(dirname "$0")" && pwd -P)
@@ -71,6 +91,8 @@ mkdir -p $ttdir
 test_ptowav
 test_cjrtowav
 test_wavtodump
+test_cmtconv_cas2bin
+#test_cmtconv_bin2cas
 
 echo ====================================
 echo SUCCESS?

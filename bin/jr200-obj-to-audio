@@ -16,7 +16,7 @@ BASEDIR = dirname(dirname(abspath(__file__)))
 if __name__ == '__main__':
     addsitedir(join(BASEDIR, 'lib'))
 
-    from cmtconv.bytestream import make_blocks_binary
+    from cmtconv.bytestream import blocks_from_bin
     from cmtconv.audio import info, debug, err, FileEncoder, edges_to_samples
 
     from testmc.tool import asl
@@ -38,7 +38,7 @@ if __name__ == '__main__':
     info('Start address: {}'.format(hex(start)))
     info('Contiguous length: {}'.format(length))
 
-    blocks = make_blocks_binary('JR-200', BytesIO(data), start)
+    blocks = blocks_from_bin('JR-200', BytesIO(data), start)
     info(blocks[0])
     for b in blocks[1:]: info(b)
 

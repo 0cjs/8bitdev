@@ -63,7 +63,7 @@ def native_filename(filename):
     try:                    return bytes(filename, encoding='ASCII')
     except TypeError:       return bytes(filename)
 
-def make_blocks_binary(platform, stream, loadaddr, filename=None):
+def blocks_from_bin(platform, stream, loadaddr=0x0000, filename=None):
     ''' Read file content bytes from `stream` and create a sequence of tape
         block objects representing that file as a machine-langauge program
         as it would be saved on `platform`. `loadaddr` is the default load
@@ -97,6 +97,9 @@ def make_blocks_binary(platform, stream, loadaddr, filename=None):
 
 ####################################################################
 #   blocks → bytestream
+
+def write_file_bytestream(blocks, stream):
+    stream.write(get_file_bytestream(blocks))
 
 def get_file_bytestream(blocks):
     ''' Return a `bytes` containing the contents of the file represented

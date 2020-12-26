@@ -25,6 +25,9 @@ def get_block_module(platform):
     pnames.append(platform.lower().replace('-', ''))
     return import_module('.'.join(pnames))
 
+####################################################################
+#   bytestream → blocks
+
 def read_block_bytestream(platform, stream):
     ''' Read bytes from `stream`, parse them as tape blocks for `platform`
         and return a sequence of the block objects.
@@ -91,6 +94,9 @@ def make_blocks_binary(platform, stream, loadaddr, filename=None):
             break
 
     return blocks
+
+####################################################################
+#   blocks → bytestream
 
 def get_file_bytestream(blocks):
     ''' Return a `bytes` containing the contents of the file represented

@@ -98,6 +98,16 @@ def blocks_from_bin(platform, stream, loadaddr=0x0000, filename=None):
 ####################################################################
 #   blocks → bytestream
 
+def write_block_bytestream(blocks, stream):
+    ' Write out the bytes of the blocks, as they would be recorded on tape. '
+    stream.write(get_block_bytestream(blocks))
+
+def get_block_bytestream(blocks):
+    ''' Return a `bytes` containing the contents of the blocks as they
+        would be recorded on tape.
+    '''
+    return bytes(chain(*( b.to_bytes() for b in blocks )))
+
 def write_file_bytestream(blocks, stream):
     stream.write(get_file_bytestream(blocks))
 

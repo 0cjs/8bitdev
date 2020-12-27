@@ -58,10 +58,10 @@ F 3 "~" H 8850 2750 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L Connector_Generic:Conn_01x25 W2A
+L Connector_Generic:Conn_01x25 W2_1
 U 1 1 5FEB2EF1
 P 8250 2750
-F 0 "W2A" H 8250 4200 50  0000 C CNN
+F 0 "W2_1" H 8250 4200 50  0000 C CNN
 F 1 "0.1\" 1x25" H 8250 4100 50  0000 C CNN
 F 2 "Connector_PinHeader_2.54mm:PinHeader_1x25_P2.54mm_Vertical" H 8250 2750 50  0001 C CNN
 F 3 "~" H 8250 2750 50  0001 C CNN
@@ -69,10 +69,10 @@ F 3 "~" H 8250 2750 50  0001 C CNN
 	-1   0    0    -1  
 $EndComp
 $Comp
-L Connector_Generic:Conn_01x25 W2B
+L Connector_Generic:Conn_01x25 W2_2
 U 1 1 5FEC1F3E
 P 9550 2750
-F 0 "W2B" H 9450 4200 50  0000 L CNN
+F 0 "W2_2" H 9450 4200 50  0000 L CNN
 F 1 "0.1\" 1x25" H 9350 4100 50  0000 L CNN
 F 2 "Connector_PinHeader_2.54mm:PinHeader_1x25_P2.54mm_Vertical" H 9550 2750 50  0001 C CNN
 F 3 "~" H 9550 2750 50  0001 C CNN
@@ -80,10 +80,10 @@ F 3 "~" H 9550 2750 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L Connector_Generic:Conn_01x16 W3A
+L Connector_Generic:Conn_01x16 W3_1
 U 1 1 5FECEA90
 P 4550 2000
-F 0 "W3A" H 4550 2950 50  0000 C CNN
+F 0 "W3_1" H 4550 2950 50  0000 C CNN
 F 1 "0.1\" 1x16" H 4468 2826 50  0000 C CNN
 F 2 "Connector_PinHeader_2.54mm:PinHeader_1x16_P2.54mm_Vertical" H 4550 2000 50  0001 C CNN
 F 3 "~" H 4550 2000 50  0001 C CNN
@@ -91,10 +91,10 @@ F 3 "~" H 4550 2000 50  0001 C CNN
 	-1   0    0    -1  
 $EndComp
 $Comp
-L Connector_Generic:Conn_01x08 W4B
+L Connector_Generic:Conn_01x08 W4_2
 U 1 1 5FECFD2E
 P 6500 4100
-F 0 "W4B" H 6400 4650 50  0000 L CNN
+F 0 "W4_2" H 6400 4650 50  0000 L CNN
 F 1 "0.1\" 1x8" H 6350 4550 50  0000 L CNN
 F 2 "Connector_PinHeader_2.54mm:PinHeader_1x08_P2.54mm_Vertical" H 6500 4100 50  0001 C CNN
 F 3 "~" H 6500 4100 50  0001 C CNN
@@ -102,10 +102,10 @@ F 3 "~" H 6500 4100 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L Connector_Generic:Conn_01x08 W4A
+L Connector_Generic:Conn_01x08 W4_1
 U 1 1 5FED086C
 P 4500 4100
-F 0 "W4A" H 4418 4617 50  0000 C CNN
+F 0 "W4_1" H 4418 4617 50  0000 C CNN
 F 1 "0.1\" 1x8" H 4418 4526 50  0000 C CNN
 F 2 "Connector_PinHeader_2.54mm:PinHeader_1x08_P2.54mm_Vertical" H 4500 4100 50  0001 C CNN
 F 3 "~" H 4500 4100 50  0001 C CNN
@@ -177,10 +177,10 @@ Wire Wire Line
 Wire Wire Line
 	6250 1300 6000 1300
 $Comp
-L Connector_Generic:Conn_01x16 W3B
+L Connector_Generic:Conn_01x16 W3_2
 U 1 1 5FECF06C
 P 6450 2000
-F 0 "W3B" H 6350 2950 50  0000 L CNN
+F 0 "W3_2" H 6350 2950 50  0000 L CNN
 F 1 "0.1\" 1x16" H 6250 2850 50  0000 L CNN
 F 2 "Connector_PinHeader_2.54mm:PinHeader_1x16_P2.54mm_Vertical" H 6450 2000 50  0001 C CNN
 F 3 "~" H 6450 2000 50  0001 C CNN
@@ -493,10 +493,10 @@ A10
 Text Label 6050 1300 0    50   ~ 0
 VCC
 $Comp
-L Connector_Generic:Conn_01x04 HIGH
+L Connector_Generic:Conn_01x04 HIGH1
 U 1 1 5FED18C8
 P 3850 5900
-F 0 "HIGH" V 4050 5950 50  0000 R CNN
+F 0 "HIGH1" V 4050 5950 50  0000 R CNN
 F 1 "0.1\" 1x4" V 3950 6000 50  0000 R CNN
 F 2 "Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical" H 3850 5900 50  0001 C CNN
 F 3 "~" H 3850 5900 50  0001 C CNN
@@ -504,10 +504,10 @@ F 3 "~" H 3850 5900 50  0001 C CNN
 	0    -1   -1   0   
 $EndComp
 $Comp
-L Connector_Generic:Conn_01x04 LOW
+L Connector_Generic:Conn_01x04 LOW1
 U 1 1 603235A5
 P 4400 5900
-F 0 "LOW" V 4600 5950 50  0000 R CNN
+F 0 "LOW1" V 4600 5950 50  0000 R CNN
 F 1 "0.1\" 1x4" V 4500 6000 50  0000 R CNN
 F 2 "Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical" H 4400 5900 50  0001 C CNN
 F 3 "~" H 4400 5900 50  0001 C CNN
@@ -515,10 +515,10 @@ F 3 "~" H 4400 5900 50  0001 C CNN
 	0    -1   -1   0   
 $EndComp
 $Comp
-L Connector_Generic:Conn_01x04 PULLUP
+L Connector_Generic:Conn_01x04 PULLUP1
 U 1 1 6032F1DA
 P 3350 5900
-F 0 "PULLUP" V 3550 6000 50  0000 R CNN
+F 0 "PULLUP1" V 3550 6000 50  0000 R CNN
 F 1 "0.1\" 1x4" V 3450 6000 50  0000 R CNN
 F 2 "Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical" H 3350 5900 50  0001 C CNN
 F 3 "~" H 3350 5900 50  0001 C CNN
@@ -583,10 +583,10 @@ Connection ~ 3450 6600
 Wire Wire Line
 	3450 6600 3550 6600
 $Comp
-L Connector_Generic:Conn_01x04 PULLDOWN
+L Connector_Generic:Conn_01x04 PULLDOWN1
 U 1 1 6042687B
 P 4900 5900
-F 0 "PULLDOWN" V 5100 6050 50  0000 R CNN
+F 0 "PULLDOWN1" V 5100 6050 50  0000 R CNN
 F 1 "0.1\" 1x4" V 5000 6000 50  0000 R CNN
 F 2 "Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical" H 4900 5900 50  0001 C CNN
 F 3 "~" H 4900 5900 50  0001 C CNN
@@ -715,10 +715,10 @@ Wire Wire Line
 Text Label 2100 2700 0    50   ~ 0
 BUS_VCC
 $Comp
-L Connector_Generic:Conn_01x02 BUSPWR_EN
+L Connector_Generic:Conn_01x02 BUSPWR_EN1
 U 1 1 60556D43
 P 1900 5900
-F 0 "BUSPWR_EN" H 2400 5900 50  0000 R CNN
+F 0 "BUSPWR_EN1" H 2400 5900 50  0000 R CNN
 F 1 "0.1\" 1x2" H 2300 5800 50  0000 R CNN
 F 2 "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical" H 1900 5900 50  0001 C CNN
 F 3 "~" H 1900 5900 50  0001 C CNN

@@ -1,6 +1,10 @@
 RC6502 / 50-pin Bus Reconfigurable Memory Board
 ===============================================
 
+__WARNING__: The current version of this board has the RC6502 bus connector
+reversed, and thus would need to be plugged in facing "backwards" from
+standard RC6502 boards. Don't build this! (This should be fixed soon.)
+
 Overview
 --------
 

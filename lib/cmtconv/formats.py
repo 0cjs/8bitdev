@@ -12,6 +12,7 @@ FORMATS = {
              bs.write_file_bytestream,  # (blocks, stream)
         ),
     'cas': ( bs.read_block_bytestream,  # (platform, stream)
+             bs.write_block_bytestream, # (blocks, stream)
             None,
         ),
     'wav': ( None, None, ),

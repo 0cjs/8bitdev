@@ -31,21 +31,28 @@ JR200_BLOCK_BYTESTREAM = bytes([
         0x6D,
     0x02, 0x2A,  0xFF, 0xFF,   0x78, 0x87,              # tail block
         0x00,
-    0xDE, 0xAD, 0xBE, 0xEF,     # data after tail block should not be read
 ])
 #   Contents of file above.
 JR200_FILE_BYTESTREAM = b'\xAA\x55\xAA\x55cjs'
 
 def test_read_block_bytestream():
-    filedata = JR200_FILE_BYTESTREAM
-    stream = BytesIO(JR200_BLOCK_BYTESTREAM)
+    # input has guard data after tail block that should not be read
+    guard = b'\xDE\xAD\xBE\xEF'
+    input = JR200_BLOCK_BYTESTREAM + guard
+    stream = BytesIO(input)
+
     blocks = read_block_bytestream('JR-200', stream)
     assert          b'ABCDEFGH' == blocks[0].filename
+    filedata                     = JR200_FILE_BYTESTREAM
     assert        filedata[0:4] == blocks[1].filedata
     assert        filedata[4: ] == blocks[2].filedata
     assert                         blocks[3].is_eof
     assert                    4 == len(blocks)
-    assert  b'\xDE\xAD\xBE\xEF' == stream.read()
+    assert                guard == stream.read()
+
+def test_get_block_bytestream():
+    assert JR200_BLOCK_BYTESTREAM == get_block_bytestream(
+        read_block_bytestream('JR-200', BytesIO(JR200_BLOCK_BYTESTREAM)))
 
 def test_get_file_bytestream():
     #   This is easier than consing up a bunch of blocks by hand, and also

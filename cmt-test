@@ -69,9 +69,12 @@ test_cmtconv_cas2bin() {
 test_cmtconv_bin2cas() {
     local ofile=$ttdir/c.bin.cas
     echo ====================================
-    echo 'ABCDEFGH' | bin/cmtconv -i bin -f PROG -l 0x810 - $ofile
+    echo 'ABCDEFGH' | bin/cmtconv -i bin -f PROG -l 0x8AA - $ofile
     cat > $ofile.expected <<_____
-XXX
+00000000: 02 2a 00 1a ff ff 50 52 4f 47 00 00 00 00 00 00  .*....PROG......
+00000010: 00 00 00 00 00 00 01 00 ff ff ff ff ff ff ff ff  ................
+00000020: 75 02 2a 01 09 08 aa 41 42 43 44 45 46 47 48 0a  u.*....ABCDEFGH.
+00000030: 16 02 2a ff ff 08 b3 00                          ..*.....
 _____
     xxd -g1 $ofile | diff -u $ofile.expected - \
         || die cmtconv_bin2cas $ofile
@@ -92,7 +95,7 @@ test_ptowav
 test_cjrtowav
 test_wavtodump
 test_cmtconv_cas2bin
-#test_cmtconv_bin2cas
+test_cmtconv_bin2cas
 
 echo ====================================
 echo SUCCESS?

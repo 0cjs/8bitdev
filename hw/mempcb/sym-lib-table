@@ -1,3 +1,4 @@
 (sym_lib_table
   (lib (name mempcb)(type Legacy)(uri ${KIPRJMOD}/mempcb.lib)(options "")(descr ""))
+  (lib (name mempcb-rescue)(type Legacy)(uri ${KIPRJMOD}/mempcb-rescue.lib)(options "")(descr ""))
 )

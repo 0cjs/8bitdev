@@ -21,7 +21,8 @@
 
 '''
 
-from enum import IntEnum
+from    enum import IntEnum
+from    cmtconv.logging  import *
 
 ####################################################################
 #   Tape Blocks
@@ -69,6 +70,7 @@ class Block(object):
             ``datalen`` more bytes plus the checksum byte from the source
             and call `setdata()` with those.
         '''
+        v3('reading header: {}', headerbytes)
         if len(headerbytes) != cls.headerlen:
             raise ValueError('Bad length: expected={} actual={}'
                 .format(cls.headerlen, len(headerbytes)))
@@ -269,6 +271,7 @@ class FileHeader(Block):
             If `checksum` is `False`, `blockbytes` must not have a trailing
             checksum byte (i.e., length `blocklen` - 1).
         '''
+        v3('reading file header: {}', blockbytes)
         if not checksum:
             blockbytes += b'\xEE'   # dummy checksum that will be ignored
         if len(blockbytes) != cls.blocklen:

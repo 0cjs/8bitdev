@@ -907,4 +907,6 @@ Wire Wire Line
 	9700 5750 9300 5750
 Connection ~ 9700 5750
 Connection ~ 9300 5750
+Text Label 4750 1700 0    50   ~ 0
+A7
 $EndSCHEMATC

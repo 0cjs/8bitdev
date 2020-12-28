@@ -41,7 +41,7 @@ U 1 1 5FEAD713
 P 5500 2100
 F 0 "U3" H 5500 3267 50  0000 C CNN
 F 1 "JEDEC_DIP32_RAM" H 5500 3176 50  0000 C CNN
-F 2 "Package_DIP:DIP-32_W15.24mm_Socket_LongPads" H 5500 2100 50  0001 C CNN
+F 2 "mempcb:DIP-32_W15.24mm_ZIF_Socket_LongPads" H 5500 2100 50  0001 C CNN
 F 3 "http://www.futurlec.com/Datasheet/Memory/628128.pdf" H 5500 2100 50  0001 C CNN
 	1    5500 2100
 	1    0    0    -1  

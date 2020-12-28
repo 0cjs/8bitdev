@@ -810,7 +810,7 @@
   )
 
   (module Connector_PinHeader_2.54mm:PinHeader_1x39_P2.54mm_Vertical (layer Front) (tedit 59FED5CC) (tstamp 5FE8972A)
-    (at 178.425 148.298 270)
+    (at 179.06 148.298 270)
     (descr "Through hole straight pin header, 1x39, 2.54mm pitch, single row")
     (tags "Through hole pin header THT 1x39 2.54mm single row")
     (path /5FE89A90)
@@ -1335,8 +1335,8 @@
     )
   )
 
-  (module Connector_PinHeader_2.54mm:PinHeader_1x39_P2.54mm_Vertical (layer Front) (tedit 59FED5CC) (tstamp 5FE8CA04)
-    (at 178.425 145.123 270)
+  (module Connector_PinHeader_2.54mm:PinHeader_1x39_P2.54mm_Vertical (layer Front) (tedit 59FED5CC) (tstamp 5FE9A913)
+    (at 179.06 145.123 270)
     (descr "Through hole straight pin header, 1x39, 2.54mm pitch, single row")
     (tags "Through hole pin header THT 1x39 2.54mm single row")
     (path /5FE96F9C)
@@ -2281,10 +2281,10 @@
     )
   )
 
-  (gr_line (start 80 150) (end 80 50) (layer Edge.Cuts) (width 0.0381) (tstamp 5FE89F81))
-  (gr_line (start 180 150) (end 80 150) (layer Edge.Cuts) (width 0.0381))
-  (gr_line (start 180 50) (end 180 150) (layer Edge.Cuts) (width 0.0381) (tstamp 5FEA59E2))
-  (gr_line (start 80 50) (end 180 50) (layer Edge.Cuts) (width 0.0381))
+  (gr_line (start 80.762 150) (end 80.762 50) (layer Edge.Cuts) (width 0.0381) (tstamp 5FE9A9E0))
+  (gr_line (start 180.762 150) (end 80.762 150) (layer Edge.Cuts) (width 0.0381))
+  (gr_line (start 180.762 50) (end 180.762 150) (layer Edge.Cuts) (width 0.0381) (tstamp 5FEA59E2))
+  (gr_line (start 80.762 50) (end 180.762 50) (layer Edge.Cuts) (width 0.0381))
 
   (segment (start 132.07 59.398) (end 144.77 59.398) (width 0.254) (layer Back) (net 1))
   (segment (start 132.07 87.338) (end 144.77 87.338) (width 0.254) (layer Back) (net 8))

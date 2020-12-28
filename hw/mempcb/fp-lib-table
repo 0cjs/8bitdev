@@ -1,0 +1,3 @@
+(fp_lib_table
+  (lib (name mempcb)(type KiCad)(uri ${KIPRJMOD}/mempcb.pretty)(options "")(descr ""))
+)

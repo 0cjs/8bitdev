@@ -494,14 +494,14 @@ A10
 Text Label 6050 1300 0    50   ~ 0
 VCC
 $Comp
-L mempcb-rescue:Conn_01x04-Connector_Generic GND/VCC1
+L mempcb-rescue:Conn_01x04-Connector_Generic GND1
 U 1 1 5FED18C8
-P 9300 4850
-F 0 "GND/VCC1" V 9500 5000 50  0000 R CNN
-F 1 "0.1\" 1x4" V 9400 4950 50  0000 R CNN
-F 2 "Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical" H 9300 4850 50  0001 C CNN
-F 3 "~" H 9300 4850 50  0001 C CNN
-	1    9300 4850
+P 9800 4850
+F 0 "GND1" V 10000 4900 50  0000 R CNN
+F 1 "0.1\" 1x4" V 9900 4950 50  0000 R CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical" H 9800 4850 50  0001 C CNN
+F 3 "~" H 9800 4850 50  0001 C CNN
+	1    9800 4850
 	0    -1   -1   0   
 $EndComp
 $Comp
@@ -575,69 +575,66 @@ Wire Wire Line
 $Comp
 L mempcb-rescue:Conn_01x04-Connector_Generic PULLDOWN1
 U 1 1 6042687B
-P 9800 4850
-F 0 "PULLDOWN1" V 10000 5000 50  0000 R CNN
-F 1 "0.1\" 1x4" V 9900 4950 50  0000 R CNN
-F 2 "Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical" H 9800 4850 50  0001 C CNN
-F 3 "~" H 9800 4850 50  0001 C CNN
-	1    9800 4850
+P 9300 4850
+F 0 "PULLDOWN1" V 9500 5000 50  0000 R CNN
+F 1 "0.1\" 1x4" V 9400 4950 50  0000 R CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical" H 9300 4850 50  0001 C CNN
+F 3 "~" H 9300 4850 50  0001 C CNN
+	1    9300 4850
 	0    -1   -1   0   
 $EndComp
 $Comp
 L mempcb-rescue:R-Device R5
 U 1 1 60426881
-P 9700 5300
-F 0 "R5" V 9700 5300 50  0000 C CNN
-F 1 "R" V 9700 5300 50  0001 C CNN
-F 2 "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal" V 9630 5300 50  0001 C CNN
-F 3 "~" H 9700 5300 50  0001 C CNN
-	1    9700 5300
+P 9200 5300
+F 0 "R5" V 9200 5300 50  0000 C CNN
+F 1 "R" V 9200 5300 50  0001 C CNN
+F 2 "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal" V 9130 5300 50  0001 C CNN
+F 3 "~" H 9200 5300 50  0001 C CNN
+	1    9200 5300
 	1    0    0    -1  
 $EndComp
 Wire Wire Line
-	9700 5150 9700 5050
+	9200 5150 9200 5050
 $Comp
 L mempcb-rescue:R-Device R6
 U 1 1 60426889
-P 9800 5300
-F 0 "R6" V 9800 5300 50  0000 C CNN
-F 1 "R" V 9800 5300 50  0001 C CNN
-F 2 "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal" V 9730 5300 50  0001 C CNN
-F 3 "~" H 9800 5300 50  0001 C CNN
-	1    9800 5300
+P 9300 5300
+F 0 "R6" V 9300 5300 50  0000 C CNN
+F 1 "R" V 9300 5300 50  0001 C CNN
+F 2 "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal" V 9230 5300 50  0001 C CNN
+F 3 "~" H 9300 5300 50  0001 C CNN
+	1    9300 5300
 	1    0    0    -1  
 $EndComp
 Wire Wire Line
-	9800 5150 9800 5050
+	9300 5150 9300 5050
 $Comp
 L mempcb-rescue:R-Device R7
 U 1 1 60426891
-P 9900 5300
-F 0 "R7" V 9900 5300 50  0000 C CNN
-F 1 "R" V 9900 5300 50  0001 C CNN
-F 2 "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal" V 9830 5300 50  0001 C CNN
-F 3 "~" H 9900 5300 50  0001 C CNN
-	1    9900 5300
+P 9400 5300
+F 0 "R7" V 9400 5300 50  0000 C CNN
+F 1 "R" V 9400 5300 50  0001 C CNN
+F 2 "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal" V 9330 5300 50  0001 C CNN
+F 3 "~" H 9400 5300 50  0001 C CNN
+	1    9400 5300
 	1    0    0    -1  
 $EndComp
 Wire Wire Line
-	9900 5150 9900 5050
+	9400 5150 9400 5050
 $Comp
 L mempcb-rescue:R-Device R8
 U 1 1 60426899
-P 10000 5300
-F 0 "R8" V 10000 5300 50  0000 C CNN
-F 1 "R" V 10000 5300 50  0001 C CNN
-F 2 "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal" V 9930 5300 50  0001 C CNN
-F 3 "~" H 10000 5300 50  0001 C CNN
-	1    10000 5300
+P 9500 5300
+F 0 "R8" V 9500 5300 50  0000 C CNN
+F 1 "R" V 9500 5300 50  0001 C CNN
+F 2 "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal" V 9430 5300 50  0001 C CNN
+F 3 "~" H 9500 5300 50  0001 C CNN
+	1    9500 5300
 	1    0    0    -1  
 $EndComp
 Wire Wire Line
-	10000 5150 10000 5050
-Connection ~ 9000 5550
-Text Label 9000 5550 0    50   ~ 0
-VCC
+	9500 5150 9500 5050
 $Comp
 L mempcb-rescue:R-Device R1
 U 1 1 603CD90C
@@ -652,32 +649,28 @@ $EndComp
 $Comp
 L mempcb-rescue:Conn_01x02-Connector_Generic PWR1
 U 1 1 604FEFCF
-P 7900 4850
-F 0 "PWR1" H 8200 4850 50  0000 R CNN
-F 1 "JST-XH" H 8250 4750 50  0000 R CNN
-F 2 "Connector_JST:JST_XH_B2B-XH-A_1x02_P2.50mm_Vertical" H 7900 4850 50  0001 C CNN
-F 3 "~" H 7900 4850 50  0001 C CNN
-	1    7900 4850
+P 7400 4850
+F 0 "PWR1" H 7700 4850 50  0000 R CNN
+F 1 "JST-XH" H 7750 4750 50  0000 R CNN
+F 2 "Connector_JST:JST_XH_B2B-XH-A_1x02_P2.50mm_Vertical" H 7400 4850 50  0001 C CNN
+F 3 "~" H 7400 4850 50  0001 C CNN
+	1    7400 4850
 	0    -1   -1   0   
 $EndComp
-Text Label 7900 5300 1    50   ~ 0
-VCC
-Text Label 8000 5300 1    50   ~ 0
-GND
 $Comp
 L mempcb-rescue:Conn_01x02-Connector_Generic PWR2
 U 1 1 6051B38D
-P 8200 4850
-F 0 "PWR2" H 8500 4850 50  0000 R CNN
-F 1 "JST-XH" H 8550 4750 50  0000 R CNN
-F 2 "Connector_JST:JST_XH_B2B-XH-A_1x02_P2.50mm_Vertical" H 8200 4850 50  0001 C CNN
-F 3 "~" H 8200 4850 50  0001 C CNN
-	1    8200 4850
+P 7700 4850
+F 0 "PWR2" H 8000 4850 50  0000 R CNN
+F 1 "JST-XH" H 8050 4750 50  0000 R CNN
+F 2 "Connector_JST:JST_XH_B2B-XH-A_1x02_P2.50mm_Vertical" H 7700 4850 50  0001 C CNN
+F 3 "~" H 7700 4850 50  0001 C CNN
+	1    7700 4850
 	0    -1   -1   0   
 $EndComp
-Text Label 8200 5300 1    50   ~ 0
+Text Label 7700 5300 1    50   ~ 0
 VCC
-Text Label 8300 5300 1    50   ~ 0
+Text Label 7800 5300 1    50   ~ 0
 GND
 Text Label 2100 2600 0    50   ~ 0
 GND
@@ -688,59 +681,49 @@ BUS_VCC
 $Comp
 L mempcb-rescue:Conn_01x02-Connector_Generic BUSPWR_EN1
 U 1 1 60556D43
-P 7350 4850
-F 0 "BUSPWR_EN1" H 7850 4850 50  0000 R CNN
-F 1 "0.1\" 1x2" H 7750 4750 50  0000 R CNN
-F 2 "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical" H 7350 4850 50  0001 C CNN
-F 3 "~" H 7350 4850 50  0001 C CNN
-	1    7350 4850
+P 8100 4850
+F 0 "BUSPWR_EN1" H 8600 4850 50  0000 R CNN
+F 1 "0.1\" 1x2" H 8500 4750 50  0000 R CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical" H 8100 4850 50  0001 C CNN
+F 3 "~" H 8100 4850 50  0001 C CNN
+	1    8100 4850
 	0    -1   -1   0   
 $EndComp
-Text Label 7350 5400 1    50   ~ 0
+Text Label 8100 5400 1    50   ~ 0
 BUS_VCC
 Wire Wire Line
-	7350 5050 7350 5400
-Text Label 7450 5400 1    50   ~ 0
+	8100 5050 8100 5400
+Text Label 8200 5400 1    50   ~ 0
 VCC
 Wire Wire Line
-	7450 5550 7900 5550
-Wire Wire Line
-	7450 5050 7450 5550
-Connection ~ 8700 5550
-Wire Wire Line
-	7900 5050 7900 5550
-Connection ~ 7900 5550
-Wire Wire Line
-	7900 5550 8200 5550
+	8200 5550 8400 5550
 Wire Wire Line
 	8200 5050 8200 5550
-Connection ~ 8200 5550
 Wire Wire Line
-	8200 5550 8700 5550
+	7400 5050 7400 5550
 Wire Wire Line
-	8000 5750 8300 5750
+	7400 5550 7700 5550
 Wire Wire Line
-	8000 5050 8000 5750
+	7700 5050 7700 5550
+Connection ~ 7700 5550
 Wire Wire Line
-	8300 5050 8300 5750
-Connection ~ 8300 5750
+	7700 5550 8200 5550
 Wire Wire Line
-	10000 5450 10000 5750
+	7500 5750 7800 5750
 Wire Wire Line
-	9900 5450 9900 5750
-Connection ~ 9900 5750
+	7500 5050 7500 5750
 Wire Wire Line
-	9900 5750 10000 5750
+	7800 5050 7800 5750
+Connection ~ 7800 5750
 Wire Wire Line
-	9800 5450 9800 5750
-Connection ~ 9800 5750
+	9500 5450 9500 5750
 Wire Wire Line
-	9800 5750 9900 5750
+	9400 5450 9400 5750
 Wire Wire Line
-	9700 5450 9700 5750
+	9300 5450 9300 5750
 Wire Wire Line
-	9700 5750 9800 5750
-Text Label 9000 5750 0    50   ~ 0
+	9200 5450 9200 5750
+Text Label 9500 5750 0    50   ~ 0
 GND
 Wire Wire Line
 	5350 5000 4950 5000
@@ -887,27 +870,63 @@ F 3 "~" H 5500 6650 50  0001 C CNN
 	0    1    1    0   
 $EndComp
 Wire Wire Line
-	8300 5750 9200 5750
+	9700 5050 9700 5750
 Wire Wire Line
-	9500 5550 9500 5050
-Wire Wire Line
-	9000 5550 9400 5550
-Wire Wire Line
-	9400 5050 9400 5550
-Connection ~ 9400 5550
-Wire Wire Line
-	9400 5550 9500 5550
-Wire Wire Line
-	9200 5050 9200 5750
-Connection ~ 9200 5750
-Wire Wire Line
-	9200 5750 9300 5750
-Wire Wire Line
-	9300 5050 9300 5750
-Wire Wire Line
-	9700 5750 9300 5750
-Connection ~ 9700 5750
-Connection ~ 9300 5750
+	9800 5050 9800 5750
 Text Label 4750 1700 0    50   ~ 0
 A7
+Wire Wire Line
+	9200 5750 9300 5750
+Connection ~ 9300 5750
+Wire Wire Line
+	9300 5750 9400 5750
+Connection ~ 9400 5750
+Wire Wire Line
+	9400 5750 9500 5750
+Wire Wire Line
+	10000 5050 10000 5750
+Wire Wire Line
+	10000 5750 9900 5750
+Connection ~ 9500 5750
+Connection ~ 9700 5750
+Wire Wire Line
+	9700 5750 9500 5750
+Connection ~ 9800 5750
+Wire Wire Line
+	9800 5750 9700 5750
+Wire Wire Line
+	9900 5050 9900 5750
+Connection ~ 9900 5750
+Wire Wire Line
+	9900 5750 9800 5750
+Connection ~ 8200 5550
+$Comp
+L mempcb-rescue:Conn_01x02-Connector_Generic VCC1
+U 1 1 5FFB1DFF
+P 8400 4850
+F 0 "VCC1" V 8600 4900 50  0000 R CNN
+F 1 "0.1\" 1x2" V 8500 4950 50  0000 R CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical" H 8400 4850 50  0001 C CNN
+F 3 "" H 8400 4850 50  0001 C CNN
+	1    8400 4850
+	0    -1   -1   0   
+$EndComp
+Wire Wire Line
+	8400 5050 8400 5550
+Connection ~ 8400 5550
+Wire Wire Line
+	8400 5550 8500 5550
+Wire Wire Line
+	8500 5050 8500 5550
+Connection ~ 8500 5550
+Wire Wire Line
+	8500 5550 8700 5550
+Connection ~ 8700 5550
+Text Label 7500 5300 1    50   ~ 0
+GND
+Text Label 7400 5300 1    50   ~ 0
+VCC
+Wire Wire Line
+	7800 5750 9200 5750
+Connection ~ 9200 5750
 $EndSCHEMATC

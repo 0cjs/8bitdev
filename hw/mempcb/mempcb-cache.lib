@@ -1,11 +1,29 @@
 EESchema-LIBRARY Version 2.4
 #encoding utf-8
 #
-# Connector_Generic_Conn_01x02
+# mempcb-rescue_C-Device
 #
-DEF Connector_Generic_Conn_01x02 J 0 40 Y N 1 F N
+DEF mempcb-rescue_C-Device C 0 10 N Y 1 F N
+F0 "C" 25 100 50 H V L CNN
+F1 "mempcb-rescue_C-Device" 25 -100 50 H V L CNN
+F2 "" 38 -150 50 H I C CNN
+F3 "" 0 0 50 H I C CNN
+$FPLIST
+ C_*
+$ENDFPLIST
+DRAW
+P 2 0 1 20 -80 -30 80 -30 N
+P 2 0 1 20 -80 30 80 30 N
+X ~ 1 0 150 110 D 50 50 1 1 P
+X ~ 2 0 -150 110 U 50 50 1 1 P
+ENDDRAW
+ENDDEF
+#
+# mempcb-rescue_Conn_01x02-Connector_Generic
+#
+DEF mempcb-rescue_Conn_01x02-Connector_Generic J 0 40 Y N 1 F N
 F0 "J" 0 100 50 H V C CNN
-F1 "Connector_Generic_Conn_01x02" 0 -200 50 H V C CNN
+F1 "mempcb-rescue_Conn_01x02-Connector_Generic" 0 -200 50 H V C CNN
 F2 "" 0 0 50 H I C CNN
 F3 "" 0 0 50 H I C CNN
 $FPLIST
@@ -20,11 +38,11 @@ X Pin_2 2 -200 -100 150 R 50 50 1 1 P
 ENDDRAW
 ENDDEF
 #
-# Connector_Generic_Conn_01x04
+# mempcb-rescue_Conn_01x04-Connector_Generic
 #
-DEF Connector_Generic_Conn_01x04 J 0 40 Y N 1 F N
+DEF mempcb-rescue_Conn_01x04-Connector_Generic J 0 40 Y N 1 F N
 F0 "J" 0 200 50 H V C CNN
-F1 "Connector_Generic_Conn_01x04" 0 -300 50 H V C CNN
+F1 "mempcb-rescue_Conn_01x04-Connector_Generic" 0 -300 50 H V C CNN
 F2 "" 0 0 50 H I C CNN
 F3 "" 0 0 50 H I C CNN
 $FPLIST
@@ -43,11 +61,11 @@ X Pin_4 4 -200 -200 150 R 50 50 1 1 P
 ENDDRAW
 ENDDEF
 #
-# Connector_Generic_Conn_01x08
+# mempcb-rescue_Conn_01x08-Connector_Generic
 #
-DEF Connector_Generic_Conn_01x08 J 0 40 Y N 1 F N
+DEF mempcb-rescue_Conn_01x08-Connector_Generic J 0 40 Y N 1 F N
 F0 "J" 0 400 50 H V C CNN
-F1 "Connector_Generic_Conn_01x08" 0 -500 50 H V C CNN
+F1 "mempcb-rescue_Conn_01x08-Connector_Generic" 0 -500 50 H V C CNN
 F2 "" 0 0 50 H I C CNN
 F3 "" 0 0 50 H I C CNN
 $FPLIST
@@ -74,11 +92,11 @@ X Pin_8 8 -200 -400 150 R 50 50 1 1 P
 ENDDRAW
 ENDDEF
 #
-# Connector_Generic_Conn_01x16
+# mempcb-rescue_Conn_01x16-Connector_Generic
 #
-DEF Connector_Generic_Conn_01x16 J 0 40 Y N 1 F N
+DEF mempcb-rescue_Conn_01x16-Connector_Generic J 0 40 Y N 1 F N
 F0 "J" 0 800 50 H V C CNN
-F1 "Connector_Generic_Conn_01x16" 0 -900 50 H V C CNN
+F1 "mempcb-rescue_Conn_01x16-Connector_Generic" 0 -900 50 H V C CNN
 F2 "" 0 0 50 H I C CNN
 F3 "" 0 0 50 H I C CNN
 $FPLIST
@@ -121,11 +139,11 @@ X Pin_9 9 -200 -100 150 R 50 50 1 1 P
 ENDDRAW
 ENDDEF
 #
-# Connector_Generic_Conn_01x25
+# mempcb-rescue_Conn_01x25-Connector_Generic
 #
-DEF Connector_Generic_Conn_01x25 J 0 40 Y N 1 F N
+DEF mempcb-rescue_Conn_01x25-Connector_Generic J 0 40 Y N 1 F N
 F0 "J" 0 1300 50 H V C CNN
-F1 "Connector_Generic_Conn_01x25" 0 -1300 50 H V C CNN
+F1 "mempcb-rescue_Conn_01x25-Connector_Generic" 0 -1300 50 H V C CNN
 F2 "" 0 0 50 H I C CNN
 F3 "" 0 0 50 H I C CNN
 $FPLIST
@@ -186,11 +204,11 @@ X Pin_9 9 -200 400 150 R 50 50 1 1 P
 ENDDRAW
 ENDDEF
 #
-# Connector_Generic_Conn_02x25_Odd_Even
+# mempcb-rescue_Conn_02x25_Odd_Even-Connector_Generic
 #
-DEF Connector_Generic_Conn_02x25_Odd_Even J 0 40 Y N 1 F N
+DEF mempcb-rescue_Conn_02x25_Odd_Even-Connector_Generic J 0 40 Y N 1 F N
 F0 "J" 50 1300 50 H V C CNN
-F1 "Connector_Generic_Conn_02x25_Odd_Even" 50 -1300 50 H V C CNN
+F1 "mempcb-rescue_Conn_02x25_Odd_Even-Connector_Generic" 50 -1300 50 H V C CNN
 F2 "" 0 0 50 H I C CNN
 F3 "" 0 0 50 H I C CNN
 $FPLIST
@@ -301,29 +319,11 @@ X Pin_9 9 -200 800 150 R 50 50 1 1 P
 ENDDRAW
 ENDDEF
 #
-# Device_C
+# mempcb-rescue_R-Device
 #
-DEF Device_C C 0 10 N Y 1 F N
-F0 "C" 25 100 50 H V L CNN
-F1 "Device_C" 25 -100 50 H V L CNN
-F2 "" 38 -150 50 H I C CNN
-F3 "" 0 0 50 H I C CNN
-$FPLIST
- C_*
-$ENDFPLIST
-DRAW
-P 2 0 1 20 -80 -30 80 -30 N
-P 2 0 1 20 -80 30 80 30 N
-X ~ 1 0 150 110 D 50 50 1 1 P
-X ~ 2 0 -150 110 U 50 50 1 1 P
-ENDDRAW
-ENDDEF
-#
-# Device_R
-#
-DEF Device_R R 0 0 N Y 1 F N
+DEF mempcb-rescue_R-Device R 0 0 N Y 1 F N
 F0 "R" 80 0 50 V V C CNN
-F1 "Device_R" 0 0 50 V V C CNN
+F1 "mempcb-rescue_R-Device" 0 0 50 V V C CNN
 F2 "" -70 0 50 V I C CNN
 F3 "" 0 0 50 H I C CNN
 $FPLIST

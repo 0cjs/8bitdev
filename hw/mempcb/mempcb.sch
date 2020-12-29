@@ -1,6 +1,5 @@
 EESchema Schematic File Version 4
-LIBS:mempcb-cache
-EELAYER 26 0
+EELAYER 30 0
 EELAYER END
 $Descr A4 11693 8268
 encoding utf-8
@@ -48,7 +47,7 @@ F 3 "http://www.futurlec.com/Datasheet/Memory/628128.pdf" H 5500 2100 50  0001 C
 	1    0    0    -1  
 $EndComp
 $Comp
-L mempcb-rescue:Conn_02x25_Odd_Even-Connector_Generic J2
+L Connector_Generic:Conn_02x25_Odd_Even J2
 U 1 1 5FEB0496
 P 8850 2750
 F 0 "J2" H 8900 4200 50  0000 C CNN
@@ -59,7 +58,7 @@ F 3 "~" H 8850 2750 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L mempcb-rescue:Conn_01x25-Connector_Generic W2_1
+L Connector_Generic:Conn_01x25 W2_1
 U 1 1 5FEB2EF1
 P 8250 2750
 F 0 "W2_1" H 8250 4200 50  0000 C CNN
@@ -70,7 +69,7 @@ F 3 "~" H 8250 2750 50  0001 C CNN
 	-1   0    0    -1  
 $EndComp
 $Comp
-L mempcb-rescue:Conn_01x25-Connector_Generic W2_2
+L Connector_Generic:Conn_01x25 W2_2
 U 1 1 5FEC1F3E
 P 9550 2750
 F 0 "W2_2" H 9450 4200 50  0000 L CNN
@@ -81,7 +80,7 @@ F 3 "~" H 9550 2750 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L mempcb-rescue:Conn_01x16-Connector_Generic W3_1
+L Connector_Generic:Conn_01x16 W3_1
 U 1 1 5FECEA90
 P 4550 2000
 F 0 "W3_1" H 4550 2950 50  0000 C CNN
@@ -92,7 +91,7 @@ F 3 "~" H 4550 2000 50  0001 C CNN
 	-1   0    0    -1  
 $EndComp
 $Comp
-L mempcb-rescue:Conn_01x08-Connector_Generic W4_2
+L Connector_Generic:Conn_01x08 W4_2
 U 1 1 5FECFD2E
 P 6500 4150
 F 0 "W4_2" H 6400 4700 50  0000 L CNN
@@ -103,7 +102,7 @@ F 3 "~" H 6500 4150 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L mempcb-rescue:Conn_01x08-Connector_Generic W4_1
+L Connector_Generic:Conn_01x08 W4_1
 U 1 1 5FED086C
 P 4500 4150
 F 0 "W4_1" H 4418 4667 50  0000 C CNN
@@ -178,7 +177,7 @@ Wire Wire Line
 Wire Wire Line
 	6250 1300 6200 1300
 $Comp
-L mempcb-rescue:Conn_01x16-Connector_Generic W3_2
+L Connector_Generic:Conn_01x16 W3_2
 U 1 1 5FECF06C
 P 6450 2000
 F 0 "W3_2" H 6350 2950 50  0000 L CNN
@@ -494,7 +493,7 @@ A10
 Text Label 6050 1300 0    50   ~ 0
 VCC
 $Comp
-L mempcb-rescue:Conn_01x04-Connector_Generic GND1
+L Connector_Generic:Conn_01x04 GND1
 U 1 1 5FED18C8
 P 9800 4850
 F 0 "GND1" V 10000 4900 50  0000 R CNN
@@ -505,7 +504,7 @@ F 3 "~" H 9800 4850 50  0001 C CNN
 	0    -1   -1   0   
 $EndComp
 $Comp
-L mempcb-rescue:Conn_01x04-Connector_Generic PULLUP1
+L Connector_Generic:Conn_01x04 PULLUP1
 U 1 1 6032F1DA
 P 8800 4850
 F 0 "PULLUP1" V 9000 4950 50  0000 R CNN
@@ -520,7 +519,7 @@ Wire Wire Line
 Wire Wire Line
 	8700 5150 8700 5050
 $Comp
-L mempcb-rescue:R-Device R2
+L Device:R R2
 U 1 1 603E796E
 P 8800 5300
 F 0 "R2" V 8800 5300 50  0000 C CNN
@@ -535,7 +534,7 @@ Wire Wire Line
 Wire Wire Line
 	8800 5150 8800 5050
 $Comp
-L mempcb-rescue:R-Device R3
+L Device:R R3
 U 1 1 60400026
 P 8900 5300
 F 0 "R3" V 8900 5300 50  0000 C CNN
@@ -550,7 +549,7 @@ Wire Wire Line
 Wire Wire Line
 	8900 5150 8900 5050
 $Comp
-L mempcb-rescue:R-Device R4
+L Device:R R4
 U 1 1 6040C3DC
 P 9000 5300
 F 0 "R4" V 9000 5300 50  0000 C CNN
@@ -573,7 +572,7 @@ Connection ~ 8900 5550
 Wire Wire Line
 	8900 5550 9000 5550
 $Comp
-L mempcb-rescue:Conn_01x04-Connector_Generic PULLDOWN1
+L Connector_Generic:Conn_01x04 PULLDOWN1
 U 1 1 6042687B
 P 9300 4850
 F 0 "PULLDOWN1" V 9500 5000 50  0000 R CNN
@@ -584,7 +583,7 @@ F 3 "~" H 9300 4850 50  0001 C CNN
 	0    -1   -1   0   
 $EndComp
 $Comp
-L mempcb-rescue:R-Device R5
+L Device:R R5
 U 1 1 60426881
 P 9200 5300
 F 0 "R5" V 9200 5300 50  0000 C CNN
@@ -597,7 +596,7 @@ $EndComp
 Wire Wire Line
 	9200 5150 9200 5050
 $Comp
-L mempcb-rescue:R-Device R6
+L Device:R R6
 U 1 1 60426889
 P 9300 5300
 F 0 "R6" V 9300 5300 50  0000 C CNN
@@ -610,7 +609,7 @@ $EndComp
 Wire Wire Line
 	9300 5150 9300 5050
 $Comp
-L mempcb-rescue:R-Device R7
+L Device:R R7
 U 1 1 60426891
 P 9400 5300
 F 0 "R7" V 9400 5300 50  0000 C CNN
@@ -623,7 +622,7 @@ $EndComp
 Wire Wire Line
 	9400 5150 9400 5050
 $Comp
-L mempcb-rescue:R-Device R8
+L Device:R R8
 U 1 1 60426899
 P 9500 5300
 F 0 "R8" V 9500 5300 50  0000 C CNN
@@ -636,7 +635,7 @@ $EndComp
 Wire Wire Line
 	9500 5150 9500 5050
 $Comp
-L mempcb-rescue:R-Device R1
+L Device:R R1
 U 1 1 603CD90C
 P 8700 5300
 F 0 "R1" V 8700 5300 50  0000 C CNN
@@ -647,7 +646,7 @@ F 3 "~" H 8700 5300 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L mempcb-rescue:Conn_01x02-Connector_Generic PWR1
+L Connector_Generic:Conn_01x02 PWR1
 U 1 1 604FEFCF
 P 7400 4850
 F 0 "PWR1" H 7700 4850 50  0000 R CNN
@@ -658,7 +657,7 @@ F 3 "~" H 7400 4850 50  0001 C CNN
 	0    -1   -1   0   
 $EndComp
 $Comp
-L mempcb-rescue:Conn_01x02-Connector_Generic PWR2
+L Connector_Generic:Conn_01x02 PWR2
 U 1 1 6051B38D
 P 7700 4850
 F 0 "PWR2" H 8000 4850 50  0000 R CNN
@@ -679,7 +678,7 @@ Wire Wire Line
 Text Label 2100 2700 0    50   ~ 0
 BUS_VCC
 $Comp
-L mempcb-rescue:Conn_01x02-Connector_Generic BUSPWR_EN1
+L Connector_Generic:Conn_01x02 BUSPWR_EN1
 U 1 1 60556D43
 P 8100 4850
 F 0 "BUSPWR_EN1" H 8600 4850 50  0000 R CNN
@@ -740,7 +739,7 @@ Connection ~ 6050 3850
 Wire Wire Line
 	6050 3850 6300 3850
 $Comp
-L mempcb-rescue:C-Device C2
+L Device:C C2
 U 1 1 5FF0AFCA
 P 5500 5000
 F 0 "C2" V 5248 5000 50  0000 C CNN
@@ -751,7 +750,7 @@ F 3 "~" H 5500 5000 50  0001 C CNN
 	0    1    1    0   
 $EndComp
 $Comp
-L mempcb-rescue:C-Device C1
+L Device:C C1
 U 1 1 5FF2C1A0
 P 5500 3200
 F 0 "C1" V 5248 3200 50  0000 C CNN
@@ -776,7 +775,7 @@ Connection ~ 6200 1300
 Wire Wire Line
 	6200 1300 6000 1300
 $Comp
-L mempcb-rescue:Conn_01x08-Connector_Generic W5_2
+L Connector_Generic:Conn_01x08 W5_2
 U 1 1 5FF51E6E
 P 6500 5800
 F 0 "W5_2" H 6400 6350 50  0000 L CNN
@@ -787,7 +786,7 @@ F 3 "~" H 6500 5800 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L mempcb-rescue:Conn_01x08-Connector_Generic W5_1
+L Connector_Generic:Conn_01x08 W5_1
 U 1 1 5FF51E74
 P 4500 5800
 F 0 "W5_1" H 4418 6317 50  0000 C CNN
@@ -859,7 +858,7 @@ Connection ~ 6050 5500
 Wire Wire Line
 	6050 5500 6300 5500
 $Comp
-L mempcb-rescue:C-Device C3
+L Device:C C3
 U 1 1 5FF51E9A
 P 5500 6650
 F 0 "C3" V 5248 6650 50  0000 C CNN
@@ -901,7 +900,7 @@ Wire Wire Line
 	9900 5750 9800 5750
 Connection ~ 8200 5550
 $Comp
-L mempcb-rescue:Conn_01x02-Connector_Generic VCC1
+L Connector_Generic:Conn_01x02 VCC1
 U 1 1 5FFB1DFF
 P 8400 4850
 F 0 "VCC1" V 8600 4900 50  0000 R CNN

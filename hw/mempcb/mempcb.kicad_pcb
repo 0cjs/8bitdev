@@ -11,7 +11,10 @@
 
   (page A4)
   (title_block
-    (rev 1)
+    (title "RC6502/50-pin Reconfigurable Memory Board")
+    (date 2020-12-29)
+    (rev 0.1-dev)
+    (comment 1 "1-row .1\" headers are for wire wrap.")
   )
 
   (layers

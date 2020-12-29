@@ -928,4 +928,40 @@ VCC
 Wire Wire Line
 	7800 5750 9200 5750
 Connection ~ 9200 5750
+Text Label 2100 1400 0    50   ~ 0
+A11
+Text Label 2100 1300 0    50   ~ 0
+A12
+Text Label 2100 1200 0    50   ~ 0
+A13
+Text Label 2100 1100 0    50   ~ 0
+A14
+Text Label 2100 1000 0    50   ~ 0
+A15
+Text Label 2100 2800 0    50   ~ 0
+PHI2OUT
+Text Label 2100 2900 0    50   ~ 0
+~RESET
+Text Label 2100 3000 0    50   ~ 0
+PHI0IN
+Text Label 2100 3100 0    50   ~ 0
+~IRQ
+Text Label 2100 3200 0    50   ~ 0
+PHI1OUT
+Text Label 2100 3300 0    50   ~ 0
+R_~W
+Text Label 2100 3400 0    50   ~ 0
+RDY
+Text Label 2100 3500 0    50   ~ 0
+SYNC
+Text Label 2100 4400 0    50   ~ 0
+TX
+Text Label 2100 4500 0    50   ~ 0
+RX
+Text Label 2100 4600 0    50   ~ 0
+~NMI
+Text Label 2100 4700 0    50   ~ 0
+EX1
+Text Label 2100 4800 0    50   ~ 0
+EX2
 $EndSCHEMATC

@@ -57,6 +57,31 @@ connections to be made are:
   these expansion bus connectors.
 
 
+TODO
+----
+
+- Fix page size to be A4 instead of US-Letter?
+
+- ssjjnn mentioned that the grid seems to be offset for him. Go back and
+  figure out where we really want the grid origin to be. (Currently upper
+  left of page?
+
+- The two component-side traces to bring power across to the left logic
+  socket and the memory socket break up the ground plane on top. There are
+  two possible solutions to this, though both still require vias between
+  top and bottom layer. (But then, so do all the components!)
+  - Replace these with jumper wires. These would be like a third layer on
+    the board, on the opposite side of the ground plane from the solder
+    side of the board. However, jumpers cannot go under sockets because ZIF
+    sockets are flat to the board and even standard sockets may not have
+    enough clear area inside for a jumper, even if soldered after the
+    socket is soldered.
+  - Run a power trace on the component side around the edges of the board
+    (excepting the RC6502 bus edge). All components will reside inside the
+    power trace, and so ground plane will be maintained.
+
+
+
 <!-------------------------------------------------------------------->
 [RC6502 bus]: https://github.com/tebl/RC6502-Apple-1-Replica/blob/master/Bus.md
 

@@ -57,31 +57,34 @@ connections to be made are:
   these expansion bus connectors.
 
 
+Design and Layout Notes
+-----------------------
+
+- Though this is a two-layer board, all traces are on the back (solder)
+  side, allowing the entire top (component) side to be a pseudo ground
+  plane. (It's interrupted by through-holes for components and headers, but
+  this should cause minimal disruption of return paths.
+- It's not clear if wire-wrap will also be able to take advantage of this
+  pseudo ground plane, but at least it will be no worse than wire wrap
+  would normally be.
+- The "power strip" around the edges of the board (on the back side) allows
+  Vcc access from pretty much any point on the board without jumper wires
+  or vias and topside traces. This helps preserve the pseudo ground plane.
+
+For more on this, see Wilson Mines' [Avoiding AC-Performance Problems][wm
+ac] and perhaps [Techniques for reliable high-speed digital circuits] on
+forum.6502.org.
+
+
 TODO
 ----
 
-- Fix page size to be A4 instead of US-Letter?
-
-- ssjjnn mentioned that the grid seems to be offset for him. Go back and
-  figure out where we really want the grid origin to be. (Currently upper
-  left of page?
-
-- The two component-side traces to bring power across to the left logic
-  socket and the memory socket break up the ground plane on top. There are
-  two possible solutions to this, though both still require vias between
-  top and bottom layer. (But then, so do all the components!)
-  - Replace these with jumper wires. These would be like a third layer on
-    the board, on the opposite side of the ground plane from the solder
-    side of the board. However, jumpers cannot go under sockets because ZIF
-    sockets are flat to the board and even standard sockets may not have
-    enough clear area inside for a jumper, even if soldered after the
-    socket is soldered.
-  - Run a power trace on the component side around the edges of the board
-    (excepting the RC6502 bus edge). All components will reside inside the
-    power trace, and so ground plane will be maintained.
+- Add prototype area.
+- Pin functions on silk screen.
 
 
 
 <!-------------------------------------------------------------------->
 [RC6502 bus]: https://github.com/tebl/RC6502-Apple-1-Replica/blob/master/Bus.md
-
+[f65 2029]: http://forum.6502.org/viewtopic.php?f=4&t=2029
+[wm ac]: https://wilsonminesco.com/6502primer/construction.html

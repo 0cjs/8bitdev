@@ -504,40 +504,25 @@ F 3 "~" H 9800 4850 50  0001 C CNN
 	0    -1   -1   0   
 $EndComp
 $Comp
-L Connector_Generic:Conn_01x04 PULLUP1
+L Connector_Generic:Conn_01x03 PULLUP1
 U 1 1 6032F1DA
-P 8800 4850
-F 0 "PULLUP1" V 9000 4800 50  0000 C CNN
-F 1 "0.1\" 1x4" V 8900 4950 50  0000 R CNN
-F 2 "Connector_PinHeader_2.54mm:PinHeader_1x04_P2.54mm_Vertical" H 8800 4850 50  0001 C CNN
-F 3 "~" H 8800 4850 50  0001 C CNN
-	1    8800 4850
+P 8900 4850
+F 0 "PULLUP1" V 9100 4850 50  0000 C CNN
+F 1 "0.1\" 1x3" V 9000 4850 50  0000 C CNN
+F 2 "Connector_PinHeader_2.54mm:PinHeader_1x03_P2.54mm_Vertical" H 8900 4850 50  0001 C CNN
+F 3 "~" H 8900 4850 50  0001 C CNN
+	1    8900 4850
 	0    -1   -1   0   
-$EndComp
-Wire Wire Line
-	8700 5550 8700 5450
-Wire Wire Line
-	8700 5150 8700 5050
-$Comp
-L Device:R R1.2
-U 1 1 603E796E
-P 8800 5300
-F 0 "R1.2" V 8800 5300 50  0000 C CNN
-F 1 "R" V 8800 5300 50  0001 C CNN
-F 2 "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal" V 8730 5300 50  0001 C CNN
-F 3 "~" H 8800 5300 50  0001 C CNN
-	1    8800 5300
-	1    0    0    -1  
 $EndComp
 Wire Wire Line
 	8800 5550 8800 5450
 Wire Wire Line
 	8800 5150 8800 5050
 $Comp
-L Device:R R1.3
-U 1 1 60400026
+L Device:R R1.2
+U 1 1 603E796E
 P 8900 5300
-F 0 "R1.3" V 8900 5300 50  0000 C CNN
+F 0 "R1.2" V 8900 5300 50  0000 C CNN
 F 1 "R" V 8900 5300 50  0001 C CNN
 F 2 "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal" V 8830 5300 50  0001 C CNN
 F 3 "~" H 8900 5300 50  0001 C CNN
@@ -549,10 +534,10 @@ Wire Wire Line
 Wire Wire Line
 	8900 5150 8900 5050
 $Comp
-L Device:R R1.4
-U 1 1 6040C3DC
+L Device:R R1.3
+U 1 1 60400026
 P 9000 5300
-F 0 "R1.4" V 9000 5300 50  0000 C CNN
+F 0 "R1.3" V 9000 5300 50  0000 C CNN
 F 1 "R" V 9000 5300 50  0001 C CNN
 F 2 "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal" V 8930 5300 50  0001 C CNN
 F 3 "~" H 9000 5300 50  0001 C CNN
@@ -563,9 +548,6 @@ Wire Wire Line
 	9000 5550 9000 5450
 Wire Wire Line
 	9000 5150 9000 5050
-Wire Wire Line
-	8700 5550 8800 5550
-Connection ~ 8800 5550
 Wire Wire Line
 	8800 5550 8900 5550
 Connection ~ 8900 5550
@@ -637,12 +619,12 @@ Wire Wire Line
 $Comp
 L Device:R R1.1
 U 1 1 603CD90C
-P 8700 5300
-F 0 "R1.1" V 8700 5300 50  0000 C CNN
-F 1 "R" V 8700 5300 50  0001 C CNN
-F 2 "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal" V 8630 5300 50  0001 C CNN
-F 3 "~" H 8700 5300 50  0001 C CNN
-	1    8700 5300
+P 8800 5300
+F 0 "R1.1" V 8800 5300 50  0000 C CNN
+F 1 "R" V 8800 5300 50  0001 C CNN
+F 2 "Resistor_THT:R_Axial_DIN0207_L6.3mm_D2.5mm_P10.16mm_Horizontal" V 8730 5300 50  0001 C CNN
+F 3 "~" H 8800 5300 50  0001 C CNN
+	1    8800 5300
 	1    0    0    -1  
 $EndComp
 $Comp
@@ -909,10 +891,7 @@ Wire Wire Line
 	8400 5550 8500 5550
 Wire Wire Line
 	8500 5050 8500 5550
-Connection ~ 8500 5550
-Wire Wire Line
-	8500 5550 8700 5550
-Connection ~ 8700 5550
+Connection ~ 8800 5550
 Text Label 7500 5300 1    50   ~ 0
 GND
 Text Label 7400 5300 1    50   ~ 0
@@ -966,4 +945,7 @@ VCC
 Connection ~ 8150 5550
 Wire Wire Line
 	8150 5550 8400 5550
+Wire Wire Line
+	8500 5550 8800 5550
+Connection ~ 8500 5550
 $EndSCHEMATC

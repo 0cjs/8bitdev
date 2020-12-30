@@ -80,7 +80,6 @@ TODO
 ----
 
 - Add prototype area.
-- Pin functions on silk screen.
 
 
 

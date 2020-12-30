@@ -19,7 +19,7 @@ U 1 1 5FE89A90
 P 1850 2900
 F 0 "J1" H 1850 4950 50  0000 C CNN
 F 1 "RC6502_Bus" H 1958 4890 50  0001 C CNN
-F 2 "Connector_PinHeader_2.54mm:PinHeader_1x39_P2.54mm_Vertical" H 1850 2900 50  0001 C CNN
+F 2 "mempcb:RC6502_PinHeader_1x39_P2.54mm_Vertical" H 1850 2900 50  0001 C CNN
 F 3 "~" H 1850 2900 50  0001 C CNN
 	1    1850 2900
 	1    0    0    -1  
@@ -30,7 +30,7 @@ U 1 1 5FE96F9C
 P 2700 2900
 F 0 "WW_J1" H 2700 4950 50  0000 C CNN
 F 1 "RC6502_Bus" H 2300 4850 50  0001 R CNN
-F 2 "Connector_PinHeader_2.54mm:PinHeader_1x39_P2.54mm_Vertical" H 2700 2900 50  0001 C CNN
+F 2 "mempcb:RC6502_PinHeader_1x39_P2.54mm_Vertical" H 2700 2900 50  0001 C CNN
 F 3 "~" H 2700 2900 50  0001 C CNN
 	1    2700 2900
 	-1   0    0    -1  

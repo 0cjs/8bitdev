@@ -17,7 +17,7 @@ $Comp
 L mempcb:RC6502_Bus J1
 U 1 1 5FE89A90
 P 1850 2900
-F 0 "J1" H 2000 4950 50  0000 C CNN
+F 0 "J1" H 1850 4950 50  0000 C CNN
 F 1 "RC6502_Bus" H 1958 4890 50  0001 C CNN
 F 2 "Connector_PinHeader_2.54mm:PinHeader_1x39_P2.54mm_Vertical" H 1850 2900 50  0001 C CNN
 F 3 "~" H 1850 2900 50  0001 C CNN
@@ -25,10 +25,10 @@ F 3 "~" H 1850 2900 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L mempcb:RC6502_Bus W1
+L mempcb:RC6502_Bus WW_J1
 U 1 1 5FE96F9C
 P 2700 2900
-F 0 "W1" H 2850 4950 50  0000 R CNN
+F 0 "WW_J1" H 2700 4950 50  0000 C CNN
 F 1 "RC6502_Bus" H 2300 4850 50  0001 R CNN
 F 2 "Connector_PinHeader_2.54mm:PinHeader_1x39_P2.54mm_Vertical" H 2700 2900 50  0001 C CNN
 F 3 "~" H 2700 2900 50  0001 C CNN
@@ -36,10 +36,10 @@ F 3 "~" H 2700 2900 50  0001 C CNN
 	-1   0    0    -1  
 $EndComp
 $Comp
-L mempcb:JEDEC_DIP32_RAM U3
+L mempcb:JEDEC_DIP32_RAM U1
 U 1 1 5FEAD713
 P 5500 2100
-F 0 "U3" H 5500 3267 50  0000 C CNN
+F 0 "U1" H 5500 3267 50  0000 C CNN
 F 1 "JEDEC_DIP32_RAM" H 5500 3176 50  0000 C CNN
 F 2 "mempcb:DIP-32_W15.24mm_ZIF_Socket_LongPads" H 5500 2100 50  0001 C CNN
 F 3 "http://www.futurlec.com/Datasheet/Memory/628128.pdf" H 5500 2100 50  0001 C CNN
@@ -58,10 +58,10 @@ F 3 "~" H 8850 2750 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L Connector_Generic:Conn_01x25 W2_1
+L Connector_Generic:Conn_01x25 WW_J2.1
 U 1 1 5FEB2EF1
 P 8250 2750
-F 0 "W2_1" H 8250 4200 50  0000 C CNN
+F 0 "WW_J2.1" H 8250 4200 50  0000 C CNN
 F 1 "0.1\" 1x25" H 8250 4100 50  0000 C CNN
 F 2 "Connector_PinHeader_2.54mm:PinHeader_1x25_P2.54mm_Vertical" H 8250 2750 50  0001 C CNN
 F 3 "~" H 8250 2750 50  0001 C CNN
@@ -69,10 +69,10 @@ F 3 "~" H 8250 2750 50  0001 C CNN
 	-1   0    0    -1  
 $EndComp
 $Comp
-L Connector_Generic:Conn_01x25 W2_2
+L Connector_Generic:Conn_01x25 WW_J2.2
 U 1 1 5FEC1F3E
 P 9550 2750
-F 0 "W2_2" H 9450 4200 50  0000 L CNN
+F 0 "WW_J2.2" H 9550 4200 50  0000 C CNN
 F 1 "0.1\" 1x25" H 9350 4100 50  0000 L CNN
 F 2 "Connector_PinHeader_2.54mm:PinHeader_1x25_P2.54mm_Vertical" H 9550 2750 50  0001 C CNN
 F 3 "~" H 9550 2750 50  0001 C CNN
@@ -80,33 +80,33 @@ F 3 "~" H 9550 2750 50  0001 C CNN
 	1    0    0    -1  
 $EndComp
 $Comp
-L Connector_Generic:Conn_01x16 W3_1
+L Connector_Generic:Conn_01x16 WW_U1.1
 U 1 1 5FECEA90
 P 4550 2000
-F 0 "W3_1" H 4550 2950 50  0000 C CNN
-F 1 "0.1\" 1x16" H 4468 2826 50  0000 C CNN
+F 0 "WW_U1.1" H 4550 2950 50  0000 C CNN
+F 1 "0.1\" 1x16" H 4550 2850 50  0000 C CNN
 F 2 "Connector_PinHeader_2.54mm:PinHeader_1x16_P2.54mm_Vertical" H 4550 2000 50  0001 C CNN
 F 3 "~" H 4550 2000 50  0001 C CNN
 	1    4550 2000
 	-1   0    0    -1  
 $EndComp
 $Comp
-L Connector_Generic:Conn_01x08 W4_2
+L Connector_Generic:Conn_01x08 WW_U2.2
 U 1 1 5FECFD2E
 P 6500 4150
-F 0 "W4_2" H 6400 4700 50  0000 L CNN
-F 1 "0.1\" 1x8" H 6350 4600 50  0000 L CNN
+F 0 "WW_U2.2" H 6500 4650 50  0000 C CNN
+F 1 "0.1\" 1x8" H 6500 4550 50  0000 C CNN
 F 2 "Connector_PinHeader_2.54mm:PinHeader_1x08_P2.54mm_Vertical" H 6500 4150 50  0001 C CNN
 F 3 "~" H 6500 4150 50  0001 C CNN
 	1    6500 4150
 	1    0    0    -1  
 $EndComp
 $Comp
-L Connector_Generic:Conn_01x08 W4_1
+L Connector_Generic:Conn_01x08 WW_U2.1
 U 1 1 5FED086C
 P 4500 4150
-F 0 "W4_1" H 4418 4667 50  0000 C CNN
-F 1 "0.1\" 1x8" H 4418 4576 50  0000 C CNN
+F 0 "WW_U2.1" H 4500 4650 50  0000 C CNN
+F 1 "0.1\" 1x8" H 4500 4550 50  0000 C CNN
 F 2 "Connector_PinHeader_2.54mm:PinHeader_1x08_P2.54mm_Vertical" H 4500 4150 50  0001 C CNN
 F 3 "~" H 4500 4150 50  0001 C CNN
 	1    4500 4150
@@ -177,10 +177,10 @@ Wire Wire Line
 Wire Wire Line
 	6250 1300 6200 1300
 $Comp
-L Connector_Generic:Conn_01x16 W3_2
+L Connector_Generic:Conn_01x16 WW_U1.2
 U 1 1 5FECF06C
 P 6450 2000
-F 0 "W3_2" H 6350 2950 50  0000 L CNN
+F 0 "WW_U1.2" H 6450 2950 50  0000 C CNN
 F 1 "0.1\" 1x16" H 6250 2850 50  0000 L CNN
 F 2 "Connector_PinHeader_2.54mm:PinHeader_1x16_P2.54mm_Vertical" H 6450 2000 50  0001 C CNN
 F 3 "~" H 6450 2000 50  0001 C CNN
@@ -230,10 +230,10 @@ D4
 Text Label 6050 2800 0    50   ~ 0
 D3
 $Comp
-L mempcb:74LS138 U4
+L mempcb:74LS138 U2
 U 1 1 5FF60AA3
 P 5500 4150
-F 0 "U4" H 5500 4717 50  0000 C CNN
+F 0 "U2" H 5500 4717 50  0000 C CNN
 F 1 "74LS138" H 5500 4626 50  0000 C CNN
 F 2 "Package_DIP:DIP-16_W7.62mm_Socket_LongPads" H 5500 4150 50  0001 C CNN
 F 3 "http://www.ti.com/lit/gpn/sn74LS138" H 5500 4150 50  0001 C CNN
@@ -775,32 +775,32 @@ Connection ~ 6200 1300
 Wire Wire Line
 	6200 1300 6000 1300
 $Comp
-L Connector_Generic:Conn_01x08 W5_2
+L Connector_Generic:Conn_01x08 WW_U3.2
 U 1 1 5FF51E6E
 P 6500 5800
-F 0 "W5_2" H 6400 6350 50  0000 L CNN
-F 1 "0.1\" 1x8" H 6350 6250 50  0000 L CNN
+F 0 "WW_U3.2" H 6500 6300 50  0000 C CNN
+F 1 "0.1\" 1x8" H 6500 6200 50  0000 C CNN
 F 2 "Connector_PinHeader_2.54mm:PinHeader_1x08_P2.54mm_Vertical" H 6500 5800 50  0001 C CNN
 F 3 "~" H 6500 5800 50  0001 C CNN
 	1    6500 5800
 	1    0    0    -1  
 $EndComp
 $Comp
-L Connector_Generic:Conn_01x08 W5_1
+L Connector_Generic:Conn_01x08 WW_U3.1
 U 1 1 5FF51E74
 P 4500 5800
-F 0 "W5_1" H 4418 6317 50  0000 C CNN
-F 1 "0.1\" 1x8" H 4418 6226 50  0000 C CNN
+F 0 "WW_U3.1" H 4500 6300 50  0000 C CNN
+F 1 "0.1\" 1x8" H 4500 6200 50  0000 C CNN
 F 2 "Connector_PinHeader_2.54mm:PinHeader_1x08_P2.54mm_Vertical" H 4500 5800 50  0001 C CNN
 F 3 "~" H 4500 5800 50  0001 C CNN
 	1    4500 5800
 	-1   0    0    -1  
 $EndComp
 $Comp
-L mempcb:74LS138 U5
+L mempcb:74LS138 U3
 U 1 1 5FF51E7A
 P 5500 5800
-F 0 "U5" H 5500 6367 50  0000 C CNN
+F 0 "U3" H 5500 6367 50  0000 C CNN
 F 1 "74LS138" H 5500 6276 50  0000 C CNN
 F 2 "Package_DIP:DIP-16_W7.62mm_Socket_LongPads" H 5500 5800 50  0001 C CNN
 F 3 "http://www.ti.com/lit/gpn/sn74LS138" H 5500 5800 50  0001 C CNN
@@ -837,17 +837,12 @@ Wire Wire Line
 	5000 6000 4700 6000
 Wire Wire Line
 	5000 6100 4700 6100
-Wire Wire Line
-	5000 6200 4950 6200
-Text Label 4750 6200 0    50   ~ 0
-GND
 Text Label 6050 5500 0    50   ~ 0
 VCC
 Wire Wire Line
 	5350 6650 4950 6650
 Wire Wire Line
 	4950 6650 4950 6200
-Connection ~ 4950 6200
 Wire Wire Line
 	4950 6200 4700 6200
 Wire Wire Line
@@ -964,4 +959,9 @@ Text Label 2100 4700 0    50   ~ 0
 EX1
 Text Label 2100 4800 0    50   ~ 0
 EX2
+Text Label 4750 6200 0    50   ~ 0
+GND
+Wire Wire Line
+	5000 6200 4950 6200
+Connection ~ 4950 6200
 $EndSCHEMATC

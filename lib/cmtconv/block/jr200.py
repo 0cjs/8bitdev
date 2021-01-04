@@ -203,7 +203,6 @@ class EOFBlock(Block):
         b.extend(b'\xFF\xFF')       # blockno and datalen identify EOF block
         b.append(self.addr >> 8)
         b.append(self.addr & 0xFF)
-        b.append(self.checksum)
         return bytes(b)
 
     def __repr__(self):

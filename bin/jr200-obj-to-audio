@@ -38,7 +38,7 @@ if __name__ == '__main__':
     info('Start address: {}'.format(hex(start)))
     info('Contiguous length: {}'.format(length))
 
-    blocks = blocks_from_bin('JR-200', BytesIO(data), start)
+    blocks = blocks_from_bin('JR-200', BytesIO(data), start, fname)
     info(blocks[0])
     for b in blocks[1:]: info(b)
 

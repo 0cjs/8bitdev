@@ -1,3 +1,4 @@
 py65
 pytest < 6.0
 requests
+scipy

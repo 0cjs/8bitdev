@@ -71,7 +71,6 @@ def test_make_EOF_block():
     bb = (  b'\x02\x2A'     # magic
             b'\xFF\xFF'     # blockno and datalen identify a end block
             b'\x78\x9A'     # address
-            b'\x00'         # checksum always 0 for end block
     )
     assert              bb == block.to_bytes()
 

@@ -41,7 +41,9 @@ def read_block_bytestream(platform, stream):
     blocks.append(fh)
     while True:
         b, len = B.from_header(stream.read(B.headerlen))
-        b.setdata(stream.read(len), stream.read(1)[0])
+        data = stream.read(len)
+        chksum = None if b.is_eof else stream.read(1)[0]
+        b.setdata(data, chksum)
         blocks.append(b)
         if b.is_eof:
             break

@@ -36,7 +36,7 @@ class Block(object):
     #        (255 for EOF block)
     #   4-5: load address ($0000 if not used)
     #   6…n: data (datalen bytes)
-    #   n+1: checksum: sum of bytes 0…n modulo 256
+    #   n+1: checksum (non-EOF blocks only): sum of bytes 0…n modulo 256
 
     #   The 'short' platform name is just the module name: `jr200`.
     platform = 'National/Panasonic JR-200'
@@ -175,7 +175,7 @@ class EOFBlock(Block):
         - The block number is always $FF.
         - The data are always an empty `bytes`.
         - The datalen byte on tape is $FF, but there are no data bytes.
-        - The checksum is $00 instead of the calculated value.
+        - There is no checksum byte. (`checksum` property is 0.)
     '''
 
     def __init__(self, addr):

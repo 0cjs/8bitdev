@@ -270,11 +270,21 @@ class FileReader(object):
         #   instead it's a tuple of ints.
         header = bytes(header)
         (block, datalen) = Block.from_header(header)
-        (i_next, body) = bit_decoder.eat_bytes(edges, i_next, datalen + 1)
-        #   XXX bit_decoder.eat_bytes is no longer returning a `bytes`!
-        #   instead it's a tuple of ints.
-        body = bytes(body)
-        block.setdata(body[:-1], body[-1])
+        # FIXME: Not clear why this code still exists.
+        #  Should at least probably have from_header return the
+        #  number of bytes to be read, and have the block construction
+        # extract the checksum, instead of doing it here...
+        if block.is_eof:
+            #   XXX bit_decoder.eat_bytes is no longer returning a `bytes`!
+            #   instead it's a tuple of ints.
+            (i_next, body) = bit_decoder.eat_bytes(edges, i_next, datalen)
+            block.setdata(bytes(body))
+        else:
+            (i_next, body) = bit_decoder.eat_bytes(edges, i_next, datalen+1)
+            #   XXX bit_decoder.eat_bytes is no longer returning a `bytes`!
+            #   instead it's a tuple of ints.
+            body = bytes(body)
+            block.setdata(body[:-1], body[-1])
         #debug(block)
         if not block.is_eof:
             #   The read for a tail block gives IndexError below.

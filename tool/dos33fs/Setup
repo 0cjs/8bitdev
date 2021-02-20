@@ -33,18 +33,20 @@ class DOS33FS(Setup):
         self.make_src()
 
     def install(self):
+        dos33 = 'utils/dos33fs-utils'
+        basic = 'utils/asoft_basic-utils'
         bins = (
-            ('dos33fs-utils', 'char2hex'),
-            ('dos33fs-utils', 'dos33'),
-            ('dos33fs-utils', 'dos33_text2ascii'),
-            ('dos33fs-utils', 'make_b'),
-            ('dos33fs-utils', 'mkdos33fs'),
-            ('asoft_basic-utils', 'asoft_compact'),
-            ('asoft_basic-utils', 'asoft_detoken'),
-            ('asoft_basic-utils', 'bin2data'),
-            ('asoft_basic-utils', 'integer_detoken'),
-            ('asoft_basic-utils', 'tokenize_asoft'),
-            ('bmp2dhr', 'b2d'),
+            (dos33,             'char2hex'),
+            (dos33,             'dos33'),
+            (dos33,             'dos33_text2ascii'),
+            (dos33,             'make_b'),
+            (dos33,             'mkdos33fs'),
+            (basic,             'asoft_compact'),
+            (basic,             'asoft_detoken'),
+            (basic,             'bin2data'),
+            (basic,             'integer_detoken'),
+            (basic,             'tokenize_asoft'),
+            ('bmp2dhr',         'b2d'),
             )
         for subdir, file in bins:
             dest = self.pdir('bin').joinpath(file)

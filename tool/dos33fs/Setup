@@ -26,7 +26,7 @@ class DOS33FS(Setup):
             b'by Vince Weaver <vince@deater.net>')
 
     def configure(self):
-        deps = [ 'libpng-dev', ]
+        deps = [ 'liblz4-dev', 'libpng-dev', ]
         self.check_packages(debian=deps)
 
     def build(self):

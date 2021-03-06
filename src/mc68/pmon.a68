@@ -49,7 +49,7 @@ DEL         equ $7F
 PROMPT      equ '^'
 
     ifndef EXWIDTH
-EXWIDTH     equ $10                 ; 16 lines, unless overridden
+EXWIDTH     equ $10                 ; examine default: 16 bytes/line
     endif
 
 ; ----------------------------------------------------------------------
@@ -111,19 +111,20 @@ pmon_ramhi_end equ *
 ;   then drop into command loop.
 init        ldx #cmdtbl_std     ; default command table
             stx cmdtbl
-            lda A,#EXWIDTH      ; default examine width: 16 bytes
+            lda A,#EXWIDTH      ; default examine width
             sta A,Mexamwidth
-            lda A,#8            ; default examine size: 8 lines
+            lda A,#8            ; default examine lines to print
             sta A,Mexamlines
 
-cmdloop     jsr startline
+cmdloop     jsr startline       ; prompt always printed at start of line
             lda A,#PROMPT
             jsr prchar
             jsr rdline
             bcs cmdloop         ; if ^C, ignore line
-            stx cmdqptr
+            stx cmdqptr         ; start parsing at beginning of input line
 
-.parse      ldx cmdqptr
+.parse      ;   Registers may have been destroyed at entry here.
+            ldx cmdqptr
             lda A,0,X           ; reached terminator?
             beq cmdloop         ; yes, read another line of commands
 
@@ -141,13 +142,13 @@ cmdloop     jsr startline
             beq savepending     ; yes, save as pending and carry on parsing
 
             ;   Consume a char and parse it as a command.
-            ;   (Callees who need to know the char parsed may DEX to get it.)
+            ;   (Callees may DEX to get the input buf addr of the parsed char.)
             lda A,0,X           ; load char we're checking
             inx                 ; move input pointer to next char
             stx cmdqptr         ;   for later
 
 .search     ldx cmdtbl
-.next       lda B,0,X           ; load next command char from table
+.contsearch lda B,0,X           ; load next command char from table
             cmp B,#00           ; end of table?
             beq .unkcmd         ; yes, unknown command
             cba                 ; found command?
@@ -155,7 +156,7 @@ cmdloop     jsr startline
             inx                 ; skip past command char in table
             inx                 ;   and its address
             inx
-            bra .next
+            bra .contsearch
 
 .callcmd    ldx 1,X             ; load command address
             jmp ,X              ; call command (TCO)
@@ -208,8 +209,9 @@ prperr      jsr startline
 
 ;   Consume just-parsed text and save pending value in qhex_out.
 ;
-;   Called after a successful qhexword in a way similar to--but not the
-;   same as-- a command.
+;   This is sort of a pesudo-command: the stack return is expected to be the
+;   parsing continuation (as with a real command) but A/X/cmdqptr are not
+;   advanced before entry.
 ;
 savepending stx cmdqptr         ; consume the parsed text
             ldx qhex_out        ; copy parsed value into pending
@@ -243,7 +245,7 @@ inline      lda B,stat
             sta B,stat
             rts
 
-;   ♣A Print a newline if we have text on the current line (`inline`).
+;   ♣A Print a newline if we have text on the current line (`inline` state).
 startline   lda A,stat
             and A,#stat_begline ; at beginning of line?
             beq nextline        ; no, print a newline
@@ -300,11 +302,13 @@ cmdtbl_std
 ;   `cmdqptr` will point to the first character after the command. If the
 ;   command routine does further parsing of arguments, it must increment
 ;   `cmdqptr` to consume what it has parsed. RTS will continue parsing
-;   from `cmdptr`.
+;   from `cmdqptr`.
 
-quitcmd     pul B               ; remove continuation address so that we
+quitcmd     pul B               ; remove parse continuation address so that we
             pul B               ;   return to what called the monitor
-rtscmd      rts
+            ; fallthrough
+
+rtscmd      rts                 ; do-nothing command
 
 ;   This command is used for testing the command parser; it's usually
 ;   bound an unprintable character such as $C0 (`@` with MSbit set).
@@ -469,11 +473,11 @@ examine     ldx #Mexamcur
 ;   XXX ♣tmp2
 ;
 ;   The registers are named with single letters `pabxcs`. With no args, the
-;   registers are printed as (space-prefixed) ` n=vv` pairs of name
-;   character and 2- or 4-character value. Otherwise arguments of a
-;   register letter followed immediately by a hexbyte or hexword (depending
-;   on register size) set register values. The argument list must be
-;   terminated by whitespace or end of input.
+;   registers are printed as (space-prefixed) ` Cval` pairs of name character
+;   and 2- or 4-character value. Otherwise arguments of a register letter
+;   followed immediately by a hexbyte or hexword (depending on register size)
+;   set register values. The argument list must be terminated by whitespace or
+;   end of input.
 ;
 regscmd     jsr qwspace         ; check args after command
             bcc .nextarg        ; not whitespace, we show instead of set
@@ -585,8 +589,8 @@ prchval     psh B               ; some platforms's prchar may not preserve this
 ; ----------------------------------------------------------------------
 ;   rd* - read input
 
-;   ♠X ♣A ♡B Read a line of user input, echoing each character.
-;   On return X will point to the chars read, terminated by $00,
+;   ♠X ♣A ♡B Read a line of user input into rdlinebuf, echoing each character.
+;   On return X will point to the start of the chars read, terminated by $00,
 ;   and the carry will be clear for CR termination, set for ^C termination.
 ;
 ;   The following characters are interpreted specially:
@@ -595,8 +599,8 @@ prchval     psh B               ; some platforms's prchar may not preserve this
 ;     - CR: echo a newline and return with C=0.
 ;     - ^C: beep, echo a newline and return with C=1.
 ;
-;   This uses its own buffer, rdlinebuf, which is overwritten with every call.
-;   When the buffer is full rdline will beep instead of accepting input chars.
+;   This uses a fixed input buffer, rdlinebuf, which is overwritten with every
+;   call. When the buffer is full rdline will beep instead of accepting input.
 ;
 rdline      ldx #rdlinebuf
 .nextchar   jsr rdchar

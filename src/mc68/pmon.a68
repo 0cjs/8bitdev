@@ -60,8 +60,9 @@ EXWIDTH     equ $10                 ; examine default: 16 bytes/line
 ;   "Low" area aimed at maximum gain from minimum direct page usage.
             org pmon_ramlo
 
-tmp1        ds  1       ; temp storage
-tmp2        ds  2       ; temp storage
+tmp1        ds  1       ; temp storage (byte)
+tmp2        ds  2       ; temp storage (usually word)
+tmp2a       ds  2
 qhex_out    ds  2       ; last qhex result ($0000 if qhex failed)
 cmdqptr     ds  2       ; Current parsing point in command input buffer.
                         ; Update this to consume parsed text, but do not
@@ -490,7 +491,7 @@ examine     ldx #Mexamcur
 ;   followed immediately by a hexbyte or hexword (depending on register size)
 ;   set register values. The argument list must be terminated by whitespace or
 ;   end of input.
-;
+
 regscmd     jsr qwspace         ; check args after command
             bcc .nextarg        ; not whitespace, we show instead of set
 
@@ -525,6 +526,20 @@ regscmd     jsr qwspace         ; check args after command
             jsr prhex
 
             jmp prnl            ; RTS TCO
+
+.regsopts   db 'p',OPTword      ; program counter
+            dw Rpc
+            db 'a',OPTbyte      ; ACC A
+            dw Ra
+            db 'b',OPTbyte      ; ACC B
+            dw Rb
+            db 'x',OPTword      ; index register
+            dw Rx
+            db 'c',OPTbyte      ; condition code register
+            dw Rcc
+            db 's',OPTword      ; stack pointer
+            dw Rsp
+            db 0                ; terminator
 
 .nextarg    ldx #Rpc
             lda A,#'p'
@@ -597,6 +612,7 @@ prchval     psh B               ; some platforms's prchar may not preserve this
             jsr prchar
             pul A               ; previous B value
             jmp prhex           ; RTS TCO
+
 
 ; ----------------------------------------------------------------------
 ;   rd* - read input
@@ -693,6 +709,86 @@ qwspace     ldx cmdqptr
             stx cmdqptr
 .noconsume  sec                 ; success
             rts
+
+;   ♣X,A,B,tmp2,tmp2a  qcmdopts
+;   Process command options from `cmdqptr` per table at X
+;
+;   Command options are a sequence of option letter followed by that
+;   option's value; whitespace (or EOL) terminates the command's options.
+;
+;   The table is an array, terminated by a 0 byte, of:
+;   - the option character (byte),
+;   - the type of the option's value (byte, definitions below), and
+;   - the location where the value is to be stored (word).
+;
+;   An option may be any character, but using characters that are also hex
+;   numbers (0-9 and A-F) may cause some inconvenince to the user since
+;   they may be interpreted as option values. E.g., if `a` and `x` are
+;   option characters with byte values, `x2a3` will be interpreted as "set
+;   X to $2A" follwed by a parse error; to set X then A in this instance
+;   one would have to enter `x02a3`.
+
+OPTbyte     equ  %011
+OPTword     equ  %110
+OPTtable    equ tmp2
+OPTvaladdr  equ tmp2a
+
+qcmdopts    stx OPTtable        ; save command options table location
+qcmdopt1    ;   process the next option in the input
+            jsr qwspace         ; ♠AX end of options given to command?
+            bcs .done           ; yes, we're done
+            ;   A now contains an unconsumed input char given as a cmd option
+            ldx OPTtable
+.tabnext    lda B,0,X           ; get next option char in table
+                                ; is it the $00 table terminator?
+            beq .opterr         ; yes, input char is not a known option
+            cba                 ; input char is this option?
+            beq .optmatch       ; yes, process it
+            inx                 ; no, skip past option char,
+            inx                 ;   option type,
+            inx                 ;   and option value address
+            inx
+            bra .tabnext        ; see if we match next opt char
+
+.optmatch   lda A,1,X           ; option type
+            ldx 2,X             ; option value address (where we store it)
+            stx OPTvaladdr
+            ldx cmdqptr         ; consume matched option char
+            inx
+            stx cmdqptr
+            cmp A,#OPTbyte
+            beq .optvalbyte
+            cmp A,#OPTword
+            beq .optvalword
+            ;   If we reach this, the options table is bad.
+            ;   XXX Currently we die (in the simulator) with an illegal opcode,
+            ;   but we should find a better way to handle this.
+            db $05
+
+.optvalbyte jsr qhexbyte
+            bne .opterr
+            stx cmdqptr         ; consume parsed value
+            ldx OPTvaladdr      ; target location for value
+            lda B,qhex_out+1
+            sta B,0,X           ; save parsed LSB
+            jmp qcmdopt1
+
+.optvalword jsr qhexword
+            bne .opterr
+            stx cmdqptr         ; consume parsed value
+            ldx OPTvaladdr      ; target location for value
+            lda B,qhex_out
+            sta B,0,X           ; save parsed MSB
+            lda B,qhex_out+1
+            sta B,1,X           ; save parsed LSB
+            jmp qcmdopt1
+
+.opterr     ;   Parse error:
+            ;   - Input char did not match a char from the option table.
+            ;   - Incorrect value after option char.
+            jmp prperr_abort
+
+.done       rts
 
 ; ----------------------------------------------------------------------
 ;   pr* - printing output

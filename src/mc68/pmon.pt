@@ -1,6 +1,8 @@
 from    testmc  import *
 from    testmc.mc6800  import *
 import  pytest, re
+from    contextlib  import contextmanager
+
 
 R = Machine.Registers
 
@@ -12,6 +14,29 @@ def loadbios(m, input=None, output=None):
     m.load(bioscode, mergestyle='prefcur', setPC=False)
     assert S['charinport'] == S['charoutport']
     return m.setiostreams(S.charinport, input, output)
+
+@contextmanager
+def prperr_abort_check(m, offset):
+    ''' Assert that the correct parse error would be generated, if one is
+        expected.
+
+        If `offset` is `None`, no parse error is expected and we simply run
+        the context's code block.
+
+        If `offset` is not `None`, we assert that the context's code block
+        has called ``prperr_abort`` (which we do not actually execute) and
+        that ``cmdqptr`` is at the given `offset` from its initial value.
+    '''
+    if offset is None:
+        yield
+    else:
+        S = m.symtab
+        cmdqptr = m.word(S.cmdqptr)         # save initial cmdqptr
+        m.deposit(S.prperr_abort, I.RTS)    # stub out prperr_abort routine
+        yield
+        assert R(pc=S.prperr_abort) == m.regs, 'Should have called prperr_abort'
+        assert cmdqptr + offset == m.word(S.cmdqptr), \
+            'not expected cmdqptr offset'
 
 ####################################################################
 #   q* - parsing
@@ -257,6 +282,52 @@ def test_prperr_abort(m, S):
     m.call(0x3000, stopat=[S.cmdloop], trace=0)
     assert R(pc=S.cmdloop, sp=end_sp) == m.regs
     assert end_sp == m.word(S.perr_stack)
+
+def deposit_opttab(m, table):
+    ' Table is a sequence of (offset, opt char, opt type, opt value addr) '
+    opttab = 0x3100
+    for offset, ochar, otype, ovaladdr in table:
+        m.deposit(opttab+offset, [ord(ochar), otype])
+        m.depword(opttab+offset+2, ovaladdr)
+        m.deposit(ovaladdr-1, [0xEE]*4)     # sentinel values
+    m.deposit(opttab+offset+4, 0)           # terminator
+
+    print('opttab', m.hexdump(opttab, 18))
+    return opttab
+
+@pytest.mark.parametrize('input, expected, err_offset', [
+    #   No options
+    (b'',           '3200: EE EE EE EE EE EE EE EE', None),
+    (b' ',          '3200: EE EE EE EE EE EE EE EE', None),
+    #   No valid options
+    (b'error',      '3200: EE EE EE EE EE EE EE EE', 0),
+    #   Byte option value parsing, and multiple option handling
+    (b'v12',        '3200: EE 12 EE EE EE EE EE EE', None),
+    (b'v12v34',     '3200: EE 34 EE EE EE EE EE EE', None),
+    (b'v12v34',     '3200: EE 34 EE EE EE EE EE EE', None),
+    (b'v5vv00',     '3200: EE 05 EE EE EE EE EE EE', 3),
+    (b'v666',       '3200: EE 66 EE EE EE EE EE EE', 3),
+    #   Word option value parsing, and multiple option handling
+    (b'w7v8xABCDv0','3200: EE 00 EE 00 07 AB CD EE', None),
+])
+def test_qcmdopts(m, S, R, input, expected, err_offset):
+    opttab = deposit_opttab(m, [(0, 'v', S.OPTbyte, 0x3201),
+                                (4, 'w', S.OPTword, 0x3203),
+                                (8, 'x', S.OPTword, 0x3205),
+    ])
+    _, ostream = loadbios(m)
+    set_rdlinebuf(m, input)
+    with prperr_abort_check(m, err_offset):
+        m.call(S.qcmdopts, R(x=opttab))
+        print(m.hexdump(0x3200, 8))
+    assert expected == m.hexdump(0x3200, 8)
+
+@pytest.mark.xfail(strict=True)
+def test_qcmdopts_badtab():
+    ''' We should do something sensible when an options table contains
+        an invalid type.
+    '''
+    assert 0
 
 ####################################################################
 #   Commands (tested outside of command loop)

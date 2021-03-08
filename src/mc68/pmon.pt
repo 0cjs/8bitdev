@@ -233,6 +233,31 @@ def test_prperr(m, S, R, input, char):
     assert bytes(expected, encoding='ISO-8859-1') == ostream.getvalue()
     #   Not actually ISO-8859-1 encoding; just used for 8-bit straight-through.
 
+def test_prperr_abort(m, S):
+    ''' Ensure that prperr_abort is restoring the stack to where it was
+        when parsing continued, dropping anything pushed by a command.
+    '''
+    loadbios(m);  set_rdlinebuf(m, b'\r')
+
+    m.deposit(0x3000, [
+        #   Emulate parse loop's save of stack position.
+        I.TSX,
+        I.STXm, MB(S.perr_stack), LB(S.perr_stack),
+
+        # simulate command deep in call stack
+        I.BSR, 0, I.BSR, 0,
+        I.LDAA, 0xEE,
+        I.PSHA, I.PSHA, I.PSHA, I.PSHA, I.PSHA, I.PSHA, I.PSHA,
+
+        #   Call abort routine, which should restore stack and goto cmdloop.
+        I.JMP, MB(S.prperr_abort), LB(S.prperr_abort),
+    ])
+
+    end_sp = m.sp - 2   # Because call() will not execute final RTS
+    m.call(0x3000, stopat=[S.cmdloop], trace=0)
+    assert R(pc=S.cmdloop, sp=end_sp) == m.regs
+    assert end_sp == m.word(S.perr_stack)
+
 ####################################################################
 #   Commands (tested outside of command loop)
 
@@ -309,6 +334,10 @@ def dep_examine_defaults(m, addr=0x000):
     m.depword(S.Mexamcur, addr)
     m.deposit(S.Mexamwidth, 8)
     m.deposit(S.Mexamlines, 2)
+    #   Since our tests are not calling the commands from the command
+    #   parsing loop, we must save our pre-call stack value manually for it
+    #   to be restored correctly on an abort.
+    m.depword(S.perr_stack, m.sp)
 
 @pytest.mark.parametrize('success, consumed, cmdarg', [
     (True,   0,  b''),
@@ -440,6 +469,11 @@ def test_regscmd_set(m, S, R, success, cmdarg, consumed, changedregs):
     depregs(m, initregs)
     inbuf = set_rdlinebuf(m, cmdarg)
     _, ostream = loadbios(m)
+
+    #   Since our tests are not calling the commands from the command
+    #   parsing loop, we must save our pre-call stack value manually for it
+    #   to be restored correctly on an abort.
+    m.depword(S.perr_stack, m.sp)
 
     initsp = m.sp       # XXX per test_examine_parseargs()
     m.call(S.regscmd, stopat=[S.prperr])

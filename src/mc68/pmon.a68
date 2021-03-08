@@ -97,6 +97,12 @@ Mexamlines  ds  1       ; examine lines: number of lines to print
 Mdepcur     ds  2       ; deposit command current start addr
 Mcallcur    ds  2       ; call command address to call
 
+;   Stack position at start of parsing continuation, enabling prperr_abort
+;   to drop any arbitrary amount of stack data pushed by command routines
+;   if, instead of returning up the stack, they abort due to a parse
+;   failure or other error. In essence, the exception catch point.
+perr_stack  ds  2
+
 pmon_ramhi_end equ *
 
 ; ----------------------------------------------------------------------
@@ -128,6 +134,11 @@ cmdloop     jsr startline       ; prompt always printed at start of line
             lda A,0,X           ; reached terminator?
             beq cmdloop         ; yes, read another line of commands
 
+            ;   Save our current stack position so we can restore it on a
+            ;   command abort, dropping any stack data pushed from here on.
+            tsx
+            stx perr_stack
+
             ;   Standard commands will RTS when done; we set up the stack
             ;   so that after we JMP to them they will come back here where
             ;   we will continue parsing the remainder of the command line.
@@ -138,6 +149,7 @@ cmdloop     jsr startline       ; prompt always printed at start of line
             psh A
 
             ;   Start by attempting to parse a hexword as the pending value.
+            ldx cmdqptr         ; continue parsing at current parse point
             jsr qhexword        ; parsed a hexword?
             beq savepending     ; yes, save as pending and carry on parsing
 
@@ -173,13 +185,13 @@ cmdloop     jsr startline       ; prompt always printed at start of line
 ;   and print a message `?nn c` where `c` is the offending character and
 ;   `nn` is its (zero-based) hex offset in the input buffer.
 ;
-;   prperr_up first removes the top word from the stack, used by commands
-;   that have a "continue parsing" continuation loaded and want to abort
-;   parsing.
-;
+;   prperr_abort first restores the stack to where it was before we set up
+;   the parse continuation and called the command, so that a command can
+;   abort without having to do its own stack cleanup first.
 
-prperr_up   pul A               ; remove return address from stack
-            pul A
+prperr_abort
+            ldx perr_stack      ; drop everything on stack created by
+            txs                 ;   a command that aborted
 
 prperr      jsr startline
             jsr errbeep
@@ -421,7 +433,7 @@ examine     ldx #Mexamcur
             beq .widtharg
             cmp A,#'W'
             beq .widtharg
-            jmp prperr_up       ; bad arg: err and abort parsing line
+            jmp prperr_abort    ; bad arg: err and abort parsing line
 
             ;   XXX obviously this duplicated code could be refactored somehow
 .linearg    inx                 ; consume option letter
@@ -539,7 +551,7 @@ regscmd     jsr qwspace         ; check args after command
 
 .argerr     pul B               ; unstack setbyte/setword RTS
             pul B
-.argerr1    jmp prperr_up
+.argerr1    jmp prperr_abort
 
 .setbyte    ;   If next char matches A, parse a hexbyte and write to [X].
             stx tmp2            ; save location

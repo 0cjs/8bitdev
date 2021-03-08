@@ -493,7 +493,7 @@ examine     ldx #Mexamcur
 ;   end of input.
 
 regscmd     jsr qwspace         ; check args after command
-            bcc .nextarg        ; not whitespace, we show instead of set
+            bcc .set            ; if not whitespace, we're setting registers
 
 .show       lda A,#'p'
             lda B,Rpc
@@ -527,7 +527,7 @@ regscmd     jsr qwspace         ; check args after command
 
             jmp prnl            ; RTS TCO
 
-.regsopts   db 'p',OPTword      ; program counter
+.opttab     db 'p',OPTword      ; program counter
             dw Rpc
             db 'a',OPTbyte      ; ACC A
             dw Ra
@@ -541,68 +541,8 @@ regscmd     jsr qwspace         ; check args after command
             dw Rsp
             db 0                ; terminator
 
-.nextarg    ldx #Rpc
-            lda A,#'p'
-            bsr .setword
-            ldx #Ra
-            lda A,#'a'
-            bsr .setbyte
-            ldx #Rb
-            lda A,#'b'
-            bsr .setbyte
-            ldx #Rx
-            lda A,#'x'
-            bsr .setword
-            ldx #Rcc
-            lda A,#'c'
-            bsr .setbyte
-            ldx #Rsp
-            lda A,#'s'
-            bsr .setword
-            ldx cmdqptr
-            jsr qwspace         ; parsed no valid arg; wspace ending arg list?
-            bcc .argerr1        ; no, error
-.rts        rts                 ; otherwise command is complete
-
-.argerr     pul B               ; unstack setbyte/setword RTS
-            pul B
-.argerr1    jmp prperr_abort
-
-.setbyte    ;   If next char matches A, parse a hexbyte and write to [X].
-            stx tmp2            ; save location
-            ldx cmdqptr
-            lda B,0,X           ; get next char
-            cba                 ; matches the arg?
-            bne .rts            ; no, carry on
-            inx                 ; consume matched char
-            jsr qhexbyte
-            bne .argerr         ; no word, die
-            stx cmdqptr         ; consume parsed value
-            ldx tmp2            ; target location
-            lda B,qhex_out+1
-            sta B,0,X           ; save parsed LSB
-            pul B               ; remove continuation
-            pul B
-            bra .nextarg        ;    because we directly continue arg loop
-
-.setword    ;   If next char matches A, parse a hexword and write to [X].
-            stx tmp2            ; save location
-            ldx cmdqptr
-            lda B,0,X           ; get next char
-            cba                 ; matches the arg?
-            bne .rts            ; no, carry on
-            inx                 ; consume matched char
-            jsr qhexword        ;
-            bne .argerr         ; no word, die
-            stx cmdqptr         ; consume parsed value
-            ldx tmp2            ; target location
-            lda B,qhex_out
-            sta B,0,X           ; save parsed MSB
-            lda B,qhex_out+1
-            sta B,1,X           ; save parsed LSB
-            pul B               ; remove continuation
-            pul B
-            bra .nextarg        ;    because we directly continue arg loop
+.set        ldx #.opttab
+            jmp qcmdopts        ; RTS TCO
 
 ;   ♣A print space, char in A, byte in B as hex
 prchval     psh B               ; some platforms's prchar may not preserve this

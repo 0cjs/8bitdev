@@ -529,7 +529,7 @@ def test_regscmd_show(m, S, R, regs):
     ( True, b's123',    4, R(sp=0x123)       ),
     ( True, b'b1  ',    3, R(b=0x01)         ), # first trailing wspc consumed
     ( True, b'a07b9',   5, R(a=0x07, b=0x09) ),
-    (False, b'x',       0, R()               ),
+    (False, b'x',       1, R()               ),
     (False, b'z',       0, R()               ),
     (False, b'a1x2y',   4, R(a=1, x=2)       ),
     ( True, b'bBBaAA',  6, R(a=0xAA, b=0xBB) ), # reversed register order

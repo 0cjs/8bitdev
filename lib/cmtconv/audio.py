@@ -20,22 +20,35 @@ from    cmtconv.block.jr200  import Block, FileHeader
 # - bits -> bytes
 # - bytes -> file header, blocks
 
-
-# TODO
-#
-# take out former code to plot histogram of cycle lengths
-#   - useful for investigating other formats
-# base cutoff on mean and stddev, instead of/in addition to max/min
-# make cutoff a parameter & command line option (?)
-# gracefully deal with end of samples and try to read multiple files
-#
-# Generate cjr file from header and blocks
-# Documentation
-#
-
 def err(*args, **kwargs):   print(*args, file=stderr, **kwargs)
 def info(*args, **kwargs):  print(*args, file=stderr, **kwargs)
 def debug(*args, **kwargs): print(*args, file=stderr, **kwargs)
+
+
+# samples   : [ float ]
+# ->
+# edges         : ( ( float, bool, float ), )
+def samples_to_timed_edges(samples, sample_dur):
+    edges = []
+    if len(samples) > 0:
+        sample_max = max(samples)
+        sample_min = min(samples)
+        cutoff = sample_min + 0.45 * (sample_max - sample_min)
+        debug('Max: %d, min: %d, cutoff: %d' %
+              (sample_max, sample_min, cutoff))
+        last_t = 0.0
+        last_level = samples[0] > cutoff
+        i = 0
+        for s in samples:
+            l = s > cutoff
+            if l != last_level:
+                t = sample_dur * i
+                edges.append((t, l, t - last_t))
+                last_t = t
+                last_level = l
+            i = i + 1
+    return tuple(edges)
+
 
 # samples   : [ float ]
 # ->
@@ -66,8 +79,8 @@ def levels_to_timed_edges(levels, sample_dur):
         last_t = 0.0
         last_level = levels[0]
         for (i, l) in enumerate(levels):
-            t = sample_dur * i
             if l != last_level:
+                t = sample_dur * i
                 edges.append((t, l, t - last_t))
                 last_t = t
                 last_level = l
@@ -431,13 +444,13 @@ def edges_to_samples(chunks, sample_dur, silence, low, high):
     for chunk in chunks:
         if chunk[0] == AudioMarker.SILENCE:
             dur = chunk[1]
-            res.extend(silence for _ in range(int(dur/sample_dur)))
+            res.extend([silence] * int(dur/sample_dur))
             lvl = True
         elif chunk[0] == AudioMarker.SOUND:
             edges = chunk[1]
             for dur in chain(edges, (0.01,)):
                 sample_lvl = high if lvl else low
-                res.extend(sample_lvl for _ in range(int(dur/sample_dur)))
+                res.extend([sample_lvl] * int(dur/sample_dur))
                 lvl = not lvl
         else:
             raise Exception('Unknown audio marker')

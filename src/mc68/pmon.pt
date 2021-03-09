@@ -333,9 +333,9 @@ def test_qcmdopts_badtab():
 #   Commands (tested outside of command loop)
 
 @pytest.mark.parametrize('command, curloc', [
-    ('deposit', 'Mdepcur'),
-    ('examine', 'Mexamcur'),
-    ('call',    'Mcallcur'),
+    ('Cdeposit',    'Mdepcur'),
+    ('Cexamine',    'Mexamcur'),
+    ('Ccall',       'Mcallcur'),
 ])
 def test_command_pending_use(m, S, R, command, curloc):
     ''' Test only that commands properly store the pending value in their
@@ -362,9 +362,9 @@ def test_command_pending_use(m, S, R, command, curloc):
     assert 0x5678 == m.word(claddr), 'available pending not used'
 
 @pytest.mark.parametrize('cmdsym, optstr, expected_vals', [
-    ('examine', b'lAwB', {
+    ('Cexamine', b'lAwB', {
         'Mexamlines': 0xA, 'Mexamwidth': 0xB, }),
-    ('regscmd', b'p1001a20b30x4001c50s6001', {
+    ('Cregisters', b'p1001a20b30x4001c50s6001', {
         'Rpc': 0x1001, 'Ra': 0x20, 'Rb': 0x30, 'Rx': 0x4001,
         'Rcc': 0x50, 'Rsp': 0x6001, }),
 ])
@@ -436,16 +436,16 @@ def test_query(m, S, R, val, output):
     m.deposit(S.stat, stat)
     m.depword(S.Mpending, val)
 
-    m.call(S.query)
+    m.call(S.Cquery)
     assert stat & (~S.stat_begline & 0xFF) == m.byte(S.stat), \
         'stat value should have stat_begline cleared, otherwise unchanged'
     assert output == str(ostream.getvalue(), encoding='ASCII')
 
 @pytest.mark.parametrize( 'target', [ 0x2222, 0x7055, ], ids=tmc_tid)
-def test_call(m, S, R, target):
+def test_callcmd(m, S, R, target):
     m.depword(S.Mcallcur, target)
     m.deposit(target, [I.LDAA, 0xAA, I.RTS])
-    m.call(S.call, R(a=0x55))
+    m.call(S.Ccall, R(a=0x55))
     assert R(a=0xAA) == m.regs
 
 @pytest.mark.parametrize(
@@ -467,7 +467,7 @@ def test_deposit(m, S, R, addr, parselen, cmdarg, data):
     inbuf = set_rdlinebuf(m, cmdarg)
     m.deposit(addr-1, b'\xEE'*len(guarded))
 
-    m.call(S.deposit, R(a=ord(':'), x=S.deposit))
+    m.call(S.Cdeposit, R(a=ord(':'), x=S.Cdeposit))
     assert (inbuf,  inbuf + parselen,   guarded) \
         == (inbuf,  m.word(S.cmdqptr),  m.bytes(addr-1, len(guarded)))
 
@@ -499,7 +499,7 @@ def test_examine_output(m, S, R, addr, width, cmdarg, lines, expmatch):
     inbuf = set_rdlinebuf(m, cmdarg)
     _, ostream = loadbios(m)
 
-    m.call(S.examine)
+    m.call(S.Cexamine)
     print('updated: lines={:02X} width={:02X}'.format(
         m.byte(S.Mexamlines), m.byte(S.Mexamwidth)))
     output = str(ostream.getvalue(), encoding='ASCII')
@@ -534,7 +534,7 @@ def test_regscmd_show(m, S, R, regs):
     depregs(m, regs)
     inbuf = set_rdlinebuf(m)
     _, ostream = loadbios(m)
-    m.call(S.regscmd)
+    m.call(S.Cregisters)
     output = str(ostream.getvalue(), encoding='ASCII')
     print(output)
 
@@ -570,15 +570,15 @@ def test_cmdloop_search(m, S, R, cmdchar, foundaddr):
         m.depword(CMDTBL+offset+1, [addr])
     m.depword(S.cmdtbl, CMDTBL)
 
-    callcmd = S['cmdloop.callcmd'] + 2  # instruction after loading address
+    docmd   = S['cmdloop.docmd'] + 2  # instruction after loading address
     unkcmd  = S['cmdloop.unkcmd']
 
     m.setregs(R(pc=S['cmdloop.search'], a=ord(cmdchar)))
-    m.stepto(stopat=[callcmd, unkcmd], maxsteps=10000)
+    m.stepto(stopat=[docmd, unkcmd], maxsteps=10000)
 
     if foundaddr is not None:
         #   We've loaded the right command address and are about to call it
-        assert R(pc=callcmd, x=foundaddr) == m.regs
+        assert R(pc=docmd, x=foundaddr) == m.regs
     else:
         #   We've gone through the entire table and not found the command.
         lastentry = CMDTBL + 3 * (len(tabledata)-1)
@@ -594,7 +594,7 @@ def test_cmdloop_quitcmd(m, S, R):
     m.call(S.cmdloop)
     assert b'\n^q\n' ==  ostream.getvalue()
     #   Make sure we exited at the point where we expected.
-    assert R(pc=S.rtscmd) == m.regs
+    assert R(pc=S.Crts) == m.regs
 
 def test_cmdloop_cancel(m, S, R):
     ' Confirm that ctrl-C terminates input, ignores line. '
@@ -603,7 +603,7 @@ def test_cmdloop_cancel(m, S, R):
     m.call(S.cmdloop)
     assert b'\n^^~123~^\x07\n' b'^q\n' ==  ostream.getvalue()
     #   Make sure we exited at the point where we expected.
-    assert R(pc=S.rtscmd) == m.regs
+    assert R(pc=S.Crts) == m.regs
 
 def test_cmdloop_parse_error(m, S, R):
     ''' This checks not only the error message, but also, by showing that

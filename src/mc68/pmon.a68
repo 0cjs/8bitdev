@@ -165,13 +165,13 @@ cmdloop     jsr startline       ; prompt always printed at start of line
             cmp B,#00           ; end of table?
             beq .unkcmd         ; yes, unknown command
             cba                 ; found command?
-            beq .callcmd        ; yes, call it
+            beq .docmd          ; yes, call it
             inx                 ; skip past command char in table
             inx                 ;   and its address
             inx
             bra .contsearch
 
-.callcmd    ldx 1,X             ; load command address
+.docmd      ldx 1,X             ; load command address
             jmp ,X              ; call command (TCO)
 
             ;   No command matched; we have an error
@@ -288,23 +288,23 @@ nextline    lda A,stat
 
 cmdtbl_std
             db ' '
-            dw      rtscmd      ; do nothing
+            dw      Crts        ; do nothing
             db ':'
-            dw      deposit     ; enter data into memory
+            dw      Cdeposit    ; enter data into memory
             db '?'
-            dw      query       ; show representations of pending
+            dw      Cquery      ; show representations of pending
             db '^'
-            dw      nlcmd       ; print newline
+            dw      Cnl         ; print newline
             db 'k'
-            dw      call        ; JSR to address ("kall")
+            dw      Ccall       ; JSR to address ("kall")
             db 'q'
-            dw      quitcmd     ; "quit"; exit to monitor's caller
+            dw      Cquit       ; "quit"; exit to monitor's caller
             db 'r'
-            dw      regscmd     ; show/set saved registers
+            dw      Cregisters  ; show/set saved registers
             db 'x'
-            dw      examine     ; examine memory
+            dw      Cexamine    ; examine memory
             db $C0
-            dw      pratcmd     ; print '@'; used for testing
+            dw      Cprat       ; print '@'; used for testing
             db $00
             dw      $0000       ; end of table
 
@@ -317,21 +317,21 @@ cmdtbl_std
 ;   `cmdqptr` to consume what it has parsed. RTS will continue parsing
 ;   from `cmdqptr`.
 
-quitcmd     pul B               ; remove parse continuation address so that we
+Cquit       pul B               ; remove parse continuation address so that we
             pul B               ;   return to what called the monitor
             ; fallthrough
 
-rtscmd      rts                 ; do-nothing command
+Crts        rts                 ; do-nothing command
 
 ;   This command is used for testing the command parser; it's usually
 ;   bound an unprintable character such as $C0 (`@` with MSbit set).
-pratcmd     jsr inline
+Cprat       jsr inline
             lda A,#'@'
             jmp prchar          ; RTS (TCO)
 
 ;   Print a newline (even if not inline).
 ;   This is useful for separating output, and also used by unit tests.
-nlcmd       equ nextline
+Cnl         equ nextline
 
 ;   Call ("kall") to an address.
 ;
@@ -345,7 +345,7 @@ nlcmd       equ nextline
 ;   XXX Register values are undefined at call time. We should be setting
 ;   up the saved registers and flags on the stack and "calling" with RTI.
 
-call        ldx #Mcallcur
+Ccall       ldx #Mcallcur
             bsr usepending
             ldx Mcallcur
             jmp ,X              ; RTS (TCO)
@@ -360,7 +360,7 @@ call        ldx #Mcallcur
 ;   following command is a hex number that would otherwise be interpreted
 ;   as data to be deposited.
 ;
-deposit     ldx #Mdepcur
+Cdeposit    ldx #Mdepcur
             bsr usepending
             ldx Mdepcur
             stx tmp2            ; deposit index
@@ -392,7 +392,7 @@ deposit     ldx #Mdepcur
 ;   this uses the most recent value of pending. The value is printed in
 ;   hex, decimal (XXX not yet implemented), ASCII, etc.
 ;
-query       jsr inline
+Cquery      jsr inline
             lda A,Mpending
             jsr prhex
             lda A,Mpending+1
@@ -420,7 +420,7 @@ query       jsr inline
 ;   - lNN   number of lines to dump
 ;   - wNN   nubmer of bytes dumped per line
 
-examine     ldx #Mexamcur
+Cexamine    ldx #Mexamcur
             jsr usepending
             ldx #.opttab
             jsr qcmdopts
@@ -467,7 +467,7 @@ examine     ldx #Mexamcur
 ;   set register values. The argument list must be terminated by whitespace or
 ;   end of input.
 
-regscmd     jsr qwspace         ; check args after command
+Cregisters  jsr qwspace         ; check args after command
             bcc .set            ; if not whitespace, we're setting registers
 
 .show       lda A,#'p'

@@ -422,44 +422,13 @@ query       jsr inline
 
 examine     ldx #Mexamcur
             jsr usepending
-
-.nextarg    jsr qwspace         ; end of arguments?
-            bcs .print
-            lda A,0,X           ; qwspace returned cmdqptr in X
-            cmp A,#'l'          ; length opt?
-            beq .linearg
-            cmp A,#'L'
-            beq .linearg
-            cmp A,#'w'          ; width opt?
-            beq .widtharg
-            cmp A,#'W'
-            beq .widtharg
-            jmp prperr_abort    ; bad arg: err and abort parsing line
-
-            ;   XXX obviously this duplicated code could be refactored somehow
-.linearg    inx                 ; consume option letter
-            stx cmdqptr
-            jsr qhexbyte        ; try to parse argument
-            bne .nextarg        ; no parse, ignore the option letter
-.linearg1   stx cmdqptr         ; consume parsed text
-            lda A,qhex_out+1
-            sta A,Mexamlines    ; set argument
-            bra .nextarg
-
-.widtharg   inx                 ; consume option letter
-            stx cmdqptr
-            jsr qhexbyte        ; try to parse argument
-            bne .nextarg        ; no parse, ignore the option letter
-            stx cmdqptr         ; consume parsed text
-            lda A,qhex_out+1
-            sta A,Mexamwidth    ; set argument
-            bra .nextarg
+            ldx #.opttab
+            jsr qcmdopts
 
 .print      jsr startline
             lda A,Mexamlines    ; lines to print
             sta A,tmp1          ; set remaining lines left to print
             ldx Mexamcur        ; load start location to examine
-
 .nextline   ;   print current line address
             stx tmp2
             lda A,tmp2          ; addr hi
@@ -480,6 +449,12 @@ examine     ldx #Mexamcur
             dec tmp1            ; lines left to print
             bne .nextline
             rts
+
+.opttab     db 'l',OPTbyte      ; number of lines of dump output
+            dw Mexamlines
+            db 'w',OPTbyte      ; number of bytes per dump line
+            dw Mexamwidth
+            db 0                ; terminator
 
 ;   show/set saved registers
 ;

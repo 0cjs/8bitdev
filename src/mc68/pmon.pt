@@ -413,8 +413,8 @@ def dep_examine_defaults(m, addr=0x000):
 @pytest.mark.parametrize('success, consumed, cmdarg', [
     (True,   0,  b''),
     (True,   2,  b'w1'),
-    (True,   3,  b'W1 '),   # first trailing whitespace consumed
-    (True,   3,  b'L1  '),
+    (True,   3,  b'w1 '),   # first trailing whitespace consumed
+    (True,   3,  b'l1  '),
     (False,  0,  b'x'),
     (False,  2,  b'w1g'),   # err msg offset includes set_rdlinebuf offset
 ])
@@ -459,9 +459,9 @@ def test_examine_parseargs(m, S, R, cmdarg, consumed, success):
     '  addr, cmdarg, width, lines, expmatch', [
     (0x7FFF, b'',        8,   2, '7FFF: 00 40 41 42 43 44 45 46\n'
                                  '8007: 47 48 49 4A 4B 4C 4D 4E\n'),
-    (0x8000, b'L1',      8,   1, '8000: 40 41 42 43 44 45 46 47\n'),
-    (0x8001, b'W3',      3,   2, '8001: 41 42 43\n8004: 44 45 46\n'),
-    (0x8002, b'L1fW2',   2,  31, '8002: 42 43\n.*803E: 7E 7F\n'),
+    (0x8000, b'l1',      8,   1, '8000: 40 41 42 43 44 45 46 47\n'),
+    (0x8001, b'w3',      3,   2, '8001: 41 42 43\n8004: 44 45 46\n'),
+    (0x8002, b'l1fw2',   2,  31, '8002: 42 43\n.*803E: 7E 7F\n'),
     (0x8003, b'l3w10',  16,   3, '8003: 43 .* 52\n8013: 53.*\n8023: 63.*72\n'),
 ], ids=tmc_tid)
 def test_examine_output(m, S, R, addr, width, cmdarg, lines, expmatch):

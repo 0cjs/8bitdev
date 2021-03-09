@@ -332,6 +332,35 @@ def test_qcmdopts_badtab():
 ####################################################################
 #   Commands (tested outside of command loop)
 
+@pytest.mark.parametrize('command, curloc', [
+    ('deposit', 'Mdepcur'),
+    ('examine', 'Mexamcur'),
+    ('call',    'Mcallcur'),
+])
+def test_command_pending_use(m, S, R, command, curloc):
+    ''' Test only that commands properly store the pending value in their
+        current location if a simple pending value is available. All other
+        coverage comes from test_usepending_* and the individual command
+        tests.
+
+        It does this by running the command up to the first RTS, which will
+        normally be the return from `bsr usepending`. For commands whose
+        first call isn't to usepending, we'll have to look at other options
+        or just have those test their pending setup themselves.
+    '''
+    cmdaddr = S[command]; claddr = S[curloc]
+    print('{}={:04X} {}={:04X}'.format(command, cmdaddr, curloc, claddr))
+
+    def run():
+        m.depword(S.Mpending, 0x5678); m.depword(claddr, 0x1234)
+        m.setregs(R(pc=cmdaddr)); m.stepto(stopon=[I.RTS])
+
+    m.deposit(S.stat, 0); run()
+    assert 0x1234 == m.word(claddr), 'no pending available'
+
+    m.deposit(S.stat, 0x80); run()
+    assert 0x5678 == m.word(claddr), 'available pending not used'
+
 @pytest.mark.parametrize('cmdsym, optstr, expected_vals', [
     ('examine', b'lAwB', {
         'Mexamlines': 0xA, 'Mexamwidth': 0xB, }),
@@ -517,35 +546,6 @@ def test_regscmd_show(m, S, R, regs):
     expected = ' p{:04X} a{:02X} b{:02X} x{:04X} c{:02X} s{:04X}\n' \
         .format(regs.pc, regs.a, regs.b, regs.x, regs.cc, regs.sp)
     assert (inbuf, expected) == (m.word(S.cmdqptr), output)
-
-@pytest.mark.parametrize('command, curloc', [
-    ('deposit', 'Mdepcur'),
-    ('examine', 'Mexamcur'),
-    ('call',    'Mcallcur'),
-])
-def test_command_pending_use(m, S, R, command, curloc):
-    ''' Test only that commands properly store the pending value in their
-        current location if a simple pending value is available. All other
-        coverage comes from test_usepending_* and the individual command
-        tests.
-
-        It does this by running the command up to the first RTS, which will
-        normally be the return from `bsr usepending`. For commands whose
-        first call isn't to usepending, we'll have to look at other options
-        or just have those test their pending setup themselves.
-    '''
-    cmdaddr = S[command]; claddr = S[curloc]
-    print('{}={:04X} {}={:04X}'.format(command, cmdaddr, curloc, claddr))
-
-    def run():
-        m.depword(S.Mpending, 0x5678); m.depword(claddr, 0x1234)
-        m.setregs(R(pc=cmdaddr)); m.stepto(stopon=[I.RTS])
-
-    m.deposit(S.stat, 0); run()
-    assert 0x1234 == m.word(claddr), 'no pending available'
-
-    m.deposit(S.stat, 0x80); run()
-    assert 0x5678 == m.word(claddr), 'available pending not used'
 
 
 ####################################################################

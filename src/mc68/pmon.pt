@@ -332,6 +332,49 @@ def test_qcmdopts_badtab():
 ####################################################################
 #   Commands (tested outside of command loop)
 
+@pytest.mark.parametrize('cmdsym, optstr, expected_vals', [
+    ('examine', b'lAwB', {
+        'Mexamlines': 0xA, 'Mexamwidth': 0xB, }),
+    ('regscmd', b'p1001a20b30x4001c50s6001', {
+        'Rpc': 0x1001, 'Ra': 0x20, 'Rb': 0x30, 'Rx': 0x4001,
+        'Rcc': 0x50, 'Rsp': 0x6001, }),
+])
+def test_command_options(m, S, cmdsym, optstr, expected_vals):
+    ''' Generic test for commands that use ``qcmdopts``:
+        ensure that options exist and set values in the correct locations.
+
+        `optstr` must use a value ≥$100 for options that take word values
+        or they will be mistakenly assumed to be byte values.
+
+        We also confirm that an unknown option produces an error and rolls
+        back the stack frame correctly, though this is really just for
+        comfort: it this adds very little coverage over the ``qcmdopts``
+        unit tests that already check this.
+    '''
+    stops = [   S['qcmdopts.done'], # successful parse complete
+                S.prperr,           # error/abort exit
+            ]
+
+    #   Successful parse with values in correct locations.
+    set_rdlinebuf(m, optstr)
+    m.call(S[cmdsym], stopat=stops)
+    for valsym, expected in expected_vals.items():
+        valaddr = S[valsym]
+        if expected >= 0x100:
+            actual = m.word(valaddr)
+        else:
+            actual = m.byte(valaddr)
+        assert expected == actual, valsym
+
+    #   Use an option that no command accepts so we get a parse failure.
+    set_rdlinebuf(m, b'\xFE')
+    #   On abort, restore stack to this test's call point,
+    #   emulating the parse loop's save of stack position.
+    initsp = m.sp; m.depword(S.perr_stack, initsp)
+    m.call(S[cmdsym], stopat=stops)
+    assert R(pc=S.prperr, sp=initsp) == m.regs, \
+        'Expected error exit and stack restored.'
+
 def set_rdlinebuf(m, input=b''):
     ''' Set up the input buffer with args to be parsed by a command.
 
@@ -410,51 +453,6 @@ def dep_examine_defaults(m, addr=0x000):
     #   to be restored correctly on an abort.
     m.depword(S.perr_stack, m.sp)
 
-@pytest.mark.parametrize('success, consumed, cmdarg', [
-    (True,   0,  b''),
-    (True,   2,  b'w1'),
-    (True,   3,  b'w1 '),   # first trailing whitespace consumed
-    (True,   3,  b'l1  '),
-    (False,  0,  b'x'),
-    (False,  2,  b'w1g'),   # err msg offset includes set_rdlinebuf offset
-])
-def test_examine_parseargs(m, S, R, cmdarg, consumed, success):
-    #   XXX This doesn't test the results of successful arguments; that's
-    #   actually still done by test_examine_output. We should probably
-    #   move the testing of all argument setup here, and then have
-    #   test_examine_output do no arg parsing but instead just use args
-    #   directly set up by the test.
-    inbuf = set_rdlinebuf(m, cmdarg)
-    _, ostream = loadbios(m)
-    dep_examine_defaults(m)
-
-    initsp = m.sp       # We pretend that the RTS address pushed on by
-                        # call() is the continuation that must be removed
-                        # in the case of an error.
-    stopat = [
-        S['examine.print'], # Don't bother executing output routines.
-        S.prperr,           # On error return, stop before doing anything that
-                            # uses the stack, because call() will throw an
-                            # error because its dummy return address was eaten
-                            # by "no error" continuation removal.
-    ]
-    m.call(S.examine, stopat=stopat)
-    #   Here an `EOFError: No more input available from streamiof` usually
-    #   indicates that the stack handling is incorrect and parsing has
-    #   continued past an error.
-    output = str(ostream.getvalue(), encoding='ASCII')
-    assert consumed == m.word(S.cmdqptr) - inbuf
-    if not success:
-        #   XXX This doesn't really properly test that control flow is
-        #   correct, since it defines a specific stack situation rather
-        #   than testing that it works. Perhaps a test similar to
-        #   test_cmdloop_parse_error() should be set up to properly test
-        #   control flow for "generic" argument parsing failures by
-        #   commands (as opposed to the top level).
-        assert R(pc=S.prperr, sp=initsp) == m.regs, '''
-            On error exit, stack should not have cmdloop.parse continuation.
-        '''
-
 @pytest.mark.parametrize(
     '  addr, cmdarg, width, lines, expmatch', [
     (0x7FFF, b'',        8,   2, '7FFF: 00 40 41 42 43 44 45 46\n'
@@ -519,42 +517,6 @@ def test_regscmd_show(m, S, R, regs):
     expected = ' p{:04X} a{:02X} b{:02X} x{:04X} c{:02X} s{:04X}\n' \
         .format(regs.pc, regs.a, regs.b, regs.x, regs.cc, regs.sp)
     assert (inbuf, expected) == (m.word(S.cmdqptr), output)
-
-@pytest.mark.parametrize('success, cmdarg, consumed, changedregs', [
-    ( True, b'pFEDC',   5, R(pc=0xFEDC)      ),
-    ( True, b'aFF',     3, R(a=0xFF)         ),
-    ( True, b'bE0 ',    4, R(b=0xE0)         ), # first trailing wspc consumed
-    ( True, b'x7778',   5, R(x=0x7778)       ),
-    ( True, b'c31',     3, R(cc=0x31)        ),
-    ( True, b's123',    4, R(sp=0x123)       ),
-    ( True, b'b1  ',    3, R(b=0x01)         ), # first trailing wspc consumed
-    ( True, b'a07b9',   5, R(a=0x07, b=0x09) ),
-    (False, b'x',       1, R()               ),
-    (False, b'z',       0, R()               ),
-    (False, b'a1x2y',   4, R(a=1, x=2)       ),
-    ( True, b'bBBaAA',  6, R(a=0xAA, b=0xBB) ), # reversed register order
-    ( True, b'aAAaBB',  6, R(a=0xBB)         ), # multiple sets
-])
-def test_regscmd_set(m, S, R, success, cmdarg, consumed, changedregs):
-    initregs = R(pc=0x0102, a=0x03, b=0x04, x=0x0506, cc=0xFF, sp=0x0708)
-    depregs(m, initregs)
-    inbuf = set_rdlinebuf(m, cmdarg)
-    _, ostream = loadbios(m)
-
-    #   Since our tests are not calling the commands from the command
-    #   parsing loop, we must save our pre-call stack value manually for it
-    #   to be restored correctly on an abort.
-    m.depword(S.perr_stack, m.sp)
-
-    initsp = m.sp       # XXX per test_examine_parseargs()
-    m.call(S.regscmd, stopat=[S.prperr])
-    assert (initregs.clone(**changedregs.valued()), hex(inbuf + consumed)
-      ) == (examregs(m),                            hex(m.word(S.cmdqptr)))
-    if not success:
-        #   XXX Same issues as arg parsing for test_examine_parseargs?
-        assert R(pc=S.prperr, sp=initsp) == m.regs, '''
-            On error exit, stack should not have cmdloop.parse continuation.
-        '''
 
 @pytest.mark.parametrize('command, curloc', [
     ('deposit', 'Mdepcur'),

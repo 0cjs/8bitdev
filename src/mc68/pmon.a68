@@ -649,7 +649,7 @@ OPTtable    equ tmp2
 OPTvaladdr  equ tmp2a
 
 qcmdopts    stx OPTtable        ; save command options table location
-qcmdopt1    ;   process the next option in the input
+.parsenext  ;   process the next option in the input
             jsr qwspace         ; ♠AX end of options given to command?
             bcs .done           ; yes, we're done
             ;   A now contains an unconsumed input char given as a cmd option
@@ -686,7 +686,7 @@ qcmdopt1    ;   process the next option in the input
             ldx OPTvaladdr      ; target location for value
             lda B,qhex_out+1
             sta B,0,X           ; save parsed LSB
-            jmp qcmdopt1
+            jmp .parsenext
 
 .optvalword jsr qhexword
             bne .opterr
@@ -696,7 +696,7 @@ qcmdopt1    ;   process the next option in the input
             sta B,0,X           ; save parsed MSB
             lda B,qhex_out+1
             sta B,1,X           ; save parsed LSB
-            jmp qcmdopt1
+            jmp .parsenext
 
 .opterr     ;   Parse error:
             ;   - Input char did not match a char from the option table.

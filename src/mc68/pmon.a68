@@ -1,5 +1,85 @@
 ;   pmon: a machine-language monitor
 
+; ---------------------------------------------------------------------------
+;   Monitor Entry, Stack Pointer and Saved Program Counter
+
+;   A reset may be "cold" (the system has just been powered on, and RAM and I/O
+;   are not initialized) or "warm" (the system can continue with its current
+;   configuration).
+;
+;   The "OS" is whatever has most recently done a cold reset initialization
+;   (whether via an actual reset or just calling the cold reset code), setting
+;   up the stack and I/O. This is usually the system ROM, but may also have
+;   been a user-supplied cold reset routine that then entered pmon.
+;
+;   A vendor-supplied ROM OS may or may not support warm resets. The Apple II
+;   Autostart Monitor does; the Apple II "Old Monitor" does not. (See _Apple II
+;   Reference Manual_ (1979) pp. 36-38.)
+;
+;   Pmon supports warm resets: the standard entry point will always attempt to
+;   determine whether it needs to (re-)initialize its own data (memory) and any
+;   I/O devices it owns (such as a serial console not set up by the OS). Pmon
+;   generally avoids setting the stack; see below for more on SP handling.
+;
+;   XXX Pmon warm resets are not yet properly implemented.
+;
+;   There are four ways of entering the monitor:
+;   1. JMP into the monitor from the OS (direct entry by OS or manually via
+;      vendor monitor or BASIC) or other running program. This leaves us with
+;      no information about the caller, beyond what its current SP is.
+;   2. JSR from OS etc. We know the calling address from the stack, and the
+;      quit (`q`) command will return to the calling program. (Quit has
+;      undefined behaviour otherwise; can we mitigate this? Can we even detect
+;      that we were entered with JSR instead of JMP?)
+;   3. From an interrupted running program (NMI or SWI/breakpoint).
+;   4. Return from a call (`k`) command.
+;
+;   *** Saved Program Counter (PC) Handling
+;
+;   1. Saved PC unchanged. The current PC is irrelevant; any value useful to
+;      the monitor was lost at reset.
+;   2. ??? Use return addr from stack? How do we tell it's valid?
+;   3. Save PC from the interrupt stack frame. The user can view it for
+;      debugging, and it's available when rebuilding the stack frame for an
+;      RTI. There should be some way of easily using this as the target for
+;      jump/continue/step/trace commands.
+;   4. Saved PC unchanged. The current PC is irrelevant, and we have no
+;      information about what it was before the RET that returned us to the
+;      call command.
+;
+;   *** Saved Stack Pointer (SP) Handling
+;
+;   pmon always uses the existing SP no matter how entered.
+;
+;   For cases 1-3 it assumes that the OS or program has set a reasonable SP
+;   with enough stack space available for the monitor's needs (a few dozen
+;   bytes, probably). For a system with only pmon on it, the "OS" is the reset
+;   vector code that sets up the stack and I/O; returning to this might just
+;   re-enter the monitor.
+;
+;   For case 4 (return to call command) it currently assumes that the SP was
+;   not changed; this allows it to continue parsing the command line after a
+;   call. It might be possible for pmon to detect a change of stack by a called
+;   routine (which would have to copy the pmon return address to the new stack)
+;   and restart pmon, but it's not clear how useful this would be.
+;
+;   The saved SP represents the most recent SP we've seen from a program that
+;   entered the monitor in any way other than returning after a call command.
+;   (This is useful for debugging programs, or sometimes seeing how one entered
+;   the monitor.) The entry cases are:
+;   1. SP is saved at entry, allowing the user to examine the OS/calling
+;      program stack.
+;   2. Same as #1.
+;   3. Pmon saves the SP  after removing interrupt stack frame. (This lets the
+;      user examine the program's stack contents.) The interrupt stack frame is
+;      rebuilt from saved regs if RTI is used to continue.
+;   4. Pmon does not save the SP; the old value is maintained since that's the
+;      last one we know of that we did not set. (It's assumed that the called
+;      routine did not change the SP; see above.)
+;
+
+; ---------------------------------------------------------------------------
+
     ifdef UNIT_TESTING
 ;   XXX These definitions should really be coming from the .pt file.
 pmon_ramlo      equ $80
@@ -114,14 +194,20 @@ pmon_ramhi_end equ *
 ; ----------------------------------------------------------------------
 ;   Command loop
 
-;   Do minimum initialization to avoid truly broken behaviour and
-;   then drop into command loop.
-init        ldx #cmdtbl_std     ; default command table
+init        ;   The SP in the saved registers defaults to our SP at monitor
+            ;   entry. This points to the address where Cquit would return; our
+            ;   monitor stack starts immediately underneath. (See above for
+            ;   details on this.)
+            tsx
+            stx Rsp
+            ;   Minimum initialization to avoid truly broken behaviour.
+            ldx #cmdtbl_std     ; default command table
             stx cmdtbl
             lda A,#EXWIDTH      ; default examine width
             sta A,Mexamwidth
             lda A,#8            ; default examine lines to print
             sta A,Mexamlines
+            ; fallthrough
 
 cmdloop     jsr startline       ; prompt always printed at start of line
             lda A,#PROMPT
@@ -178,7 +264,7 @@ cmdloop     jsr startline       ; prompt always printed at start of line
 .unkcmd     ldx cmdqptr         ; restore parse point because we had consumed
             dex                 ;   the command
             stx cmdqptr
-            ;   fallthrough
+            ; fallthrough
 
 ;   Parse error: beep, print message, start fresh parser loop.
 ;
@@ -342,13 +428,60 @@ Cnl         equ nextline
 ;   input buffer or move the stack! The monitor may also break if other
 ;   locations it depends upon are overwritten.
 ;
-;   XXX Register values are undefined at call time. We should be setting
-;   up the saved registers and flags on the stack and "calling" with RTI.
+;   Before the call, this sets the registers and condition codes (excepting the
+;   PC and SP) to the saved values, and saves the same at return. This is
+;   handy for testing/debugging subroutines, but means that the information
+;   needed to resume after an interrupt that entered the monitor is destroyed.
 
 Ccall       ldx #Mcallcur
             bsr usepending
-            ldx Mcallcur
-            jmp ,X              ; RTS (TCO)
+            ;   Set up return address for this call
+            lda #LB(.callreturn)
+            psh A
+            lda #MB(.callreturn)
+            psh A
+            ;   Build an RTI stack frame from address of the routine to
+            ;   call and the saved register values.
+            lda Mcallcur+1
+            psh A
+            lda Mcallcur
+            psh A
+            lda Rx+1
+            psh A
+            lda Rx
+            psh A
+            lda Ra
+            psh A
+            lda Rb
+            psh A
+            lda Rcc
+            psh A
+            ;   Set the register values and "call" the routine.
+            rti
+
+.callreturn ;   We can't just start with `STA A,Rcc` becuase that changes the
+            ;   flags. (Making store instructions affect flags was not the best
+            ;   decision Motorola ever made.) So instead:
+            psh A           ; does not affect flags
+            tpa
+            sta A,Rcc       ; save condition codes at return
+            pul A
+            sta A,Ra        ; save accumulators and index register at return
+            sta B,Rb
+            stx Rx
+            ;   The current PC is irrelevant, and we have no information about
+            ;   what the PC was at the RET that brought us back here. So we do
+            ;   not update the saved PC. This leaves intact the saved PC of the
+            ;   interrupt point that entered the monitor, if present, but
+            ;   we cannot continue from interrupt after a call command because
+            ;   the call command changed A/B/X/CCR.
+            ;
+            ;   We assume that the caller did not move the stack, so the saved
+            ;   SP stays at its value as of the last monitor entry (or change
+            ;   by the user). Had the routine moved the stack, our behviour now
+            ;   would be undefined unless it copied our stack data to the new
+            ;   stack.
+            rts
 
 ;   deposit byte arguments to memory at Mcur.
 ;
@@ -361,7 +494,7 @@ Ccall       ldx #Mcallcur
 ;   as data to be deposited.
 ;
 Cdeposit    ldx #Mdepcur
-            bsr usepending
+            jsr usepending
             ldx Mdepcur
             stx tmp2            ; deposit index
 .next       ldx cmdqptr         ; current input pointer

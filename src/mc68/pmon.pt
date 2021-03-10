@@ -442,11 +442,39 @@ def test_query(m, S, R, val, output):
     assert output == str(ostream.getvalue(), encoding='ASCII')
 
 @pytest.mark.parametrize( 'target', [ 0x2222, 0x7055, ], ids=tmc_tid)
-def test_callcmd(m, S, R, target):
+def test_Ccall(m, S, R, target):
+    m.deposit(S.Ra,  0xA0)
+    m.deposit(S.Rb,  0xB0)
+    m.depword(S.Rx,  0xC000)
+    #   The test routine both expects certain condition codes (crashing if
+    #   they are not set as expected) and sets some. In particular, we know
+    #   that a likely error in the register save routine would set the zero
+    #   flag, so we have the test code clear it.
+    m.deposit(S.Rcc, 0b00101010)    # --HiNzVc
+    expected_cc =    0b11100101     # --HinZvC
+
+    #   The call command should not change the saved SP or PC,
+    #   for reasons described in the code.
+    expected_sp = 0xDEAD
+    m.depword(S.Rsp, expected_sp)
+    expected_pc = 0xBEEF
+    m.depword(S.Rpc, expected_pc)
+
+    #   XXX test condition codes
+    m.deposit(target, [
+        I.INCA, I.INX,              # changed registers to save (except B)
+        I.CLV, I.SEC,               # some changed flags to save
+        I.LDAB, 0,                  # set Z flag and change B
+        I.RTS,
+        ])
     m.depword(S.Mcallcur, target)
-    m.deposit(target, [I.LDAA, 0xAA, I.RTS])
-    m.call(S.Ccall, R(a=0x55))
-    assert R(a=0xAA) == m.regs
+
+    print('calling:', hex(target), m.hexdump(target, 8))
+    m.call(S.Ccall)
+    assert (0xA1,         0x00,         0xC001,       bin(expected_cc)) \
+        == (m.byte(S.Ra), m.byte(S.Rb), m.word(S.Rx), bin(m.byte(S.Rcc)))
+    assert (hex(expected_pc),   hex(expected_sp)) \
+        == (hex(m.word(S.Rpc)), hex(m.word(S.Rsp)))
 
 @pytest.mark.parametrize(
     '  addr, parselen, cmdarg,    data', [

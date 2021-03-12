@@ -5,7 +5,7 @@ import  pytest
 if not exists('.all-tools'):
     pytest.skip("skipping ASxxxx tests", allow_module_level=True)
 
-object_file = 'asxxxx/reloctest'
+object_file = 'src/asxxxx/reloctest'
 
 def test_relocaddr(m, S):
     assert 0x400 == S.reloctest

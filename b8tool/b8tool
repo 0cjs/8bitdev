@@ -1,0 +1,216 @@
+#!/usr/bin/env python3
+'''
+    b8tool - build tool for retro 8-bit cross-development
+
+    The ``B8_BASEDIR`` environment variable must be used to set `BASEDIR`,
+    the base directory of the project. All relative paths given to the tool
+    are intepreted relative to this (the CWD is ignored), and all of the
+    project's tools, source code and build results are expected to live
+    under this.
+    • All generated files (build output, downloaded tools, temporary files,
+      etc.) will be placed under ``$BASEDIR/.build/`` for easy cleanup.
+    • Source code and data may be placed directly in $BASEDIR but more
+      often is in src/ or other subdirectories.
+    • The build tools themselves may be placed in any directory; ``b8tool``
+      uses its own path to find its modules.
+
+    Subdirectories under ``BASEDIR/.build/`` include:
+    • ``obj/``: Build output. Paths underneath this will match the path to
+      the source code file relative to `BASEDIR`, e.g., ``src/foo/bar.a65``
+      will produce output files ``.build/obj/src/foo/bar.*``.
+
+    This currently expects all the tools it invokes (``asl``, ``as6500``,
+    etc.) to be in $PATH. For tools the user has installed into his system
+    this is fine. Tools built for the project should be placed in
+    ``$BASEDIR/.build/tool/bin/`` and that should be prefixed to $PATH
+    before running this. (Eventually, this tool should deal with building
+    and installing project-local tools.)
+
+'''
+
+# N.B. for developers:
+# • In the long run we want nicer error messages, but for the moment
+#   developers can easily enough work out the problem from the exception.
+# • Older systems still supply Python 3.5. To try to remain compatible,
+#   always use str() when passing path-like objects to standard library
+#   functions.
+
+from    contextlib  import contextmanager
+from    os  import chdir, environ
+from    pathlib  import Path
+from    subprocess  import run, CalledProcessError
+import  sys
+
+BASEDIR = environ.get('B8_BASEDIR')
+
+####################################################################
+#   Support routines
+
+def b8path(*pathcomponents):
+    ' Return absolute `Path` for `pathcomponents` relative to `BASEDIR`. '
+    return Path(BASEDIR, *pathcomponents)
+
+def b8objdir(srcpath):
+    ''' Return the directory in which we build object files for sources
+        from directory `srcpath` relative to `BASEDIR`.
+    '''
+    return b8path('.build/obj/', srcpath)
+
+@contextmanager
+def cwd(path):
+    ''' Change the current working directory to `path` for the duration of
+        the context, switching to the previous CWD when done. Non-existent
+        directories will be created.
+
+        To help debug problems, the CWD will be printed to stderr if any
+        exception is raised. (The exception will be re-raised after
+        printing.) This is a hack; the caller should control all printing.
+    '''
+    oldcwd = Path.cwd()
+    path.mkdir(parents=True, exist_ok=True)
+    chdir(str(path))
+    try:
+        yield
+    except BaseException:
+        #   XXX Printing here is a hack (see docstring.)
+        #   We catch BaseException to ensure that we print this even if
+        #   the program is, e.g., trying to exit with a SystemExit.
+        print('Exception with CWD', prettypath(str(path)), file=sys.stderr)
+        raise
+    finally:
+        chdir(str(oldcwd))
+
+def prettypath(s):
+    ''' If `str` `s` is a path where `BASEDIR` is its prefix, return, `s`
+        with that prefix replaced by '$BASEDIR'. Otherwise return `s`
+        unmodified. This reduces noise when printing diagnostics while
+        still giving complete path information.
+    '''
+    if s.startswith(BASEDIR):
+        return '$BASEDIR' + s[len(BASEDIR):]
+    else:
+        return s
+
+def runtool(toolbin, *args, is32bit=False):
+    ''' Run `toolbin` with the given `args`. On success this simply
+        returns; on failure it prints the command line and the exit code
+        and then exits this program. (This makes error output more readable
+        than if a Python exception is thrown and printed.)
+
+        For tools that under Linux are 32-bit binaries, set `is32bit` to
+        `True` to have a helpful message printed when the exit code is 127,
+        usually indicating that support for running 32-bit binaries is not
+        installed.
+    '''
+    ret = run((toolbin,) + args)
+    if ret.returncode == 0:
+        return
+    print('FAILED (exit={}): {} {}'.format(ret.returncode, toolbin,
+        ' '.join(map(prettypath, args))))
+    if is32bit and ret.returncode == 127:
+        print('(Do you support 32-bit executables?)', file=sys.stderr)
+    exit(ret.returncode)
+
+def remove_formfeeds(filepath):
+    ''' Replace all form feeds with newlines in `filepath`. This makes
+        listings cleaner when viewed on the screen.
+
+        For ASXXXX .lst files, this must be done only *after* the .rst file
+        is created by the linker because otherwise the extra newlines make
+        the linker edit the wrong lines in the .lst file.
+    '''
+    f = Path(filepath)
+    f.write_text(f.read_text().replace('\f', '\n'))
+
+####################################################################
+#   Build commands
+
+def asx(args):
+    ''' Run ASXXXX assembler. Currently this always runs ``as6500``.
+
+        `args[0]` is the source path, relative to `BASEDIR`.
+        Any further arguments are passed as-is to the assembler.
+
+        The assembly options we use are:
+          -x  Output in hexadecimal
+          -w  Wide listing format for symbol table
+              (symbol name field 55 chars instead of 14)
+          -p  Disable listing pagination
+          -l  Create listing file (`.lst`)
+          -o  Create object file (`.rel`)
+          -s  Create symbol file (`.sym`) (removes symtab from listing file)
+          -r  Inlcude assembler line numbers in the `.hlr` hint file
+          -rr Inlcude non-list assembler line numbers in the `.hlr` hint file
+          -f  Flag relocatable references with backtick in listing
+    '''
+    asmopts = '-xwplof'
+
+    if len(args) != 1:
+        raise RuntimeError('len(args) != 1')
+
+    srcfile = b8path(args[0])
+    srcdir  = Path(args[0]).parent
+    objdir  = b8objdir(srcdir)
+    objfile = objdir.joinpath(srcfile.stem)
+
+    objdir.mkdir(parents=True, exist_ok=True)
+    runtool('as6500', asmopts, str(objfile), str(srcfile), *args[2:],
+        is32bit=True)
+
+def asxlink(args):
+    ''' Link ASXXXX assembler output.
+
+        `arg[0]` is the source path relative to `BASEDIR` (which will be
+        translated to an object path) followed by the output file basename.
+        Any extension will be removed; the output file will automatically
+        have .hex/.s19/.bin appened to it. If no input filenames are given
+        in additional arguments, the basename of this file plus ``.rel`` is
+        the input file.
+
+        `arg[1:]`, if present, are a mix of linker options and input
+        filenames (with or without .rel extension). Input filenames
+        are relative to the object dir of the output file. (Possibly
+        they should instead take source dir paths; see the comments
+        in the function for a discussion of this.)
+
+        The link options we use are:
+          -n  No echo of commands to stdout
+          -u  Update listing file (.lst) with relocated addresses from .rst
+              (This does not update the addresses in the symbol table.)
+          -m  Generate map output file (`.map`)
+          -w  "Wide" mode for map file (show 32 chars, not 8, of symbol names)
+          -t  Output format: Tandy Color Computer BASIC binary file (`.bin`)
+    '''
+    linkopts="-numwt"
+
+    srcpath = Path(args[0])
+    srcdir = srcpath.parent
+    objstem = srcpath.name      # possibly should remove .rel here, if present
+    objdir = b8objdir(srcdir)
+
+    #   XXX We should use absolute paths rather than setting a CWD.
+    #   However, this requires us to generate absolute paths for the file
+    #   arguments to the linker, which probably requires us to specify
+    #   those separately from the linker options if we're to do this
+    #   reliably. (Otherwise we need to duplicate some of the linker's
+    #   option parsing code.) The current behaviour isn't causing much
+    #   pain, so this has not yet been fixed.
+    with cwd(objdir):
+        runtool('aslink', linkopts, objstem, *args[1:], is32bit=True)
+        remove_formfeeds(objstem + '.lst')
+        remove_formfeeds(objstem + '.rst')
+        remove_formfeeds(objstem + '.map')
+
+####################################################################
+
+COMMANDS = {
+    'asx':      asx,        # ASXXXX assembler
+    'asxlink':  asxlink,    # ASXXXX linker
+}
+
+if __name__ == '__main__':
+    if BASEDIR is None:
+        raise RuntimeError('B8_BASEDIR not set')
+    args = sys.argv[1:]   # make a copy without our program name
+    command = args.pop(0)
+    COMMANDS[command](args)

@@ -43,6 +43,9 @@ basedir=$(cd "$(dirname "$0")" && pwd -P)
 export BUILDDIR="$basedir/.build"
 all_tools="$basedir/.all-tools"
 
+export B8_BASEDIR="$basedir"
+b8tool="$B8_BASEDIR/b8tool/b8tool"
+
 #   Leading command line args (these must be at the start):
 #   • -C: clean rebuild of everything, including toolchains
 #   • -c: clean rebuild of only this repo's source (test/toolchain output)
@@ -69,64 +72,23 @@ tool_setup tool/linapple/Setup
     || export PATH="$basedir/bin:$PATH"
 mkdir -p "$BUILDDIR/obj"
 
+#   In the following builds we have no dependency graph, so everything is
+#   rebuilt each time. Fortunately this is quite fast.
+
 ####################################################################
 #   ASxxxx builds
-#
 #   Due to issues with 32-bit binaries, run only when $all_tools set.
-#
-#   The files to build are currently hardcoded with
-#   no dependency graph so it rebuilds everything each time.
-#   (Fortunately this is quite fast.)
-
-#   -x  Output in hexadecimal
-#   -w  Wide listing format for symbol table (55 char of symname instead of 14)
-#   -p  Disable listing pagination
-#   -l  Create listing file (`.lst`)
-#   -o  Create object file (`.rel`)
-#   -s  Create symbol file (`.sym`) (removes symtab from listing file)
-#   -r  Inlcude assembler line numbers in the `.hlr` hint file
-#   -rr Inlcude non-list assembler line numbers in the `.hlr` hint file
-asmopts="-xwplo -f"
-
-#   -n  No echo of commands to stdout
-#   -u  Update listing file (`.lst`) with relocated addresses info (`.rst`)
-#       (This does not update the addresses in the symbol table.)
-#   -m  Generate map output file (`.map`)
-#   -w  "Wide" mode for map file (show 32 chars, not 8, of symbol names)
-#   -t  Output format: Tandy Color Computer BASIC binary file (`.bin`)
-linkopts="-numwt"
-
-asm() {
-    local srcfile="$1"; shift
-    local objfile="$BUILDDIR/obj/asxxxx/"$(basename "$srcfile")
-    mkdir -p $(dirname "$objfile")
-    #   `.rel` output extension is replaced/added automatically
-    as6500 $asmopts "$objfile" "$srcfile" "$@" || {
-        local exitcode=$?
-        [[ $exitcode -eq 127 ]] && echo 1>&2 \
-            "as6500 exited with 127: do you support 32-bit executables?"
-        return $exitcode
-    }
-}
-
-link() {
-    #   First filename is outputfile; extn replaced by .hex/.s19/.bin.
-    #   Subsequent filenames are input files, with or without .rel extension
-    #   Single filename is ouput and input.
-    #   Other arguments before and after
-    (cd $BUILDDIR/obj/asxxxx/ && aslink $linkopts "$@")
-}
 
 [[ -f $all_tools ]] && {
-    asm src/asxxxx/simple.a65       ; link simple
-    asm src/asxxxx/reloctest.a65    ; link reloctest -b '_code=0x400' reloctest
-    asm src/asxxxx/zptest.a65       ; link zptest    -b '_code=0x0300'
-
-    #   Replace form feeds since we view listing only on screen. This must
-    #   be done *after* the .rst file is created by the linker because
-    #   otherwise the extra newlines make the linker edit the wrong lines
-    #   in the .lst file.
-    sed -i -e 's/\f/\n/' "$BUILDDIR"/obj/asxxxx/*.{lst,rst,map}
+    #   Though we don't need to explicitly specify `simple` as an input
+    #   file for the link (aslink would get it from the output file) we
+    #   do so anyway to test that b8tool handles it correctly.
+    $b8tool asx     src/asxxxx/simple.a65
+    $b8tool asxlink src/asxxxx/simple simple
+    $b8tool asx     src/asxxxx/reloctest.a65
+    $b8tool asxlink src/asxxxx/reloctest -b '_code=0x400'
+    $b8tool asx     src/asxxxx/zptest.a65
+    $b8tool asxlink src/asxxxx/zptest -b '_code=0x0300'
 }
 
 ####################################################################

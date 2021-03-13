@@ -125,6 +125,49 @@ def remove_formfeeds(filepath):
 ####################################################################
 #   Build commands
 
+def asl(args):
+    ''' Run Macroassembler AS (``asl``) on a generated top-level source
+        file that includes the single file whose path is given as the first
+        argument. If additional arguments are given, their contents will be
+        inserted into the top-level source file before the include of the
+        real source file.
+
+        This is part of the workarounds to deal with AS behavour not well
+        suited to our standard build system. See the comments in the code
+        below for details.
+    '''
+    opts = [
+        '-codepage', 'utf-8',
+        '-qxx',
+        '-U',                   # Case-sensitive symbols. This can be set
+                                # only with a command-line option.
+        '-i', BASEDIR,
+        ]
+    endopts = [ '-L', '-s', '-g', ]
+
+    srcfile = args[0]
+    objdir  = b8objdir(Path(args[0]).parent)
+    topfile = Path(srcfile).name
+
+    assert b8path(srcfile).is_file(), b8path(srcfile)
+    #   Set CWD to output dir because AS can't specify other output
+    #   locations for some files, such as the debug symbols.
+    with cwd(objdir):
+        #   If given an absolute path to a source file in another dir, AS
+        #   doesn't generate output files. (!) So set up a top-level source
+        #   file here that `include`s the real top-level source file.
+        topfile_lines = [
+            '    page 0',
+            '',
+            *args[1:],
+            #    for line in "$@"; do echo >>"$src" "$line"; done \
+            '',
+            '    include {}'.format(srcfile),
+            ]
+        with open(topfile, 'w', newline='\n') as f: # always Unix newlines
+            print(*topfile_lines, sep='\n', file=f)
+        runtool('asl', *opts, topfile, *endopts)
+
 def asx(args):
     ''' Run ASXXXX assembler. Currently this always runs ``as6500``.
 
@@ -204,6 +247,7 @@ def asxlink(args):
 ####################################################################
 
 COMMANDS = {
+    'asl':      asl,        # Macroassembler AS
     'asx':      asx,        # ASXXXX assembler
     'asxlink':  asxlink,    # ASXXXX linker
 }

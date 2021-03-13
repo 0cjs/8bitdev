@@ -102,32 +102,6 @@ objdir() {
     echo "$basedir/.build/obj/$d"
 }
 
-asbuild() {
-    local srcpath="$1"; shift
-    local objdir=$(objdir "$srcpath")
-    local src=$(basename "$srcpath")
-    #   AS has some poor behaviour we need to work around here.
-    #   • We set CWD to output dir because AS can't specify other output
-    #     locations for some files, such as the debug symbols.
-    #   • If given an absolute path to a source file in another dir, AS
-    #     doesn't generate output files. (!) So we set up the top-level
-    #     source file here that `include`s the real top-level source file.
-    #   • </dev/null prevents interactive prompt if no input file given.
-    #   • Full path to source file must be given. It will be found from
-    #     path relative to include dir, but then AS will crash.
-    #   Also, We make symbols case sensitive here; this can be done only
-    #   with a command-line option.
-    [[ -r $srcpath ]] || die 2 "Test: asbuild cannot read $srcpath"
-    mkdir -p "$objdir"
-    (cd "$objdir" \
-        && echo  >"$src" '   page 0' \
-        && for line in "$@"; do echo >>"$src" "$line"; done \
-        && echo >>"$src" "   include $srcpath" \
-        && asl </dev/null -codepage utf-8 -qxx -U \
-            -i "$basedir" "$src" -L -s -g
-    )
-}
-
 #   Build a unit-test version of a "library" file that's normally used by
 #   other files via `include`. This adds the setup and structure that is
 #   normally provided by the file including the library file.
@@ -156,7 +130,7 @@ astest() {
         *)      die 5 "astest(): Unknown file extension: $filename";;
     esac
     # XXX
-    asbuild "$filename" \
+    $b8tool asl "$filename" \
         ';   Unit Test Assembly'                                    \
         ''                                                          \
         'UNIT_TESTING equ 1'                                        \
@@ -172,7 +146,7 @@ a2exebuild() {
     local exe=$(basename "$1")
           exe=${exe%.*}             # Remove extension
     local objdir=$(objdir "$1")
-    asbuild "$@"
+    $b8tool asl "$@"
     p2a2bin "$objdir/$exe.p" > "$objdir/$exe"
 
     #   Build a disk image that will run the program when booted.
@@ -193,15 +167,15 @@ a2exebuild() {
 }
 
 #   Non-CPU-specific builds/tests (assembler/toolchain tests).
-asbuild src/asl/nomacro.a65
-asbuild src/asl/sym.a65
+$b8tool asl src/asl/nomacro.a65
+$b8tool asl src/asl/sym.a65
 
 #   CPU-specific basic tests that do not rely on the assembly framework.
-asbuild src/asl/simple.a65 ' org $240'
-asbuild src/mc68/simple.a68
+$b8tool asl src/asl/simple.a65 ' org $240'
+$b8tool asl src/mc68/simple.a68
 
 #   Standalone blobs of code.
-asbuild src/tmc68/bioscode.a68
+$b8tool asl src/tmc68/bioscode.a68
 
 #   "Library" routines
 astest  src/m65/stdtest.a65
@@ -215,22 +189,22 @@ astest src/m65/bigint.a65
 #   Portable programs (i.e., not platform-specific)
 #   and their platform-specific versions.
 astest   src/mc68/hello.a68     '  include "src/tmc68/bios.a68"'
-asbuild exe/tmc68/hello.a68
-asbuild exe/jr200/hello.a68
+$b8tool asl exe/tmc68/hello.a68
+$b8tool asl exe/jr200/hello.a68
 astest   src/mc68/pmon.a68      '  include "src/tmc68/bios.a68"'
-asbuild exe/tmc68/pmon.a68
-asbuild exe/jr200/pmon.a68
+$b8tool asl exe/tmc68/pmon.a68
+$b8tool asl exe/jr200/pmon.a68
 
 #   Platform-specific code blobs
-asbuild src/a1/pia2.a65
-asbuild src/a2/misc.a65
-asbuild src/a2/mondump.a65
-asbuild src/c64.a65
-asbuild src/jr200/jr200.a68
-asbuild src/fm7.a69
+$b8tool asl src/a1/pia2.a65
+$b8tool asl src/a2/misc.a65
+$b8tool asl src/a2/mondump.a65
+$b8tool asl src/c64.a65
+$b8tool asl src/jr200/jr200.a68
+$b8tool asl src/fm7.a69
 
 #   Platform-specific programs
-asbuild     exe/a1/charset.a65
+$b8tool asl     exe/a1/charset.a65
 a2exebuild  exe/a2/charset.a65
 
 #   Other stuff (probably needs sorting into categories above)

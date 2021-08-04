@@ -119,7 +119,7 @@ def test_call_abort(m, opcode, stopon):
         m.deposit(p, [opcode])
         m.call(p, stopon=stopon, trace=1)
     assert R(pc=p) == m.regs
-    assert ex.match('Abort on opcode=\${:02X}: '.format(opcode))
+    assert ex.match(r'Abort on opcode=\${:02X}: '.format(opcode))
 
 def test_call_rts_registers(m):
     p = 0x202

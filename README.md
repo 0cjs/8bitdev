@@ -173,6 +173,7 @@ Execution:
 
 <!-------------------------------------------------------------------->
 [ASxxxx]: http://shop-pdp.net/ashtml/asxxxx.htm
+[LinApple]: https://github.com/linappleii/linapple
 [asl]: http://john.ccac.rwth-aachen.de:8000/as/
 [dos33fsprogs]: https://github.com/deater/dos33fsprogs
 [py65]: http://py65.readthedocs.org/

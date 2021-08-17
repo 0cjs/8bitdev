@@ -7,6 +7,17 @@ die() {
     exit $exitcode
 }
 
+#   If $py is unset, set it to a reasonable default. Either way, confirm
+#   that it appears to be a Python 3 interpreter.
+#
+checkpy() {
+    : ${py:=python3}
+    #   stderr not redirected here so user sees any error from run attempt.
+    "$py" --version >/dev/null || die 2 "Bad Python interpreter: $py"
+    local v=$("$py" --version 2>&1 | head -1)
+    [[ $v = 'Python 3.'* ]] || die 2 "Bad Python version: $v"
+}
+
 tool_setup() {
     [[ ${#@} -eq 1 ]] \
         || { echo 1>&2 'tool_setup(): tool path arg required'; return 2; }
@@ -41,12 +52,13 @@ while [[ ${#@} -gt 0 ]]; do case "$1" in
     -C)     shift; rm -rf "$BUILDDIR";;
     -c)     shift; rm -rf "$BUILDDIR"/{obj,pytest};;
     -A)     shift; touch "$all_tools";;
+    -p)     shift; py="$1"; shift;;
     *)      break;;
 esac; done
 
 cd "$basedir"
 
-. ./activate -q -p python3
+checkpy; . ./activate -q -p "$py"
 
 [[ -f $all_tools ]] && tool_setup tool/asxxxx/Setup
 tool_setup tool/asl/Setup

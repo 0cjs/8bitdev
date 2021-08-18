@@ -18,13 +18,13 @@
     • ``obj/``: Build output. Paths underneath this will match the path to
       the source code file relative to `BASEDIR`, e.g., ``src/foo/bar.a65``
       will produce output files ``.build/obj/src/foo/bar.*``.
+    • ``tool/bin/``: Project-local binaries for tools used by this project.
+      Executable files here will always be used if present, otherwise the
+      usual $PATH search will occur.
 
-    This currently expects all the tools it invokes (``asl``, ``as6500``,
-    etc.) to be in $PATH. For tools the user has installed into his system
-    this is fine. Tools built for the project should be placed in
-    ``$BASEDIR/.build/tool/bin/`` and that should be prefixed to $PATH
-    before running this. (Eventually, this tool should deal with building
-    and installing project-local tools.)
+    TODO:
+    • b8tool should build project project-local tools into
+      ``BASEDIR/.build/tool/``.
 
 '''
 
@@ -36,12 +36,11 @@
 #   functions.
 
 from    contextlib  import contextmanager
-from    os  import chdir, environ
 from    pathlib  import Path
 from    subprocess  import run, CalledProcessError
-import  sys
+import  os, sys
 
-BASEDIR = environ.get('B8_BASEDIR')
+BASEDIR = os.environ.get('B8_BASEDIR')
 
 ####################################################################
 #   Support routines
@@ -68,7 +67,7 @@ def cwd(path):
     '''
     oldcwd = Path.cwd()
     path.mkdir(parents=True, exist_ok=True)
-    chdir(str(path))
+    os.chdir(str(path))
     try:
         yield
     except BaseException:
@@ -78,7 +77,7 @@ def cwd(path):
         print('Exception with CWD', prettypath(str(path)), file=sys.stderr)
         raise
     finally:
-        chdir(str(oldcwd))
+        os.chdir(str(oldcwd))
 
 def prettypath(s):
     ''' If `str` `s` is a path where `BASEDIR` is its prefix, return, `s`
@@ -102,7 +101,12 @@ def runtool(toolbin, *args, is32bit=False):
         usually indicating that support for running 32-bit binaries is not
         installed.
     '''
-    ret = run((toolbin,) + args)
+    #   Relative `toolbin` uses explict path to project tool, if available.
+    b8tool = b8path('.build', 'tool', 'bin', toolbin)
+    if os.access(str(b8tool), os.X_OK):
+        toolbin = b8tool
+
+    ret = run((str(toolbin),) + args)
     if ret.returncode == 0:
         return
     print('FAILED (exit={}): {} {}'.format(ret.returncode, toolbin,

@@ -35,6 +35,7 @@
 #   always use str() when passing path-like objects to standard library
 #   functions.
 
+from    collections  import namedtuple as ntup
 from    contextlib  import contextmanager
 from    pathlib  import Path
 from    subprocess  import run, CalledProcessError
@@ -43,7 +44,7 @@ import  os, sys
 BASEDIR = os.environ.get('B8_BASEDIR')
 
 ####################################################################
-#   Support routines
+#   b8tool Conventions
 
 def b8path(*pathcomponents):
     ' Return absolute `Path` for `pathcomponents` relative to `BASEDIR`. '
@@ -54,6 +55,37 @@ def b8objdir(srcpath):
         from directory `srcpath` relative to `BASEDIR`.
     '''
     return b8path('.build/obj/', srcpath)
+
+ISA = ntup('ISA', 'cpu, stdinc')
+ISAMAP = {
+    '.a65': ISA('6502', 'm65/std.a65'),
+    '.a68': ISA('6800', 'mc68/std.a68'),
+}
+
+#   XXX this should have a unit test
+def isa_from_path(path, return_none=False):
+    ''' Given a path, determine the instruction set architecture (ISA) from
+        the filename's extension.
+
+        The returned `ISA` object includes the lowest-common-denominator
+        CPU type and the standard include file. The CPU type may be
+        overridden by code that wants to use extended features of specific
+        CPUs in that ISA (e.g., 65C02 for the 6502 ISA), but the file
+        extensions do not determine things with that level of granularity.
+
+        If `return_none` is `True`, `None` will be returned if the ISA
+        cannot be determined. Otherwise a `LookupError` will be thrown with
+        a message giving the unknown filename extension.
+    '''
+    _, ext = os.path.splitext(str(path))
+    isa = ISAMAP.get(ext)
+    if return_none or isa is not None:
+        return isa
+    else:
+        raise LookupError("No ISA known for extension '{}'".format(ext))
+
+####################################################################
+#   Support routines
 
 @contextmanager
 def cwd(path):
@@ -128,6 +160,10 @@ def remove_formfeeds(filepath):
 
 ####################################################################
 #   Build commands
+#
+#   The arguments to these vary by build command and may be passed
+#   via a command line, so for all of these the sole parameter is
+#   a list of arguments that the build function parses itself.
 
 def asl(args):
     ''' Run Macroassembler AS (``asl``) on a generated top-level source
@@ -171,6 +207,46 @@ def asl(args):
         with open(topfile, 'w', newline='\n') as f: # always Unix newlines
             print(*topfile_lines, sep='\n', file=f)
         runtool('asl', *opts, topfile, *endopts)
+
+def asltest(args):
+    ''' Build a unit test version of a "library" file with Macroassembler
+        AS. This determines the ISA from the file extension (using
+        `isa_from_path()`) and then calls `asl()` to do the standard build
+        after generating a code prefix that sets the assembly symbol
+        ``UNIT_TESTING equ 1``, sets the base CPU type for the ISA and
+        includes the standard definitions file for it, and sets ``org
+        $1000``. the test file itself.
+
+        The first argument is the path (relative to `BASEDIR`) of the file
+        to be assembled; remaining arguments are additional lines to add to
+        the assembly before including the actual code. This can be used to
+        override the CPU type or origin, set further symbols for testing,
+        and so on.
+
+        XXX The ``UNIT_TESTING`` symbol should not actually be hardcoded by
+        this function; instead we should be reading the ``.pt`` file for
+        the unit test and extracting any symbol definitions for testing
+        from that. This would also remove the necessity of the build system
+        calling this supplying additional testing definitions as parameters
+        to this function.
+
+        XXX One way to do this would be to have the .pt file define a
+        ``unit_test_code`` variable containing a list of lines to prefix to
+        the code under test and have a Python interpreter evaluate that
+        file to get the value. (This would allow programatic generation of
+        the the value.)
+    '''
+    isa = isa_from_path(args[0])
+    header = [
+        ';   Unit Test Assembly',
+        '',
+        'UNIT_TESTING equ 1',
+        '',
+        '           cpu {}'.format(isa.cpu),
+        '           include "src/{}"'.format(isa.stdinc),
+        '           org $1000',
+        '', ]
+    asl([args[0]] + header + args[1:])
 
 def asx(args):
     ''' Run ASXXXX assembler. Currently this always runs ``as6500``.
@@ -249,9 +325,11 @@ def asxlink(args):
         remove_formfeeds(objstem + '.map')
 
 ####################################################################
+#   Top Level (Main)
 
 COMMANDS = {
-    'asl':      asl,        # Macroassembler AS
+    'asl':      asl,        # Assemble program with Macroassembler AS
+    'asltest':  asltest,    # Assemble unit test with Macroassembler AS
     'asx':      asx,        # ASXXXX assembler
     'asxlink':  asxlink,    # ASXXXX linker
 }

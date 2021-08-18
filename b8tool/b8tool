@@ -38,8 +38,7 @@
 from    collections  import namedtuple as ntup
 from    contextlib  import contextmanager
 from    pathlib  import Path
-from    subprocess  import run, CalledProcessError
-import  os, sys
+import  os, shutil, subprocess, sys
 
 BASEDIR = os.environ.get('B8_BASEDIR')
 
@@ -50,11 +49,11 @@ def b8path(*pathcomponents):
     ' Return absolute `Path` for `pathcomponents` relative to `BASEDIR`. '
     return Path(BASEDIR, *pathcomponents)
 
-def b8objdir(srcpath):
+def b8objpath(srcpath, *components):
     ''' Return the directory in which we build object files for sources
         from directory `srcpath` relative to `BASEDIR`.
     '''
-    return b8path('.build/obj/', srcpath)
+    return b8path('.build/obj/', srcpath, *components)
 
 ISA = ntup('ISA', 'cpu, stdinc')
 ISAMAP = {
@@ -122,11 +121,18 @@ def prettypath(s):
     else:
         return s
 
-def runtool(toolbin, *args, is32bit=False):
+def runtool(toolbin, *args, input=None, stdout_path=None, is32bit=False):
     ''' Run `toolbin` with the given `args`. On success this simply
         returns; on failure it prints the command line and the exit code
         and then exits this program. (This makes error output more readable
         than if a Python exception is thrown and printed.)
+
+        `input` is passed directly to `subprocess.run()` and is typically
+        a byte string.
+
+        If `stdout_path` is given, that file will be opened in binary mode
+        (creating it if necessary) and the standard output of the program
+        will be written to it. (No output will produce an empty file.)
 
         For tools that under Linux are 32-bit binaries, set `is32bit` to
         `True` to have a helpful message printed when the exit code is 127,
@@ -138,7 +144,13 @@ def runtool(toolbin, *args, is32bit=False):
     if os.access(str(b8tool), os.X_OK):
         toolbin = b8tool
 
-    ret = run((str(toolbin),) + args)
+    runargs = (str(toolbin),) + args
+    if stdout_path is None:
+        ret = subprocess.run(runargs, input=input)
+    else:
+        with open(str(stdout_path), 'wb') as f:
+            ret = subprocess.run(runargs, input=input, stdout=f)
+
     if ret.returncode == 0:
         return
     print('FAILED (exit={}): {} {}'.format(ret.returncode, toolbin,
@@ -186,7 +198,7 @@ def asl(args):
     endopts = [ '-L', '-s', '-g', ]
 
     srcfile = args[0]
-    objdir  = b8objdir(Path(args[0]).parent)
+    objdir  = b8objpath(Path(args[0]).parent)
     topfile = Path(srcfile).name
 
     assert b8path(srcfile).is_file(), b8path(srcfile)
@@ -273,7 +285,7 @@ def asx(args):
 
     srcfile = b8path(args[0])
     srcdir  = Path(args[0]).parent
-    objdir  = b8objdir(srcdir)
+    objdir  = b8objpath(srcdir)
     objfile = objdir.joinpath(srcfile.stem)
 
     objdir.mkdir(parents=True, exist_ok=True)
@@ -309,7 +321,7 @@ def asxlink(args):
     srcpath = Path(args[0])
     srcdir = srcpath.parent
     objstem = srcpath.name      # possibly should remove .rel here, if present
-    objdir = b8objdir(srcdir)
+    objdir = b8objpath(srcdir)
 
     #   XXX We should use absolute paths rather than setting a CWD.
     #   However, this requires us to generate absolute paths for the file
@@ -324,6 +336,63 @@ def asxlink(args):
         remove_formfeeds(objstem + '.rst')
         remove_formfeeds(objstem + '.map')
 
+def a2dsk(args):
+    ''' Assemble a program with Macroassembler AS and build a bootable
+        Apple II ``.dsk`` image containing that program and a ``HELLO``
+        that will run it. This calls `asl` to do the assembly; `args` will
+        be passed to it unmodified.
+
+        The program is typically run with something like::
+
+            linapple --conf tool/linapple/linapple.conf \
+                --d1 .build/obj/exe/a2/charset.dsk
+
+        XXX We should work out an option to do this automatically.
+
+        This requires dos33, mkdos33fs and tokenize_asoft from dos33fsprogs_,
+        a base image from the retroabandon diskimg_ repo, and the p2a2bin
+        program.
+
+        .. _dos33fsprogs: https://github.com/deater/dos33fsprogs.git
+        .. _diskimg: https://gitlab.com/retroabandon/diskimg.git
+    '''
+    #   XXX and TODO:
+    #   • b8tool should be handling the fetching and building of all
+    #     these programs and template disk images.
+    #   • p2a2bin is actually part of the `testmc` module; not sure
+    #     whether that is part of b8tool or separate. (Does it want a
+    #     proper Python package release, too?)
+    #   • The use of str(...) is annoying, perhaps we need some better
+    #     general plan for handling paths. The main issue is that they
+    #     currently usually come in as strings from command lines, but
+    #     possibly Path objects from other code.
+
+    srcfile = args[0]
+    srcdir, name = os.path.split(str(srcfile))
+    name, _ = os.path.splitext(name)
+    def binfile(ext=''):
+        return str(b8objpath(srcdir, name)) + ext
+
+    #   Generate an Apple II 'B' file (machine language program)
+    asl(args)
+    runtool('p2a2bin', binfile('.p'), stdout_path=binfile())
+
+    #   Generate the Applesoft BASIC HELLO program to run the above.
+    bootprog = '10 PRINT CHR$(4);"BRUN {}"'.format(name.upper()).encode('ASCII')
+    runtool('tokenize_asoft', input=bootprog, stdout_path=binfile('.HELLO'))
+
+    #   Build a disk image with the above and a HELLO that willl run it.
+    baseimg = b8path('.build/tool/src/dskimg/a2/EMPTY-DOS33-48K-V254.dsk')
+    img     = binfile('.dsk')
+    shutil.copyfile(str(baseimg), str(img))
+    def dos33(*command):
+        runtool('dos33', '-y', str(img), *command)
+    dos33('SAVE', 'B', binfile(), name.upper())
+    dos33('DELETE', 'HELLO')    # Avoids annoying SAVE overwrite warning.
+    dos33('SAVE', 'A', binfile('.HELLO'), 'HELLO')
+    #   Seems not required, but make sure HELLO is run on boot anyway.
+    dos33('HELLO', 'HELLO')
+
 ####################################################################
 #   Top Level (Main)
 
@@ -332,6 +401,7 @@ COMMANDS = {
     'asltest':  asltest,    # Assemble unit test with Macroassembler AS
     'asx':      asx,        # ASXXXX assembler
     'asxlink':  asxlink,    # ASXXXX linker
+    'a2dsk':    a2dsk,      # Apple II .dsk image that boots and runs program
 }
 
 if __name__ == '__main__':

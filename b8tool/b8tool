@@ -2,25 +2,12 @@
 '''
     b8tool - build tool for retro 8-bit cross-development
 
-    The ``B8_BASEDIR`` environment variable must be used to set `BASEDIR`,
-    the base directory of the project. All relative paths given to the tool
-    are intepreted relative to this (the CWD is ignored), and all of the
-    project's tools, source code and build results are expected to live
-    under this.
-    • All generated files (build output, downloaded tools, temporary files,
-      etc.) will be placed under ``$BASEDIR/.build/`` for easy cleanup.
-    • Source code and data may be placed directly in $BASEDIR but more
-      often is in src/ or other subdirectories.
-    • The build tools themselves may be placed in any directory; ``b8tool``
-      uses its own path to find its modules.
-
-    Subdirectories under ``BASEDIR/.build/`` include:
-    • ``obj/``: Build output. Paths underneath this will match the path to
-      the source code file relative to `BASEDIR`, e.g., ``src/foo/bar.a65``
-      will produce output files ``.build/obj/src/foo/bar.*``.
-    • ``tool/bin/``: Project-local binaries for tools used by this project.
-      Executable files here will always be used if present, otherwise the
-      usual $PATH search will occur.
+    The b8tool directory may be placed anywhere; ``b8tool`` uses its own
+    path to find its modules. See the `b8tool.path` module documentation
+    for information about the project directory structure and how the
+    ``B8_BASEDIR`` environment variable is used. In particular, b8tool will
+    always use tools from `path.tooldir('bin/')`, if available, in
+    preference to any others.
 
     TODO:
     • b8tool should build project project-local tools into
@@ -37,23 +24,17 @@
 
 from    collections  import namedtuple as ntup
 from    contextlib  import contextmanager
+from    os.path  import abspath, dirname
 from    pathlib  import Path
 import  os, shutil, subprocess, sys
 
-BASEDIR = os.environ.get('B8_BASEDIR')
+#   Configure and use b8tool's Python library path
+sys.path.insert(0, os.path.join(abspath(dirname(__file__)), 'pylib'))
+
+from    b8tool  import path
 
 ####################################################################
 #   b8tool Conventions
-
-def b8path(*pathcomponents):
-    ' Return absolute `Path` for `pathcomponents` relative to `BASEDIR`. '
-    return Path(BASEDIR, *pathcomponents)
-
-def b8objpath(srcpath, *components):
-    ''' Return the directory in which we build object files for sources
-        from directory `srcpath` relative to `BASEDIR`.
-    '''
-    return b8path('.build/obj/', srcpath, *components)
 
 ISA = ntup('ISA', 'cpu, stdinc')
 ISAMAP = {
@@ -87,8 +68,8 @@ def isa_from_path(path, return_none=False):
 #   Support routines
 
 @contextmanager
-def cwd(path):
-    ''' Change the current working directory to `path` for the duration of
+def cwd(target):
+    ''' Change the current working directory to `target` for the duration of
         the context, switching to the previous CWD when done. Non-existent
         directories will be created.
 
@@ -97,29 +78,18 @@ def cwd(path):
         printing.) This is a hack; the caller should control all printing.
     '''
     oldcwd = Path.cwd()
-    path.mkdir(parents=True, exist_ok=True)
-    os.chdir(str(path))
+    target.mkdir(parents=True, exist_ok=True)
+    os.chdir(str(target))
     try:
         yield
     except BaseException:
         #   XXX Printing here is a hack (see docstring.)
         #   We catch BaseException to ensure that we print this even if
         #   the program is, e.g., trying to exit with a SystemExit.
-        print('Exception with CWD', prettypath(str(path)), file=sys.stderr)
+        print('Exception with CWD', path.pretty(str(target)), file=sys.stderr)
         raise
     finally:
         os.chdir(str(oldcwd))
-
-def prettypath(s):
-    ''' If `str` `s` is a path where `BASEDIR` is its prefix, return, `s`
-        with that prefix replaced by '$BASEDIR'. Otherwise return `s`
-        unmodified. This reduces noise when printing diagnostics while
-        still giving complete path information.
-    '''
-    if s.startswith(BASEDIR):
-        return '$BASEDIR' + s[len(BASEDIR):]
-    else:
-        return s
 
 def runtool(toolbin, *args, input=None, stdout_path=None, is32bit=False):
     ''' Run `toolbin` with the given `args`. On success this simply
@@ -140,11 +110,11 @@ def runtool(toolbin, *args, input=None, stdout_path=None, is32bit=False):
         installed.
     '''
     #   Relative `toolbin` uses explict path to project tool, if available.
-    b8tool = b8path('.build', 'tool', 'bin', toolbin)
+    b8tool = path.tool('bin', toolbin)
     if os.access(str(b8tool), os.X_OK):
         toolbin = b8tool
 
-    runargs = (str(toolbin),) + args
+    runargs = (str(toolbin),) + tuple(map(str, args))
     if stdout_path is None:
         ret = subprocess.run(runargs, input=input)
     else:
@@ -154,7 +124,7 @@ def runtool(toolbin, *args, input=None, stdout_path=None, is32bit=False):
     if ret.returncode == 0:
         return
     print('FAILED (exit={}): {} {}'.format(ret.returncode, toolbin,
-        ' '.join(map(prettypath, args))))
+        ' '.join(map(path.pretty, args))))
     if is32bit and ret.returncode == 127:
         print('(Do you support 32-bit executables?)', file=sys.stderr)
     exit(ret.returncode)
@@ -193,15 +163,15 @@ def asl(args):
         '-qxx',
         '-U',                   # Case-sensitive symbols. This can be set
                                 # only with a command-line option.
-        '-i', BASEDIR,
+        '-i', path.base(),
         ]
     endopts = [ '-L', '-s', '-g', ]
 
     srcfile = args[0]
-    objdir  = b8objpath(Path(args[0]).parent)
+    objdir  = path.obj(Path(args[0]).parent)
     topfile = Path(srcfile).name
 
-    assert b8path(srcfile).is_file(), b8path(srcfile)
+    assert path.base(srcfile).is_file(), path.base(srcfile)
     #   Set CWD to output dir because AS can't specify other output
     #   locations for some files, such as the debug symbols.
     with cwd(objdir):
@@ -283,9 +253,9 @@ def asx(args):
     if len(args) != 1:
         raise RuntimeError('len(args) != 1')
 
-    srcfile = b8path(args[0])
+    srcfile = path.base(args[0])
     srcdir  = Path(args[0]).parent
-    objdir  = b8objpath(srcdir)
+    objdir  = path.obj(srcdir)
     objfile = objdir.joinpath(srcfile.stem)
 
     objdir.mkdir(parents=True, exist_ok=True)
@@ -321,7 +291,7 @@ def asxlink(args):
     srcpath = Path(args[0])
     srcdir = srcpath.parent
     objstem = srcpath.name      # possibly should remove .rel here, if present
-    objdir = b8objpath(srcdir)
+    objdir = path.obj(srcdir)
 
     #   XXX We should use absolute paths rather than setting a CWD.
     #   However, this requires us to generate absolute paths for the file
@@ -371,7 +341,7 @@ def a2dsk(args):
     srcdir, name = os.path.split(str(srcfile))
     name, _ = os.path.splitext(name)
     def binfile(ext=''):
-        return str(b8objpath(srcdir, name)) + ext
+        return str(path.obj(srcdir, name)) + ext
 
     #   Generate an Apple II 'B' file (machine language program)
     asl(args)
@@ -382,7 +352,7 @@ def a2dsk(args):
     runtool('tokenize_asoft', input=bootprog, stdout_path=binfile('.HELLO'))
 
     #   Build a disk image with the above and a HELLO that willl run it.
-    baseimg = b8path('.build/tool/src/dskimg/a2/EMPTY-DOS33-48K-V254.dsk')
+    baseimg = path.tool('src/dskimg/a2/EMPTY-DOS33-48K-V254.dsk')
     img     = binfile('.dsk')
     shutil.copyfile(str(baseimg), str(img))
     def dos33(*command):
@@ -405,7 +375,7 @@ COMMANDS = {
 }
 
 if __name__ == '__main__':
-    if BASEDIR is None:
+    if path.B8_BASEDIR is None:
         raise RuntimeError('B8_BASEDIR not set')
     args = sys.argv[1:]   # make a copy without our program name
     command = args.pop(0)

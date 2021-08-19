@@ -63,11 +63,11 @@ cd "$basedir"
 
 checkpy; . ./activate -q -p "$py"
 
-[[ -f $all_tools ]] && tool_setup tool/asxxxx/Setup
-tool_setup tool/asl/Setup
-tool_setup tool/diskimg/Setup
-tool_setup tool/dos33fs/Setup
-tool_setup tool/linapple/Setup
+[[ -f $all_tools ]] && tool_setup b8tool/tool/asxxxx/Setup
+tool_setup b8tool/tool/asl/Setup
+tool_setup b8tool/tool/diskimg/Setup
+tool_setup b8tool/tool/dos33fs/Setup
+tool_setup b8tool/tool/linapple/Setup
 [[ $PATH =~ ^$basedir/bin:|:$basedir/bin:|:$basedir/bin$ ]] \
     || export PATH="$basedir/bin:$PATH"
 mkdir -p "$BUILDDIR/obj"

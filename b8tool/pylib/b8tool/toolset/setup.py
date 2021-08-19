@@ -40,6 +40,8 @@
 from    pathlib  import Path
 import  abc, os, pathlib, shutil, subprocess, sys, traceback
 
+from    b8tool  import path
+
 ####################################################################
 #   Globals
 
@@ -57,26 +59,30 @@ PREFIX_SUBDIRS = ('bin', 'doc', 'include', 'lib', 'man', 'share', 'src')
 ####################################################################
 #   printconfig()
 #
-#   Define printconfig() to print a configuration command to be
-#   executed by the caller. This should be bash code, e.g., ``export
-#   PATH=...``.
-#
-#   The string will be printed on file descriptor 3, if it was open
-#   when we started, otherwise it it will be printed on stdout
-#   prefixed with ``CONFIG: ``, presumably for the user to read and do
-#   by hand.
-#
+#   XXX The previous version of this was designed to let stand-alone
+#   programs print configuration commands to be viewed or run by the caller
+#   to configure the environment running the tool. (These would be Bash
+#   commands such as ``export PATH=...``.) This should no longer be needed
+#   once b8tool is dealing with finding and running commands, but for the
+#   moment we just consume and ignore printconfig requests.
 
-try:
-    #   Use file descriptor 3, if it's open. This open(3) call can be
-    #   done only once per process; it will fail with [Errno 9] Bad
-    #   file descriptor if tried a second time.
-    config_out = open(3, 'w')
-    def printconfig(*s):
-        print(*s, file=config_out)
-except OSError as e:                     # [Errno 9] Bad file descriptor
-    def printconfig(*s):
-        print('CONFIG:', *s)
+def printconfig(*s): pass
+
+#   The previous version of printconfig() would print the string(s) on file
+#   descriptor 3, if it was open when we started, otherwise on printed on
+#   stdout prefixed with ``CONFIG: ``, presumably for the user to read and
+#   do by hand.
+#
+#   try:
+#       #   Use file descriptor 3, if it's open. This open(3) call can be
+#       #   done only once per process; it will fail with [Errno 9] Bad
+#       #   file descriptor if tried a second time.
+#       config_out = open(3, 'w')
+#       def printconfig(*s):
+#           print(*s, file=config_out)
+#   except OSError as e:                     # [Errno 9] Bad file descriptor
+#       def printconfig(*s):
+#           print('CONFIG:', *s)
 
 ####################################################################
 #   Utility routines
@@ -88,10 +94,6 @@ def errexit(exitcode, *messages):
     errprint(*messages)
     printconfig('return', exitcode)   # Sourced stdout also exits with code.
     sys.exit(exitcode)
-
-def successexit():
-    printconfig('return 0')
-    sys.exit(0)
 
 def runcmd(command, *, cwd=None, suppress_stdout=False):
     ''' Run a command, failing the program with an error message if the
@@ -118,12 +120,17 @@ def checkrun(cmdargs, exitcode=0, banner=b'', suppress_stdout=False):
         Stdout and stderr will be captured together unless
         `suppress_stdout` is set to `True`.
     '''
+    b8tool = path.tool('bin', cmdargs[0])
+    if os.access(str(b8tool), os.X_OK):
+        cmdargs[0] = str(b8tool)
+
     if suppress_stdout:
         stdout = subprocess.DEVNULL
         stderr = subprocess.PIPE
     else:
         stdout = subprocess.PIPE
         stderr = subprocess.STDOUT
+
     try:
         c = subprocess.run(cmdargs, stderr=stderr, stdout=stdout)
     except FileNotFoundError:
@@ -134,7 +141,7 @@ def checkrun(cmdargs, exitcode=0, banner=b'', suppress_stdout=False):
 
 
 ####################################################################
-#   Setup class
+#   Generic Setup Class
 
 class Setup(metaclass=abc.ABCMeta):
 
@@ -236,16 +243,11 @@ class Setup(metaclass=abc.ABCMeta):
             creating that directory if necessary. Otherwise if ``.build/``
             exists in the current working directory, we use that.
         '''
-        if os.environ.get('BUILDDIR', None):
-            self.builddir = Path(os.environ['BUILDDIR'])
-            for d in PREFIX_SUBDIRS:
-                self.builddir.joinpath('tool', d) \
-                    .mkdir(parents=True, exist_ok=True)
-            return
-
-        if Path('.build').is_dir():
-            self.builddir = Path('.build')
-            return
+        #   XXX This class should be using path.tool() everywhere.
+        self.builddir = path.build()
+        for d in PREFIX_SUBDIRS:
+            self.builddir.joinpath('tool', d) \
+                .mkdir(parents=True, exist_ok=True)
 
     def setpath(self):
         ''' Update ``PATH`` to include the tools we're building.
@@ -344,7 +346,9 @@ class Setup(metaclass=abc.ABCMeta):
         self.setbuilddir()
         self.setpath()
         if self.check_installed():
-            successexit()               # Already built or system-supplied
+            #   Already built or system-supplied
+            printconfig('return 0')
+            return
 
         if not self.builddir:
             errexit(EX_USAGE,

@@ -8,10 +8,10 @@
 from    os.path  import abspath, dirname
 import  sys
 
-sys.path.insert(0, abspath(dirname(dirname(__file__)))) # setup.py location
-from setup import *
+from    b8tool.toolset.setup  import *
 
-class DskImg(Setup):
+
+class DiskImg(Setup):
 
     def __init__(self):
         super().__init__()
@@ -20,7 +20,6 @@ class DskImg(Setup):
     def check_installed(self):
         #   Since the repo is only data files, we simply check to see
         #   if it's been cloned.
-        return self.pdir('src').joinpath('dskimg', 'README.md').exists()
+        return self.pdir('src').joinpath('diskimg', 'README.md').exists()
 
-if (__name__) == '__main__':
-    DskImg().main()
+TOOLSET_CLASS = DiskImg

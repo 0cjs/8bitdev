@@ -18,14 +18,6 @@ checkpy() {
     [[ $v = 'Python 3.'* ]] || die 2 "Bad Python version: $v"
 }
 
-tool_setup() {
-    [[ ${#@} -eq 1 ]] \
-        || { echo 1>&2 'tool_setup(): tool path arg required'; return 2; }
-    local tool_path="$1"; shift
-    [[ -x $tool_path ]] || return 69    # EX_UNAVAILABLE: support file nonexist
-    $tool_path >/dev/null
-}
-
 ####################################################################
 #   Main
 
@@ -53,11 +45,11 @@ cd "$basedir"
 
 checkpy; . ./activate -q -p "$py"
 
-[[ -f $all_tools ]] && tool_setup b8tool/tool/asxxxx/Setup
-tool_setup b8tool/tool/asl/Setup
-tool_setup b8tool/tool/diskimg/Setup
-tool_setup b8tool/tool/dos33fs/Setup
-tool_setup b8tool/tool/linapple/Setup
+[[ -f $all_tools ]] && $b8tool buildtoolset asxxxx
+$b8tool buildtoolset asl
+$b8tool buildtoolset diskimg
+$b8tool buildtoolset dos33fs
+$b8tool buildtoolset linapple
 [[ $PATH =~ ^$basedir/bin:|:$basedir/bin:|:$basedir/bin$ ]] \
     || export PATH="$basedir/bin:$PATH"
 mkdir -p "$BUILDDIR/obj"

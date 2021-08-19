@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 '''
-    Configure for use of the ASxxxx assembler suite.
+    The ASxxxx assembler suite.
 
     This fetches the binaries and extracts them, if necessary. The binaries
     are for 32-bit Linux; on 64-bit systems these will error out with "No
@@ -18,8 +18,7 @@
 import  hashlib, requests, sys, zipfile
 from    os.path  import abspath, dirname
 
-sys.path.insert(0, abspath(dirname(dirname(__file__)))) # setup.py location
-from setup import *
+from    b8tool.toolset.setup import *
 
 class ASxxxx(Setup):
 
@@ -37,9 +36,8 @@ class ASxxxx(Setup):
         '''
         #   Don't ask why, after displaying the usage message,
         #   the linker exits with 3 but the assemblers exit with 1.
-        found = checkrun(['aslink'], 3, b'ASxxxx Linker') \
+        return  checkrun(['aslink'], 3, b'ASxxxx Linker') \
             and checkrun(['as6500'], 1, b'ASxxxx Assembler')
-        if found: successexit()
 
     def fetch(self):
         archive = '5p31_exe_linux.zip'
@@ -71,5 +69,4 @@ class ASxxxx(Setup):
                 #   anything that was removed.
                 bindir.joinpath(filename).chmod(0o755)
 
-if (__name__) == '__main__':
-    ASxxxx().main()
+TOOLSET_CLASS = ASxxxx

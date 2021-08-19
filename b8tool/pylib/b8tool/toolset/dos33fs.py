@@ -12,8 +12,7 @@
 from    os.path  import abspath, dirname
 import  sys
 
-sys.path.insert(0, abspath(dirname(dirname(__file__)))) # setup.py location
-from setup import *
+from    b8tool.toolset.setup import *
 
 class DOS33FS(Setup):
 
@@ -57,5 +56,4 @@ class DOS33FS(Setup):
             if not dest.exists():
                 dest.symlink_to(self.srcdir().joinpath(subdir, file))
 
-if (__name__) == '__main__':
-    DOS33FS().main()
+TOOLSET_CLASS = DOS33FS

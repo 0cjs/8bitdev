@@ -11,8 +11,7 @@
 from    os.path  import abspath, dirname
 import  sys
 
-sys.path.insert(0, abspath(dirname(dirname(__file__)))) # setup.py location
-from setup import *
+from    b8tool.toolset.setup  import *
 
 class LinApple(Setup):
     pass
@@ -70,5 +69,4 @@ class LinApple(Setup):
         #   is the .SYM symbol tables for the debugger, which seem to be
         #   searched for only in the current working directory, anyway.
 
-if (__name__) == '__main__':
-    LinApple().main()
+TOOLSET_CLASS = LinApple

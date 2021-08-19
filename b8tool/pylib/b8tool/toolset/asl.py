@@ -1,18 +1,19 @@
-#!/usr/bin/env python3
 '''
-    Configure for use of the Macroassembler AS.
+    The Macroassembler AS.
 
-    This will fetch from `ASL.source_repo` and build the `ASL.source_ref`
-    branch, if necessary.
+    .. https://github.com/KubaO/asl.git
+
+    This fetches from `ASL.source_repo` and builds the `ASL.source_ref`
+    branch.
 
     See the module documentation for `setup` for more details.
+
 '''
 
 from    os.path  import abspath, dirname
 import  shutil, sys
 
-sys.path.insert(0, abspath(dirname(dirname(__file__)))) # setup.py location
-from setup import *
+from    b8tool.toolset.setup  import *
 
 class ASL(Setup):
 
@@ -26,6 +27,24 @@ class ASL(Setup):
         return checkrun(['asl', '-this-is-not-an-option'], 4,
             b'Invalid option')
 
+    GITIGNORE = '''\
+#   .o and .obj are the only two TARG_OBJEXTENSION in Makefile.def-samples/
+/*.o
+/*.obj
+#   These are generated for most executables; wildcard them to save typing.
+/*.msg
+/*.rsc
+#   Generated binaries.
+/alink
+/asl
+/mkdepend
+/p2bin
+/p2hex
+/pbind
+/plist
+/rescomp
+'''
+
     def configure(self):
         ''' Configure build, if not already done. '''
         if self.srcdir().joinpath('Makefile.def').exists():
@@ -34,9 +53,9 @@ class ASL(Setup):
 
         self.printaction('Configuring {}'.format(self.srcdir()))
 
-        shutil.copyfile(
-            str(Path(__file__).parent.joinpath('gitignore')),
-            str(self.srcdir().joinpath('.gitignore')))
+        dot_gitignore = self.srcdir().joinpath('.gitignore')
+        with open(str(dot_gitignore), 'wt') as f:
+            f.write(self.GITIGNORE)
 
         mfdef_template = self.srcdir().joinpath(
                 'Makefile.def-samples', 'Makefile.def-x86_64-unknown-linux')
@@ -91,5 +110,4 @@ class ASL(Setup):
             dest.parent.mkdir(parents=True, exist_ok=True)
             if not dest.exists(): dest.symlink_to(src)
 
-if (__name__) == '__main__':
-    ASL().main()
+TOOLSET_CLASS = ASL

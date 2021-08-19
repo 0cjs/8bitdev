@@ -31,7 +31,7 @@ import  os, shutil, sys
 #   Configure and use b8tool's Python library path
 sys.path.insert(0, os.path.join(abspath(dirname(__file__)), 'pylib'))
 
-from    b8tool  import path, run
+from    b8tool  import path, run, toolset
 
 ####################################################################
 #   b8tool Conventions
@@ -101,6 +101,33 @@ def remove_formfeeds(filepath):
     '''
     f = Path(filepath)
     f.write_text(f.read_text().replace('\f', '\n'))
+
+####################################################################
+#   Tool Set Builds
+#
+
+def buildtoolsets(args):
+    ''' This should check the configuration of the project and build
+        all tools that have been enabled (or at least confirm that
+        they are available from the system).
+
+        XXX WRITEME
+    '''
+
+def buildtoolset(args):
+    ''' Given the name of a toolset, run its setup/build/install code.
+
+        This will first check to see if the toolset is already available in
+        the current path and do nothing if it is. Otherwise it will fetch,
+        build and install the toolset to the project's local tool directories.
+
+        XXX There should really be an option to force building a
+        project-local toolset even when the system provides one.
+    '''
+    assert len(args) == 1, "buildtool() requires an argument"
+    tsname = args.pop(0)
+    tool_class = toolset.TOOLSETS[tsname]
+    tool_class().main()
 
 ####################################################################
 #   Build commands
@@ -314,7 +341,7 @@ def a2dsk(args):
     run.tool('tokenize_asoft', input=bootprog, stdout_path=binfile('.HELLO'))
 
     #   Build a disk image with the above and a HELLO that willl run it.
-    baseimg = path.tool('src/dskimg/a2/EMPTY-DOS33-48K-V254.dsk')
+    baseimg = path.tool('src/diskimg/a2/EMPTY-DOS33-48K-V254.dsk')
     img     = binfile('.dsk')
     shutil.copyfile(str(baseimg), str(img))
     def dos33(*command):
@@ -334,6 +361,8 @@ COMMANDS = {
     'asx':      asx,        # ASXXXX assembler
     'asxlink':  asxlink,    # ASXXXX linker
     'a2dsk':    a2dsk,      # Apple II .dsk image that boots and runs program
+    'bt':       buildtoolset,  'buildtoolset':  buildtoolset,
+    'bts':      buildtoolsets, 'buildtoolsets': buildtoolsets,
 }
 
 if __name__ == '__main__':

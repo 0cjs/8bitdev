@@ -1,0 +1,10 @@
+from    testmc.m6502  import *
+import  pytest
+
+object_file = 'src/woz/sweet16.p'
+
+def test_locations(m, S):
+    ' We test at the original listing/Integer BASIC ROM location: $F689. '
+    assert S.SW16 == 0xF689
+    assert (S.SET, S.RTN) == (0xF703, 0xF7FA), \
+        'All instruction code should be on single page'

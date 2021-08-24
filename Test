@@ -114,6 +114,8 @@ $b8tool asltest src/mc68/qhex.a68
 $b8tool asltest src/m65/objects.a65
 $b8tool asltest src/m65/bigint.a65
 
+$b8tool asltest src/woz/sweet16.a65     '  org $F689 ; Integer BASIC ROM'
+
 #   Portable programs (i.e., not platform-specific)
 #   and their platform-specific versions.
 $b8tool asltest src/mc68/hello.a68     '  include "src/tmc68/bios.a68"'

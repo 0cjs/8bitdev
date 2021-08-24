@@ -1,15 +1,62 @@
-***********************
-*                     *
-*   APPLE-II PSEUDO   *
-* MACHINE INTERPRETER *
-*                     *
-*   COPYRIGHT 1977    *
-* APPLE COMPUTER INC  *
-*                     *
-* ALL RIGHTS RESERVED *
-*     S. WOZNIAK      *
-*                     *
-***********************
+;   Woz Sweet 16 Interpeter
+;
+;   From:
+;     • Wozniak, "SWEET16: The 6502 Dream Machine," Byte vol 2 no 11 (1977-11)
+;       https://archive.org/details/BYTE_Vol_02-11_1977-11_Sweet_16/page/n151
+;     • Machine-readable listing from the BYTE article:
+;       http://www.easy68k.com/paulrsm/6502/SW16RB.TXT
+;     • Call-A.P.P.L.E. Woz Pak II (1979), pp.85-98 (PDF 87-100)
+;       https://web.archive.org/web/20110927173944/http://www.applefritter.com/files/Call-APPLE%20Woz%20Pak%202%201979.pdf
+;     • Combined parts of several of the sources above:
+;       http://www.fadden.com:80/dl-apple2/sweet16.txt
+;       http://www.6502.org/source/interpreters/sweet16.htm
+;
+;   The source code used here comes from SW16RB.TXT, presumed to be the
+;   original listing.
+;
+;   The Woz Pak II does not include Sweet 16 source code, but does include
+;   a copy of Woz's _BYTE_ article, a new introductory article by Dick
+;   Sedgewick and, as an extended example, the Sweet 16 "Lazarus" program
+;   (by Andy Hertzfeld, reprinted from Dr. Dobb's) for recovering erased
+;   Integer BASIC programs from memory.
+;
+;   sweet16.txt includes the first two articles above, some further
+;   docuementation, and a very bad version of the source code with odd
+;   assembler syntax (no `#` for immediate data) and several typos. The
+;   original URL for it is now dead (though still on archive.org); the
+;   6502.org version is an HTML-reformatted version of the text file.
+;
+;   Possible to-do items for this code:
+;   • Make all labels local (except for the entry point)
+;   • Add assembly-time check that SET through RTN+2 is on a single page.
+;   • Add a set of macros to make Sweet 16 easier to use.
+;
+; ----------------------------------------------------------------------
+;
+;   The original start location for this in both the listing and the Apple
+;   II Integer BASIC ROM was $F689. (It was not in the Applesoft ROM.) This
+;   is commented out below, allowing clients to control the code's
+;   location. Note the warning below that code from `SET` must be on a
+;   single page. (A check should be added for this.)
+
+DFB         macro
+            byt ALLARGS
+            endm
+
+; ----------------------------------------------------------------------
+
+; ***********************
+; *                     *
+; *   APPLE-II PSEUDO   *
+; * MACHINE INTERPRETER *
+; *                     *
+; *   COPYRIGHT 1977    *
+; * APPLE COMPUTER INC  *
+; *                     *
+; * ALL RIGHTS RESERVED *
+; *     S. WOZNIAK      *
+; *                     *
+; ***********************
                           ; TITLE "SWEET16 INTERPRETER"
 R0L      EQU   $0
 R0H      EQU   $1
@@ -19,7 +66,9 @@ R15H     EQU   $1F
 SW16PAG  EQU   $F7
 SAVE     EQU   $FF4A
 RESTORE  EQU   $FF3F
-         ORG   $F689
+
+;        ORG   $F689
+
 SW16     JSR   SAVE       ;PRESERVE 6502 REG CONTENTS
          PLA
          STA   R15L       ;INIT SWEET16 PC
@@ -72,38 +121,43 @@ SETZ     LDA   (R15L),Y   ;HIGH-ORDER BYTE OF CONSTANT
          BCC   SET2
          INC   R15H
 SET2     RTS
-OPTBL    DFB   SET-1      ;1X
-BRTBL    DFB   RTN-1      ;0
-         DFB   LD-1       ;2X
-         DFB   BR-1       ;1
-         DFB   ST-1       ;3X
-         DFB   BNC-1      ;2
-         DFB   LDAT-1     ;4X
-         DFB   BC-1       ;3
-         DFB   STAT-1     ;5X
-         DFB   BP-1       ;4
-         DFB   LDDAT-1    ;6X
-         DFB   BM-1       ;5
-         DFB   STDAT-1    ;7X
-         DFB   BZ-1       ;6
-         DFB   POP-1      ;8X
-         DFB   BNZ-1      ;7
-         DFB   STPAT-1    ;9X
-         DFB   BM1-1      ;8
-         DFB   ADD-1      ;AX
-         DFB   BNM1-1     ;9
-         DFB   SUB-1      ;BX
-         DFB   BK-1       ;A
-         DFB   POPD-1     ;CX
-         DFB   RS-1       ;B
-         DFB   CPR-1      ;DX
-         DFB   BS-1       ;C
-         DFB   INR-1      ;EX
-         DFB   NUL-1      ;D
-         DFB   DCR-1      ;FX
-         DFB   NUL-1      ;E
-         DFB   NUL-1      ;UNUSED
-         DFB   NUL-1      ;F
+
+OPTBL    DFB   LB(SET-1)  ;1X
+BRTBL    DFB   LB(RTN-1)  ;0
+         DFB   LB(LD-1)   ;2X
+         DFB   LB(BR-1)   ;1
+         DFB   LB(ST-1)   ;3X
+         DFB   LB(BNC-1)  ;2
+         DFB   LB(LDAT-1) ;4X
+         DFB   LB(BC-1)   ;3
+         DFB   LB(STAT-1) ;5X
+         DFB   LB(BP-1)   ;4
+         DFB   LB(LDDAT-1);6X
+         DFB   LB(BM-1)   ;5
+         DFB   LB(STDAT-1);7X
+         DFB   LB(BZ-1)   ;6
+         DFB   LB(POP-1)  ;8X
+         DFB   LB(BNZ-1)  ;7
+         DFB   LB(STPAT-1);9X
+         DFB   LB(BM1-1)  ;8
+         DFB   LB(ADD-1)  ;AX
+         DFB   LB(BNM1-1) ;9
+         DFB   LB(SUB-1)  ;BX
+         DFB   LB(BK-1)   ;A
+         DFB   LB(POPD-1) ;CX
+         DFB   LB(RS-1)   ;B
+         DFB   LB(CPR-1)  ;DX
+         DFB   LB(BS-1)   ;C
+         DFB   LB(INR-1)  ;EX
+         DFB   LB(NUL-1)  ;D
+         DFB   LB(DCR-1)  ;FX
+         DFB   LB(NUL-1)  ;E
+         DFB   LB(NUL-1)  ;UNUSED
+         DFB   LB(NUL-1)  ;F
+
+; FOLLOWING CODE MUST BE
+; CONTAINED ON A SINGLE PAGE!
+
 SET      BPL   SETZ       ;ALWAYS TAKEN
 LD       LDA   R0L,X
 BK       EQU   *-1

@@ -26,6 +26,13 @@
 ;   original URL for it is now dead (though still on archive.org); the
 ;   6502.org version is an HTML-reformatted version of the text file.
 ;
+;   XXX Bugs:
+;   • If the registers are moved so that R0 is no longer at $00, the BK
+;     (break) instruction will fail due to the trick used to save one byte
+;     in the instruction routines. If changed, the $00 used by the
+;     interpreter to implement BK must be in the same page as the other
+;     instruction routines.
+;
 ;   Possible to-do items for this code:
 ;   • Deal better with SAVE and RESTORE.
 ;   • Make all labels local (except for the entry point)
@@ -172,7 +179,7 @@ BRTBL    DFB   LB(RTN-1)  ;0
 
 SET      BPL   SETZ       ;ALWAYS TAKEN
 LD       LDA   R0L,X
-BK       EQU   *-1
+BK       EQU   *-1        ; XXX not a BRK instruction if registers moved!
          STA   R0L
          LDA   R0H,X      ;MOVE RX TO R0
          STA   R0H

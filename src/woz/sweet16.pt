@@ -10,7 +10,7 @@ def test_locations(m, S):
     assert (S.SET, S.RTN) == (0xF703, 0xF7FA), \
         'All instruction code should be on single page'
 
-def runSweet16(m, sweet16instrs, startaddr=0x300):
+def runSweet16(m, sweet16instrs, startaddr=0x300, dump=False):
     ''' Run the given list of `sweet16instrs` by placing them after a JMP
         to the Sweet 16 interpreter, followed by an RTS, and `call()`ing
         the constructed code.
@@ -25,6 +25,9 @@ def runSweet16(m, sweet16instrs, startaddr=0x300):
         *sweet16instrs,
         I.RTS,
         )
+    if dump:
+        l = len(sweet16instrs) + 4
+        print(m.hexdump(startaddr, l))
     m.call(startaddr)
 
 def test_RTN(m, R, S):
@@ -33,3 +36,35 @@ def test_RTN(m, R, S):
     rtsaddr = addr + 3 + 1                  # JSR SW16, RTN, leaving us at RTS
     runSweet16(m, [0x00], startaddr=addr)   # Sweet 16 RTN instruction
     assert m.regs == R(pc=rtsaddr),         'RTS instruction address'
+
+def test_Sedgewick(m, R, S):
+    ''' This is the example from the Sedgewick article in Woz Pak II.
+
+        However, it's simplified in that it's not concerned with
+        interacting with Integer BASIC in any way; it simply copies 8 bytes
+        of data from the source to the target. (It would make more sense to
+        do word copies, but the original used bytes, so we do here as well.)
+    '''
+    assert (0x0000,)*16 == m.words(0, 16)       # SW16 registers all clear
+
+    target = 0x1234
+    data = (0xFEDC, 0xBA98, 0x7654, 0x3210)
+    m.depword(0x0800, data)
+    assert (0x0000,)*4 == m.words(target, 4)    # target empty
+
+    runSweet16(m, [
+        0x11, 0x00, 0x08,   # $303  SET R1      source address ($800)
+        0x12, 0x34, 0x12,   # $306  SET R2      destination address ($1234)
+        0x13, 0x08, 0x00,   # $309  SET R3      length (in bytes, 8)
+        0x41,               # $30C  LD  @R1     (move single byte)
+        0x52,               # $30D  ST  @R2
+       #0x00, I.RTS,        # DEBUG RTN
+        0xF3,               # $30E  DCR R3
+        0x07, 0xFB,         # $30F  BNZ $30C
+        0x00,               # $311  RTN
+        ], dump=True)
+
+    print(m.hexdump(0x0800, 8))                 # debug: source
+    print(m.hexdump(target, 8))                 # debug: target
+    print(m.hexdump(0, 16))                     # debug: examine registers
+    assert data == m.words(target, 4)

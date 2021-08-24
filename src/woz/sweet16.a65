@@ -27,6 +27,7 @@
 ;   6502.org version is an HTML-reformatted version of the text file.
 ;
 ;   Possible to-do items for this code:
+;   • Deal better with SAVE and RESTORE.
 ;   • Make all labels local (except for the entry point)
 ;   • Add assembly-time check that SET through RTN+2 is on a single page.
 ;   • Add a set of macros to make Sweet 16 easier to use.
@@ -38,6 +39,15 @@
 ;   is commented out below, allowing clients to control the code's
 ;   location. Note the warning below that code from `SET` must be on a
 ;   single page. (A check should be added for this.)
+;
+;   This also depends on the SAVE and RESTORE routines from the Apple
+;   II/II+ Monitor ROM (they're the same in both versions). These save and
+;   restore A, X, Y and status flags and need not be re-entrant. Copies
+;   of the versions from the Apple II/II+ Monitor ROM are given below
+;   for reference. These can be replaced with just an RTS if you need
+;   not preserve the registers, as we do for unit tests.
+;
+; ----------------------------------------------------------------------
 
 DFB         macro
             byt ALLARGS
@@ -64,10 +74,12 @@ R14H     EQU   $1D
 R15L     EQU   $1E
 R15H     EQU   $1F
 SW16PAG  EQU   $F7
+
+    ifdef APPLE_II
 SAVE     EQU   $FF4A
 RESTORE  EQU   $FF3F
-
-;        ORG   $F689
+         ORG   $F689
+    endif
 
 SW16     JSR   SAVE       ;PRESERVE 6502 REG CONTENTS
          PLA
@@ -293,3 +305,44 @@ RS       LDX   #$18       ;12*2 FOR R12 AS STACK POINTER
          STA   R15L
          RTS
 RTN      JMP   RTNZ
+
+
+; ----------------------------------------------------------------------
+;   These are copies of the SAVE and RESTORE routines from the Apple II/II+
+;   Monitor ROM, for documentation purposes.
+;
+    if 0
+ACC         equ $20
+XREG        equ $21
+YREG        equ $22
+STATUS      equ $23
+
+            org $FF3F
+RESTORE     lda STATUS      ; restore 6502 reg contents
+            pha             ;   used by debug software
+            lda ACC
+RESTR1      ldx XREG
+            ldy YREG
+            plp
+            rts
+
+           ;org $FF4A
+SAVE        sta ACC         ; save 6502 reg contents
+SAV1        stx XREG
+            sty YREG
+            php
+            pla
+            sta STATUS
+            tsx
+            stx SPNT
+            cld
+            rts
+    endif
+
+;   For unit testing we don't bother with restoring the registers after a
+;   Sweet 16 call.
+;
+    ifdef UNIT_TESTING
+RESTORE
+SAVE        rts
+    endif

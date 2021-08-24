@@ -1,3 +1,4 @@
+from    testmc  import LB, MB
 from    testmc.m6502  import *
 import  pytest
 
@@ -8,3 +9,27 @@ def test_locations(m, S):
     assert S.SW16 == 0xF689
     assert (S.SET, S.RTN) == (0xF703, 0xF7FA), \
         'All instruction code should be on single page'
+
+def runSweet16(m, sweet16instrs, startaddr=0x300):
+    ''' Run the given list of `sweet16instrs` by placing them after a JMP
+        to the Sweet 16 interpreter, followed by an RTS, and `call()`ing
+        the constructed code.
+
+        The following can be inserted at any line in your Sweet 16 program
+        to return early, for debugging purposes::
+            [ 0x00, I.RTS,        # DEBUG RTN ]
+    '''
+    S = m.symtab
+    m.deposit(startaddr,
+        I.JSR, LB(S.SW16), MB(S.SW16),  # JSR $F689
+        *sweet16instrs,
+        I.RTS,
+        )
+    m.call(startaddr)
+
+def test_RTN(m, R, S):
+    ' Just enter and return from the Sweet 16 interpreter. '
+    addr = 0x404                            # start of code to call SW16
+    rtsaddr = addr + 3 + 1                  # JSR SW16, RTN, leaving us at RTS
+    runSweet16(m, [0x00], startaddr=addr)   # Sweet 16 RTN instruction
+    assert m.regs == R(pc=rtsaddr),         'RTS instruction address'

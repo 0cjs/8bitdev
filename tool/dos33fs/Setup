@@ -20,10 +20,10 @@ class DOS33FS(Setup):
     def __init__(self):
         super().__init__()
         self.source_repo = 'https://github.com/deater/dos33fsprogs.git'
-        #   The commit after this, c3a278b, introduced an error that causes
-        #   the DELETE command to trash the diskette image. See:
+        #   NOTE: Commits on master from c3a278b up to 6b5c361 had an error
+        #   that caused the DELETE command to trash the diskette image. See:
         #   https://github.com/deater/dos33fsprogs/issues/11
-        self.source_ref  = '8e05dc8b32be'
+        #self.source_ref  = '8e05dc8b32be'      # just before c3a278b
 
     def check_installed(self):
         return checkrun( ['dos33', '-h'], 0,

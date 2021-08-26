@@ -143,6 +143,7 @@ EXWIDTH     equ $10                 ; examine default: 16 bytes/line
 tmp1        ds  1       ; temp storage (byte)
 tmp2        ds  2       ; temp storage (usually word)
 tmp2a       ds  2
+tmp2b       ds  2
 qhex_out    ds  2       ; last qhex result ($0000 if qhex failed)
 cmdqptr     ds  2       ; Current parsing point in command input buffer.
                         ; Update this to consume parsed text, but do not
@@ -758,10 +759,10 @@ qwspace     ldx cmdqptr
 .noconsume  sec                 ; success
             rts
 
-;   ♣X,A,B,tmp2,tmp2a  qcmdopts
+;   ♣X,A,B,tmp2,tmp2a,tmp2b  qcmdopts
 ;   Process command options from `cmdqptr` per table at X
 ;
-;   Command options are a sequence of option letter followed by that
+;   Command options are a sequence of `=` or option letter followed by that
 ;   option's value; whitespace (or EOL) terminates the command's options.
 ;
 ;   The table is an array, terminated by a 0 byte, of:
@@ -775,17 +776,34 @@ qwspace     ldx cmdqptr
 ;   option characters with byte values, `x2a3` will be interpreted as "set
 ;   X to $2A" follwed by a parse error; to set X then A in this instance
 ;   one would have to enter `x02a3`.
+;
+;   Byte resp. word values are read and stored directly in the given byte
+;   resp. word location. Bit values are for flags: specifying the letter
+;   for that option will flip the flag bit from its current value.
+;   Specifying `=` will clear all bits specified in the options table. In
+;   no case does this touch any bits not specified in the options table.
 
 OPTbyte     equ  %011
 OPTword     equ  %110
+OPTbit0     equ  %00000001
+OPTbit1     equ  %00000010
+OPTbit2     equ  %00000100
+OPTbit3     equ  %00001000
+OPTbit4     equ  %00010000
+OPTbit5     equ  %00100000
+OPTbit6     equ  %01000000
+OPTbit7     equ  %10000000
 OPTtable    equ tmp2
 OPTvaladdr  equ tmp2a
+OPTtabtmp   equ tmp2b
 
 qcmdopts    stx OPTtable        ; save command options table location
 .parsenext  ;   process the next option in the input
             jsr qwspace         ; ♠AX end of options given to command?
             bcs .done           ; yes, we're done
             ;   A now contains an unconsumed input char given as a cmd option
+            cmp A,#'='          ; clear all flags (bit options)?
+            beq .clearbits
             ldx OPTtable
 .tabnext    lda B,0,X           ; get next option char in table
                                 ; is it the $00 table terminator?
@@ -808,10 +826,14 @@ qcmdopts    stx OPTtable        ; save command options table location
             beq .optvalbyte
             cmp A,#OPTword
             beq .optvalword
-            ;   If we reach this, the options table is bad.
-            ;   XXX Currently we die (in the simulator) with an illegal opcode,
-            ;   but we should find a better way to handle this.
-            db $05
+.optvalbit  ;   Anything else we assume is a flag option with only a single
+            ;   bit set. It's not worth checking there aren't multiple bits
+            ;   set since devs should be using the OPTbit# symbols.
+            stx cmdqptr
+            ldx OPTvaladdr
+            eor A,0,X
+            sta A,0,X
+            bra .parsenext
 
 .optvalbyte jsr qhexbyte
             bne .opterr
@@ -830,6 +852,35 @@ qcmdopts    stx OPTtable        ; save command options table location
             lda B,qhex_out+1
             sta B,1,X           ; save parsed LSB
             bra .parsenext
+
+            ;   We've also just considered having `=` clear all the bits in the
+            ;   first OPTbit# value address we find, but that doesn't save
+            ;   a huge amount of code and introduces more chance for error.
+            ;
+.clearbits  ldx cmdqptr         ; consume '=' that sent us here
+            inx
+            stx cmdqptr
+            ldx OPTtable
+.clearopt   lda A,0,X           ; option table terminator?
+            beq .parsenext      ; done clearing; move on to next option in input
+            lda A,1,X           ; option type
+            ;   XXX consider changing OPTbyte,OPTword to have MSB and one other
+            ;   bit set so that we can use CMP #$80, BHI to skip commands.
+            cmp A,#OPTbyte
+            beq .clearnext
+            cmp A,#OPTword
+            beq .clearnext
+            stx OPTtabtmp       ; save current position in OPTtab
+            ldx 2,X             ; load option value address
+            eor A,#$FF          ; flip all bits
+            and A,0,X           ; clear bit
+            sta A,0,X
+            ldx OPTtabtmp       ; restore curent pos in OPTtab
+.clearnext  inx                 ; skip past option char,
+            inx                 ;   option type,
+            inx                 ;   and option value address
+            inx
+            bra .clearopt       ; check our new current option
 
 .opterr     ;   Parse error:
             ;   - Input char did not match a char from the option table.

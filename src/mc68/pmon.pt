@@ -310,11 +310,22 @@ def deposit_opttab(m, table):
     (b'v666',       '3200: EE 66 EE EE EE EE EE EE', 3),
     #   Word option value parsing, and multiple option handling
     (b'w7v8xABCDv0','3200: EE 00 EE 00 07 AB CD EE', None),
+    #   Flag parsing
+    (b'i',          '3200: EE EE EF EE EE EE EE EE', None),
+    (b'k',          '3200: EE EE FE EE EE EE EE EE', None),
+    (b'jki',        '3200: EE EE FD EE EE EE EE EE', None),
+    (b'jkiijk',     '3200: EE EE EE EE EE EE EE EE', None),
+    (b'ki=',        '3200: EE EE 6C EE EE EE EE EE', None), # set all, clr all
+    (b'=ikl',       '3200: EE EE FD EE EE EE EE EE', None), # clr all, set some
 ])
 def test_qcmdopts(m, S, R, input, expected, err_offset):
-    opttab = deposit_opttab(m, [(0, 'v', S.OPTbyte, 0x3201),
-                                (4, 'w', S.OPTword, 0x3203),
-                                (8, 'x', S.OPTword, 0x3205),
+    opttab = deposit_opttab(m, [( 0, 'v', S.OPTbyte, 0x3201),
+                                ( 4, 'w', S.OPTword, 0x3203),
+                                ( 8, 'x', S.OPTword, 0x3205),
+                                (12, 'i', S.OPTbit0, 0x3202),
+                                (16, 'j', S.OPTbit1, 0x3202),
+                                (20, 'k', S.OPTbit4, 0x3202),
+                                (24, 'l', S.OPTbit7, 0x3202),
     ])
     _, ostream = loadbios(m)
     set_rdlinebuf(m, input)

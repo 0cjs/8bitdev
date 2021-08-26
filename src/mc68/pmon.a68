@@ -783,8 +783,8 @@ qwspace     ldx cmdqptr
 ;   Specifying `=` will clear all bits specified in the options table. In
 ;   no case does this touch any bits not specified in the options table.
 
-OPTbyte     equ  %011
-OPTword     equ  %110
+OPTbyte     equ  $81
+OPTword     equ  $82
 OPTbit0     equ  %00000001
 OPTbit1     equ  %00000010
 OPTbit2     equ  %00000100
@@ -864,12 +864,8 @@ qcmdopts    stx OPTtable        ; save command options table location
 .clearopt   lda A,0,X           ; option table terminator?
             beq .parsenext      ; done clearing; move on to next option in input
             lda A,1,X           ; option type
-            ;   XXX consider changing OPTbyte,OPTword to have MSB and one other
-            ;   bit set so that we can use CMP #$80, BHI to skip commands.
-            cmp A,#OPTbyte
-            beq .clearnext
-            cmp A,#OPTword
-            beq .clearnext
+            cmp A,#OPTbit7
+            bhi .clearnext
             stx OPTtabtmp       ; save current position in OPTtab
             ldx 2,X             ; load option value address
             eor A,#$FF          ; flip all bits

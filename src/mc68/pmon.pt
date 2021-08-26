@@ -292,7 +292,8 @@ def deposit_opttab(m, table):
         m.deposit(ovaladdr-1, [0xEE]*4)     # sentinel values
     m.deposit(opttab+offset+4, 0)           # terminator
 
-    print('opttab', m.hexdump(opttab, 18))
+    for addr in range(opttab, opttab+offset+5, 4):
+        print('opttab', m.hexdump(addr, 4))
     return opttab
 
 @pytest.mark.parametrize('input, expected, err_offset', [

@@ -819,7 +819,7 @@ qcmdopts    stx OPTtable        ; save command options table location
             ldx OPTvaladdr      ; target location for value
             lda B,qhex_out+1
             sta B,0,X           ; save parsed LSB
-            jmp .parsenext
+            bra .parsenext
 
 .optvalword jsr qhexword
             bne .opterr
@@ -829,7 +829,7 @@ qcmdopts    stx OPTtable        ; save command options table location
             sta B,0,X           ; save parsed MSB
             lda B,qhex_out+1
             sta B,1,X           ; save parsed LSB
-            jmp .parsenext
+            bra .parsenext
 
 .opterr     ;   Parse error:
             ;   - Input char did not match a char from the option table.

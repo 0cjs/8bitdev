@@ -1,0 +1,59 @@
+;   arithtest: tests of and playing about with arithmetic routines
+
+;   Standard locations for inputs and results. All operations are in the
+;   form X = A ⋅ B, with Y as an additional result where needed. These are
+;   prefixed by `arg` and `res` to avoid conflicts with register names.
+;
+argA        equ $20
+argB        equ $22
+resX        equ $24
+resY        equ $26
+
+;   Divide unsigned 16-bit word via shift-and-subtract:
+;       X (quotient), Y (remainder) = A / B
+;   locations: ♠X,Y ♣A (i.e., A input is destroyed)
+;   registers: ♠A,B,X
+;
+;   The basic algorithm takes each bit from MSB to LSB out of A and shifts
+;   it into the remainder Y. Whenever the current remainder Y becomes ≥ the
+;   divisor B we know that that bit is [XXX explain here what it is] and
+;   so we add that bit into X. Rather than directly flipping on that bit,
+;   however, we shift X in sync with A so that if we shift in a 1 rather
+;   than a 0 it will automatically be in the right position at the end.
+;
+divUW_ss    lda A,0         ; clear outputs
+            sta resX
+            sta resX+1
+            sta resY
+            sta resY+1
+            lda B,#16       ; bits in a word
+
+.loop       asl argA+1      ; MSB out of dividend...
+            rol argA
+            rol resY+1      ; ...and into remainder
+            rol resY
+            lda A,resY      ; remainder Y MSB - divisor B MSB
+            cmp A,argB
+            bcs .noquot     ; Y < B: cannot subtract out B
+            bgt .subdiv     ; Y > B: must subtract out b
+            lda A,resY+1    ; MSBs were equal, so compare LSBs
+            cmp A,argB+1
+            bcs .noquot     ; Y < B: cannot subtract out
+.subdiv     ; move quotient portion from remainder to quotent
+            lda A,resY+1    ; remainder Y = remainder Y - divisor B
+            sub A,argB+1
+            sta A,resY+1
+            lda A,resY
+            sbc A,argB
+            sta A,resY
+            sec             ; add this quotent bit into result
+            rol resX+1
+            rol resX
+            jmp .next
+.noquot     clc             ; no quotent bit to be rotated into result
+            rol resX+1
+            rol resX
+.next       dec B
+            bne .loop
+
+            rts

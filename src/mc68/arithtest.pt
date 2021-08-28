@@ -1,0 +1,21 @@
+from    testmc  import *
+from    testmc.mc6800  import *
+import  pytest
+
+R = Machine.Registers
+
+object_file = 'src/mc68/arithtest.p'
+
+@pytest.mark.parametrize('A, B, X, Y', [        # X = A / B; Y = remainder
+    (  123,   124,     0,   123),   #  A < Q always, so X never used
+    (  179,    10,    17,     9),
+    (43201,   103,   419,    44),
+])
+def test_difUW_ss(m, S, A, B, X, Y):
+    addrvals = [ (S.argA, A), (S.argB, B),
+                 (S.resX, 22222), (S.resY, 11111), ]    # guards
+    for a, v in addrvals: m.depword(a, v)
+    print(m.hexdump(S.argA, 10))
+    m.call(S.divUW_ss, trace=0)
+    print(m.hexdump(S.argA, 10))
+    assert (A, B, X, Y) == (A, B, m.word(S.resX), m.word(S.resY))

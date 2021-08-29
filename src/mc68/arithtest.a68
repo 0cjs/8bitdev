@@ -21,7 +21,7 @@ resY        equ $26
 ;   however, we shift X in sync with A so that if we shift in a 1 rather
 ;   than a 0 it will automatically be in the right position at the end.
 ;
-divUW_ss    lda A,0         ; clear outputs
+divUW_ss    lda A,#0        ; clear outputs
             sta resX
             sta resX+1
             sta resY
@@ -49,7 +49,7 @@ divUW_ss    lda A,0         ; clear outputs
             sec             ; add this quotent bit into result
             rol resX+1
             rol resX
-            jmp .next
+            bra .next
 .noquot     clc             ; no quotent bit to be rotated into result
             rol resX+1
             rol resX

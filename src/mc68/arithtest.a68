@@ -2,57 +2,84 @@
 
 ;   Standard locations for inputs and results. All operations are in the
 ;   form X = A ⋅ B, with Y as an additional result where needed. These are
-;   prefixed by `arg` and `res` to avoid conflicts with register names.
+;   prefixed by `_` to avoid conflicts with register names.
 ;
-argA        equ $20
-argB        equ $22
-resX        equ $24
-resY        equ $26
+_A          equ $20
+_B          equ $22
+_X          equ $24
+_Y          equ $26
 
-;   Divide unsigned 16-bit word via shift-and-subtract:
-;       X (quotient), Y (remainder) = A / B
-;   locations: ♠X,Y ♣A (i.e., A input is destroyed)
-;   registers: ♠A,B,X
+;   Divide unsigned 16-bit word via shift-and-subtract
+;   _X = _A / _B, remainder _Y      ♠_X,_Y, ♣_A,A,B ♡_B,X
 ;
-;   The basic algorithm takes each bit from MSB to LSB out of A and shifts
-;   it into the remainder Y. Whenever the current remainder Y becomes ≥ the
-;   divisor B we know that that bit is [XXX explain here what it is] and
-;   so we add that bit into X. Rather than directly flipping on that bit,
-;   however, we shift X in sync with A so that if we shift in a 1 rather
-;   than a 0 it will automatically be in the right position at the end.
+;   The basic algorithm works just like decimal long division by hand. We
+;   collect digits (bits) from the left (most signifcant end) until we
+;   have accumlated enough digits that we can subtract the divisor
+;   from them. At this point the rightmost digit (bit) we've collected is
+;   treated as the temporary "ones" column, we do our subtraction leaving a
+;   remainder, and then add the result of the subtraction to the current
+;   digit column (bit position) in the quotient that we're working on. We
+;   carry on this way until all columns (bits positions) have been done.
 ;
-divUW_ss    lda A,#0        ; clear outputs
-            sta resX
-            sta resX+1
-            sta resY
-            sta resY+1
+;   There are two main differences from by-hand decimal when we do this in
+;   binary on a computer.
+;   1. Rather than moving our pencil along the digit columns from left to
+;      right, we leave our attention point fixed (on the dividend's MSbit
+;      and the quotient's and remainders LSbit) and instead, with each loop
+;      of the algorithm, shift the columns/bits out of the dividend and
+;      into the remainder and quotent.
+;   2. Since every shift in binary only doubles the remainder, it is never
+;      possible to subtract more than one times the divisor from the
+;      remainder, meaning that we never need to add more than one bit to
+;      the quotient. (In base 10 a one-digit shift multiplies by ten, so
+;      you might have as much as 9 × the divisor in the remainder, and
+;      thus have to subtract all that and add up to 9 to the quotent.)
+;
+divUW_ss    ;  Q = D / V,  R = D mod V
+
+.Dh         equ _A          ; dividend  high byte
+.Dl         equ _A+1        ;           low
+.Vh         equ _B          ; divisor   high byte
+.Vl         equ _B+1        ;           low
+.Qh         equ _X          ; quotient  high byte
+.Ql         equ _X+1        ;           low
+.Rh         equ _Y          ; remainder high byte
+.Rl         equ _Y+1        ;           low
+
+            lda A,#0        ; clear outputs
+            sta .Qh
+            sta .Ql
+            sta .Rh
+            sta .Rl
             lda B,#16       ; bits in a word
 
-.loop       asl argA+1      ; MSB out of dividend...
-            rol argA
-            rol resY+1      ; ...and into remainder
-            rol resY
-            lda A,resY      ; remainder Y MSB - divisor B MSB
-            cmp A,argB
-            bcs .noquot     ; Y < B: cannot subtract out B
-            bgt .subdiv     ; Y > B: must subtract out b
-            lda A,resY+1    ; MSBs were equal, so compare LSBs
-            cmp A,argB+1
-            bcs .noquot     ; Y < B: cannot subtract out
-.subdiv     ; move quotient portion from remainder to quotent
-            lda A,resY+1    ; remainder Y = remainder Y - divisor B
-            sub A,argB+1
-            sta A,resY+1
-            lda A,resY
-            sbc A,argB
-            sta A,resY
-            sec             ; add this quotent bit into result
-            rol resX+1
-            rol resX
-            bra .next
-.noquot     clc             ; no quotent bit to be rotated into result
-            rol resX+1
-            rol resX
+.loop       asl .Dl         ; MSB out of dividend...
+            rol .Dh
+            rol .Rl         ;   ...and into remainder
+            rol .Rh
+            lda A,.Rh       ; remainder MSB - divisor MSB
+            cmp A,.Vh
+            bcs .noquotent  ; R < V: cannot subtract divisor from remainder
+            bgt .hasquotent ; R > V: must subtract divisor from remainder
+            lda A,.Rl       ; MSBs were equal, so compare LSBs
+            cmp A,.Vl
+            bcs .noquotent  ; R < V: cannot subtract divisor from remainder
+
+.hasquotent ; move quotient portion from remainder to quotent
+            lda A,.Rl       ; R = R - V, making R less than V again
+            sub A,.Vl
+            sta A,.Rl
+            lda A,.Rh       ;   (MSB)
+            sbc A,.Vh
+            sta A,.Rh
+            sec             ; V now removed from remainder; add it into Q by
+            rol .Ql         ;   settting in Q the current bit we're working
+            rol .Qh         ;   on. (This will be shifted up to its proper
+            bra .next       ;   place as we carry on.)
+
+.noquotent  clc             ; R was less than V, so nothing to add to Q.
+            rol .Ql
+            rol .Qh
 .next       dec B
             bne .loop
 

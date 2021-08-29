@@ -14,11 +14,11 @@ object_file = 'src/mc68/arithtest.p'
 def test_difUW_ss(m, S, A, B, X, Y):
     m.deposit(0, 0xA5)          # guard for loads _from_ 0 instead of _of_ 0
 
-    addrvals = [ (S.argA, A), (S.argB, B),
-                 (S.resX, 22222), (S.resY, 11111), ]    # guards
+    addrvals = [ (S._A, A), (S._B, B),
+                 (S._X, 22222), (S._Y, 11111), ]    # guards
     for a, v in addrvals: m.depword(a, v)
-    print(m.hexdump(S.argA, 10))
+    print(m.hexdump(S._A, 10))
 
     m.call(S.divUW_ss, trace=0)
-    print(m.hexdump(S.argA, 10))
-    assert (A, B, X, Y) == (A, B, m.word(S.resX), m.word(S.resY))
+    print(m.hexdump(S._A, 10))
+    assert (A, B, X, Y) == (A, B, m.word(S._X), m.word(S._Y))

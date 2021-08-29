@@ -73,14 +73,15 @@ divUW_ss    ;  Q = D / V,  R = D mod V
             sbc A,.Vh
             sta A,.Rh
             sec             ; V now removed from remainder; add it into Q by
-            rol .Ql         ;   settting in Q the current bit we're working
-            rol .Qh         ;   on. (This will be shifted up to its proper
-            bra .next       ;   place as we carry on.)
+            bra .next       ;   settting in Q the current bit we're working
+                            ;   on. (This will be shifted up to its proper
+                            ;   place as we carry on.)
 
-.noquotent  clc             ; R was less than V, so nothing to add to Q.
-            rol .Ql
+.noquotent  clc             ; R was less than V, so nothing to add into to Q.
+
+.next       rol .Ql         ; incorporate quotient update from remainder
             rol .Qh
-.next       dec B
+            dec B
             bne .loop
 
             rts

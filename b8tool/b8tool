@@ -26,12 +26,12 @@ from    collections  import namedtuple as ntup
 from    contextlib  import contextmanager
 from    os.path  import abspath, dirname
 from    pathlib  import Path
-import  os, shutil, subprocess, sys
+import  os, shutil, sys
 
 #   Configure and use b8tool's Python library path
 sys.path.insert(0, os.path.join(abspath(dirname(__file__)), 'pylib'))
 
-from    b8tool  import path
+from    b8tool  import path, run
 
 ####################################################################
 #   b8tool Conventions
@@ -90,44 +90,6 @@ def cwd(target):
         raise
     finally:
         os.chdir(str(oldcwd))
-
-def runtool(toolbin, *args, input=None, stdout_path=None, is32bit=False):
-    ''' Run `toolbin` with the given `args`. On success this simply
-        returns; on failure it prints the command line and the exit code
-        and then exits this program. (This makes error output more readable
-        than if a Python exception is thrown and printed.)
-
-        `input` is passed directly to `subprocess.run()` and is typically
-        a byte string.
-
-        If `stdout_path` is given, that file will be opened in binary mode
-        (creating it if necessary) and the standard output of the program
-        will be written to it. (No output will produce an empty file.)
-
-        For tools that under Linux are 32-bit binaries, set `is32bit` to
-        `True` to have a helpful message printed when the exit code is 127,
-        usually indicating that support for running 32-bit binaries is not
-        installed.
-    '''
-    #   Relative `toolbin` uses explict path to project tool, if available.
-    b8tool = path.tool('bin', toolbin)
-    if os.access(str(b8tool), os.X_OK):
-        toolbin = b8tool
-
-    runargs = (str(toolbin),) + tuple(map(str, args))
-    if stdout_path is None:
-        ret = subprocess.run(runargs, input=input)
-    else:
-        with open(str(stdout_path), 'wb') as f:
-            ret = subprocess.run(runargs, input=input, stdout=f)
-
-    if ret.returncode == 0:
-        return
-    print('FAILED (exit={}): {} {}'.format(ret.returncode, toolbin,
-        ' '.join(map(path.pretty, args))))
-    if is32bit and ret.returncode == 127:
-        print('(Do you support 32-bit executables?)', file=sys.stderr)
-    exit(ret.returncode)
 
 def remove_formfeeds(filepath):
     ''' Replace all form feeds with newlines in `filepath`. This makes
@@ -188,7 +150,7 @@ def asl(args):
             ]
         with open(topfile, 'w', newline='\n') as f: # always Unix newlines
             print(*topfile_lines, sep='\n', file=f)
-        runtool('asl', *opts, topfile, *endopts)
+        run.tool('asl', *opts, topfile, *endopts)
 
 def asltest(args):
     ''' Build a unit test version of a "library" file with Macroassembler
@@ -259,7 +221,7 @@ def asx(args):
     objfile = objdir.joinpath(srcfile.stem)
 
     objdir.mkdir(parents=True, exist_ok=True)
-    runtool('as6500', asmopts, str(objfile), str(srcfile), *args[2:],
+    run.tool('as6500', asmopts, str(objfile), str(srcfile), *args[2:],
         is32bit=True)
 
 def asxlink(args):
@@ -301,7 +263,7 @@ def asxlink(args):
     #   option parsing code.) The current behaviour isn't causing much
     #   pain, so this has not yet been fixed.
     with cwd(objdir):
-        runtool('aslink', linkopts, objstem, *args[1:], is32bit=True)
+        run.tool('aslink', linkopts, objstem, *args[1:], is32bit=True)
         remove_formfeeds(objstem + '.lst')
         remove_formfeeds(objstem + '.rst')
         remove_formfeeds(objstem + '.map')
@@ -345,18 +307,18 @@ def a2dsk(args):
 
     #   Generate an Apple II 'B' file (machine language program)
     asl(args)
-    runtool('p2a2bin', binfile('.p'), stdout_path=binfile())
+    run.tool('p2a2bin', binfile('.p'), stdout_path=binfile())
 
     #   Generate the Applesoft BASIC HELLO program to run the above.
     bootprog = '10 PRINT CHR$(4);"BRUN {}"'.format(name.upper()).encode('ASCII')
-    runtool('tokenize_asoft', input=bootprog, stdout_path=binfile('.HELLO'))
+    run.tool('tokenize_asoft', input=bootprog, stdout_path=binfile('.HELLO'))
 
     #   Build a disk image with the above and a HELLO that willl run it.
     baseimg = path.tool('src/dskimg/a2/EMPTY-DOS33-48K-V254.dsk')
     img     = binfile('.dsk')
     shutil.copyfile(str(baseimg), str(img))
     def dos33(*command):
-        runtool('dos33', '-y', str(img), *command)
+        run.tool('dos33', '-y', str(img), *command)
     dos33('SAVE', 'B', binfile(), name.upper())
     dos33('DELETE', 'HELLO')    # Avoids annoying SAVE overwrite warning.
     dos33('SAVE', 'A', binfile('.HELLO'), 'HELLO')

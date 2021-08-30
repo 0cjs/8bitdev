@@ -9,6 +9,7 @@ _B          equ $22
 _X          equ $24
 _Y          equ $26
 
+; ----------------------------------------------------------------------
 ;   Divide unsigned 16-bit word via shift-and-subtract
 ;   _X = _A / _B, remainder _Y      ♠_X,_Y, ♣_A,A,B ♡_B,X
 ;
@@ -85,3 +86,63 @@ divUW_ss    ;  Q = D / V,  R = D mod V
             bne .loop
 
             rts
+
+; ----------------------------------------------------------------------
+;   ♣A,B,X print unsigned 16-bit int at (X) in decimal
+;
+;   This uses the relatively simple and fast "multiple subtraction of
+;   factors" method: count all the 10,000s you can subtract, print out
+;   that digit, then the 1,000s, and so on. This iterates fewer loops
+;   than doing actual division and also produces digits in the output
+;   order while using minimal storage space.
+;
+
+prdec_u16
+
+.n          equ _A          ; temp holding remainder of uint we're processing
+
+            lda A,0,X       ; copy input MSB...
+            sta A,.n
+            lda A,1,X       ;   ...and LSB
+            sta A,.n+1
+            ldx #.ten_tab-2 ; position just before first (largest) factor
+
+.nextfactor inx             ; next factor
+            inx
+            lda B,#0        ; count of this factor's quantity
+            lda A,1,X       ; end of list marker?
+            bne .subfactor  ;   nonzero: carry on
+
+            lda A,.n+1      ; remaining amount is final digit
+            add A,#'0'
+            jsr prchar
+            rts
+
+            ;   All possible 10^n (where n>0) factors of $FFFF, terminated
+            ;   by low-byte 0. The termination is slightly tricky: it relies
+            ;   on the fact that none of the factors have an LSB of 0.
+.ten_tab    dw  10000, 1000, 100, 10, 0
+
+.subfactor
+            lda .n+1        ; subtract factor from LSB...
+            sub A,1,X
+            sta .n+1
+            lda .n
+            sbc A,0,X       ;   ...and MSB
+            sta .n
+            bcs .finfactor  ; we underflowed; we're done with this factor
+            inc B
+            bra .subfactor
+
+.finfactor  ;   Add factor back into current value to undo underflow.
+            lda A,.n+1      ; LSB and...
+            add A,1,X
+            sta A,.n+1
+            lda A,.n        ;   ...MSB
+            adc A,0,X
+            sta A,.n
+
+            tba             ; count of this factor
+            add A,#'0'      ; convert to ASCII
+            jsr prchar
+            bra .nextfactor

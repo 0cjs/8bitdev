@@ -1,0 +1,55 @@
+;   pr - routines for formatting and printing output
+
+SPACE       equ ' '
+DEL         equ $7F
+
+;   ♣A Print value in A as hex to the character output port.
+;   Falls through to prnyb.
+prhex       psh A
+            lsr A
+            lsr A
+            lsr A
+            lsr A
+            bsr prnyb
+            pul A
+            ; fallthrough
+
+;   ♣A Print lower nybble of A to the character output port.
+prnyb       and A,#$0F
+            add A,#'0'
+            cmp A,#'9'+1
+            bmi .digit
+            add A,#'A'-'9'-1
+.digit      jmp prchar          ; RTS (TCO)
+
+;   ♣A Print a space.
+prspace     lda A,#SPACE
+            jsr prchar
+            rts
+
+;   ♣A Print any (8-bit) value "visibly" as one character.
+;
+;   The output is always a character from the printable ASCII range. Bit 7
+;   is ignored, characters in the control sticks ($00-$1F) are shifted
+;   up into the upper-case ASCII sticks, and DEL is printed as `?` (i.e.,
+;   shifted down in the reverse direction from the control chars).
+;
+;   XXX This should be printing control chars in reverse video.
+;
+;   This is a more informative alternative to printing just a `.` for any
+;   non-printing char. It is slightly more subject to confusion in that it
+;   can make non-ASCII look more like ASCII, but it's assumed that the
+;   viewer will also have hex output easily available to help distinguish
+;   the two.
+;
+prvischar   and A,#$7F          ; clear bit 7
+            cmp A,#DEL
+            beq .isctl
+            cmp A,#' '
+            bcc .notctl
+.isctl      ;   Flipping bit 6 of a control character moves it up by $40
+            ;   into the upper-case sticks, except for DEL where it's
+            ;   moved down by 40 into the numeric/symbol stick.
+            eor A,#(1<<6)
+.notctl     jsr prchar
+            rts

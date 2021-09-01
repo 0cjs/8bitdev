@@ -1,0 +1,39 @@
+from    testmc  import *
+from    testmc.mc6800  import *
+import  pytest, re
+from    contextlib  import contextmanager
+
+
+R = Machine.Registers
+
+object_file = 'src/mc68/pr.p'
+
+@pytest.mark.parametrize('val, char', (
+    (0x00, b'0'), (0x01, b'1'), (0x0E, b'E'), (0x0F, b'F'),
+    (0x10, b'0'), (0xFE, b'E'),
+), ids=tmc_tid)
+def test_prnyb(m, S, R, loadbios, val, char):
+    _, output = loadbios('tmc68')
+    m.call(S.prnyb, R(a=val))
+    assert char == output.getvalue()
+
+@pytest.mark.parametrize('val, chars', (
+    (0x00, b'00'), (0x0F, b'0F'), (0xA0, b'A0'), (0xFF, b'FF'),
+), ids=tmc_tid)
+def test_prhex(m, S, R, loadbios, val, chars):
+    _, outchars = loadbios('tmc68')
+    m.call(S.prhex, R(a=val))
+    assert chars == outchars.getvalue()
+
+@pytest.mark.parametrize('char, output', [
+    (0x20, ' '), (0x5A, 'Z'), (0x7E, '~'),  # printable range
+    (0xA0, ' '), (0xDA, 'Z'), (0xFE, '~'),  # high bit set
+    (0x00, '@'), (0x1F, '_'),               # control chars
+    (0x80, '@'), (0x9F, '_'),               # hi-bit control chars
+    (0x7F, '?'), (0xFF, '?'),               # DEL is special
+])
+def test_prvischar(m, R, S, loadbios, char, output):
+    _, ostream = loadbios('tmc68')
+    m.call(S.prvischar, R(a=char))
+    assert output == str(ostream.getvalue(), encoding='ASCII')
+

@@ -424,13 +424,14 @@ def des(m):     m.sp = incword(m.sp, -1)
 ####################################################################
 #   Binary Arithmetic operations
 
-def add(m, augend, addend):
-    ''' Return the modular 8-bit sum of adding without carry `addend` (the
-        operand) to `augend` (the contents of the register). Set H, N, Z, V
+def add(m, augend, addend, carry=0):
+    ''' Return the modular 8-bit sum of adding `addend` (the operand) and
+        `carry` to `augend` (the contents of the register). Set H, N, Z, V
         and C flags based on the result, per pages A-4 (ADC) and A-5 (ADD)
         in the PRG.
     '''
     sum = incbyte(augend, addend)
+    sum = incbyte(sum, carry)
 
     m.N = isneg(sum)
     m.Z = iszero(sum)
@@ -456,19 +457,25 @@ def addbz(m):   m.b = add(m, m.b, m.mem[readbyte(m)])
 def addbm(m):   m.b = add(m, m.b, m.mem[readword(m)])
 def addbx(m):   m.b = add(m, m.b, m.mem[readindex(m)])
 
-def adca(m):    m.a = add(m, m.a, readbyte(m) + m.C)
-def adcaz(m):   m.a = add(m, m.a, m.mem[readbyte(m)] + m.C)
-def adcam(m):   m.a = add(m, m.a, m.mem[readword(m)] + m.C)
-def adcax(m):   m.a = add(m, m.a, m.mem[readindex(m)] + m.C)
-def adcb(m):    m.b = add(m, m.b, readbyte(m) + m.C)
-def adcbz(m):   m.b = add(m, m.b, m.mem[readbyte(m)] + m.C)
-def adcbm(m):   m.b = add(m, m.b, m.mem[readword(m)] + m.C)
-def adcbx(m):   m.b = add(m, m.b, m.mem[readindex(m)] + m.C)
+def adca(m):    m.a = add(m, m.a, readbyte(m), m.C)
+def adcaz(m):   m.a = add(m, m.a, m.mem[readbyte(m)], m.C)
+def adcam(m):   m.a = add(m, m.a, m.mem[readword(m)], m.C)
+def adcax(m):   m.a = add(m, m.a, m.mem[readindex(m)], m.C)
+def adcb(m):    m.b = add(m, m.b, readbyte(m), m.C)
+def adcbz(m):   m.b = add(m, m.b, m.mem[readbyte(m)], m.C)
+def adcbm(m):   m.b = add(m, m.b, m.mem[readword(m)], m.C)
+def adcbx(m):   m.b = add(m, m.b, m.mem[readindex(m)], m.C)
 
 def aba(m):     m.a = add(m, m.a, m.b)
 
-def sub(m, minuend, subtrahend, affectC=True):
+def sub(m, minuend, subtrahend, borrow=0, affectC=True):
+    ''' On the 6800 the C condition code is a "carry-borrow" flag: when
+        subtracting it is SET if the previous operation needed to borrow
+        from the next. Thus, when set, that borrow 1 bit should be
+        additionally subtracted from the SBC result.
+    '''
     difference = incbyte(minuend, -subtrahend)
+    difference = incbyte(difference, -borrow)
     m.N = isneg(difference)
     m.Z = iszero(difference)
 
@@ -494,14 +501,14 @@ def subbm(m):   m.b = sub(m, m.b, m.mem[readword(m)])
 def subbx(m):   m.b = sub(m, m.b, m.mem[readindex(m)])
 
 #   ACCX - M - C = ACCS - (M + C)   (PRM A-59)
-def sbca(m):    m.a = sub(m, m.a, readbyte(m) + m.C)
-def sbcaz(m):   m.a = sub(m, m.a, m.mem[readbyte(m)] + m.C)
-def sbcam(m):   m.a = sub(m, m.a, m.mem[readword(m)] + m.C)
-def sbcax(m):   m.a = sub(m, m.a, m.mem[readindex(m)] + m.C)
-def sbcb(m):    m.b = sub(m, m.b, readbyte(m) + m.C)
-def sbcbz(m):   m.b = sub(m, m.b, m.mem[readbyte(m)] + m.C)
-def sbcbm(m):   m.b = sub(m, m.b, m.mem[readword(m)] + m.C)
-def sbcbx(m):   m.b = sub(m, m.b, m.mem[readindex(m)] + m.C)
+def sbca(m):    m.a = sub(m, m.a, readbyte(m), borrow=m.C)
+def sbcaz(m):   m.a = sub(m, m.a, m.mem[readbyte(m)], borrow=m.C)
+def sbcam(m):   m.a = sub(m, m.a, m.mem[readword(m)], borrow=m.C)
+def sbcax(m):   m.a = sub(m, m.a, m.mem[readindex(m)], borrow=m.C)
+def sbcb(m):    m.b = sub(m, m.b, readbyte(m), borrow=m.C)
+def sbcbz(m):   m.b = sub(m, m.b, m.mem[readbyte(m)], borrow=m.C)
+def sbcbm(m):   m.b = sub(m, m.b, m.mem[readword(m)], borrow=m.C)
+def sbcbx(m):   m.b = sub(m, m.b, m.mem[readindex(m)], borrow=m.C)
 
 def cmpa(m):          sub(m, m.a, readbyte(m))
 def cmpaz(m):         sub(m, m.a, m.mem[readbyte(m)])

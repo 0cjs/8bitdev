@@ -136,11 +136,16 @@ EXWIDTH     equ $10                 ; examine default: 16 bytes/line
 
 ; ----------------------------------------
 ;   "Low" area aimed at maximum gain from minimum direct page usage.
+;
+;   It's a convention in this repo to have _[axbyij] zero pages words
+;   defined for arithmetic routine parameters/returns/counters so we re-use
+;   this here for temp space for non-arithemtic routines.
+;
             org pmon_ramlo
 
-tmp1        ds  1       ; temp storage (byte)
-tmp2        ds  2       ; temp storage (usually word)
-tmp2a       ds  2
+_a          ds  2
+_x          ds  2
+_i          ds  1
 qhex_out    ds  2       ; last qhex result ($0000 if qhex failed)
 cmdqptr     ds  2       ; Current parsing point in command input buffer.
                         ; Update this to consume parsed text, but do not
@@ -364,6 +369,7 @@ nextline    lda A,stat
 ;     for that command; the routine should finish with RTS.
 ;   • A $00 character and $0000 address indicating end of table.
 ;   • XXX need to define entry for continuation address of table.
+;   Commands may destroy any registers and _[axbyij] variables.
 
 ;   `init` sets `cmdtbl` to point to `cmdtbl_std`. The user may change this
 ;   to point to his own command table to add new commands or override
@@ -494,16 +500,16 @@ Ccall       ldx #Mcallcur
 Cdeposit    ldx #Mdepcur
             jsr usepending
             ldx Mdepcur
-            stx tmp2            ; deposit index
+            stx _a              ; deposit index
 .next       ldx cmdqptr         ; current input pointer
             jsr qhexbyte
             bne .nothex         ; not hexbyte, skip space or end
             stx cmdqptr         ; save next parse position
             lda A,qhex_out+1    ; byte we just read
-            ldx tmp2            ; current deposit index
+            ldx _a              ; current deposit index
             sta A,,X
             inx
-            stx tmp2            ; next deposit index
+            stx _a              ; next deposit index
             bra .next
 
 .nothex     lda A,,X            ; load next character
@@ -558,13 +564,13 @@ Cexamine    ldx #Mexamcur
 
 .print      jsr startline
             lda A,Mexamlines    ; lines to print
-            sta A,tmp1          ; set remaining lines left to print
+            sta A,_i            ; set remaining lines left to print
             ldx Mexamcur        ; load start location to examine
 .nextline   ;   print current line address
-            stx tmp2
-            lda A,tmp2          ; addr hi
+            stx _a
+            lda A,_a            ; addr hi
             jsr prhex
-            lda A,tmp2+1        ; addr lo
+            lda A,_a+1          ; addr lo
             jsr prhex
             lda A,#':'
             jsr prchar
@@ -577,7 +583,7 @@ Cexamine    ldx #Mexamcur
             dec B
             bne .nexthex
             jsr prnl
-            dec tmp1            ; lines left to print
+            dec _i              ; lines left to print
             bne .nextline
             rts
 
@@ -588,8 +594,6 @@ Cexamine    ldx #Mexamcur
             db 0                ; terminator
 
 ;   show/set saved registers
-;
-;   XXX ♣tmp2
 ;
 ;   The registers are named with single letters `pabxcs`. With no args, the
 ;   registers are printed as (space-prefixed) ` Cval` pairs of name character
@@ -756,7 +760,7 @@ qwspace     ldx cmdqptr
 .noconsume  sec                 ; success
             rts
 
-;   ♣X,A,B,tmp2,tmp2a  qcmdopts
+;   ♣X,A,B,_a,_x  qcmdopts
 ;   Process command options from `cmdqptr` per table at X
 ;
 ;   Command options are a sequence of option letter followed by that
@@ -776,8 +780,8 @@ qwspace     ldx cmdqptr
 
 OPTbyte     equ  %011
 OPTword     equ  %110
-OPTtable    equ tmp2
-OPTvaladdr  equ tmp2a
+OPTtable    equ _a
+OPTvaladdr  equ _x
 
 qcmdopts    stx OPTtable        ; save command options table location
 .parsenext  ;   process the next option in the input

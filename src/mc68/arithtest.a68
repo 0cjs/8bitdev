@@ -100,16 +100,21 @@ divUW_ss    ;  Q = D / V,  R = D mod V
 prdec_u16
 
 .n          equ _A          ; temp holding remainder of uint we're processing
+.printing   equ _B          ; bits 0..6: initial value of factor count (0)
+                            ;     bit 7: 1 if we are printing all digits,
+                            ;            0 if we are in non-printed leading 0s
 
             lda A,0,X       ; copy input MSB...
             sta A,.n
             lda A,1,X       ;   ...and LSB
             sta A,.n+1
             ldx #.ten_tab-2 ; position just before first (largest) factor
+            clr A           ; start with high bit clear, meaning that
+            sta A,.printing ;   we do not print 0 values
 
 .nextfactor inx             ; next factor
             inx
-            lda B,#0        ; count of this factor's quantity
+            lda B,.printing ; count of this factor's quantity and printing flag
             lda A,1,X       ; end of list marker?
             bne .subfactor  ;   nonzero: carry on
 
@@ -142,7 +147,12 @@ prdec_u16
             adc A,0,X
             sta A,.n
 
-            tba             ; count of this factor
+            tba             ; count of this factor and leading 0 suppress flag
+            beq .noprint    ; no count and flag=0: skip printing leading 0
+
+            and A,#$7F      ; clear printing leading 0s flag, if present
             add A,#'0'      ; convert to ASCII
             jsr prchar
-            bra .nextfactor
+            lda A,#$80      ; ensure we print all digits from now on
+            sta A,.printing
+.noprint    bra .nextfactor

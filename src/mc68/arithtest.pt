@@ -29,14 +29,12 @@ def test_difUW_ss(m, S, A, B, X, Y):
 ])
 def test_prdec_u16(m, S, R, loadbios, n):
     expected = '{}'.format(n).encode('ASCII')
-    #   XXX use a version with leading zeros until we add removal of those
-    expected = '{:05}'.format(n).encode('ASCII')
     print('expected', expected)
 
     loc = 0x7000 + (n & 0xFF ^ 0x55)    # pesudo-random location for input
     m.depword(loc, n)
     _, output = loadbios('tmc68')
-    m.call(S.prdec_u16, R(x=loc), trace=0)
+    m.call(S.prdec_u16, R(x=loc))
     print('input', m.hexdump(loc, 2), '  copy', m.hexdump(S._A, 2),
         '  regs', m.regs, '  output', output.getvalue())
     assert expected == output.getvalue()

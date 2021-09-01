@@ -14,14 +14,14 @@ object_file = 'src/mc68/arithtest.p'
 def test_difUW_ss(m, S, A, B, X, Y):
     m.deposit(0, 0xA5)          # guard for loads _from_ 0 instead of _of_ 0
 
-    addrvals = [ (S._A, A), (S._B, B),
-                 (S._X, 22222), (S._Y, 11111), ]    # guards
+    addrvals = [ (S._a, A), (S._b, B),
+                 (S._x, 22222), (S._y, 11111), ]    # guards
     for a, v in addrvals: m.depword(a, v)
-    print(m.hexdump(S._A, 10))
+    print(m.hexdump(S._a, 10))
 
     m.call(S.divUW_ss, trace=0)
-    print(m.hexdump(S._A, 10))
-    assert (A, B, X, Y) == (A, B, m.word(S._X), m.word(S._Y))
+    print(m.hexdump(S._a, 10))
+    assert (A, B, X, Y) == (A, B, m.word(S._x), m.word(S._y))
 
 @pytest.mark.parametrize('n', [
     0, 3, 15, 16, 17, 255, 256, 257, 999, 1000, 2001, 3002, 9999,
@@ -35,6 +35,6 @@ def test_prdec_u16(m, S, R, loadbios, n):
     m.depword(loc, n)
     _, output = loadbios('tmc68')
     m.call(S.prdec_u16, R(x=loc))
-    print('input', m.hexdump(loc, 2), '  copy', m.hexdump(S._A, 2),
+    print('input', m.hexdump(loc, 2), '  copy', m.hexdump(S._a, 2),
         '  regs', m.regs, '  output', output.getvalue())
     assert expected == output.getvalue()

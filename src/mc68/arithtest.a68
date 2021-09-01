@@ -1,17 +1,17 @@
 ;   arithtest: tests of and playing about with arithmetic routines
 
 ;   Standard locations for inputs and results. All operations are in the
-;   form X = A ⋅ B, with Y as an additional result where needed. These are
-;   prefixed by `_` to avoid conflicts with register names.
+;   form _x = _a ⋅ _b, with _y as an additional result where needed. These
+;   are prefixed by `_` to avoid conflicts with register names.
 ;
-_A          equ $20
-_B          equ $22
-_X          equ $24
-_Y          equ $26
+_a          equ $20
+_b          equ $22
+_x          equ $24
+_y          equ $26
 
 ; ----------------------------------------------------------------------
 ;   Divide unsigned 16-bit word via shift-and-subtract
-;   _X = _A / _B, remainder _Y      ♠_X,_Y, ♣_A,A,B ♡_B,X
+;   _x = _a / _b, remainder _y      ♠_x,_y, ♣_a,A,B ♡_b,X
 ;
 ;   The basic algorithm works just like decimal long division by hand. We
 ;   collect digits (bits) from the left (most signifcant end) until we
@@ -38,14 +38,14 @@ _Y          equ $26
 ;
 divUW_ss    ;  Q = D / V,  R = D mod V
 
-.Dh         equ _A          ; dividend  high byte
-.Dl         equ _A+1        ;           low
-.Vh         equ _B          ; divisor   high byte
-.Vl         equ _B+1        ;           low
-.Qh         equ _X          ; quotient  high byte
-.Ql         equ _X+1        ;           low
-.Rh         equ _Y          ; remainder high byte
-.Rl         equ _Y+1        ;           low
+.Dh         equ _a          ; dividend  high byte
+.Dl         equ _a+1        ;           low
+.Vh         equ _b          ; divisor   high byte
+.Vl         equ _b+1        ;           low
+.Qh         equ _x          ; quotient  high byte
+.Ql         equ _x+1        ;           low
+.Rh         equ _y          ; remainder high byte
+.Rl         equ _y+1        ;           low
 
             lda A,#0        ; clear outputs
             sta .Qh
@@ -99,8 +99,8 @@ divUW_ss    ;  Q = D / V,  R = D mod V
 
 prdec_u16
 
-.n          equ _A          ; temp holding remainder of uint we're processing
-.printing   equ _B          ; bits 0..6: initial value of factor count (0)
+.n          equ _a          ; temp holding remainder of uint we're processing
+.printing   equ _b          ; bits 0..6: initial value of factor count (0)
                             ;     bit 7: 1 if we are printing all digits,
                             ;            0 if we are in non-printed leading 0s
 

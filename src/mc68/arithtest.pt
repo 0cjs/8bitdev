@@ -22,19 +22,3 @@ def test_difUW_ss(m, S, A, B, X, Y):
     m.call(S.divUW_ss, trace=0)
     print(m.hexdump(S._a, 10))
     assert (A, B, X, Y) == (A, B, m.word(S._x), m.word(S._y))
-
-@pytest.mark.parametrize('n', [
-    0, 3, 15, 16, 17, 255, 256, 257, 999, 1000, 2001, 3002, 9999,
-    10000, 10001, 16383, 16384, 16385, 32768, 33879, 0xFFFE, 0xFFFF,
-])
-def test_prdec_u16(m, S, R, loadbios, n):
-    expected = '{}'.format(n).encode('ASCII')
-    print('expected', expected)
-
-    loc = 0x7000 + (n & 0xFF ^ 0x55)    # pesudo-random location for input
-    m.depword(loc, n)
-    _, output = loadbios('tmc68')
-    m.call(S.prdec_u16, R(x=loc))
-    print('input', m.hexdump(loc, 2), '  copy', m.hexdump(S._a, 2),
-        '  regs', m.regs, '  output', output.getvalue())
-    assert expected == output.getvalue()

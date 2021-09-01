@@ -382,9 +382,9 @@ def set_rdlinebuf(m, input=b''):
 
 @pytest.mark.parametrize('val, output', [
     #   Output is expected to have a trailing space.
-    (0x5071, '5071 Pq '),   # PAB=1 (pending available bit is set)
-    (0x7E20, '7E20 ~  '),   # PAB=0; ends of printable ASCII range
-    (0x019F, '019F A_ '),   # using prvischar (bit 7 ignored, ctl-chars visible)
+    (0x5071, "$5071 20593 'Pq' "),  # PAB=1 (pending available bit is set)
+    (0x7E20, "$7E20 32288 '~ ' "),  # PAB=0; ends of printable ASCII range
+    (0x019F, "$019F 415 'A_' "),    # using prvischar (bit 7 ignored, ctl-chars visible)
 ])
 def test_query(m, S, R, loadbios, val, output):
     #   `status` byte:

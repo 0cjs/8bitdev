@@ -529,17 +529,29 @@ Cdeposit    ldx #Mdepcur
 ;   this uses the most recent value of pending. The value is printed in
 ;   hex, decimal (XXX not yet implemented), ASCII, etc.
 ;
-Cquery      jsr inline
+Cquery      jsr inline          ; output after this continues on same line
+
+            lda #'$'            ; hex value
+            jsr prchar
             lda A,Mpending
             jsr prhex
             lda A,Mpending+1
-            tab                 ; saves a reload later
             jsr prhex
             jsr prspace
+
+            ldx #Mpending       ; decimal value
+            jsr prdec_u16
+            jsr prspace
+
+            lda #'\''           ; ASCII characters
+            jsr prchar
             lda A,Mpending
             jsr prvischar
-            tba                 ; saved Mpending+1
+            lda A,Mpending+1
             jsr prvischar
+            lda #'\''
+            jsr prchar
+
             ;   Space instead of CR at end of output works better when
             ;   we have multiple commands per line.
             jsr prspace

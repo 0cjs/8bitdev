@@ -111,26 +111,18 @@ def runcmd(command, *, cwd=None, suppress_stdout=False):
     if c.returncode != 0:
         errexit(c.returncode, 'Command failed: {}'.format(command))
 
-def checkrun(cmdargs, exitcode=0, banner=b'', suppress_stdout=False):
+def checkrun(cmdargs, exitcode=0, banner=b''):
     ''' Attempt to execute the given `cmdargs`, a sequence of the
         command name followed by its arguments. If it successfully
         runs, the exit code is `exitcode`, and stdout or stderr contains
         the byte string `banner`, return `True`. Othewrise return `False`.
-
-        Stdout and stderr will be captured together unless
-        `suppress_stdout` is set to `True`.
     '''
     b8tool = path.tool('bin', cmdargs[0])
     if os.access(str(b8tool), os.X_OK):
         cmdargs[0] = str(b8tool)
 
-    if suppress_stdout:
-        stdout = subprocess.DEVNULL
-        stderr = subprocess.PIPE
-    else:
-        stdout = subprocess.PIPE
-        stderr = subprocess.STDOUT
-
+    stdout = subprocess.PIPE
+    stderr = subprocess.STDOUT
     try:
         c = subprocess.run(cmdargs, stderr=stderr, stdout=stdout)
     except FileNotFoundError:

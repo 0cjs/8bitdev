@@ -50,7 +50,7 @@ class DOS33FS(Setup):
             (basic,             'bin2data'),
             (basic,             'integer_detoken'),
             (basic,             'tokenize_asoft'),
-            ('bmp2dhr',         'b2d'),
+            ('utils/bmp2dhr',   'b2d'),
             )
         for subdir, file in bins:
             dest = self.pdir('bin').joinpath(file)

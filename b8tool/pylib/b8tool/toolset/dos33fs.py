@@ -28,9 +28,10 @@ class DOS33FS(Setup):
         return checkrun( ['dos33', '-h'], 0,
             b'by Vince Weaver <vince@deater.net>')
 
-    def configure(self):
-        deps = [ 'liblz4-dev', 'libpng-dev', ]
-        self.check_packages(debian=deps)
+    DEPENDENCIES = (
+         ('liblz4-dev', ('pkg-config', 'liblz4')),
+         ('libpng-dev', ('pkg-config', 'libpng')),
+    )
 
     def build(self):
         self.make_src()

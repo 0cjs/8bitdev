@@ -28,12 +28,15 @@ class LinApple(Setup):
         return checkrun(['linapple', '--help'], 0,
             b'show this help message')
 
-    def configure(self):
-        #   XXX This should add the `imagemagick` package to the list only
-        #   if something's not already providing the `convert` program.
-        deps = [ 'git', 'imagemagick', 'libzip-dev', 'libsdl1.2-dev',
-            'libsdl-image1.2-dev', 'libcurl4-openssl-dev', 'zlib1g-dev', ]
-        self.check_packages(debian=deps)
+    DEPENDENCIES = (
+        ('git',                     ('git', '--version')),
+        ('imagemagick',             ('convert', '--version')),
+        ('libzip-dev',              ('pkg-config', 'libzip')),
+        ('libsdl1.2-dev',           ('pkg-config', 'sdl')),
+        ('libsdl-image1.2-dev',     ('pkg-config', 'SDL_image')),
+        ('libcurl4-openssl-dev',    ('pkg-config', 'libcurl')),
+        ('zlib1g-dev',              ('pkg-config', 'zlib')),
+    )
 
     def build(self):
         ''' Build  the tool.

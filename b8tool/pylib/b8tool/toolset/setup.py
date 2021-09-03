@@ -293,19 +293,38 @@ class Setup(metaclass=abc.ABCMeta):
             runcmd([ 'git', '-C', str(self.srcdir()),
                 'checkout', str(self.source_ref) ])
 
+    #   See check_dependencies() for the format of this.
+    DEPENDENCIES = []
 
-    def check_packages(self, *, debian=[], redhat=[]):
-        ''' Check that the given packages are present. This is usually
-            used to confirm that we have what we need to build from source.
+    def check_dependencies(self):
+        ''' Check that the files in `DEPENDENCIES` are present and, if
+            any are missing, suggest the packages that need to be installed.
+            All files will be checked and the full list of missing packages
+            will be suggested.
+
+            `DEPENDENCIES` is a sequence of pairs of ``(package_name,
+            testcmd)``, where ``testcmd`` is a sequence of command and
+            arguments.. If running ``testcmd`` returns an error, this will
+            suggest that ``package_name`` be installed.  ``testcmd`` is
+            anything that returns success if the package is present, e.g.
+            ``pkg-config zlib``.
+
+            ``package_name`` need not be an actual package name; it's just
+            a hint to the developer. Currently the convention is to use
+            Debian package names, but it would be nice if we could have
+            some easy way to determine the package name for whatever system
+            this is running on.
         '''
-        if redhat:
-            raise NotImplementedError(
-                "I don't know how to check redhat packages yet.")
-        if not debian:
-            return
-
-        self.printaction('Checking dependencies:', ' '.join(debian))
-        runcmd(['dpkg', '-s'] + debian, suppress_stdout=True)
+        self.printaction('Checking dependencies:',
+            ' '.join([ p for p, _ in self.DEPENDENCIES ]))
+        needed = set()
+        for package, testcmd in self.DEPENDENCIES:
+            if not checkrun(testcmd):
+                self.printaction(
+                    '{} test failed: {}'.format(package, ' '.join(testcmd)))
+                needed.add(package)
+        if needed:
+            errexit(1, 'Missing dependencies. Try installing:', *sorted(needed))
 
     def make_src(self, *makeargs):
         ''' Run ``make`` in the source directory.
@@ -352,6 +371,7 @@ class Setup(metaclass=abc.ABCMeta):
             errexit(EX_USAGE,
                 'BUILDDIR not set and {} is not a directory.'.format(BUILDDIR))
         self.fetch()
+        self.check_dependencies()
         self.configure()
         self.build()
         self.install()

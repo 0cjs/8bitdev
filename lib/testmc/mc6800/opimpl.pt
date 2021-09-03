@@ -601,16 +601,18 @@ def test_LD16(reg, arg, N, Z):
         initmem     = { addr+offset: MB(arg), addr+offset+1: LB(arg) },
         changedregs = changedregs)
 
-@tc('arg', 0x0000, 0x1234, 0xFFED)
-def test_TSX(arg):
+@tc('sp', 0x0000, 0x1234, 0xFFFF)
+def test_TSX(sp):
+    xval = (sp + 1) & 0xFFFF
     #   Not clear if this is the best way to catch flag changes....
-    runop([I.TSX], initregs=R(sp=arg, N=0, Z=1), changedregs=R(x=arg))
-    runop([I.TSX], initregs=R(sp=arg, N=1, Z=0), changedregs=R(x=arg))
+    runop([I.TSX], initregs=R(sp=sp, N=0, Z=1), changedregs=R(x=xval))
+    runop([I.TSX], initregs=R(sp=sp, N=1, Z=0), changedregs=R(x=xval))
 
-@tc('arg', 0x0000, 0x1234, 0xFFED)
-def test_TXS(arg):
-    runop([I.TXS], initregs=R(x=arg, N=0, Z=1), changedregs=R(sp=arg))
-    runop([I.TXS], initregs=R(x=arg, N=1, Z=0), changedregs=R(sp=arg))
+@tc('xval', 0x0000, 0x1234, 0xFFFF)
+def test_TXS(xval):
+    sp = (xval - 1) & 0xFFFF
+    runop([I.TXS], initregs=R(x=xval, N=0, Z=1), changedregs=R(sp=sp))
+    runop([I.TXS], initregs=R(x=xval, N=1, Z=0), changedregs=R(sp=sp))
 
 #### Stores
 

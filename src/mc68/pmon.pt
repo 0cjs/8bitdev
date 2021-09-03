@@ -242,7 +242,7 @@ def test_prperr_abort(m, S, loadbios):
     end_sp = m.sp - 2   # Because call() will not execute final RTS
     m.call(0x3000, stopat=[S.cmdloop], trace=0)
     assert R(pc=S.cmdloop, sp=end_sp) == m.regs
-    assert end_sp == m.word(S.perr_stack)
+    assert end_sp == m.word(S.perr_stack) - 1
 
 def deposit_opttab(m, table):
     ' Table is a sequence of (offset, opt char, opt type, opt value addr) '
@@ -361,7 +361,7 @@ def test_command_options(m, S, cmdsym, optstr, expected_vals):
     set_rdlinebuf(m, b'\xFE')
     #   On abort, restore stack to this test's call point,
     #   emulating the parse loop's save of stack position.
-    initsp = m.sp; m.depword(S.perr_stack, initsp)
+    initsp = m.sp; m.depword(S.perr_stack, initsp + 1)
     m.call(S[cmdsym], stopat=stops)
     assert R(pc=S.prperr, sp=initsp) == m.regs, \
         'Expected error exit and stack restored.'

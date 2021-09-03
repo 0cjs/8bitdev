@@ -181,10 +181,12 @@ Mexamlines  ds  1       ; examine lines: number of lines to print
 Mdepcur     ds  2       ; deposit command current start addr
 Mcallcur    ds  2       ; call command address to call
 
-;   Stack position at start of parsing continuation, enabling prperr_abort
-;   to drop any arbitrary amount of stack data pushed by command routines
-;   if, instead of returning up the stack, they abort due to a parse
-;   failure or other error. In essence, the exception catch point.
+;   Stack position + 1 at start of parsing continuation, enabling prperr_abort
+;   to drop any arbitrary amount of stack data pushed by command routines if,
+;   instead of returning up the stack, they abort due to a parse failure or
+;   other error. In essence, the exception catch point. It's SP+1 because
+;   that's what TSX gives us, TXS corrects this, and we don't use it otherwise
+;   so there's no point in spending cycles to "correct" it.
 perr_stack  ds  2
 
 pmon_ramhi_end equ *
@@ -202,6 +204,7 @@ init        ;   The SP in the saved registers defaults to our SP at monitor
             ;   monitor stack starts immediately underneath. (See above for
             ;   details on this.)
             tsx
+            dex
             stx Rsp
             ;   Minimum initialization to avoid truly broken behaviour.
             ldx #cmdtbl_std     ; default command table

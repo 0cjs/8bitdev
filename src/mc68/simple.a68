@@ -11,4 +11,34 @@ ident       byt "mc68/simple.a68"   ; we use this to check that we've loaded
 set_a_ff    ldaa #$FF
             rts
 
+; ----------------------------------------------------------------------
+
+;   Brief demonstration of a 6800 quirk: the SP points to the address
+;   _below_ the last item on the stack, but TSX and TXS treat X as the
+;   address _at_ the last item on the stack (i.e., they increment and
+;   decrement the value by 1, respectively).
+;
+spdemo      tsx                     ; save system stack
+            stx .save
+            ldx #.testsp            ; our test stack
+            txs
+            bsr .rts                ; put following return address on stack
+.retaddr    tsx                     ; to assert stack hasn't changed
+            stx .altstack
+            dex                     ; grab return address that was on stack
+            dex                     ;   one and two bytes _below_ what we
+            ldx 0,X                 ;   were given by TSX
+            stx .stackval
+            ldx .save               ; restore system stack
+            txs
+.rts        rts
+
+.testsp     equ $6200
+.save       equ $E0
+.altstack   equ $E2
+.stackval   equ $E4
+
+
+; ----------------------------------------------------------------------
+
             end set_a_ff            ; set entry point

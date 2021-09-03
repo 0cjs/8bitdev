@@ -269,8 +269,8 @@ def stsz(m):    st16target(m, m.sp, readbyte(m))
 def stsm(m):    st16target(m, m.sp, readword(m))
 def stsx(m):    st16target(m, m.sp, readindex(m))
 
-def tsx(m):     m.x = m.sp
-def txs(m):     m.sp = m.x
+def tsx(m):     m.x  = incword(m.sp, 1)
+def txs(m):     m.sp = incword(m.x, -1)
 
 ####################################################################
 #   Flag handling for data movement and logic

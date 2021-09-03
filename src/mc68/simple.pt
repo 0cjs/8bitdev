@@ -30,3 +30,17 @@ def test_call(m, S, R):
     assert R(a=0) == m.regs
     m.call(S.set_a_ff)
     assert R(a=0xFF) == m.regs
+
+def test_spdemo(m, S, R):
+    ' The behaviour checked here has been confirmed on a Panasonic JR-200. '
+    def l(localsym):
+        return S['spdemo.' + localsym]
+    testsp = l('testsp')
+
+    m.deposit(testsp-4, range(0xAC, 0xB2))
+    m.call(S.spdemo)
+    print(m.hexdump(testsp-4, 6))
+    print(m.hexdump(l('save'), 6))
+
+    assert (testsp,                l('retaddr')             ) \
+        == (m.word(l('altstack')), m.word(l('stackval'))    )

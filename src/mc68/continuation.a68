@@ -35,15 +35,17 @@ pushcont    macro addr
 ;
 pushcontcur                     ;         bytes,cycles for caller's JSR:  (3),9
             tsx                 ;                                           1,4
-            lda B,2,X           ; load return addr LSB                      2,5
+            lda B,1,X           ; load return addr LSB                      2,5
             sub B,#3            ; move back to start of JSR $nnnn instr     2,5
-            sta B,2,X           ; (carry not affected)                      2,6
+            sta B,1,X           ; (carry not affected)                      2,6
             bcc +               ; if no borrow, skip decrement of MSB       2,4
-            dec 1,X             ;                                           2,7
-+           ldx 1,X             ; load return address                       6,2
-            inx                 ; incr. to point to instr. after caller     1,4
-            inx                 ;                                           1,4
-            inx                 ;                                           1,4
+            dec 0,X             ;                                           2,7
++           ldx 0,X             ; load return address                       6,2
+                                ; increment past JSR to to point to the
+                                ;   instruction after the call:
+            inx                 ;   (JSR                                    1,4
+            inx                 ;    target MSB                             1,4
+            inx                 ;    target LSB)                            1,4
             jmp ,X              ;                                           2,4
 
 ;   ♣B  Remove a continuation address from the top of the stack.

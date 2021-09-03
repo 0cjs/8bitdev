@@ -202,10 +202,10 @@ def test_call_changedstack(m):
     p = 0x207
     isp = 0x3007                # initial stack pointer
     m.deposit(p, [
-        I.TSX,      I.INX,      # 0207: point X to word on top of stack
-        I.LDAAx, 1, I.PSHA,     # 0209: return addr LSB
-        I.LDAAx, 0, I.PSHA,     # 020C: return addr MSB
-        I.RTS,                  # 020F: return to call() w/new stack ptr
+        I.TSX,                  # 0207: X points to word on top of stack
+        I.LDAAx, 1, I.PSHA,     # 0208: return addr LSB
+        I.LDAAx, 0, I.PSHA,     # 020B: return addr MSB
+        I.RTS,                  # 020E: return to call() w/new stack ptr
         ])
     with pytest.raises(m.UnexpectedCallStack) as ex:
         m.call(p, R(sp=isp), trace=1)
@@ -213,7 +213,7 @@ def test_call_changedstack(m):
     assert bytes([0x00, 0xFF, 0xFd, 0xFF, 0xFd, 0x00]) == m.bytes(isp-4, 6), '''
         Stack should contain two copies of the address for RTS with
         guard bytes $00 (never-written data) on either side. '''
-    assert R(pc=0x20F, sp=isp-4) == m.regs, '''
+    assert R(pc=0x20E, sp=isp-4) == m.regs, '''
         Should have stopped on RTS with unpopped stack pointing to
         the pushed copy of the address for RTS. '''
     assert ex.match('initsp=3005 sp=3003 retaddr=FFFD spretaddr=FFFD')
@@ -226,16 +226,16 @@ def test_call_changedretaddr(m):
     p = 0x208
     isp = 0x3008        # initial stack pointer
     m.deposit(p, [
-        I.TSX, I.INX,   # 0208: point to word on top of stack
-        I.CLRx, 0,      # 020A: return addr MSB
-        I.CLRx, 1,      # 020C: return addr LSB
-        I.RTS,          # 020E: return to call() w/wrong ret addr
+        I.TSX,          # 0208: X points to word on top of stack
+        I.CLRx, 0,      # 0209: return addr MSB
+        I.CLRx, 1,      # 020B: return addr LSB
+        I.RTS,          # 020D: return to call() w/wrong ret addr
         ])
     with pytest.raises(m.UnexpectedCallStack) as ex:
         m.call(p, R(sp=isp), retaddr=0x01F2, trace=1)
     print(m.hexdump(isp-4, 6))
     assert bytes([0,0]) == m.bytes(isp-3, 2), 'changed RTS addr at top of stack'
-    assert R(pc=0x20E, sp=isp-2) == m.regs
+    assert R(pc=0x20D, sp=isp-2) == m.regs
     assert ex.match('initsp=3006 sp=3006 retaddr=01F2 spretaddr=0000'), '''
         Should be:
         - initsp: isp - 2 for return addr placed by call()

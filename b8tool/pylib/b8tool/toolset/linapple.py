@@ -53,10 +53,7 @@ class LinApple(Setup):
         dest = self.pdir('bin').joinpath('linapple')
         if not dest.exists():
             #   This is $src/bin/linapple in older versions
-            target = self.srcdir().joinpath('build', 'bin', 'linapple')
-            assert target.exists(), \
-                'Cannot find linapple binary: {}'.format(target)
-            dest.symlink_to(target)
+            self.symlink_toolbin(self.srcdir(), 'build', 'bin', 'linapple')
 
         #   The only other non-documentation things that get installed are
         #   linapple.conf and Master.dsk, neither of which we need. (The

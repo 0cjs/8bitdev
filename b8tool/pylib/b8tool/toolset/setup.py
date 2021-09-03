@@ -261,6 +261,12 @@ class Setup(metaclass=abc.ABCMeta):
         os.environ['PATH'] = path
         printconfig("PATH='{}'".format(path))
 
+    def symlink_toolbin(self, *source_components):
+        path.symlink_toolbin(*source_components)
+
+    def symlink_tool(self, targetpath, linkpath):
+        path.symlink_tool(targetpath, linkpath)
+
     ####################################################################
     #   Implementations of various parts of the setup/config/build/install
     #   process, normally used by the core setup routines defined in

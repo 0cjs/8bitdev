@@ -88,8 +88,7 @@ class ASL(Setup):
 
         binfiles = ('asl', 'plist', 'alink', 'pbind', 'p2hex', 'p2bin',)
         for f in binfiles:
-            dest = self.pdir('bin').joinpath(f)
-            if not dest.exists(): dest.symlink_to(self.srcdir().joinpath(f))
+            self.symlink_toolbin(self.srcdir(), f)
 
         #   The localization message files normally go in lib/asl/, but the
         #   programs don't find them there by default (unless perhaps the
@@ -101,13 +100,12 @@ class ASL(Setup):
         #
         for path in self.srcdir().glob('*.msg'):
             dest = self.pdir('lib', 'asl').joinpath(path.name)
-            if not dest.exists(): dest.symlink_to(path)
+            self.symlink_tool(path, dest)
 
         srcs = self.srcdir().joinpath('include')
         for src in srcs.glob('**/*'):
             if src.is_dir(): continue
             dest = self.pdir('include', 'asl').joinpath(src.relative_to(srcs))
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            if not dest.exists(): dest.symlink_to(src)
+            self.symlink_tool(src, dest)
 
 TOOLSET_CLASS = ASL

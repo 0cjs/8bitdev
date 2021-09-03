@@ -23,10 +23,13 @@
 
 '''
 
-from    os  import environ
 from    pathlib  import Path
+import  os
 
-B8_BASEDIR = environ.get('B8_BASEDIR')
+B8_BASEDIR = os.environ.get('B8_BASEDIR')
+
+####################################################################
+#   Public API for getting/creating paths
 
 def base(*components):
     ''' Return absolute `Path` for path `components` relative to `B8_BASEDIR`.
@@ -79,3 +82,37 @@ def obj(*components):
         ``.build/obj/``.
     '''
     return build('obj/', *components)
+
+####################################################################
+#   File manipulation
+
+def symlink_tool(targetpath, linkpath):
+    ''' Create a symlink to `targetpath` at `tool(linkpath)`, making any
+        intermediate directories required. This will silently remove any
+        existing file or symlink at `linkpath`.
+
+        `targetpath` may be relative to `base()`. To help catch developer
+        errors, `targetpath` must point to an existing and readable file or
+        directory or a `ValueError` will be raised.
+    '''
+    target = build(targetpath)
+    if not os.access(str(target), os.R_OK):
+        raise ValueError('Not readable target: {}'.format(pretty(str(target))))
+    link = tool(linkpath)
+    if link.exists() or link.is_symlink():  # catch dangling symlink
+        link.unlink()                       # no `missing_ok` before Py 3.8
+    link.parent.mkdir(parents=True, exist_ok=True)
+    link.symlink_to(target)
+
+def symlink_toolbin(*exepath):
+    ''' Create a symlink in `tool('bin/')` named for the last component
+        in `exepath` that points to `exepath`. This will silently remove
+        any existing file or symlink in tool/bin/. To help catch developer
+        errors, `exepath` must point to an executable file or a
+        `ValueError` will be raised.
+    '''
+    file = base(*exepath)
+    if not os.access(str(file), os.X_OK):
+        raise ValueError('Not executable file: {}'.format(pretty(str(file))))
+    link = tool('bin', file.name)
+    symlink_tool(file, link)

@@ -52,8 +52,6 @@ class DOS33FS(Setup):
             ('utils/bmp2dhr',   'b2d'),
             )
         for subdir, file in bins:
-            dest = self.pdir('bin').joinpath(file)
-            if not dest.exists():
-                dest.symlink_to(self.srcdir().joinpath(subdir, file))
+            self.symlink_toolbin(self.srcdir(), subdir, file)
 
 TOOLSET_CLASS = DOS33FS

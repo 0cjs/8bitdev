@@ -36,10 +36,12 @@ def test_pushcontcur(m, S, R, jsraddr):
     m.stepto(stopat=breaks)
     print(m.hexdump(isp-5, 8), '\t', m.regs)
 
-    assert (R(a=0x55, sp=isp-2), hex(jsraddr)
-      ) == (m.regs, hex(m.word(isp-1))), ''' Expected that:
+    assert (R(a=0x55, sp=isp-2, pc=jsraddr+3), hex(jsraddr),
+      ) == (m.regs,                            hex(m.word(isp-1))), \
+    ''' Expected that:
         - ACCA is preserved
         - stack has a return address on it (sp=isp-2)
+        - we have continued with the address after the JSR
         - return address is the address of the (simulated) JSR
     '''
 
@@ -61,12 +63,12 @@ def test_dropcont(m, S, R):
 
 def test_main_sc(m, S):
     ' Demonstrate use of pushcont macro. '
-    m.deposit(S.in_main, [0, 0, 0])
+    m.deposit(S.in_main, [0, 0, 0]) # in_main, in_sub, in_exit
     m.call(S.main)
     assert [3, 3, 1] == list(m.bytes(S.in_main, 3))
 
 def test_Dpushcontcur(m, S):
     ' Demonstrate use of pushcontcur subroutine. '
-    m.deposit(S.in_main, [0, 0, 0])
+    m.deposit(S.in_main, [0, 0, 0]) # in_main, in_sub, in_exit
     m.call(S.main_pcc)
     assert [3, 3, 1] == list(m.bytes(S.in_main, 3))

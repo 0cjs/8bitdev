@@ -11,4 +11,4 @@ ident       byt "mc68/simple.a68"   ; we use this to check that we've loaded
 set_a_ff    ldaa #$FF
             rts
 
-            end set_a_ff
+            end set_a_ff            ; set entry point

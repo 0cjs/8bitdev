@@ -12,7 +12,7 @@ rdlinebuf_end equ pmon_org
 
             include "src/mc68/pmon.a68"
 
-reset:      ldx #rdlinebuf-1 ; stack immediately below input buffer
+reset:      ldx #rdlinebuf   ; stack immediately below input buffer
             txs
             jsr init        ; `q` command returns to next instruction
 

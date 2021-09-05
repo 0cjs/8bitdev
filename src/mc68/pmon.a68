@@ -222,7 +222,8 @@ cmdloop     jsr startline       ; prompt always printed at start of line
             bcs cmdloop         ; if ^C, ignore line
             stx cmdqptr         ; start parsing at beginning of input line
 
-.parse      ;   Registers may have been destroyed at entry here.
+.parse      ;   This is a continuation entry point (see below);
+            ;   registers may have been destroyed at entry here.
             ldx cmdqptr
             lda A,0,X           ; reached terminator?
             beq cmdloop         ; yes, read another line of commands
@@ -232,10 +233,10 @@ cmdloop     jsr startline       ; prompt always printed at start of line
             tsx
             stx perr_stack
 
-            ;   Standard commands will RTS when done; we set up the stack
-            ;   so that after we JMP to them they will come back here where
-            ;   we will continue parsing the remainder of the command line.
-            ;   (Essentially, continuation-passing style.)
+            ;   Standard commands will RTS when done, so set up the stack
+            ;   so that after we JMP to them they will return us to .parse
+            ;   above where we will continue parsing the remainder of the
+            ;   command line. (Essentially, continuation-passing style.)
             lda A,#LB(.parse)
             psh A
             lda A,#MB(.parse)
@@ -267,10 +268,10 @@ cmdloop     jsr startline       ; prompt always printed at start of line
             jmp ,X              ; call command (TCO)
 
             ;   No command matched; we have an error
-.unkcmd     ldx cmdqptr         ; restore parse point because we had consumed
-            dex                 ;   the command
+.unkcmd     ldx cmdqptr         ; restore parse point to previous value
+            dex                 ;   because we had consumed the command
             stx cmdqptr
-            ; fallthrough
+            ; fallthrough to parse error
 
 ;   Parse error: beep, print message, start fresh parser loop.
 ;

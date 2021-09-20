@@ -13,7 +13,7 @@
 #   • A few other options are set to make the formatting nice.
 #
 #   Bugs:
-#   • This works only when CWD is $B8_BASEDIR.
+#   • This works only when CWD is $B8_PROJDIR.
 #   • For this program, :quit should exit rather than complaining when the
 #     last buffer hasn't been edited.
 #   • Doesn't check to see if source or list files exist.

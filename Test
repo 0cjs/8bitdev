@@ -25,8 +25,8 @@ basedir=$(cd "$(dirname "$0")" && pwd -P)
 export BUILDDIR="$basedir/.build"
 all_tools="$basedir/.all-tools"
 
-export B8_BASEDIR="$basedir"
-b8tool="$B8_BASEDIR/b8tool/b8tool"
+export B8_PROJDIR="$basedir"
+b8tool="$B8_PROJDIR/b8tool/b8tool"
 
 #   Leading command line args (these must be at the start):
 #   • -C: clean rebuild of everything, including toolchains

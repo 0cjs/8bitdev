@@ -1,21 +1,21 @@
 ''' b8tool.path - Define path conventions and build paths
 
-    Everything is relative to a base project directory defined by the
-    environment variable ``$B8_BASEDIR``, which must be an absolute path.
-    Source code may be anywhere in or under the base directory; other files
-    have specific locations defined in docstrings below for the functions
-    that generate paths underneath these locations.
+    Everything is relative to a project directory defined by the
+    environment variable ``$B8_PROJDIR``, which must be an absolute path.
+    Source code may be anywhere in or under the project directory; other
+    files have specific locations defined in docstrings below for the
+    functions that generate paths underneath these locations.
 
     The one path not defined here is b8tool's ``pylib/``; that's added
     to `sys.path` by the b8tool when it starts.
 
-    Source code and data may be placed directly in $B8_BASEDIR but more
+    Source code and data may be placed directly in $B8_PROJDIR but more
     often is under ``src/`` (libraries), ``exe/`` (complete executable
     programs) or other subdirectories.
 
-    Subdirectories under ``$B8_BASEDIR/.build/`` include:
+    Subdirectories under ``$B8_PROJDIR/.build/`` include:
     • ``obj/``: Build output. Paths underneath this will match the path to
-      the source code file relative to `$B8_BASEDIR`, e.g., ``src/foo/bar.a65``
+      the source code file relative to `$B8_PROJDIR`, e.g., ``src/foo/bar.a65``
       will produce output files ``.build/obj/src/foo/bar.*``.
     • ``tool/bin/``: Project-local binaries for tools used by this project.
       Executable files here will always be used if present, otherwise the
@@ -26,27 +26,28 @@
 from    pathlib  import Path
 import  os
 
-B8_BASEDIR = os.environ.get('B8_BASEDIR')
+B8_PROJDIR = os.environ.get('B8_PROJDIR')
 
 ####################################################################
 #   Public API for getting/creating paths
 
-def base(*components):
-    ''' Return absolute `Path` for path `components` relative to `B8_BASEDIR`.
+def proj(*components):
+    ''' Return absolute `Path` for path `components` relative to `B8_PROJDIR`.
 
         Most other path functions eventually call this one.
     '''
-    return Path(B8_BASEDIR, *components)
+    return Path(B8_PROJDIR, *components)
 
 def pretty(s):
-    ''' If `s` is a path where `B8_BASEDIR` is its prefix, return, `s` with
-        that prefix replaced by '$BASEDIR'. Otherwise return `s` unmodified.
-        This reduces noise when printing diagnostics while still giving
-        complete path information.
+    ''' If `s` is a path where `B8_PROJDIR` is its prefix, return, `s` with
+        that prefix and its slash removed, i.e. a relative path from
+        `B8_PROJDIR`. Otherwise return `s` unmodified. This reduces noise
+        when printing diagnostics while still giving complete path
+        information.
     '''
     s = str(s)
-    if s.startswith(B8_BASEDIR + '/'):
-        return s[len(B8_BASEDIR)+1:]
+    if s.startswith(B8_PROJDIR + '/'):
+        return s[len(B8_PROJDIR)+1:]
     else:
         return s
 
@@ -62,7 +63,7 @@ def build(*components):
         build directories for, e.g., testing with different versions of
         Python or other tools.
     '''
-    return base('.build/', *components)
+    return proj('.build/', *components)
 
 def tool(*components):
     ''' Return a path relative to the local project tools directory.
@@ -77,7 +78,7 @@ def tool(*components):
     return build('tool/', *components)
 
 def obj(*components):
-    ''' Given components for a project source path relative to `B8_BASEDIR`,
+    ''' Given components for a project source path relative to `B8_PROJDIR`,
         return the corresponding object path, which is the same path under
         ``.build/obj/``.
     '''
@@ -91,7 +92,7 @@ def symlink_tool(targetpath, linkpath):
         intermediate directories required. This will silently remove any
         existing file or symlink at `linkpath`.
 
-        `targetpath` may be relative to `base()`. To help catch developer
+        `targetpath` may be relative to `proj()`. To help catch developer
         errors, `targetpath` must point to an existing and readable file or
         directory or a `ValueError` will be raised.
     '''
@@ -111,7 +112,7 @@ def symlink_toolbin(*exepath):
         errors, `exepath` must point to an executable file or a
         `ValueError` will be raised.
     '''
-    file = base(*exepath)
+    file = proj(*exepath)
     if not os.access(str(file), os.X_OK):
         raise ValueError('Not executable file: {}'.format(pretty(str(file))))
     link = tool('bin', file.name)

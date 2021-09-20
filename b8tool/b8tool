@@ -5,7 +5,7 @@
     The b8tool directory may be placed anywhere; ``b8tool`` uses its own
     path to find its modules. See the `b8tool.path` module documentation
     for information about the project directory structure and how the
-    ``B8_BASEDIR`` environment variable is used. In particular, b8tool will
+    ``B8_PROJDIR`` environment variable is used. In particular, b8tool will
     always use tools from `path.tooldir('bin/')`, if available, in
     preference to any others.
 
@@ -152,7 +152,7 @@ def asl(args):
         '-qxx',
         '-U',                   # Case-sensitive symbols. This can be set
                                 # only with a command-line option.
-        '-i', path.base(),
+        '-i', path.proj(),
         ]
     endopts = [ '-L', '-s', '-g', ]
 
@@ -160,7 +160,7 @@ def asl(args):
     objdir  = path.obj(Path(args[0]).parent)
     topfile = Path(srcfile).name
 
-    assert path.base(srcfile).is_file(), path.base(srcfile)
+    assert path.proj(srcfile).is_file(), path.proj(srcfile)
     #   Set CWD to output dir because AS can't specify other output
     #   locations for some files, such as the debug symbols.
     with cwd(objdir):
@@ -242,7 +242,7 @@ def asx(args):
     if len(args) != 1:
         raise RuntimeError('len(args) != 1')
 
-    srcfile = path.base(args[0])
+    srcfile = path.proj(args[0])
     srcdir  = Path(args[0]).parent
     objdir  = path.obj(srcdir)
     objfile = objdir.joinpath(srcfile.stem)
@@ -366,8 +366,8 @@ COMMANDS = {
 }
 
 if __name__ == '__main__':
-    if path.B8_BASEDIR is None:
-        raise RuntimeError('B8_BASEDIR not set')
+    if path.B8_PROJDIR is None:
+        raise RuntimeError('B8_PROJDIR not set')
     args = sys.argv[1:]   # make a copy without our program name
     command = args.pop(0)
     COMMANDS[command](args)

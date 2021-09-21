@@ -1,4 +1,5 @@
 from    testmc.tool.asxxxx import *
+from    b8tool.path  import pylib
 
 from    io import BytesIO, StringIO
 from    pathlib import Path
@@ -75,9 +76,8 @@ def tdatafile(filename):
     ''' Return a ByteStream reading from the given test file.
         This returns a context manager and so can be used with ``with``.
     '''
-    dir = 'lib/testmc/testfiles/asxxxx' # XXX works only from repo top level dir
-    path = Path(dir, filename)
-    return open(str(path), 'r')
+    dir = 'testmc/testfiles/asxxxx'
+    return open(str(pylib(dir, filename)), 'r')
 
 @pytest.mark.parametrize('filename',
     ['wide.sym', 'wide.lst', 'wide.rst' ])
@@ -132,9 +132,8 @@ def test_AxSymTab_readsymtabpath_nonexistent_file():
         AxSymTab.readsymtabpath('/dev/null')
 
 def test_AxSymTab_readsymtabpath():
-    #   XXX This depends on CWD.
-    assert AxSymTab.readsymtabpath('lib/testmc/testfiles/asxxxx/wide.rst')
-    assert AxSymTab.readsymtabpath('lib/testmc/testfiles/asxxxx/wide')
+    assert AxSymTab.readsymtabpath(pylib('testmc/testfiles/asxxxx/wide.rst'))
+    assert AxSymTab.readsymtabpath(pylib('testmc/testfiles/asxxxx/wide'))
 
 def test_AxSymTab_readsymtabstream():
     #   Here we deliberately use a file that does not list the areas

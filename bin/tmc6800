@@ -73,7 +73,7 @@ def usage():
     exit(2)
 
 if __name__ == '__main__':
-    addsitedir(join(BASEDIR, 'lib'))
+    addsitedir(join(BASEDIR, 'b8tool/pylib'))
     from testmc.tool.asl import parse_obj_fromfile
     from testmc.mc6800 import Machine
 

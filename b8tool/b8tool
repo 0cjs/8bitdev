@@ -29,7 +29,8 @@ from    pathlib  import Path
 import  os, shutil, sys
 
 #   Configure and use b8tool's Python library path
-sys.path.insert(0, os.path.join(abspath(dirname(__file__)), 'pylib'))
+B8_HOME = abspath(dirname(__file__))
+sys.path.insert(0, os.path.join(B8_HOME, 'pylib'))
 
 from    b8tool  import path, run, toolset
 

@@ -107,6 +107,7 @@ class AxSymTab(SymTab):
             It should at least check the header line to ensure that it
             says 'Hexadecimal [16-bits]'.
         '''
+        path = str(path)        # we accept path-like objects
         if path[-4] == '.':
             noext = path[0:-4]
         else:

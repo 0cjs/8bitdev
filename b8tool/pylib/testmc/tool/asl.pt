@@ -1,4 +1,5 @@
 from    testmc.tool.asl   import *
+from    b8tool.path  import pylib
 
 from    io   import BytesIO, StringIO
 from    pathlib import Path
@@ -8,8 +9,7 @@ import  re
 ####################################################################
 #   Test support
 
-#   XXX This works only from repo top level dir.
-TESTDATA_DIR = 'lib/testmc/testfiles'
+TESTDATA_DIR = pylib('testmc/testfiles')
 
 def tdatafile(filename):
     ''' Return a ByteStream reading from the given test file.

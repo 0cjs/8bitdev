@@ -51,6 +51,19 @@ def pretty(s):
     else:
         return s
 
+def b8home(*components):
+    ''' The path to the b8tool repo or installation.
+
+        XXX For the moment this is hardcoded to ``$B8_PROJDIR/pylib``,
+        but it should actually be whatever was set up by b8tool when
+        it was invoked and found its libraries.
+    '''
+    return proj('b8tool', *components)
+
+def pylib(*components):
+    ' The top-level directory of Python libraries supplied by by b8tool. '
+    return b8home('pylib', *components)
+
 def build(*components):
     ''' The build directory in which we place all generated files for
         this project. This is always a single directory so that it can

@@ -39,7 +39,7 @@ def usage():
     exit(2)
 
 if __name__ == '__main__':
-    addsitedir(join(BASEDIR, 'lib'))
+    addsitedir(join(BASEDIR, 'b8tool/pylib'))
     from testmc.tool.asl import parse_obj_fromfile
     if len(argv) != 2: usage()
     print_a2bin(load_image(argv[1]))

@@ -134,4 +134,4 @@ $b8tool asltest  src/mc68/continuation.a68
 #     (though that goes away when lib/testmc moved to b8tool/pylib)
 #
 cd "$B8_PROJDIR"
-PYTHONPATH="$b8_plib:$B8_PROJDIR/lib" pytest -q "$@"
+PYTHONPATH="$b8_plib" pytest -q "$@"

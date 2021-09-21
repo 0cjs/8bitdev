@@ -54,11 +54,14 @@ def pretty(s):
 def b8home(*components):
     ''' The path to the b8tool repo or installation.
 
-        XXX For the moment this is hardcoded to ``$B8_PROJDIR/pylib``,
-        but it should actually be whatever was set up by b8tool when
-        it was invoked and found its libraries.
+        This assumes that the `__main__` module has figured out where
+        the b8tool installation is (since it needed to do this to make
+        this module available in the first place) and has set its global
+        `B8_HOME` to that. (If it's not, a NameError pointing at this
+        function will be raised.)
     '''
-    return proj('b8tool', *components)
+    from __main__ import B8_HOME
+    return Path(B8_HOME, *components)
 
 def pylib(*components):
     ' The top-level directory of Python libraries supplied by by b8tool. '

@@ -126,7 +126,4 @@ $b8tool asltest  src/mc68/continuation.a68
 ####################################################################
 #   Tests
 
-#   XXX Some tests still rely on relative paths to files from .build/
-#   with the assumption that CWD is $B8_PROJDIR.
-cd "$B8_PROJDIR"
 $b8tool pytest "$@"

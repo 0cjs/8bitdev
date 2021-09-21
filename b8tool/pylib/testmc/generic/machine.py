@@ -122,6 +122,7 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
             * ``.bin`` CoCo binary format and associated ASxxxx ``.rst``
               linker listing file.
         '''
+        path = str(path)                    # We accept path-like objects
         if path.lower().endswith('.p'):
             #   Assume it's Macro Assembler AS output.
             image, symtab = self._load_asl(path)

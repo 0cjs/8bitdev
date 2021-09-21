@@ -1,8 +1,9 @@
 from    testmc.m6502  import *
+from    b8tool  import path
 from    os.path import exists
 import  pytest
 
-if not exists('.all-tools'):
+if not exists(str(path.proj('.all-tools'))):
     pytest.skip("skipping ASxxxx tests", allow_module_level=True)
 
 object_file = 'src/asxxxx/simple'

@@ -370,7 +370,8 @@ def pytest(args):
     #   Remember that pytest comes from the (virtual) environment in which
     #   this program is run; it's not a tool installed by this program.
 
-    default_discovery_dirs = [ 'b8tool/pylib/', 'src/', ]
+    default_discovery_dirs = list(map(str, ([
+        path.proj('src/'), path.b8home('pylib'), ])))
     non_opt_args = [ a for a in args if not a.startswith('-') ]
     args = [
         '--rootdir=' + str(path.proj()),

@@ -1,4 +1,5 @@
 import  pytest
+from    b8tool  import path
 
 #   Nicer assertion error display for various testmc objects.
 from    testmc.pytest  import pytest_assertrepr_compare
@@ -18,7 +19,7 @@ def m(request):
     m = Machine()
     #   XXX This is probably not the best way to find this file; it makes
     #   this dependent on the CWD being the project root dir above .build/.
-    m.load('.build/obj/' + getattr(request.module, 'object_file'))
+    m.load(path.obj(getattr(request.module, 'object_file')))
     return m
 
 #   These rely on pytest running the m() fixture only once per test, even
@@ -74,7 +75,7 @@ def loadbios(m, S):
             assert b'Hello, world!' == ostream.getvalue()
     '''
     def loadbios(biosname, input=None, output=None):
-        bioscode = '.build/obj/src/{}/bioscode.p'.format(biosname)
+        bioscode = path.obj('src', biosname, 'bioscode.p')
         m.load(bioscode, mergestyle='prefcur', setPC=False)
         assert S['charinport'] == S['charoutport']
         return m.setiostreams(S.charinport, input, output)

@@ -26,6 +26,7 @@ export BUILDDIR="$B8_PROJDIR/.build"
 all_tools="$B8_PROJDIR/.all-tools"
 
 b8tool="$B8_PROJDIR/b8tool/b8tool"
+b8_plib="$B8_PROJDIR/b8tool/pylib"      # used locally; not part of b8tool
 
 #   Leading command line args (these must be at the start):
 #   • -C: clean rebuild of everything, including toolchains
@@ -127,6 +128,5 @@ $b8tool asltest  src/mc68/continuation.a68
 ####################################################################
 #   Tests
 
-export PYTHONPATH="$B8_PROJDIR/lib"
 #   XXX This probably relies on the cwd to find the pytest.ini.
-pytest -q "$@"
+PYTHONPATH="$b8_plib" pytest -q "$@"

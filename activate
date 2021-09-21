@@ -23,5 +23,4 @@ __activate_quiet=
         && pip install $__activate_quiet -r requirements.txt
     }
 ) \
-&& . "$(dirname "$BASH_SOURCE")"/.build/virtualenv/*/activate \
-&& export PYTHONPATH="$(dirname "$BASH_SOURCE")/lib"
+&& . "$(dirname "$BASH_SOURCE")"/.build/virtualenv/*/activate

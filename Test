@@ -52,7 +52,6 @@ $b8tool buildtoolset dos33fs
 $b8tool buildtoolset linapple
 [[ $PATH =~ ^$basedir/bin:|:$basedir/bin:|:$basedir/bin$ ]] \
     || export PATH="$basedir/bin:$PATH"
-mkdir -p "$BUILDDIR/obj"
 
 #   In the following builds we have no dependency graph, so everything is
 #   rebuilt each time. Fortunately this is quite fast.

@@ -126,12 +126,7 @@ $b8tool asltest  src/mc68/continuation.a68
 ####################################################################
 #   Tests
 
-#   XXX There's a lot here relying on the CWD:
-#   - finding pytest.ini when no arguments are given
-#   - testpaths, which is used only when CWD is rootdir
-#   - files from .build loaded by tests
-#   - lib/, for some reason, when $B8_PROJDIR/lib is not in $PYTHONPATH
-#     (though that goes away when lib/testmc moved to b8tool/pylib)
-#
+#   XXX Some tests still rely on relative paths to files from .build/
+#   with the assumption that CWD is $B8_PROJDIR.
 cd "$B8_PROJDIR"
-PYTHONPATH="$b8_plib" pytest -q "$@"
+$b8tool pytest "$@"

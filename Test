@@ -21,11 +21,10 @@ checkpy() {
 ####################################################################
 #   Main
 
-basedir=$(cd "$(dirname "$0")" && pwd -P)
-export BUILDDIR="$basedir/.build"
-all_tools="$basedir/.all-tools"
+export B8_PROJDIR=$(cd "$(dirname "$0")" && pwd -P)
+export BUILDDIR="$B8_PROJDIR/.build"
+all_tools="$B8_PROJDIR/.all-tools"
 
-export B8_PROJDIR="$basedir"
 b8tool="$B8_PROJDIR/b8tool/b8tool"
 
 #   Leading command line args (these must be at the start):
@@ -41,7 +40,7 @@ while [[ ${#@} -gt 0 ]]; do case "$1" in
     *)      break;;
 esac; done
 
-cd "$basedir"
+cd "$B8_PROJDIR"
 
 checkpy; . ./activate -q -p "$py"
 
@@ -50,8 +49,8 @@ $b8tool buildtoolset asl
 $b8tool buildtoolset diskimg
 $b8tool buildtoolset dos33fs
 $b8tool buildtoolset linapple
-[[ $PATH =~ ^$basedir/bin:|:$basedir/bin:|:$basedir/bin$ ]] \
-    || export PATH="$basedir/bin:$PATH"
+[[ $PATH =~ ^$B8_PROJDIR/bin:|:$B8_PROJDIR/bin:|:$B8_PROJDIR/bin$ ]] \
+    || export PATH="$B8_PROJDIR/bin:$PATH"
 
 #   In the following builds we have no dependency graph, so everything is
 #   rebuilt each time. Fortunately this is quite fast.
@@ -128,6 +127,6 @@ $b8tool asltest  src/mc68/continuation.a68
 ####################################################################
 #   Tests
 
-export PYTHONPATH="$basedir/lib"
+export PYTHONPATH="$B8_PROJDIR/lib"
 #   XXX This probably relies on the cwd to find the pytest.ini.
 pytest -q "$@"

@@ -41,9 +41,7 @@ while [[ ${#@} -gt 0 ]]; do case "$1" in
     *)      break;;
 esac; done
 
-cd "$B8_PROJDIR"
-
-checkpy; . ./activate -q -p "$py"
+checkpy; . $B8_PROJDIR/activate -q -p "$py"
 
 [[ -f $all_tools ]] && $b8tool buildtoolset asxxxx
 $b8tool buildtoolset asl
@@ -128,5 +126,12 @@ $b8tool asltest  src/mc68/continuation.a68
 ####################################################################
 #   Tests
 
-#   XXX This probably relies on the cwd to find the pytest.ini.
-PYTHONPATH="$b8_plib" pytest -q "$@"
+#   XXX There's a lot here relying on the CWD:
+#   - finding pytest.ini when no arguments are given
+#   - testpaths, which is used only when CWD is rootdir
+#   - files from .build loaded by tests
+#   - lib/, for some reason, when $B8_PROJDIR/lib is not in $PYTHONPATH
+#     (though that goes away when lib/testmc moved to b8tool/pylib)
+#
+cd "$B8_PROJDIR"
+PYTHONPATH="$b8_plib:$B8_PROJDIR/lib" pytest -q "$@"

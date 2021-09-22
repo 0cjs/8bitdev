@@ -36,7 +36,10 @@ def proj(*components):
 
         Most other path functions eventually call this one.
     '''
-    return Path(B8_PROJDIR, *components)
+    if B8_PROJDIR:
+        return Path(B8_PROJDIR, *components)
+    else:
+        raise NameError('B8_PROJDIR not set in environment')
 
 def pretty(s):
     ''' If `s` is a path where `B8_PROJDIR` is its prefix, return, `s` with

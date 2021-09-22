@@ -30,7 +30,7 @@ from    site  import addsitedir
 import  os, shutil, sys
 
 #   Configure and use b8tool's Python library path
-B8_HOME = dirname(abspath(__file__))
+B8_HOME = dirname(dirname(abspath(__file__)))
 addsitedir(os.path.join(B8_HOME, 'pylib'))
 
 from    b8tool  import path, run, toolset

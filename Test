@@ -25,7 +25,7 @@ export B8_PROJDIR=$(cd "$(dirname "$0")" && pwd -P)
 export BUILDDIR="$B8_PROJDIR/.build"
 all_tools="$B8_PROJDIR/.all-tools"
 
-b8tool="$B8_PROJDIR/b8tool/b8tool"
+b8tool="$B8_PROJDIR/b8tool/bin/b8tool"
 b8_plib="$B8_PROJDIR/b8tool/pylib"      # used locally; not part of b8tool
 
 #   Leading command line args (these must be at the start):

@@ -26,12 +26,12 @@ sendfiles() {
         #   We'd like to use wozmon-deposit -c here to avoid the extra
         #   blank lines, but ascii-xfr uses line pause only on \n, not \r.
         ascii-xfr  -s >"$A1TTY" -l 100 -c 35 \
-            <("$basedir/bin/wozmon-deposit" -n "$file")
+            <("$B8_HOME/bin/wozmon-deposit" -n "$file")
     done
 }
 
 EX_USAGE=64     # /usr/include/sysexits.h
-basedir=$(dirname "$(dirname "$0")")
+B8_HOME=$(dirname "$(dirname "$0")")
 : ${A1TTY:=/dev/serial/by-id/usb-1a86_USB2.0-Serial-if00-port0}
 
 #   Use realpath(1) in the hope this will work on MacOS as well. If

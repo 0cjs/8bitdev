@@ -13,7 +13,9 @@
 #   • A few other options are set to make the formatting nice.
 #
 #   Bugs:
-#   • This works only when CWD is $B8_PROJDIR.
+#   • This works only for paths relative to $B8_PROJDIR; it should find
+#     the absolute path and then part of that relative to $B8_PROJDIR to
+#     find the listing file location in the build directory.
 #   • For this program, :quit should exit rather than complaining when the
 #     last buffer hasn't been edited.
 #   • Doesn't check to see if source or list files exist.
@@ -28,7 +30,7 @@ usage() { die 2 "Usage: vlst source-file ..."; }
 lstfiles=()
 
 for f in "$@"; do
-    lstfiles+=(.build/obj/${f%.*}.lst)
+    lstfiles+=("$B8_PROJDIR"/.build/obj/${f%.*}.lst)
 done
 
 case ${#lstfiles[@]} in

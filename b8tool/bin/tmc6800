@@ -10,11 +10,16 @@ from    os  import isatty
 from    traceback  import print_exception
 import  termios, tty
 
-BASEDIR = dirname(dirname(abspath(__file__)))
+B8_HOME = dirname(dirname(abspath(__file__)))
+addsitedir(join(B8_HOME, 'pylib'))
+
+from    b8tool  import path
+from    testmc.mc6800  import Machine
+from    testmc.tool.asl  import parse_obj_fromfile
 
 def binname(fname):
     if '.' not in fname: fname += '.p'
-    if '/' not in fname: fname = join(BASEDIR, '.build', 'obj', 'src', fname)
+    if '/' not in fname: fname = path.obj('src', fname)
     return fname
 
 def getchar():
@@ -50,7 +55,7 @@ def setupIO(m):
     ''' Load the BIOS and set up `charoutport` for writes to stdout and
         `charinport` for blocking reads from stdin.
     '''
-    bioscode = join(BASEDIR, '.build/obj/src/tmc68/bioscode.p')
+    bioscode = path.obj('src/tmc68/bioscode.p')
     m.load(bioscode, mergestyle='prefcur', setPC=False)
     m.setio(0xC000, consoleio)
 
@@ -73,9 +78,5 @@ def usage():
     exit(2)
 
 if __name__ == '__main__':
-    addsitedir(join(BASEDIR, 'b8tool/pylib'))
-    from testmc.tool.asl import parse_obj_fromfile
-    from testmc.mc6800 import Machine
-
     if len(argv) != 2: usage()
     exec(binname(argv[1]))

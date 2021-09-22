@@ -1,5 +1,6 @@
 from    b8tool.path  import *
 from    os.path  import abspath
+import  pytest
 
 def test_pretty():
     assert '/ff/bar' == pretty('/ff/bar')
@@ -9,3 +10,12 @@ def test_pretty():
 def test_b8home_path_is_absolute():
     p = str(b8home('test'))
     assert abspath(p) == p
+
+@pytest.mark.parametrize('expected, environ', [
+    ('/a/bin',              {}),
+    ('/a/bin',              { 'PATH': '' }),
+    ('/a/bin:/foo:/bar',    { 'PATH': '/foo:/bar' }),
+])
+def test_addbin(environ, expected):
+    addbin('/a', Path('bin'), environ=environ)
+    assert expected == environ['PATH']

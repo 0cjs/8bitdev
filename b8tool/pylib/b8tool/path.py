@@ -70,6 +70,15 @@ def pylib(*components):
     ' The top-level directory of Python libraries supplied by by b8tool. '
     return b8home('pylib', *components)
 
+def addbin(*components, environ=os.environ):
+    bindir = str(Path(*components))
+    path = environ.get('PATH', '')
+    if path:
+        path = bindir + os.pathsep + path
+    else:
+        path = bindir
+    environ['PATH'] = path
+
 def build(*components):
     ''' The build directory in which we place all generated files for
         this project. This is always a single directory so that it can

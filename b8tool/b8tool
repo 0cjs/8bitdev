@@ -398,6 +398,7 @@ COMMANDS = {
 if __name__ == '__main__':
     if path.B8_PROJDIR is None:
         raise RuntimeError('B8_PROJDIR not set')
+    path.addbin(B8_HOME, 'bin')
     args = sys.argv[1:]   # make a copy without our program name
     command = args.pop(0)
     exit(COMMANDS[command](args))

@@ -11,11 +11,16 @@ from    site  import addsitedir
 from    struct  import pack
 from    sys  import argv, stdout, stderr
 
-BASEDIR = dirname(dirname(abspath(__file__)))
+B8_HOME = dirname(dirname(abspath(__file__)))
+addsitedir(join(B8_HOME, 'pylib'))
+
+from    b8tool  import path
+from    testmc.tool.asl  import parse_obj_fromfile
+
 
 def load_image(fname):
     if '.' not in fname: fname += '.p'
-    if '/' not in fname: fname = join(BASEDIR, '.build', 'obj', 'src', fname)
+    if '/' not in fname: fname = path.obj('src', fname)
     return parse_obj_fromfile(fname)
 
 def print_a2bin(mi):
@@ -39,7 +44,5 @@ def usage():
     exit(2)
 
 if __name__ == '__main__':
-    addsitedir(join(BASEDIR, 'b8tool/pylib'))
-    from testmc.tool.asl import parse_obj_fromfile
     if len(argv) != 2: usage()
     print_a2bin(load_image(argv[1]))

@@ -4,6 +4,9 @@
     ending in ``.pt`` and loads them as test files. The ``python_files``
     `configuration option`_ need not be changed to include ``*.pt``.
 
+    Typical usage is to create a ``conftest.py`` file at or above the level
+    of your ``.pt`` files and in it execute ``from pytest_pt import *``.
+
     This will work only in Python ≥3.5 because it uses new importlib
     routines. Further, it does not (as traditional pytest did) change
     the import path per ``--import-mode`` to add the directory in
@@ -47,6 +50,7 @@ def pytest_configure(config):
     global PYTEST_CONFIG
     PYTEST_CONFIG = config
 
+
 def pt_pyimport(self, modname=None, ensuresyspath=True):
     ''' This replaces the pyimport() method on an instance of
         LocalPath. This version loads modules from files that the
@@ -57,7 +61,6 @@ def pt_pyimport(self, modname=None, ensuresyspath=True):
         Replace `pyimport()` in an instance ``lp`` with
         ``lp.pyimport = pt_pyimport.__get__(lp, LocalPath)``.
     '''
-
     #   Here we add `_pt` just to help with test framework debugging.
     #   There won't be any collisions in `sys.modules` becuase we
     #   never add the modules we load to it.
@@ -84,11 +87,28 @@ def pt_pyimport(self, modname=None, ensuresyspath=True):
     spec.loader.exec_module(mod)
     return mod
 
+
+COLLECTED_PATHS = set()
+
 def pytest_collect_file(path, parent):
+    ''' Collect ``.pt`` files.
+
+        This function may be called multiple times with the same path if
+        more than one ``conftest.py`` above that path imports and reexports
+        this function. Thus we keep track of each path and do not collect
+        again paths we've already collected.
+
+    '''
     #   We handle only files with our custom extension, otherwise we
     #   return `None` to let something else handle it (or not).
     if path.ext != '.pt':
         return None
+
+    pathname = str(path)            # don't rely on LocalPath being hashable
+    global COLLECTED_PATHS
+    if pathname in COLLECTED_PATHS:
+        return None
+    COLLECTED_PATHS.add(pathname)
 
     #   Replace this LocalPath's `pyimport()` with our custom code.
     path.pyimport = pt_pyimport.__get__(path, LocalPath)

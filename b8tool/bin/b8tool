@@ -162,7 +162,9 @@ def asl(args):
     objdir  = path.obj(Path(args[0]).parent)
     topfile = Path(srcfile).name
 
-    assert path.proj(srcfile).is_file(), path.proj(srcfile)
+    assert path.proj(srcfile).is_file(), \
+        "not a file: {}".format(path.proj(srcfile))
+
     #   Set CWD to output dir because AS can't specify other output
     #   locations for some files, such as the debug symbols.
     with cwd(objdir):

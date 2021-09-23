@@ -35,7 +35,7 @@ typedisp
             lda obj+1       ; obdata header length byte
             sta oblen
             rts
-.unused     ;   tag=%10
+.unused     ;   tag=%01
             lda obj+1       ; load byte/char value
             sta unused
             rts

@@ -1,0 +1,45 @@
+
+        end
+
+----------------------------------------------------------------------
+
+    TOP:
+        parse
+        case
+            object:         val := obj, goto DONE
+            end of list:    ERROR "unclosed expr"
+            start of list:  push(val), val → alloc(), cur = val, goto STARTING
+
+    STARTING:   # reading value for already-alloc'd head cell of a list
+                # - cur.car is waiting to be filled
+                # - cur.cdr will be filled by APPENDING
+        parse
+        case
+            object:         cur.car := obj
+                            goto APPENDING
+            end of list:    NOTREACHED because parser reads () as nil
+            start of list:  cur.car → alloc()   # same as 2nd half SOL below
+                            push(cur)
+                            cur := cur.car
+                            goto STARTING
+
+    APPENDING:  # reading value for not-yet-alloc'd cell to append to cur list
+                # - cur.car is filled
+                # - cur.cdr is waiting to fill w/next cell ptr or end of list
+        parse
+        case
+            end of input:   ERROR "unclosed expr"
+            end of list:    cur.cdr := ∅
+                            cur → pop(),
+                            if cur = val: goto DONE
+                                    else: goto APPENDING
+            object:         cur.cdr → alloc()   # next val on list...
+                            cur := cur.cdr
+                            cur.car := obj      # ...is object
+                            goto APPENDING      # continue with current list
+            start of list:  cur.cdr → alloc()   # next val on list...
+                            cur := cur.cdr
+                            cur.car → alloc()   # ...points to head of new list
+                            push(cur)           # we'll come back to this later
+                            cur := cur.car      # start with new list
+                            goto STARTING

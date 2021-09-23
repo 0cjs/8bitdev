@@ -1,0 +1,11 @@
+from    testmc.mos65 import  Machine
+import  pytest
+
+test_rig = '''
+            cpu 6502
+            org $1000
+            include src/mos65/reader.a65
+'''
+
+def test_nothing(m, S):
+    assert 1

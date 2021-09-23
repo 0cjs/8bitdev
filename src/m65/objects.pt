@@ -42,7 +42,7 @@ def test_typedisp(m, S, obj, expected):
     m.call(S.typedisp)
     obfmtid, oblen, unused \
         = m.byte(S.obfmtid), m.byte(S.oblen), m.byte(S.unused)
-    smallint =int.from_bytes(
+    smallint = int.from_bytes(
         m.bytes(S.smallint, 2), byteorder='little', signed=True)
 
     print('obj ${:04X}, obfmtid ${:02X}, oblen ${:02X} unused ${:02X}, ' \

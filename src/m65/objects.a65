@@ -19,23 +19,23 @@
 ;
 typedisp
             lda obj         ; format ID byte or LSB of tagged pointer
-            cmp #$80        ; ASR, which helps later if it's a smallint
-            ror             ; bit 0 → carry
-            bcs .obdata     ; tag=%x1?
-            cmp #$80        ; ASR
-            ror             ; original bit 1 → carry
-            bcs .smallint   ; tag=%10?
-            rts             ; tag=%00
-.obdata     ;   tag=%01 or %11
+            cmp #$80        ; ASR setup: bit 7 → carry
+            ror             ; ASR; bit 0 → carry
+            bcs .tag_x1     ; if tag %x1
+            cmp #$80        ; ASR setup: bit 7 → carry
+            ror             ; ASR: original bit 1 → carry
+            bcs .smallint   ; if tag %10
+            rts             ; tag %00: carry clear
+.tag_x1     ;   tags %01, %11
             lsr             ; original bit 1 → carry
-            bcc .unused     ; %01: invalid
-            ;   tag=%11: obdata
+            bcc .unused     ; if %01
+.obdata     ;   tag %11: obdata
             lda obj         ; what we loaded has been destroyed, so reload
             sta obfmtid
             lda obj+1       ; obdata header length byte
             sta oblen
             rts
-.unused     ;   tag=%01
+.unused     ;   tag %01
             lda obj+1       ; load byte/char value
             sta unused
             rts
@@ -51,8 +51,8 @@ typedisp
 ;   object on which to do type dispatch
 obj         ds      2       ; input object reference. not in ZP because
                             ;   we'd often be reading this from the heap
-;   typedisp outputs
+;   typedisp output values
 obfmtid     zds     1       ; obdata format ID
 oblen       zds     1       ; obdata length
 unused      zds     1       ; MSB of unused/invalid
-smallint    zds     2       ; smallint type
+smallint    zds     2       ; smallint value

@@ -384,3 +384,15 @@ class GenericMachine(MemoryAccess): # MemoryAccess is already an ABC
             a nicer disassembly.
         '''
         return 'opcode={:02X}'.format(self.byte(self.regs.pc))
+
+    ####################################################################
+    #   Utilities for use by test modules
+
+    @classmethod
+    def rs(cls, objfile):
+        ''' Return a pair ``(R,S)`` of the `Registers` for this machine and
+            the `symtab` that results from loading `objfile`.
+        '''
+        m = cls()
+        m.load(objfile)
+        return m.Registers, m.symtab

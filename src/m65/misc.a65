@@ -1,0 +1,36 @@
+;   misc testing and demonstration routines
+
+; ----------------------------------------------------------------------
+
+val         equ $20
+
+; ----------------------------------------------------------------------
+;   Word double-decrement
+;
+;   We compare doing it with SUB or DEC,DEC.
+;
+;   The byte and cycle counts assume zero page addressing. The first cycle
+;   column is for the case where the MSB is not decremented, and the second
+;   for the case when it is.
+;
+                            ; byte and cycle counts assume ZP addressing
+                            ; first cycle column is for branch taken
+
+decw_sub:   lda val         ;  2b  2c
+            sec             ;  1b  2c
+            sbc #2          ;  2b  2c
+            sta val         ;  2b  3c
+            bcs .done       ;  2b  3c  2c
+            dec val+1       ;  2b      5c
+.done                       ; ────────────
+            rts             ;  9b 12c 16c   TOTALS
+
+decw_dec:   lda val         ;  2b  2c
+            bne .nz1        ;  2b  3c 2c        { at least one
+            dec val+1       ;         5c          of these two
+.nz1        dec val         ;  2b  5c             branches must
+            bne .nz2        ;  2b  3c 2c        { be taken
+            dec val+1       ;         5c
+.nz2        dec val         ;  2b  5c
+                            ; ───────────
+            rts             ; 10b 18c 22c   TOTALS

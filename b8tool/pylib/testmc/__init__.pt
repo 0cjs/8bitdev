@@ -1,4 +1,5 @@
 from    testmc  import *
+from    testmc.symtab  import SymTab
 import  pytest
 
 
@@ -20,3 +21,14 @@ def test_LB_MB(value, l, m):
 ])
 def test_tmc_tid(input, expected):
     assert expected == tmc_tid(input)
+
+def test_sym_tid():
+    tab = SymTab.fromargs(foo=0x100, BAR=0x200, Baz=0x200)
+
+    tid = sym_tid(tab)
+    assert ( '$0000',     '$A001',      'foo',  'BAR,Baz', ) \
+        == (  tid(0), tid(0xA001), tid(0x100), tid(0x200), )
+
+    tid = sym_tid(tab, multi=False)
+    assert (      'BAR',    '$0123', ) \
+        == ( tid(0x200), tid(0x123), )

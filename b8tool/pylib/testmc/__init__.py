@@ -3,7 +3,7 @@
 
 from    numbers  import Number
 
-__all__ = ['LB', 'MB', 'tmc_tid']
+__all__ = ['LB', 'MB', 'tmc_tid', 'sym_tid']
 
 def LB(n):
     ' Return the lowest byte (LSB) of a value. '
@@ -32,3 +32,25 @@ def tmc_tid(x):
         return repr(x)
     else:
         return x
+
+def sym_tid(symtab, multi=True):
+    ''' Return a function that returns symbol names from values, if a
+        symbol in `symtab` has that value. This helps to generate more
+        readable test IDs for pytest parametrized tests that use symbols.
+        Typical usage, where `S` is the symtab::
+
+            @pytest.mark.parametrize('f', [S.foo, S.bar], ids=sym_tid(S))
+
+        Some values may have multiple symbols associated with them. If
+        `multi` is `True`, all values will be returned (in ASCII order)
+        separated by commas. If `multi` is `False`, only the value that
+        sorts highest will be returned.
+    '''
+    def tid(value):
+        names = tuple( s.name for s in sorted(symtab.valued(value)) )
+        if not names:
+            return '${:04X}'.format(value)
+        else:
+            if multi:   return ','.join(names)
+            else:       return names[0]
+    return tid

@@ -3,32 +3,56 @@
 q_point     equ $60         ; pointer to current parse point in input buffer
 q_value     equ $62         ; parsed value (if any)
 
-;   ♡AXY consume a character
+; ----------------------------------------------------------------------
+;   parsers
+;
+;   A parser attempts to parse a value starting at q_point.
+;   - On success:
+;     - Its input is consumed by incrementing q_point.
+;     - The parsed value (if any) is stored in q_value.
+;     - Z=0 (BNE) to indicate success ONLY if the parser is capable of
+;       failing. Otherwise Z is not indicative of anything.
+;   - On failure:
+;     - No input is consumed (q_point is untouched)
+;     - q_value may be destroyed
+;     - Z=1 (BEQ) to indicate failure
+;
+;   XXX Stuff to consider:
+;   - Should have some parsers assume Y=0 on entry?
+;   - Should qspaces INY and then add Y to q_point when done?
+;
+
+;   ♣Z ♡AXY,q_value  Consume any character. Always successful.
 qchar       inc q_point
             bne .done
             inc q_point+1
 .done       rts
 
-;   ♠Y=0 ♣A ♡X consume spaces
+;   ♠Y=0 ♣Z,A ♡X,q_value  Consume spaces. Always successful.
 qspaces     ldy #0
             lda (q_point),y
             cmp #' '
             beq .consume
-            clc
             rts
 .consume    jsr qchar
             clc
             bcc qspaces
 
-;   attempt to parse a '()' (left-paren, right paren), interpreted as nil
+;   ♠Z,q_value ♣? ♡? Parse a '()' (left-paren, right paren) as value nil.
 qLR         ldy #0
             lda (q_point),y
             cmp #'('
             beq .close
-            rts
-.close      jsr qspaces
+.rts        rts
+.close      ;   XXX we can't consume here until we know end!
+            ;   use Y instead
+            jsr qchar               ; consume '('
+            jsr qspaces
             lda (q_point),y
-            cmp #'('
+            cmp #')'
+            bne .rts
+            ; XXX store a nil here
+            rts
 
 
 

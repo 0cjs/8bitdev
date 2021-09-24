@@ -21,36 +21,38 @@ def qset(m, input):
 
 #   Values to be returned by parsers
 Alloc   = 'Alloc'           # Special: we expect an allocation from startcons
-NoValue = 'NoValue'         # Special: no value returned on parse success
 Nil     = 'Nil'
 
-@pytest.mark.parametrize('qf, value, consumed, input', [
+#   Parse success indicators
+qA      = 'A'               # Always sucessful; ignore Z flag
+qS      = 'S'               # Success: Z=1
+qF      = 'F'               # Failure, Z=0
+
+@pytest.mark.parametrize('qf, value, success, consumed, input', [
     #   qf: parser function
-    #   value: expected value from the parser, or `None` if failure expected
+    #   value: expected value from the parser, `None` if failure (Z=0) expected
+    #   success: qA, qS, qF (see above)
     #   consumed: the number input characters consumed (moving foward `q_point`)
     #   input: the input (bytestring) on which to run the parser function
-    ('qspaces',     NoValue,     0,  b'_'),
-    ('qspaces',     NoValue,     1,  b' _'),
-    ('qspaces',     NoValue,     3,  b'   _'),
-    ('qLR',         None,     None,  b'_()'),
-   #(S.qLR,         None,     None,  b'(('),
-   #(S.qLR,         Nil,         2,  b'()'),
-   #(S.qLR,         Nil,         4,  b'(  )'),
+    ('qspaces',     None,       qA,  0,  b'_'),
+    ('qspaces',     None,       qA,  1,  b' _'),
+    ('qspaces',     None,       qA,  3,  b'   _'),
+    ('qLR',         None,       qF,  0,  b'_()'),
+   #('qLR',         None,       qF,  0,  b'(('),
+   #('qLR',         Nil,        qS,  2,  b'()'),
+   #('qLR',         Nil,        qS,  4,  b'(  )'),
 ], ids=tmc_tid)
-def testq(m, R, S, qf, value, consumed, input):
+def testq(m, R, S, qf, value, success, consumed, input):
     start = qset(m, input)
+    flags = { qA: R(), qS: R(Z=1), qF: R(Z=0) }[success]
+
     print('qf={} value={} start={} consumed={} input={}' \
         .format( qf, value, start, consumed, input))
-    initcarry = 1 if value else 0       # opposite of what we expect as output
-    m.call(S[qf], R(C=initcarry), trace=1)
+    m.call(S[qf], R(Z=0))
 
     if value is None:
-        #   carry set indicates error; nothing should have been consumed
-        assert (R(C=1), start,            ) \
-            == (m.regs, m.word(S.q_point), )
-    elif value is NoValue:
-        assert (R(C=0), start + consumed, ) \
-            == (m.regs, m.word(S.q_point), )
+        assert (flags,  start + consumed) \
+            == (m.regs, m.word(S.q_point))
     else:
-        assert (R(C=0), start + consumed,  value) \
+        assert (flags,  start + consumed,  value) \
             == (m.regs, m.word(S.q_point), m.word(S.q_value))

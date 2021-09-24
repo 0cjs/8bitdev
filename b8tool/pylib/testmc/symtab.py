@@ -90,6 +90,10 @@ class SymTab():
         '''
         return ((s.name, s.value) for _, s in self.symbols.items())
 
+    def valued(self, value):
+        ' Given a value, return a `set` of Symbol objects having that value. '
+        return set(( s for s in self.symbols.values() if s.value == value ))
+
     def merge(self, symtab, style='conflict'):
         ''' Merge the symbols from `symtab` into this symbol table. `style`
             determines how the merge is done, and must be one of the

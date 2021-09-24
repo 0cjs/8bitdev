@@ -6,10 +6,12 @@ import  pytest
 object_file = 'src/m65/misc.p'
 R, S = Machine.rs(path.obj(object_file))
 
-@pytest.mark.parametrize('f', [S.decw_sub, S.decw_dec], ids=sym_tid(S))
 @pytest.mark.parametrize('val, result', [
     (0xFFFF, 0xFFFD), (0x8001, 0x7FFF), (0x7000, 0x6FFE), (0x0000, 0xFFFE),
 ])
+@pytest.mark.parametrize('f', [
+    S.decw_sub, S.decw_dec, S.decw_dey,
+], ids=sym_tid(S))
 def test_decw(m, f, val, result):
     m.depword(S.val, val)
     m.call(f)

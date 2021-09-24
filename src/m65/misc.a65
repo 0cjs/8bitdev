@@ -13,24 +13,39 @@ val         equ $20
 ;   column is for the case where the MSB is not decremented, and the second
 ;   for the case when it is.
 ;
+;   As pointed out by barrym95838, the non-sub version might be useful if
+;   you're in a situation whre you may be in decimal mode, want to preserve
+;   the V flag, or want to preserve A over Y.
+;
                             ; byte and cycle counts assume ZP addressing
                             ; first cycle column is for branch taken
 
-decw_sub:   lda val         ;  2b  2c
+decw_sub:   lda val         ;  2b  3c
             sec             ;  1b  2c
             sbc #2          ;  2b  2c
             sta val         ;  2b  3c
             bcs .done       ;  2b  3c  2c
             dec val+1       ;  2b      5c
 .done                       ; ────────────
-            rts             ;  9b 12c 16c   TOTALS
+            rts             ; 11b 13c 16c   TOTALS
 
-decw_dec:   lda val         ;  2b  2c
+decw_dec:   lda val         ;  2b  3c
             bne .nz1        ;  2b  3c 2c        { at least one
-            dec val+1       ;         5c          of these two
+            dec val+1       ;  2b     5c          of these two
 .nz1        dec val         ;  2b  5c             branches must
             bne .nz2        ;  2b  3c 2c        { be taken
-            dec val+1       ;         5c
+            dec val+1       ;  2b     5c
 .nz2        dec val         ;  2b  5c
                             ; ───────────
-            rts             ; 10b 18c 22c   TOTALS
+            rts             ; 14b 19c 22c   TOTALS
+
+;   From barrym95838; http://forum.6502.org/viewtopic.php?f=12&t=6799#p87333
+decw_dey:   ldy val         ;  2b  3c
+            cpy #2          ;  2b  2c
+            dey             ;  1b  2c
+            dey             ;  1b  2c
+            bcs .nz2        ;  2b  3c  2c
+            dec val+1       ;  2b      5c
+.nz2:       sty val         ;  2b  3c  3c
+                            ; ───────────
+            rts             ; 12b 15c 19c   TOTALS

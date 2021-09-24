@@ -37,6 +37,10 @@ def sym_tid(symtab, multi=True):
     ''' Return a function that returns symbol names from values, if a
         symbol in `symtab` has that value. This helps to generate more
         readable test IDs for pytest parametrized tests that use symbols.
+        Values smaller than 5 and any value without a symbol will be
+        passed to `tmc_tid()`. (Not translating small values avoids
+        significant noise.)
+
         Typical usage, where `S` is the symtab::
 
             @pytest.mark.parametrize('f', [S.foo, S.bar], ids=sym_tid(S))
@@ -47,10 +51,13 @@ def sym_tid(symtab, multi=True):
         sorts highest will be returned.
     '''
     def tid(value):
+        if isinstance(value, Number) and value <= 5:
+            return tmc_tid(value)
         names = tuple( s.name for s in sorted(symtab.valued(value)) )
         if not names:
-            return '${:04X}'.format(value)
+            return tmc_tid(value)
         else:
             if multi:   return ','.join(names)
             else:       return names[0]
+
     return tid

@@ -1,0 +1,28 @@
+from    testmc.mos65 import  Machine
+import  pytest
+
+test_rig = '''
+            cpu 6502
+            org $1000
+            include src/mos65/std.a65
+            include src/mos65/heap.a65
+'''
+
+def setheap(m, alloced=0x8001, base=0x8001):
+    ''' The default base and alloc values are selected deliberately to
+        force an MSB decrement on the first allocation.
+    '''
+    m.depword(m.symtab.hc_alloced, alloced)
+    m.depword(m.symtab.hc_base, base)
+
+def test_init(m, S):
+    setheap(m, 0xCCDD, 0xAABB)
+    m.call(S.hcinit)
+    assert (0x8000, 0x8000) == (m.word(S.hc_alloced), m.word(S.hc_base))
+
+def test_alloc(m, S):
+    setheap(m)
+    m.depword(S.hc_output, 0xDEAD)
+    m.call(S.hcalloc)
+    assert (          0x7FFD,              0x7FFD,               0x8001) \
+        == ( m.word(S.hc_output), m.word(S.hc_alloced), m.word(S.hc_base))

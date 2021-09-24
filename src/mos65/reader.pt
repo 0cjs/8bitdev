@@ -1,4 +1,6 @@
-from    testmc.mos65 import  Machine
+from    testmc  import tmc_tid
+from    testmc.mos65  import  Machine
+from    b8tool  import path
 import  pytest
 
 test_rig = '''
@@ -7,5 +9,48 @@ test_rig = '''
             include src/mos65/reader.a65
 '''
 
-def test_nothing(m, S):
-    assert 1
+def qset(m, input):
+    ''' Set `input` as the parser input, returning the `q_point` value. This
+        does not explicitly terminate the input with 0, though that will
+        happen "automatically" when the simulator started with zeroed memory.
+    '''
+    buf = 0x300 - 2 - len(input)
+    m.deposit(buf, input)
+    m.depword(m.symtab.q_point, buf)
+    return buf
+
+#   Values to be returned by parsers
+Alloc   = 'Alloc'           # Special: we expect an allocation from startcons
+NoValue = 'NoValue'         # Special: no value returned on parse success
+Nil     = 'Nil'
+
+@pytest.mark.parametrize('qf, value, consumed, input', [
+    #   qf: parser function
+    #   value: expected value from the parser, or `None` if failure expected
+    #   consumed: the number input characters consumed (moving foward `q_point`)
+    #   input: the input (bytestring) on which to run the parser function
+    ('qspaces',     NoValue,     0,  b'_'),
+    ('qspaces',     NoValue,     1,  b' _'),
+    ('qspaces',     NoValue,     3,  b'   _'),
+    ('qLR',         None,     None,  b'_()'),
+   #(S.qLR,         None,     None,  b'(('),
+   #(S.qLR,         Nil,         2,  b'()'),
+   #(S.qLR,         Nil,         4,  b'(  )'),
+], ids=tmc_tid)
+def testq(m, R, S, qf, value, consumed, input):
+    start = qset(m, input)
+    print('qf={} value={} start={} consumed={} input={}' \
+        .format( qf, value, start, consumed, input))
+    initcarry = 1 if value else 0       # opposite of what we expect as output
+    m.call(S[qf], R(C=initcarry), trace=1)
+
+    if value is None:
+        #   carry set indicates error; nothing should have been consumed
+        assert (R(C=1), start,            ) \
+            == (m.regs, m.word(S.q_point), )
+    elif value is NoValue:
+        assert (R(C=0), start + consumed, ) \
+            == (m.regs, m.word(S.q_point), )
+    else:
+        assert (R(C=0), start + consumed,  value) \
+            == (m.regs, m.word(S.q_point), m.word(S.q_value))

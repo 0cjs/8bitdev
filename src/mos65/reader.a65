@@ -1,7 +1,49 @@
+;   a simple reader for (very limited) S-expressions
 
-        end
+q_point     equ $60         ; pointer to current parse point in input buffer
+q_value     equ $62         ; parsed value (if any)
 
+;   ♡AXY consume a character
+qchar       inc q_point
+            bne .done
+            inc q_point+1
+.done       rts
+
+;   ♠Y=0 ♣A ♡X consume spaces
+qspaces     ldy #0
+            lda (q_point),y
+            cmp #' '
+            beq .consume
+            clc
+            rts
+.consume    jsr qchar
+            clc
+            bcc qspaces
+
+;   attempt to parse a '()' (left-paren, right paren), interpreted as nil
+qLR         ldy #0
+            lda (q_point),y
+            cmp #'('
+            beq .close
+            rts
+.close      jsr qspaces
+            lda (q_point),y
+            cmp #'('
+
+
+
+
+            end
 ----------------------------------------------------------------------
+
+    parse: start by consuming spaces, then:
+        - '(', ' '*, ')'    -> nil
+        - 
+        - consume spaces
+        - '
+        - '(' → start of list or nil (consume spaces to check
+        - try smallint
+        - anything else: symbol (just 2 chars for the moment)
 
     TOP:
         parse

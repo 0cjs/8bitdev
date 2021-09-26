@@ -1,7 +1,10 @@
 ;   a simple reader for (very limited) S-expressions
 
-q_point     equ $60         ; pointer to current parse point in input buffer
-q_value     equ $62         ; parsed value (if any)
+            include "src/mos65/objects.a65"
+
+q_point     zds 2           ; pointer to current parse point in input buffer
+q_value     zds 2           ; parsed value (if any)
+
 
 ; ----------------------------------------------------------------------
 ;   parsers

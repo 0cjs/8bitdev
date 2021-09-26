@@ -107,7 +107,7 @@ first and second respectively characters of a sym2.
     |  7  6  5  4  3  2  1  0 |   |  7  6  5  4  3  2  1  0 |
     ---------------------------------------------------------
     |  0  0  0  0  0  0  1  0 |   | c7 c6 c5 c4 c3 c2 c1 c0 |  sym1
-    | d5 d4 d3 d2 d1 d0  1  0 |   | c6 c5 c4 c3 c2 c1 c0 d6 |  sym1
+    | d5 d4 d3 d2 d1 d0  1  0 |   | c6 c5 c4 c3 c2 c1 c0 d6 |  sym2
 
 Two-character symbols where either character has the high bit set or where
 the second character is $00 must be stored as allocated symbols with an

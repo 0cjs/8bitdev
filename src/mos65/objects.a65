@@ -37,9 +37,21 @@ typedisp
             lda obj+1
             sta smallint
             rts
-.tag_10     ;   unused
-            lda obj+1
-            sta unused
+.tag_10     ;   sym1/sym2
+            ;   LSB has been partially sign extended, so just abandon it.
+            lda obj         ; abandon partially sign-extended LSB
+            cmp #$02        ; bits 7..2 all zero?
+            bne .sym2
+.sym1       lda obj+1       ; single char in MSB
+            sta sym1
+            rts
+.sym2       lda obj+1       ; MSB
+            lsr             ; bit [0] → carry for sym2a[6]
+            sta sym2a
+            lda obj         ; sym2b[5..0] in bits [7..2]
+            ror             ; sym2b[6..0] in bits [7..1]; carry cleared
+            ror             ; sym2b[6..0] in bits [6..0]; carry set
+            sta sym2b
             rts
 .tag_11     ;   obdata
             lda obj         ; what we loaded has been destroyed, so reload
@@ -55,5 +67,7 @@ obj         ds      2       ; input object reference. not in ZP because
 ;   typedisp output values
 obfmtid     zds     1       ; obdata format ID
 oblen       zds     1       ; obdata length
-unused      zds     1       ; MSB of unused/invalid
 smallint    zds     2       ; smallint value
+sym1        zds     1       ; single-character symbol
+sym2a       zds     1       ; two-character symbol
+sym2b       zds     1

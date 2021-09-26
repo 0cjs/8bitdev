@@ -1,4 +1,5 @@
-from    testmc.mos65 import  Machine
+from    testmc  import tmc_tid
+from    testmc.mos65  import  Machine
 import  pytest
 
 object_file = 'src/mos65/objects.p'
@@ -7,49 +8,57 @@ object_file = 'src/mos65/objects.p'
 #   Tests
 
 @pytest.mark.parametrize('obj, expected', (
-    #   obj     (obfmtid, oblen, unused, smallint)
+    #   obj     (obfmtid, oblen, smallint, sym1, sym2a, sym2b)
     # Least significant bits of obj determine type:
-    #   %00   pointer to object
-    (0x0000,    (0xFF, 0xFF, 0xFF,     -1)),
-    (0xFFFC,    (0xFF, 0xFF, 0xFF,     -1)),
-    #   %01   number: smallint
-    (0x0001,    (0xFF, 0xFF, 0xFF,      0)),
-    (0x0005,    (0xFF, 0xFF, 0xFF,    256)),
-    (0x0009,    (0xFF, 0xFF, 0xFF,    512)),
-    (0x000D,    (0xFF, 0xFF, 0xFF,    768)),
-    (0x0401,    (0xFF, 0xFF, 0xFF,      4)),
-    (0xC03D,    (0xFF, 0xFF, 0xFF,   4032)),    # non-zero MSB positive number
-    (0xFF7D,    (0xFF, 0xFF, 0xFF,   8191)),    # smallint max
-    (0x0081,    (0xFF, 0xFF, 0xFF,  -8192)),    # smallint min
-    (0xFDFD,    (0xFF, 0xFF, 0xFF,     -3)),
-    (0x2491,    (0xFF, 0xFF, 0xFF,  -7132)),    # non-zero MSB negative number
-    #   %11   obdata: format number is LSB[7‥2], length is MSB
-    (0x00FF,    (0xFF, 0x00, 0xFF,     -1)),
-    (0x21EF,    (0xEF, 0x21, 0xFF,     -1)),
-    (0xFE07,    (0x07, 0xFE, 0xFF,     -1)),
-    #   %10   unused/invalid
-    (0x0002,    (0xFF, 0xFF, 0x00,     -1)),
-    (0xFF02,    (0xFF, 0xFF, 0xFF,     -1)),
-    (0x3402,    (0xFF, 0xFF, 0x34,     -1)),
-))
+    #   %00: pointer/intrinsic constant
+    (0x0000,    (0xFF, 0xFF,     -1,  0xFF, 0xFF, 0xFF)),
+    (0xFFFC,    (0xFF, 0xFF,     -1,  0xFF, 0xFF, 0xFF)),
+    #   %01:                smallint
+    (0x0001,    (0xFF, 0xFF,      0,  0xFF, 0xFF, 0xFF)),
+    (0x0005,    (0xFF, 0xFF,    256,  0xFF, 0xFF, 0xFF)),
+    (0x0009,    (0xFF, 0xFF,    512,  0xFF, 0xFF, 0xFF)),
+    (0x000D,    (0xFF, 0xFF,    768,  0xFF, 0xFF, 0xFF)),
+    (0x0401,    (0xFF, 0xFF,      4,  0xFF, 0xFF, 0xFF)),
+    (0xC03D,    (0xFF, 0xFF,   4032,  0xFF, 0xFF, 0xFF)), # non-0 MSB positive
+    (0xFF7D,    (0xFF, 0xFF,   8191,  0xFF, 0xFF, 0xFF)), # smallint max
+    (0x0081,    (0xFF, 0xFF,  -8192,  0xFF, 0xFF, 0xFF)), # smallint min
+    (0xFDFD,    (0xFF, 0xFF,     -3,  0xFF, 0xFF, 0xFF)),
+    (0x2491,    (0xFF, 0xFF,  -7132,  0xFF, 0xFF, 0xFF)), # non-0 MSB negative
+    #   %10   (lsb=$2 → sym1)         sym1  sym2a sym2b
+    (0x0002,    (0xFF, 0xFF,     -1,  0x00, 0xFF, 0xFF)), # sym1 (LSB=$02)
+    (0x1202,    (0xFF, 0xFF,     -1,  0x12, 0xFF, 0xFF)),
+    (0xFE02,    (0xFF, 0xFF,     -1,  0xFE, 0xFF, 0xFF)),
+    (0x0006,    (0xFF, 0xFF,     -1,  0xFF, 0x00, 0x01)), # sym2
+    (0xC792,    (0xFF, 0xFF,     -1,  0xFF, 0x63, 0x64)), # 'cd'
+    (0xFFFE,    (0xFF, 0xFF,     -1,  0xFF, 0x7F, 0x7F)),
+    #   %11    obfmtid oblen
+    #        LSB[7..2] MSB
+    (0x00FF,    (0xFF, 0x00,     -1,  0xFF, 0xFF, 0xFF)),
+    (0x21EF,    (0xEF, 0x21,     -1,  0xFF, 0xFF, 0xFF)),
+    (0xFE07,    (0x07, 0xFE,     -1,  0xFF, 0xFF, 0xFF)),
+), ids=tmc_tid)
 def test_typedisp(m, S, obj, expected):
-    m.deposit(S.obfmtid,    0xFF)   # set outputs to sentinel values
+    #   Set outputs to sentinel values.
+    m.depword(S.smallint, 0xFFFF)   # -1
+    m.deposit(S.sym1,       0xFF)
+    m.deposit(S.sym2a,      0xFF)   # invalid 7-bit chars
+    m.deposit(S.sym2b,      0xFF)   # invalid 7-bit chars
+    m.deposit(S.obfmtid,    0xFF)
     m.deposit(S.oblen,      0xFF)
-    m.deposit(S.unused,     0xFF)
-    m.depword(S.smallint,   0xFFFF) # -1
 
     m.depword(S.obj, obj)
     m.call(S.typedisp)
-    obfmtid, oblen, unused \
-        = m.byte(S.obfmtid), m.byte(S.oblen), m.byte(S.unused)
+    obfmtid, oblen, sym1, sym2a, sym2b \
+        = m.byte(S.obfmtid), m.byte(S.oblen), \
+          m.byte(S.sym1), m.byte(S.sym2a), m.byte(S.sym2b)
     smallint = int.from_bytes(
         m.bytes(S.smallint, 2), byteorder='little', signed=True)
 
-    print('obj ${:04X}, obfmtid ${:02X}, oblen ${:02X} unused ${:02X}, ' \
-          'smallint: ${:04X} {}' \
-          .format(obj, obfmtid, oblen, unused, smallint, smallint))
+    print('obj ${:04X}, obfmtid ${:02X}, oblen ${:02X} smallint: ${:04X} {}, ' \
+          'sym1: ${:02X}, sym2a: ${:02X}, sym2b: ${:02X}, ' \
+          .format(obj, obfmtid, oblen, smallint, smallint, sym1, sym2a, sym2b))
 
-    assert expected == (obfmtid, oblen, unused, smallint)
+    assert expected == (obfmtid, oblen, smallint, sym1, sym2a, sym2b)
     assert obj == m.word(S.obj), 'original obj should never be modified'
 
     #   XXX It might be useful to set some flags based on type.

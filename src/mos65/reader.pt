@@ -6,6 +6,7 @@ import  pytest
 test_rig = '''
             cpu 6502
             org $1000
+            include src/mos65/std.a65
             include src/mos65/reader.a65
 '''
 
@@ -23,9 +24,19 @@ def qset(m, input):
     m.depword(m.symtab.q_value, 0xDEAD)
     return buf
 
+@pytest.mark.parametrize('start, y, end', [
+    (0x7123,    0, 0x7123),
+    (0x7220,    1, 0x7221),
+    (0x7FFF,    2, 0x8001),
+    (0x8003, 0xFF, 0x8102),
+], ids=tmc_tid)
+def test_qYconsume(m, R, S, start, y, end):
+    m.depword(S.q_point, start)
+    m.call(S.qYconsume, R(y=y))
+    assert (start, y, end) == (start, y, m.word(S.q_point))
+
 #   Values to be returned by parsers
 Alloc   = 'Alloc'           # Special: we expect an allocation from startcons
-Nil     = 'Nil'
 
 #   Parse success indicators
 qA      = 'A'               # Always sucessful; ignore Z flag
@@ -42,12 +53,13 @@ qF      = 'F'               # Failure, Z=0
     ('qspaces',     None,       qA,  1,  b' _'),
     ('qspaces',     None,       qA,  3,  b'   _'),
     ('qLR',         None,       qF,  0,  b'_()'),
-   #('qLR',         None,       qF,  0,  b'(('),
-   #('qLR',         Nil,        qS,  2,  b'()'),
-   #('qLR',         Nil,        qS,  4,  b'(  )'),
+    ('qLR',         None,       qF,  0,  b'(('),
+    ('qLR',         'nil',      qS,  2,  b'()'),
+    ('qLR',         'nil',      qS,  4,  b'(  )'),
 ], ids=tmc_tid)
 def testq(m, R, S, qf, value, success, consumed, input):
     if value is None: value = 0xDEAD    # sentinel set by qset
+    if isinstance(value, str): value = S[value]
     start = qset(m, input)
     flags = { qA: R(), qS: R(Z=1), qF: R(Z=0) }[success]
 

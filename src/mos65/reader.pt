@@ -10,13 +10,17 @@ test_rig = '''
 '''
 
 def qset(m, input):
-    ''' Set `input` as the parser input, returning the `q_point` value. This
+    ''' Set `input` as the parser input, returning the ``q_point`` value. This
         does not explicitly terminate the input with 0, though that will
         happen "automatically" when the simulator started with zeroed memory.
+
+        This also sets ``q_value`` to the sentinel $DEAD (57005), since any
+        test about to do a parse probably would be doing this anyway.
     '''
     buf = 0x300 - 2 - len(input)
     m.deposit(buf, input)
     m.depword(m.symtab.q_point, buf)
+    m.depword(m.symtab.q_value, 0xDEAD)
     return buf
 
 #   Values to be returned by parsers
@@ -43,16 +47,12 @@ qF      = 'F'               # Failure, Z=0
    #('qLR',         Nil,        qS,  4,  b'(  )'),
 ], ids=tmc_tid)
 def testq(m, R, S, qf, value, success, consumed, input):
+    if value is None: value = 0xDEAD    # sentinel set by qset
     start = qset(m, input)
     flags = { qA: R(), qS: R(Z=1), qF: R(Z=0) }[success]
 
     print('qf={} value={} start={} consumed={} input={}' \
         .format( qf, value, start, consumed, input))
     m.call(S[qf], R(Z=0))
-
-    if value is None:
-        assert (flags,  start + consumed) \
-            == (m.regs, m.word(S.q_point))
-    else:
-        assert (flags,  start + consumed,  value) \
-            == (m.regs, m.word(S.q_point), m.word(S.q_value))
+    assert (flags,   start + consumed,             value) \
+        == (m.regs, m.word(S.q_point), m.word(S.q_value))

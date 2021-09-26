@@ -54,6 +54,9 @@ qLR         ldy #0
             ; XXX store a nil here
             rts
 
+;   ♠Z,q_value ♣? ♡? Consume a symbol (no more than 2 chars!)
+qsym        rts
+
 
 
 

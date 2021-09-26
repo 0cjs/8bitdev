@@ -1,6 +1,19 @@
 ;   Some "objects" as described in objects.md
 
 
+; ----------------------------------------------------------------------
+;   Object values
+
+;   Intrinsic constants. The MSB is always $00, as are LSB(1..); the
+;   remainder encodes the value.
+;
+nil         equ $00 << 2
+t           equ $01 << 2
+
+
+; ----------------------------------------------------------------------
+;   Functions
+
 ;   ♣A ♡XY  Dispatch based on type of object at location.
 ;
 ;   If `obj` is a pointer or instrinsic constant this does nothing and

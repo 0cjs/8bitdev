@@ -1,16 +1,16 @@
 ;   Some "objects" as described in objects.md
 
 
-;   typedisp - dispatch based on type of object at location
+;   ♣A ♡XY  Dispatch based on type of object at location.
 ;
-;   If `obj` is a pointer or fixed constant, does nothing and returns with
-;   carry clear, otherwise it returns with carry set and the value
-;   deconstructed as shown below.
+;   If `obj` is a pointer or instrinsic constant this does nothing and
+;   returns with carry clear. Otherwise it returns with carry set and the
+;   value deconstructed as shown below.
 ;
-;   Least significant bits of LSB (first byte) determine type:
-;     %00   pointer or fixed constant
-;     %10   smallint: store value in `smallint`
-;     %01   unused: store MSB in "unused"
+;   Least significant 2 bits of LSB (first byte) are tag determining type:
+;     %00   pointer or intrinsic constant
+;     %01   smallint: store value in `smallint`
+;     %10   unused: store MSB in `unused`
 ;     %11   obdata: store format ID in `obfmtid` and length in `oblen`
 ;
 ;   The 6502 has no arithmetic shift right (ASR) instruction, so we have to
@@ -21,30 +21,31 @@ typedisp
             lda obj         ; format ID byte or LSB of tagged pointer
             cmp #$80        ; ASR setup: bit 7 → carry
             ror             ; ASR; bit 0 → carry
-            bcs .tag_x1     ; if tag %x1
-            cmp #$80        ; ASR setup: bit 7 → carry
+            bcs .tag_x1
+.tag_x0     ror             ; original bit 1 → carry
+            bcs .tag_10
+.tag_00     ;   pointer or intrinsic constant
+            rts             ; return with carry clear
+
+.tag_x1     cmp #$80        ; ASR setup again as might be %01 smallint
             ror             ; ASR: original bit 1 → carry
-            bcs .smallint   ; if tag %10
-            rts             ; tag %00: carry clear
-.tag_x1     ;   tags %01, %11
-            lsr             ; original bit 1 → carry
-            bcc .unused     ; if %01
-.obdata     ;   tag %11: obdata
-            lda obj         ; what we loaded has been destroyed, so reload
-            sta obfmtid
-            lda obj+1       ; obdata header length byte
-            sta oblen
-            rts
-.unused     ;   tag %01
-            lda obj+1       ; load byte/char value
-            sta unused
-            rts
-.smallint   ;   At this point the reference's LSB has been ASR'd twice,
-            ;   which gives us the MSB of a smallint. Store the smallint
+            bcs .tag_11
+.tag_01     ;   smallint: at this point the LSB's been ASR'd twice,
+            ;   which gives us the smallint MSB. Store the smallint
             ;   converted to native 16-bit format and endianness.
             sta smallint+1
             lda obj+1
             sta smallint
+            rts
+.tag_10     ;   unused
+            lda obj+1
+            sta unused
+            rts
+.tag_11     ;   obdata
+            lda obj         ; what we loaded has been destroyed, so reload
+            sta obfmtid
+            lda obj+1       ; obdata header length byte
+            sta oblen
             rts
 
 

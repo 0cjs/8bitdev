@@ -1,4 +1,4 @@
-from    testmc.m6502 import  Machine
+from    testmc.mos65 import  Machine
 import  pytest
 
 object_file = 'src/a1/pia2.p'

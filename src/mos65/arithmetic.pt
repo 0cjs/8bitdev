@@ -15,7 +15,7 @@
 
 '''
 
-from    testmc.m6502  import *
+from    testmc.mos65  import *
 import  pytest
 
 @pytest.fixture

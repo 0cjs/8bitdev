@@ -1,4 +1,4 @@
-from    testmc.m6502  import Machine
+from    testmc.mos65  import Machine
 import  pytest
 
 object_file = 'src/asl/sym.p'

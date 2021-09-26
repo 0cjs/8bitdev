@@ -1,4 +1,4 @@
-from    testmc.m6502  import *
+from    testmc.mos65  import *
 from    testmc.memimage  import  MemImage
 from    testmc  import LB, MB
 import  pytest

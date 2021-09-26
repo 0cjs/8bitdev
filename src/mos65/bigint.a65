@@ -37,7 +37,7 @@
 ;---------------------------------------------------------------------
 ;   Routines that do not need memory storage
 
-            include "src/m65/qhex.a65"
+            include "src/mos65/qhex.a65"
 
 ;---------------------------------------------------------------------
 ;   Common zero-page storage.

@@ -1,9 +1,9 @@
 from    testmc  import sym_tid
-from    testmc.m6502 import  Machine
+from    testmc.mos65 import  Machine
 from    b8tool  import path
 import  pytest
 
-object_file = 'src/m65/misc.p'
+object_file = 'src/mos65/misc.p'
 R, S = Machine.rs(path.obj(object_file))
 
 @pytest.mark.parametrize('val, result', [

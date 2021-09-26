@@ -1,7 +1,7 @@
-from    testmc.m6502  import *
+from    testmc.mos65  import *
 import  pytest
 
-object_file = 'src/m65/stdtest.p'
+object_file = 'src/mos65/stdtest.p'
 
 pytest.register_assert_rewrite('stdtest')
 from stdtest import (

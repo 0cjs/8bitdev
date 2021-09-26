@@ -1,4 +1,4 @@
-from    testmc.m6502 import  *
+from    testmc.mos65 import  *
 
 def test_module_interface():
     ' Smoke test of public interface. '

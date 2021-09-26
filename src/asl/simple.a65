@@ -1,7 +1,7 @@
 ;   Simple 6502 routines to test with Macro Assembler AS
 
             cpu 6502
-            include "src/m65/std.a65"
+            include "src/mos65/std.a65"
 
 ident       byt "asl/simple.a65"    ; we use this to check that we've loaded
                                     ; the correct binary data and symbol table.

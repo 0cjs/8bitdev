@@ -85,16 +85,16 @@ $b8tool asl src/mc68/simple.a68
 $b8tool asl src/tmc68/bioscode.a68
 
 #   "Library" routines
-$b8tool asltest src/m65/stdtest.a65
+$b8tool asltest src/mos65/stdtest.a65
 $b8tool asltest src/mc68/stdtest.a68
-$b8tool asltest src/m65/misc.a65
+$b8tool asltest src/mos65/misc.a65
 $b8tool asltest src/mc68/arithtest.a68  '  include "src/tmc68/bios.a68"'
 $b8tool asltest src/mc68/pr.a68         '  include "src/tmc68/bios.a68"'
-$b8tool asltest src/m65/qhex.a65
+$b8tool asltest src/mos65/qhex.a65
 $b8tool asltest src/mc68/qhex.a68
 
-$b8tool asltest src/m65/objects.a65
-$b8tool asltest src/m65/bigint.a65
+$b8tool asltest src/mos65/objects.a65
+$b8tool asltest src/mos65/bigint.a65
 
 $b8tool asltest src/woz/sweet16.a65     '  org $F689 ; Integer BASIC ROM'
 

@@ -4,7 +4,7 @@
 ;   PIA1: $D000-$D00F, mirrored at $D020, $D040, ...
 
             cpu 6502
-            include "src/m65/std.a65"
+            include "src/mos65/std.a65"
             include "src/a1/def.a65"
 
             org $400

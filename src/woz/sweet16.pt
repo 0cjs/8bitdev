@@ -1,5 +1,5 @@
 from    testmc  import LB, MB
-from    testmc.m6502  import *
+from    testmc.mos65  import *
 import  pytest
 
 object_file = 'src/woz/sweet16.p'

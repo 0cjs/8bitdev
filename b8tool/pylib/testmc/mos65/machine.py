@@ -7,7 +7,7 @@ from    py65.devices.mpu6502  import MPU
 from    sys import stderr
 
 from    testmc.generic  import *
-from    testmc.m6502.instructions  import Instructions
+from    testmc.mos65.instructions  import Instructions
 
 from    testmc.tool import asl, asxxxx
 

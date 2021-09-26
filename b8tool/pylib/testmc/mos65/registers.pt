@@ -1,4 +1,4 @@
-from    testmc.m6502.machine  import Machine
+from    testmc.mos65.machine  import Machine
 import  pytest
 
 R = Machine.Registers

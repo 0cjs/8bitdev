@@ -1,8 +1,8 @@
-from    testmc.m6502  import *
+from    testmc.mos65  import *
 import  pytest
 from    itertools import chain, count
 
-object_file = 'src/m65/bigint.p'
+object_file = 'src/mos65/bigint.p'
 
 ####################################################################
 #   Tests: readhex

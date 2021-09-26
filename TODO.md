@@ -19,7 +19,7 @@ To-do List
 
 #### Features
 
-- Add the `testmc.generic.IOMem` interface to `testmc.m6502`.
+- Add the `testmc.generic.IOMem` interface to `testmc.mos65`.
 - Add "hexadecimal integers" to framework with `__repr__()`s that
   print as `$EA` or `$FFFF`. Construct perhaps with `A(0xFFFF)`
   (address) and `B(0xFF)` (byte)?

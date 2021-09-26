@@ -40,7 +40,7 @@ from    b8tool  import path, run, toolset
 
 ISA = ntup('ISA', 'cpu, stdinc')
 ISAMAP = {
-    '.a65': ISA('6502', 'm65/std.a65'),
+    '.a65': ISA('6502', 'mos65/std.a65'),
     '.a68': ISA('6800', 'mc68/std.a68'),
 }
 

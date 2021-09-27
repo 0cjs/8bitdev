@@ -104,6 +104,12 @@ def remove_formfeeds(filepath):
     f = Path(filepath)
     f.write_text(f.read_text().replace('\f', '\n'))
 
+VERBOSITY = 0
+def vprint(verbosity, *args, **kwargs):
+    global VERBOSITY
+    if verbosity <= VERBOSITY:
+        print(*args, **kwargs)
+
 ####################################################################
 #   Tool Set Builds
 #
@@ -402,6 +408,9 @@ if __name__ == '__main__':
     if path.B8_PROJDIR is None:
         raise RuntimeError('B8_PROJDIR not set')
     path.addbin(B8_HOME, 'bin')
+
+    #   XXX it's getting on time to use argparse
     args = sys.argv[1:]   # make a copy without our program name
+    while args[0] == '-v': args.pop(0); VERBOSITY += 1
     command = args.pop(0)
     exit(COMMANDS[command](args))

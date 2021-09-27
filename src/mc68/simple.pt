@@ -1,6 +1,6 @@
 from    testmc.mc6800  import  Machine
 
-object_file = 'src/mc68/simple.p'
+object_files = 'src/mc68/simple.p'
 
 def test_machine_type(m, R):
     ' Confirm the framework loaded the correct machine '

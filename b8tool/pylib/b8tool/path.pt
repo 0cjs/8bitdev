@@ -2,6 +2,10 @@ from    b8tool.path  import *
 from    os.path  import abspath
 import  pytest
 
+def test_relproj():
+    assert Path('foo/bar')   == relproj(proj('foo/bar'))
+    assert Path('/absolute') == relproj(proj('/absolute'))
+
 def test_pretty():
     assert '/ff/bar' == pretty('/ff/bar')
     assert 'foo/bar' == pretty('foo/bar')

@@ -1,15 +1,8 @@
 ;   pr - routines for formatting and printing output
 
-    ;   XXX This is a bit awkward; we need to work out something better
-    ;   and more generic.
-    ifdef UNIT_TESTING
-        ifndef _a               ; in case we're included by another unit test
-            _a: equ $30         ;   that also defines these
-        endif
-        ifndef _x
-            _x: equ $32
-        endif
-    endif
+;   Required definitions:
+;   • _a:   input variable (_b and _c will be added as necessary)
+;   • _x:   output variable (_y and _z will be added as necessary)
 
 SPACE       equ ' '
 DEL         equ $7F
@@ -66,7 +59,7 @@ prvischar   and A,#$7F          ; clear bit 7
             rts
 
 ; ----------------------------------------------------------------------
-;   ♣A,B,X,_a,_b print unsigned 16-bit int at (X) in decimal
+;   ♣A,B,X,_a  Print unsigned 16-bit int at (X) in decimal.
 ;
 ;   This uses the relatively simple and fast "multiple subtraction of
 ;   factors" method: count all the 10,000s you can subtract, print out

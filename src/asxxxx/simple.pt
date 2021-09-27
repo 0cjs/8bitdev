@@ -6,7 +6,7 @@ import  pytest
 if not exists(str(path.proj('.all-tools'))):
     pytest.skip("skipping ASxxxx tests", allow_module_level=True)
 
-object_file = 'src/asxxxx/simple'
+object_files = 'src/asxxxx/simple'
 
 def test_loaded_object_file(m):
     ' Confirm that the correct object file was loaded. '

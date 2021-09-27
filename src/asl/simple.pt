@@ -1,7 +1,7 @@
 from    testmc.mos65 import  Machine
 import  pytest
 
-object_file = 'src/asl/simple.p'
+object_files = 'src/asl/simple.p'
 
 def test_loaded_object_file(m):
     ' Confirm that the correct object file was loaded. '

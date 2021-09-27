@@ -8,18 +8,38 @@ from    testmc.pytest  import pytest_assertrepr_compare
 def m(request):
     ''' A simulated machine with the object file loaded.
 
-        The caller must have two global variables defined in its
-        module:
-        - `Machine`: The class of the CPU/machine simulator to instantiate.
-          Normally this is simply imported from `testmc`.
-        - `object_file`: A `str` giving the path to the object file to load
-          into the machine, relative to ``.build/obj/``.
+        The caller must define in its module a global variable ``Machine``
+        which is the class of the CPU/machine simulator to instantiate.
+        This is usually imported from one of the `testmc` submodules.
+
+        If the module global ``object_files`` is defined, it will be read
+        as a path (if `str`) or sequence of paths from which to load
+        machine code via `Machine.load()`. Relative paths will be relative
+        to `path.obj()`. Symbol values from earlier loads take preference
+        over later loads.
+
+        If the module global ``test_rig`` is defined it's assumed that a
+        binary was built with ``b8tool asltest`` and it will be found and
+        loaded based on the path from which the test module was loaded,
+        using the portion relative to `B8_PROJDIR` under `path.ptobj()`.
+        Symbol values from this load will be preferred over those
+        previously loaded via ``object_files``.
     '''
     Machine = getattr(request.module, 'Machine')
     m = Machine()
-    #   XXX This is probably not the best way to find this file; it makes
-    #   this dependent on the CWD being the project root dir above .build/.
-    m.load(path.obj(getattr(request.module, 'object_file')))
+
+    if hasattr(request.module, 'object_files'):
+        objfiles = getattr(request.module, 'object_files')
+        if isinstance(objfiles, str):   # because forgetting the comma is such
+            objfiles = (objfiles,)      # an easy mistake for devs to make
+        for f in objfiles:
+            m.load(path.obj(f), mergestyle='prefcur', setPC=False)
+
+    if hasattr(request.module, 'test_rig'):
+        relmodpath = path.relproj(request.module.__file__)
+        object_file = path.ptobj(relmodpath).with_suffix('.p')
+        m.load(object_file, mergestyle='prefnew')
+
     return m
 
 #   These rely on pytest running the m() fixture only once per test, even

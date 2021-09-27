@@ -4,7 +4,11 @@ import  pytest
 
 R = Machine.Registers
 
-object_file = 'src/mc68/arithtest.p'
+test_rig = '''
+            cpu 6800
+            org $1000
+            include src/mc68/arithtest.a68
+'''
 
 @pytest.mark.parametrize('A, B, X, Y', [        # X = A / B; Y = remainder
     (  123,   124,     0,   123),   #  A < Q always, so X never used

@@ -2,7 +2,12 @@ from    testmc.mos65  import *
 import  pytest
 from    itertools import chain, count
 
-object_file = 'src/mos65/bigint.p'
+test_rig = '''
+            cpu 6502
+            org $1000
+            include src/mos65/std.a65
+            include src/mos65/bigint.a65
+'''
 
 ####################################################################
 #   Tests: readhex

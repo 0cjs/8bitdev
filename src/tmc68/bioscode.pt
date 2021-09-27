@@ -1,7 +1,7 @@
 from    testmc.mc6800  import Machine
 from    inspect  import currentframe
 
-object_file = 'src/tmc68/bioscode.p'
+object_files = 'src/tmc68/bioscode.p'
 
 def test_prchar(m, S, R):
     _, outchars = m.setiostreams(S.charoutport)

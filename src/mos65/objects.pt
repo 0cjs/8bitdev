@@ -2,7 +2,12 @@ from    testmc  import tmc_tid
 from    testmc.mos65  import  Machine
 import  pytest
 
-object_file = 'src/mos65/objects.p'
+test_rig = '''
+            cpu 6502
+            org $1000
+            include src/mos65/std.a65
+            include src/mos65/objects.a65
+'''
 
 ####################################################################
 #   Tests

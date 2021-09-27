@@ -78,17 +78,6 @@
 ;      routine did not change the SP; see above.)
 ;
 
-; ---------------------------------------------------------------------------
-
-    ifdef UNIT_TESTING
-;   XXX These definitions should really be coming from the .pt file.
-pmon_ramlo      equ $80
-rdlinebuf       equ $110
-rdlinebuf_end   equ $140    ; 48 chars
-pmon_ramhi      equ $180
-pmon_org        equ $1000
-    endif
-
 ; ----------------------------------------------------------------------
 ;   Memory Configuration
 

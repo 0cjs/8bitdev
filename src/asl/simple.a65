@@ -3,6 +3,8 @@
             cpu 6502
             include "src/mos65/std.a65"
 
+            org $240
+
 ident       byt "asl/simple.a65"    ; we use this to check that we've loaded
                                     ; the correct binary data and symbol table.
 

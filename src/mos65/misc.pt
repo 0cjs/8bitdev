@@ -3,16 +3,19 @@ from    testmc.mos65 import  Machine
 from    b8tool  import path
 import  pytest
 
-object_file = 'src/mos65/misc.p'
-R, S = Machine.rs(path.obj(object_file))
+test_rig = '''
+            cpu 6502
+            org $1000
+            include src/mos65/misc.a65
+'''
 
 @pytest.mark.parametrize('val, result', [
     (0xFFFF, 0xFFFD), (0x8001, 0x7FFF), (0x7000, 0x6FFE), (0x0000, 0xFFFE),
 ])
 @pytest.mark.parametrize('f', [
-    S.decw_sub, S.decw_dec, S.decw_dey,
-], ids=sym_tid(S))
-def test_decw(m, f, val, result):
+    'decw_sub', 'decw_dec', 'decw_dey',
+])
+def test_decw(m, S, f, val, result):
     m.depword(S.val, val)
-    m.call(f)
+    m.call(S[f])
     assert hex(result) == hex(m.word(S.val))

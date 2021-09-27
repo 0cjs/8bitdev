@@ -1,10 +1,16 @@
 from    testmc.mc6800  import Machine
 import  pytest
 
-object_file = 'src/mc68/stdtest.p'
+test_rig = '''
+            cpu 6800
+            org $1000
+            include src/mc68/std.a68
+            include src/stdtest.asm
+'''
 
-pytest.register_assert_rewrite('stdtest')
-from stdtest import (
+
+pytest.register_assert_rewrite('src.stdtest')
+from src.stdtest import (
     test_LB_MB                  as test_LB_MB,
     test_ds_db_dw               as test_ds_db_dw_6800,
     )

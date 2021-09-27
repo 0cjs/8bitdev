@@ -35,7 +35,7 @@ b8_plib="$B8_PROJDIR/b8tool/pylib"      # used locally; not part of b8tool
 #   All args after these are passed on to pytest.
 while [[ ${#@} -gt 0 ]]; do case "$1" in
     -C)     shift; rm -rf "$BUILDDIR";;
-    -c)     shift; rm -rf "$BUILDDIR"/{obj,pytest};;
+    -c)     shift; rm -rf "$BUILDDIR"/{obj,ptobj,pytest};;
     -A)     shift; touch "$all_tools";;
     -p)     shift; py="$1"; shift;;
     *)      break;;
@@ -75,35 +75,35 @@ $b8tool buildtoolset linapple
 
 #   Non-CPU-specific builds/tests (assembler/toolchain tests).
 $b8tool asl src/asl/nomacro.a65
-$b8tool asl src/asl/sym.a65
+$b8tool asltest src/asl/sym.pt
 
 #   CPU-specific basic tests that do not rely on the assembly framework.
-$b8tool asl src/asl/simple.a65 ' org $240'
+$b8tool asl src/asl/simple.a65
 $b8tool asl src/mc68/simple.a68
 
 #   Standalone blobs of code.
 $b8tool asl src/tmc68/bioscode.a68
 
 #   "Library" routines
-$b8tool asltest src/mos65/stdtest.a65
-$b8tool asltest src/mc68/stdtest.a68
-$b8tool asltest src/mos65/misc.a65
-$b8tool asltest src/mc68/arithtest.a68  '  include "src/tmc68/bios.a68"'
-$b8tool asltest src/mc68/pr.a68         '  include "src/tmc68/bios.a68"'
-$b8tool asltest src/mos65/qhex.a65
-$b8tool asltest src/mc68/qhex.a68
+$b8tool asltest src/mos65/stdtest.pt
+$b8tool asltest src/mc68/stdtest.pt
+$b8tool asltest src/mos65/misc.pt
+$b8tool asltest src/mc68/arithtest.pt
+$b8tool asltest src/mc68/pr.pt
+$b8tool asltest src/mos65/qhex.pt
+$b8tool asltest src/mc68/qhex.pt
 
-$b8tool asltest src/mos65/objects.a65
-$b8tool asltest src/mos65/bigint.a65
+$b8tool asltest src/mos65/objects.pt
+$b8tool asltest src/mos65/bigint.pt
 
-$b8tool asltest src/woz/sweet16.a65     '  org $F689 ; Integer BASIC ROM'
+$b8tool asltest src/woz/sweet16.pt
 
 #   Portable programs (i.e., not platform-specific)
 #   and their platform-specific versions.
-$b8tool asltest src/mc68/hello.a68     '  include "src/tmc68/bios.a68"'
+$b8tool asltest src/mc68/hello.pt
 $b8tool asl exe/tmc68/hello.a68
 $b8tool asl exe/jr200/hello.a68
-$b8tool asltest src/mc68/pmon.a68      '  include "src/tmc68/bios.a68"'
+$b8tool asltest src/mc68/pmon.pt
 $b8tool asl exe/tmc68/pmon.a68
 $b8tool asl exe/jr200/pmon.a68
 
@@ -120,8 +120,8 @@ $b8tool asl     exe/a1/charset.a65
 $b8tool a2dsk   exe/a2/charset.a65
 
 #   Other stuff (probably needs sorting into categories above)
-$b8tool asltest  src/mc68/cpxtest.a68
-$b8tool asltest  src/mc68/continuation.a68
+$b8tool asltest  src/mc68/cpxtest.pt
+$b8tool asltest  src/mc68/continuation.pt
 
 
 ####################################################################

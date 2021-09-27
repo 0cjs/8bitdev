@@ -2,12 +2,6 @@
 ;   qhex - hexadecimal number parsing and related routines
 ; ----------------------------------------------------------------------
 
-  ifdef UNIT_TESTING
-    ifndef qhex_out
-qhex_out                    equ $21     ; WORD output of qhex*
-    endif
-  endif
-
 ; ----------------------------------------------------------------------
 ;   Parse up to A (1-4) ASCII hex digits at X, Z=1 on success.
 ;   ♠X,qhex_out  ♣AB,qhex_len

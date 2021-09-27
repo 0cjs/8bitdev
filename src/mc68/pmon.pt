@@ -3,10 +3,22 @@ from    testmc.mc6800  import *
 import  pytest, re
 from    contextlib  import contextmanager
 
-
 R = Machine.Registers
 
-object_file = 'src/mc68/pmon.p'
+test_rig = '''
+                cpu 6800
+                org $1000
+
+pmon_ramlo      equ $80
+rdlinebuf       equ $110
+rdlinebuf_end   equ $140    ; 48 chars
+pmon_ramhi      equ $180
+pmon_org        equ $1000
+
+                include src/mc68/std.a68
+                include src/tmc68/bios.a68
+                include src/mc68/pmon.a68
+'''
 
 @contextmanager
 def prperr_abort_check(m, offset):

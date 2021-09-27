@@ -2,7 +2,16 @@ from    testmc  import LB, MB
 from    testmc.mos65  import *
 import  pytest
 
-object_file = 'src/woz/sweet16.p'
+test_rig    = '''
+        cpu 6502
+        include "src/mos65/std.a65"
+
+        org $F689                       ; Same as Apple II Integer BASIC ROM
+        include "src/woz/sweet16.a65"
+
+SAVE                                    ; For unit testing we don't bother to
+RESTORE rts                             ; restore regs after a Sweet 16 call.
+'''
 
 def test_locations(m, S):
     ' We test at the original listing/Integer BASIC ROM location: $F689. '

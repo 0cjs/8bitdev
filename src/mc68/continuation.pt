@@ -2,7 +2,13 @@ from    testmc.mc6800  import *
 from    testmc  import tmc_tid
 import  pytest
 
-object_file = 'src/mc68/continuation.p'
+test_rig = '''
+            cpu 6800
+            org $1000
+            include src/mc68/std.a68
+            include src/mc68/continuation.a68
+            ;   XXX above file contains test rig code that should be here
+'''
 
 def test_pushcont(m, S, R):
     isp = m.sp

@@ -345,11 +345,3 @@ SAV1        stx XREG
             cld
             rts
     endif
-
-;   For unit testing we don't bother with restoring the registers after a
-;   Sweet 16 call.
-;
-    ifdef UNIT_TESTING
-RESTORE
-SAVE        rts
-    endif

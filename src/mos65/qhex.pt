@@ -1,10 +1,14 @@
 from    testmc.mos65 import  Machine
 import  pytest
 
-object_file = 'src/mos65/qhex.p'
+test_rig = '''
+            cpu 6502
+            org $1000
+            include src/mos65/qhex.a65
+'''
 
-pytest.register_assert_rewrite('qdigit')
-from qdigit import (
+pytest.register_assert_rewrite('src.qdigit')
+from src.qdigit import (
     test_qdigit_good                as test_qdigit_good_6502,
     test_qdigit_good_exhaustive     as test_qdigit_good_exhaustive_6502,
     test_qdigit_error               as test_qdigit_error_6502,

@@ -27,7 +27,7 @@ from    contextlib  import contextmanager
 from    os.path  import abspath, dirname
 from    pathlib  import Path
 from    site  import addsitedir
-import  os, shutil, sys
+import  importlib.util, importlib.machinery, os, shutil, sys
 
 #   Configure and use b8tool's Python library path
 B8_HOME = dirname(dirname(abspath(__file__)))
@@ -144,17 +144,29 @@ def buildtoolset(args):
 #   via a command line, so for all of these the sole parameter is
 #   a list of arguments that the build function parses itself.
 
-def asl(args):
-    ''' Run Macroassembler AS (``asl``) on a generated top-level source
-        file that includes the single file whose path is given as the first
-        argument. If additional arguments are given, their contents will be
-        inserted into the top-level source file before the include of the
-        real source file.
+def runasl(objdir, name, sourcecode):
+    ''' Create `objdir`, a source file in it called `name`.asm containing
+        `sourcecode`, and assemble it with Macroassembler AS (``asl``).
 
-        This is part of the workarounds to deal with AS behavour not well
-        suited to our standard build system. See the comments in the code
-        below for details.
+        ASL generates some output files (e.g., debug symbols) only to the
+        current working directory, and only if the source file is in the
+        current directory. (Included files may come from other
+        directories.) Thus this function sets up the environment to
+        assemble properly, including:
+        - adding `path.proj()` to the assembler's include search path
+        - using case-sensitive symbols
+        - setting UTF-8 input
+        - disabling listing pagination (the formfeeds and extra spacing are
+          just irritating when viewing a listing file on screen)
+
+        `sourcode` is assumed to have ``include`` statements that bring in
+        the "real" source code to be assembled. (These would normally be
+        paths relative to $B8_PROJDIR.) Conveniently, it may also include
+        things like test rig setup if the source code is assembling a test
+        rig to be unit-tested.
     '''
+    vprint(1, 'runasl: name={} objdir={}'.format(name, path.pretty(objdir)))
+
     opts = [
         '-codepage', 'utf-8',
         '-qxx',
@@ -164,70 +176,72 @@ def asl(args):
         ]
     endopts = [ '-L', '-s', '-g', ]
 
-    srcfile = args[0]
-    objdir  = path.obj(Path(args[0]).parent)
-    topfile = Path(srcfile).name
-
-    assert path.proj(srcfile).is_file(), \
-        "not a file: {}".format(path.proj(srcfile))
-
-    #   Set CWD to output dir because AS can't specify other output
-    #   locations for some files, such as the debug symbols.
+    srcfile = name + '.asm'
     with cwd(objdir):
-        #   If given an absolute path to a source file in another dir, AS
-        #   doesn't generate output files. (!) So set up a top-level source
-        #   file here that `include`s the real top-level source file.
-        topfile_lines = [
-            '    page 0',
-            '',
-            *args[1:],
-            #    for line in "$@"; do echo >>"$src" "$line"; done \
-            '',
-            '    include {}'.format(srcfile),
-            ]
-        with open(topfile, 'w', newline='\n') as f: # always Unix newlines
-            print(*topfile_lines, sep='\n', file=f)
-        run.tool('asl', *opts, topfile, *endopts)
+        #   We always use Unix newline format for consistency across platforms.
+        #   (Every decent editor for programmers handles this, and many people
+        #   do this for all their source code.)
+        with open(srcfile, 'w', newline='\n') as f:
+            f.write('    page 0\n')                     # Disable pagination
+            f.write(sourcecode)
+        run.tool('asl', *opts, srcfile, *endopts)
+
+def asl(args):
+    ''' Given a path to an assembler source file relative to `path.proj()`,
+        generate an equivalent directory and under `path.obj()`, and invoke
+        `runasl()` on a generated source file that includes the one given.
+
+        This works around various issues with ASL input and output file
+        locations. See `runasl()` for details.
+    '''
+    src_rel = Path(args[0])
+    if len(args) != 1:
+        #   Can't think of any reason we'd ever want to supply > one arg.
+        raise ValueError('asl takes only one arg')
+    runasl(path.obj(src_rel.parent), src_rel.stem,
+        '    include "{}"'.format(src_rel))
 
 def asltest(args):
-    ''' Build a unit test version of a "library" file with Macroassembler
-        AS. This determines the ISA from the file extension (using
-        `isa_from_path()`) and then calls `asl()` to do the standard build
-        after generating a code prefix that sets the assembly symbol
-        ``UNIT_TESTING equ 1``, sets the base CPU type for the ISA and
-        includes the standard definitions file for it, and sets ``org
-        $1000``. the test file itself.
+    ''' Given a path to a pytest file realtive to B8_PROJDIR, build its
+        corresponding assembly-lanugage unit test rig using the
+        Macroassembler AS. The pytest file will be loaded as a module and
+        the string value of its ``test_rig`` global variable will be
+        assembled. Typically this would contain, at a minimum, something
+        along the lines of:
 
-        The first argument is the path (relative to `BASEDIR`) of the file
-        to be assembled; remaining arguments are additional lines to add to
-        the assembly before including the actual code. This can be used to
-        override the CPU type or origin, set further symbols for testing,
-        and so on.
+            cpu 6502
+            include "src/some/library.a65"
+            org $1000
 
-        XXX The ``UNIT_TESTING`` symbol should not actually be hardcoded by
-        this function; instead we should be reading the ``.pt`` file for
-        the unit test and extracting any symbol definitions for testing
-        from that. This would also remove the necessity of the build system
-        calling this supplying additional testing definitions as parameters
-        to this function.
+        All build products will be placed under `path.ptobj()`, with the
+        path under that parallel to the pytest file's path and basename
+        relative to $B8_PROJDIR.
 
-        XXX One way to do this would be to have the .pt file define a
-        ``unit_test_code`` variable containing a list of lines to prefix to
-        the code under test and have a Python interpreter evaluate that
-        file to get the value. (This would allow programatic generation of
-        the the value.)
+        Note that this simply builds the code under test; it does not
+        actually run any tests.
     '''
-    isa = isa_from_path(args[0])
-    header = [
-        ';   Unit Test Assembly',
-        '',
-        'UNIT_TESTING equ 1',
-        '',
-        '           cpu {}'.format(isa.cpu),
-        '           include "src/{}"'.format(isa.stdinc),
-        '           org $1000',
-        '', ]
-    asl([args[0]] + header + args[1:])
+    ptfile_rel = Path(args[0])
+    if len(args) != 1:
+        #   Can't think of any reason we'd ever want to supply > one arg.
+        raise ValueError('asltest takes only one arg')
+
+    #   XXX copied from b8tool/pylib/pytest_pt.py
+    #   but maybe duplicate code to keep that separable
+
+    modname = ptfile_rel.stem + '_pt' # Just for debugging; never in sys.modules
+    vprint(1, 'asltest: modname={} path={}'.format(modname, ptfile_rel))
+    testmodule_path = path.proj(ptfile_rel)
+    loader = importlib.machinery.SourceFileLoader(modname, str(testmodule_path))
+    spec = importlib.util.spec_from_file_location(
+        modname, str(testmodule_path), loader=loader)
+    if spec is None:
+        #   This should never happen; if it does most likely we mucked up
+        #   our loader setup or something like that.
+        raise ImportError(
+            "Can't create spec for module %s at location %s" % (modname, path))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    runasl(path.ptobj(ptfile_rel.parent), ptfile_rel.stem, module.test_rig)
 
 def asx(args):
     ''' Run ASXXXX assembler. Currently this always runs ``as6500``.
@@ -407,6 +421,18 @@ COMMANDS = {
 if __name__ == '__main__':
     if path.B8_PROJDIR is None:
         raise RuntimeError('B8_PROJDIR not set')
+
+    #   Code common to several .pt files (including entire test suites) may
+    #   be factored out into .py files that are imported by multiple .pt
+    #   files. We add $B8_PROJDIR to the Python search path so that they
+    #   can `import src.common` or similar, both when imported by asltest().
+    #   and when imported by pytest. (Though pytest already provided this.)
+    #
+    #   XXX This probably also has implications for other things; we need
+    #   to sit down and work out how we really want to deal with it.
+    #
+    addsitedir(str(path.proj()))
+
     path.addbin(B8_HOME, 'bin')
 
     #   XXX it's getting on time to use argparse

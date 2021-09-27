@@ -1,10 +1,35 @@
 from    testmc.mos65  import *
 import  pytest
 
-object_file = 'src/mos65/stdtest.p'
+test_rig = '''
+            cpu 6502
+            org $1000
+            include src/mos65/std.a65
+            include src/stdtest.asm     ; common test rig code for all platforms
 
-pytest.register_assert_rewrite('stdtest')
-from stdtest import (
+;   ZDS
+zdstest0    db  $F0     ; byte at current location
+zdstest1    zds 3       ; zero page allocation
+zdstest2    zds 2       ; zero page allocation
+zdstest3    db  $F3     ; byte at current location +1
+
+;   INCW
+incwtest    clv
+            bvs .incwtemp   ; show that composed temps can cross macro
+.nocarry    incw incwdata   ; show no collision w/macro-internal .nocarry
+.incwtemp
+            rts
+incwdata    zds 2
+
+;   DWALIGN
+dwaligntest dwalign dwaladdr
+            rts
+
+dwaladdr    zds 2
+'''
+
+pytest.register_assert_rewrite('src.stdtest')
+from src.stdtest import (
     test_LB_MB                  as test_LB_MB,
     test_ds_db_dw               as test_ds_db_dw_6502,
     )

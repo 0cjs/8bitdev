@@ -41,12 +41,24 @@ def proj(*components):
     else:
         raise NameError('B8_PROJDIR not set in environment')
 
+def relproj(path):
+    ''' Return the portion of `path` relative to `B8_PROJDIR`, if it's
+        underneath `B8_PROJDIR`. Otherwise just return `path`. Always
+        returns a `Path` object.
+    '''
+    try:
+        return Path(path).relative_to(proj())
+    except ValueError:
+        return Path(path)
+
 def pretty(s):
     ''' If `s` is a path where `B8_PROJDIR` is its prefix, return, `s` with
         that prefix and its slash removed, i.e. a relative path from
         `B8_PROJDIR`. Otherwise return `s` unmodified. This reduces noise
         when printing diagnostics while still giving complete path
         information.
+
+        This accepts plain `str` as well as `Path` objects.
     '''
     s = str(s)
     if s.startswith(B8_PROJDIR + '/'):
@@ -111,6 +123,17 @@ def obj(*components):
         ``.build/obj/``.
     '''
     return build('obj/', *components)
+
+def ptobj(*components):
+    ''' Test rig object path `build('ptobj/')`, for top-level assembly
+        source files generated from pytest modules for testing machine-
+        language code. (The object files generated from the source file are
+        also placed here.)
+
+        `components` should be for a the Python file source path relative
+        to `B8_PROJDIR`.
+    '''
+    return build('ptobj/', *components)
 
 ####################################################################
 #   File manipulation

@@ -1,6 +1,10 @@
 from    testmc.mc6800  import *
 
-object_file = 'src/mc68/cpxtest.p'
+test_rig = '''
+            cpu 6800
+            ; ORG set in cpxtest.a68
+            include src/mc68/cpxtest.a68
+'''
 
 def test_cpxtest(m, S):
     otlen = int((S.argstable_end - S.argstable) / 4)

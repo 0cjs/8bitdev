@@ -1,7 +1,7 @@
 from    testmc.mos65  import *
 import  pytest
 
-object_file = 'src/c64.p'
+object_files = 'src/c64.p'
 
 def test_invscr(m, S):
     m.deposit(0x3FF, [0]*1026)

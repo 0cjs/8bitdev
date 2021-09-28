@@ -50,17 +50,19 @@ qYconsume   tya
             rts
 
 
-;   ♠Y=0 ♣Z,A ♡X,q_value  Consume spaces. Always successful.
-qspaces     ldy #0
-            jsr qYspaces
-            jmp qYconsume   ; TCO
-
+;   ♠Y ♡A,X,q_point,q_value  Consume spaces at Y. Always successful.
 qYspaces    lda (q_point),y
             iny
             cmp #' '
             beq qYspaces
             dey
             rts
+
+;   ♠Y=0 ♣Z,A ♡X,q_value  Consume spaces. Always successful.
+qspaces     ldy #0
+            jsr qYspaces
+            jmp qYconsume   ; TCO
+
 
 ;   ♠Z,q_value ♣AY  Parse a '()' (left-paren, right paren) as value nil.
 qLR         ldy #0
@@ -90,13 +92,12 @@ qsym        rts
 ----------------------------------------------------------------------
 
     parse: start by consuming spaces, then:
-        - '(', ' '*, ')'    -> nil
-        - 
-        - consume spaces
-        - '
-        - '(' → start of list or nil (consume spaces to check
-        - try smallint
-        - anything else: symbol (just 2 chars for the moment)
+        - ✓ consume spaces
+        - ✓ '(', ' '*, ')'    -> nil
+        - ○ sym1
+        - ○ smallint
+        - ○ '(' → start of list or nil (consume spaces to check
+        - ○ sym2
 
     TOP:
         parse

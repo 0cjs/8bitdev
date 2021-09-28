@@ -10,6 +10,9 @@ test_rig = '''
             include src/mos65/reader.a65
 '''
 
+####################################################################
+#   Utility routines
+
 def qset(m, input):
     ''' Set `input` as the parser input, returning the ``q_point`` value. This
         does not explicitly terminate the input with 0, though that will
@@ -23,6 +26,32 @@ def qset(m, input):
     m.depword(m.symtab.q_point, buf)
     m.depword(m.symtab.q_value, 0xDEAD)
     return buf
+
+def S(name):
+    ''' Return a function that, given a `SymTab`, returns the value of
+        `name` from that symbol table. This is essentially a partial
+        application of a function that would take ``(name, symtab)`` so
+        that at top-level when we do not yet have the symbol table
+        available we can pass in a value to be looked up later.
+    '''
+    def lookup(symtab):
+        return symtab[name]
+    return lookup
+
+def sym1(c):
+    ' Return a sym1 object word containing `c`. '
+    n = ord(c)
+    if n > 0xFF: raise ValueError("Char {} (${:02X}) > $FF".format(repr(c), n))
+    return 0x0200 + n
+
+@pytest.mark.parametrize('input, output', [
+    ('\x00', 0x0200), ('a',    0x0261), ('\x80', 0x0280), ('\xFF', 0x02FF),
+])
+def test_sym1(input, output):
+    assert output == sym1(input)
+
+####################################################################
+#   Tests
 
 @pytest.mark.parametrize('start, y, end', [
     (0x7123,    0, 0x7123),
@@ -49,16 +78,23 @@ qF      = 'F'               # Failure, Z=0
     #   success: qA, qS, qF (see above)
     #   consumed: the number input characters consumed (moving foward `q_point`)
     #   input: the input (bytestring) on which to run the parser function
-    ('qspaces',     None,       qA,  0,  b'_'),
-    ('qspaces',     None,       qA,  1,  b' _'),
-    ('qspaces',     None,       qA,  3,  b'   _'),
-    ('qLR',         None,       qF,  0,  b'_()'),
-    ('qLR',         None,       qF,  0,  b'(('),
-    ('qLR',         'nil',      qS,  2,  b'()'),
-    ('qLR',         'nil',      qS,  4,  b'(  )'),
+    ('qspaces',         None,   qA,  0,  b'_'),
+    ('qspaces',         None,   qA,  1,  b' _'),
+    ('qspaces',         None,   qA,  3,  b'   _'),
+    ('qLR',             None,   qF,  0,  b'_()'),
+    ('qLR',             None,   qF,  0,  b'(('),
+    ('qLR',         S('nil'),   qS,  2,  b'()'),
+    ('qLR',         S('nil'),   qS,  4,  b'(  )'),
+    ('qsym1',           None,   qF,  0,  b''),
+    ('qsym1',           None,   qF,  0,  b'bc'),
+    ('qsym1',      sym1('d'),   qS,  1,  b'd '),
+    ('qsym1',      sym1('e'),   qS,  1,  b'e)'),
+    ('qsym1',      sym1('f'),   qS,  1,  b'f('),
 ], ids=tmc_tid)
 def testq(m, R, S, qf, value, success, consumed, input):
-    if value is None: value = 0xDEAD    # sentinel set by qset
+    if value is None:       value = 0xDEAD      # sentinel set by qset
+    elif callable(value):   value = value(S)    # lazy symbol lookup
+
     if isinstance(value, str): value = S[value]
     start = qset(m, input)
     flags = { qA: R(), qS: R(Z=1), qF: R(Z=0) }[success]

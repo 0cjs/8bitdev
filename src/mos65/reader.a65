@@ -11,12 +11,12 @@
 ;   and there is at least one unconsumed character to parse.
 ;   - On success:
 ;     - Its input is consumed by incrementing q_point.
-;     - The parsed value (if any) is stored in q_value.
+;     - The parsed value (if any) is stored in $00,X
 ;     - Z=1 (BNE) to indicate success ONLY if the parser is capable of
 ;       failing. Otherwise Z is not indicative of anything.
 ;   - On failure:
 ;     - No input is consumed (q_point is untouched)
-;     - q_value may be destroyed
+;     - $00,X may be destroyed
 ;     - Z=0 (BEQ) to indicate failure
 ;
 ;   The reason we use Z=0 for failure is that a very common test for
@@ -28,13 +28,13 @@
 ;   - Should qspaces INY and then add Y to q_point when done?
 ;
 
-;   ♣Z ♡AXY,q_value  Consume any character. Always successful.
+;   ♣Z,q_point ♡AXY  Advance q_point to onsume any character. Always successful.
 qchar       inc q_point
             bne .done
             inc q_point+1
 .done       rts
 
-;   ♠YZ ♣A  Advance q_point by Y characters to consume them.
+;   ♠YZ,q_point ♣A  Advance q_point by Y characters to consume them.
 ;          • This does not check for end of input!
 ;          • Always returns with Z=0 for tail calls from successful parsers.
 ;          • Always returns with Y=0, in case that's useful.
@@ -49,7 +49,7 @@ qYconsume   tya
             rts
 
 
-;   ♠Y ♡AX,q_point,q_value  Consume spaces at Y. Always successful.
+;   ♠Y ♡AX  Consume spaces at Y. Always successful.
 qYspaces    lda (q_point),y
             iny
             cmp #' '
@@ -57,13 +57,13 @@ qYspaces    lda (q_point),y
             dey
             rts
 
-;   ♠Y=0 ♣Z,A ♡X,q_value  Consume spaces. Always successful.
+;   ♠Y=0,q_point ♣Z,A ♡X  Consume spaces. Always successful.
 qspaces     ldy #0
             jsr qYspaces
             jmp qYconsume   ; TCO
 
 
-;   ♠Z,q_value ♣AY  Parse a '()' (left-paren, right paren) as value nil.
+;   ♠XZ ♣AY  Parse a '()' (left-paren, right paren) as value nil.
 qLR         ldy #0
             lda (q_point),y
             cmp #'('
@@ -76,24 +76,23 @@ qLR         ldy #0
             beq .qsuccess
             rts
 .qsuccess   lda #nil        ; intrinsic constant
-            sta q_value
-            sta q_value+1   ; hack: we know that `nil`'s value is 0
+            sta 0,X
+            sta 1,X         ; hack: we know that `nil`'s value is 0
             iny             ; consume the ')'
             jmp qYconsume   ; TCO
 
-;   ♠Z,q_value ♣AY  Parse a '(' as start of a list, a heap-allocated cons cell
+;   ♠XZ ♣AY  Parse a '(' as start of a list, a heap-allocated cons cell
 qlist       ldy #0
             lda (q_point),Y
             cmp #'('
             beq .list
             rts
-.list       ldx #q_value    ; newly allocated cell to q_value
-            jsr hcalloc
+.list       jsr hcalloc     ; newly allocated cell to 0,X
             jsr qchar       ; consume the '('
             ldy #0          ; z=1 success
             rts
 
-;   ♠Z,q_value ♣A,Y ♡? Consume a sym1 (1 char
+;   ♠XZ ♣A,Y ♡? Consume a sym1 (1 char
 ;   Assumes that leading spaces have been consumed.
 qsym1       ldy #1          ; character after current one
             lda (q_point),y ;   must be a terminator
@@ -106,10 +105,10 @@ qsym1       ldy #1          ; character after current one
             beq .sym1
             rts             ; Z=0 return failure
 .sym1       lda #2          ; sym1 tag
-            sta q_value     ; tagged pointer LSB
+            sta 0,X         ; tagged pointer LSB
             dey             ; y=0
             lda (q_point),y ; load character
-            sta q_value+1   ; tagged pointer MSB
+            sta 1,X         ; tagged pointer MSB
             jsr qchar       ; consume character we stored
             ldy #0          ; Z=1 success
             rts

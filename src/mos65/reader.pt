@@ -13,7 +13,9 @@ hc_bottom   ds 2
 
             org $50         ; ZP for CUT
 q_point     ds 2            ; pointer to current parse point in input buffer
-q_value     ds 2            ; parsed value (if any)
+
+            org $E0         ; ZP for test rig
+value       ds 2            ; output from routines
 
             org $280        ; non-ZP for CUT
 q_buf       ds $80
@@ -34,14 +36,14 @@ def qset(m, input):
         happen "automatically" when the simulator started with zeroed memory.
 
         This also does the following additional setup useful to most tests:
-        - Set ``q_value`` to the sentinel $DEAD (57005).
+        - Set ``value`` to the sentinel $DEAD (57005).
         - Call ``hcinit`` to initialize the heap.
     '''
     S = m.symtab
     buf = S.q_buf_end - 2 - len(input)
     m.deposit(buf, input)
     m.depword(S.q_point, buf)
-    m.depword(S.q_value, 0xDEAD)
+    m.depword(S.value, 0xDEAD)
     m.call(S.hcinit)
     return buf
 
@@ -120,7 +122,7 @@ def testq(m, R, S, qf, value, success, consumed, input):
 
     print('qf={} value={} start={} consumed={} input={}' \
         .format( qf, value, start, consumed, input))
-    m.call(S[qf], R(Z=0))
+    m.call(S[qf], R(Z=0, x=S.value))
     assert flags == m.regs
-    assert (flags,   start + consumed,             value) \
-        == (m.regs, m.word(S.q_point), m.word(S.q_value))
+    assert (flags,   start + consumed,          value) \
+        == (m.regs, m.word(S.q_point), m.word(S.value))

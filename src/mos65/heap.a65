@@ -8,10 +8,10 @@
 ;   used or free, so free space starts at the free space pointer.
 
 ; ----------------------------------------------------------------------
-;   Client-supplied constants and variables.
+;   Client-supplied definitions:
 ;
-;   • hc_top        first address above the heap, for hc_init and GC
-;   • hc_bottom     word storing lowest allocated cons cell
+;   • hc_org        first address above the heap, for hc_init and GC
+;   • hc_brk        pointer to lowest allocated cons cell
 
 ; ----------------------------------------------------------------------
 
@@ -21,22 +21,22 @@
 ;   destroys the system badly enough that nothing will run any more.
 ;
 hcinit
-            lda #LB(hc_top)
-            sta hc_bottom
-            lda #MB(hc_top)
-            sta hc_bottom+1
+            lda #LB(hc_org)
+            sta hc_brk
+            lda #MB(hc_org)
+            sta hc_brk+1
             rts
 
 ;   ♠X ♣AY  Allocate a 2-word heap cell, storing the pointer to it in 0,X
 ;
-hcalloc     lda hc_bottom       ; decrement LSB by 4
+hcalloc     lda hc_brk          ; decrement LSB by 4
             sec
             sbc #4
-            sta hc_bottom       ; move heap bottom down
+            sta hc_brk          ; move heap bottom down
             sta 0,X             ; also copy to output
-            ldy hc_bottom+1     ; MSB for copy, possibly decremented first
+            ldy hc_brk+1        ; MSB for copy, possibly decremented first
             bcs .msb_ok         ; if no need to decrement MSB
             dey
-            sty hc_bottom+1
+            sty hc_brk+1
 .msb_ok     sty 1,X
             rts

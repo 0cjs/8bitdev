@@ -6,8 +6,8 @@ test_rig = '''
             include src/mos65/std.a65
 
             org $40
-hc_top      equ $8000
-hc_bottom   ds 2
+hc_org      equ $8000
+hc_brk      ds 2
 
             org $E0
 out0        dw $DEAD            ; storage for function outputs.
@@ -21,22 +21,22 @@ def setheap(m, bottom=0x8001):
     ''' The default bottom-of-heap locatin is selected deliberately to
         force an MSB decrement on the first allocation.
     '''
-    m.depword(m.symtab.hc_bottom, bottom)
+    m.depword(m.symtab.hc_brk, bottom)
 
 def test_init(m, S):
     setheap(m, 0xCCDD)
     m.call(S.hcinit)
-    assert 0x8000 == m.word(S.hc_bottom)
+    assert 0x8000 == m.word(S.hc_brk)
 
 def test_alloc(m, R, S):
     setheap(m)
-    assert (          0x8001,            0xDEAD,         0xBEEF) \
-        == ( m.word(S.hc_bottom), m.word(S.out0), m.word(S.out1))
+    assert (          0x8001 ,        0xDEAD ,        0xBEEF) \
+        == ( m.word(S.hc_brk), m.word(S.out0), m.word(S.out1))
 
     m.call(S.hcalloc, R(x=S.out0))
-    assert (          0x7FFD,            0x7FFD,         0xBEEF) \
-        == ( m.word(S.hc_bottom), m.word(S.out0), m.word(S.out1))
+    assert (          0x7FFD ,        0x7FFD ,        0xBEEF) \
+        == ( m.word(S.hc_brk), m.word(S.out0), m.word(S.out1))
 
     m.call(S.hcalloc, R(x=S.out1))
-    assert (          0x7FF9,            0x7FFD,         0x7FF9) \
-        == ( m.word(S.hc_bottom), m.word(S.out0), m.word(S.out1))
+    assert (          0x7FF9 ,        0x7FFD ,        0x7FF9) \
+        == ( m.word(S.hc_brk), m.word(S.out0), m.word(S.out1))

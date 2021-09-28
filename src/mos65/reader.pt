@@ -8,8 +8,8 @@ test_rig = '''
             include src/mos65/std.a65
 
             org $20         ; ZP for support routines
-hc_top      equ $8000
-hc_bottom   ds 2
+hc_org      equ $8000
+hc_brk      ds 2
 
             org $50         ; ZP for CUT
 q_point     ds 2            ; pointer to current parse point in input buffer

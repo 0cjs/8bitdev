@@ -87,9 +87,9 @@ qF      = 'F'               # Failure, Z=0
     ('qLR',         S('nil'),   qS,  4,  b'(  )'),
     ('qsym1',           None,   qF,  0,  b''),
     ('qsym1',           None,   qF,  0,  b'bc'),
-    ('qsym1',      sym1('d'),   qS,  1,  b'd '),
-    ('qsym1',      sym1('e'),   qS,  1,  b'e)'),
-    ('qsym1',      sym1('f'),   qS,  1,  b'f('),
+   #('qsym1',      sym1('d'),   qS,  1,  b'd '),
+   #('qsym1',      sym1('e'),   qS,  1,  b'e)'),
+   #('qsym1',      sym1('f'),   qS,  1,  b'f('),
 ], ids=tmc_tid)
 def testq(m, R, S, qf, value, success, consumed, input):
     if value is None:       value = 0xDEAD      # sentinel set by qset
@@ -102,5 +102,6 @@ def testq(m, R, S, qf, value, success, consumed, input):
     print('qf={} value={} start={} consumed={} input={}' \
         .format( qf, value, start, consumed, input))
     m.call(S[qf], R(Z=0))
+    assert flags == m.regs
     assert (flags,   start + consumed,             value) \
         == (m.regs, m.word(S.q_point), m.word(S.q_value))

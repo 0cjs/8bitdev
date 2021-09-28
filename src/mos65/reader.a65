@@ -12,16 +12,22 @@ q_value     zds 2           ; parsed value (if any)
 ;   q* indicates a parser at q_point, incrementing q_point to consume
 ;   qY* indicates a parser at qpoint,y, incrementing y to consume
 ;
-;   A parser attempts to parse a value starting at q_point.
+;   A parser attempts to parse a value starting at q_point. Except where
+;   noted, they always assume that leading whitespace has been consumed
+;   and there is at least one unconsumed character to parse.
 ;   - On success:
 ;     - Its input is consumed by incrementing q_point.
 ;     - The parsed value (if any) is stored in q_value.
-;     - Z=0 (BNE) to indicate success ONLY if the parser is capable of
+;     - Z=1 (BNE) to indicate success ONLY if the parser is capable of
 ;       failing. Otherwise Z is not indicative of anything.
 ;   - On failure:
 ;     - No input is consumed (q_point is untouched)
 ;     - q_value may be destroyed
-;     - Z=1 (BEQ) to indicate failure
+;     - Z=0 (BEQ) to indicate failure
+;
+;   The reason we use Z=0 for failure is that a very common test for
+;   parsers is to CMP the next character, BEQ if it matches, or exit
+;   with an RTS if it doesn't, in which case Z=0.
 ;
 ;   XXX Stuff to consider:
 ;   - Should have some parsers assume Y=0 on entry?
@@ -34,11 +40,10 @@ qchar       inc q_point
             inc q_point+1
 .done       rts
 
-;   ♠Y ♣A  Advance q_point by Y characters to consume them.
+;   ♠YZ ♣A  Advance q_point by Y characters to consume them.
 ;          • This does not check for end of input!
-;          • This always returns with zero clear, to allow tail calls from
-;            successful parsers.
-;          • This always returns with A=0 and carry clear, in case that helps.
+;          • Always returns with Z=0 for tail calls from successful parsers.
+;          • Always returns with Y=0, in case that's useful.
 ;
 qYconsume   tya
             clc
@@ -46,11 +51,11 @@ qYconsume   tya
             sta q_point
             bcc .done
             inc q_point+1
-.done       lda #0          ; clear Z to indicate success
+.done       ldy #0          ; set Z to indicate success
             rts
 
 
-;   ♠Y ♡A,X,q_point,q_value  Consume spaces at Y. Always successful.
+;   ♠Y ♡AX,q_point,q_value  Consume spaces at Y. Always successful.
 qYspaces    lda (q_point),y
             iny
             cmp #' '
@@ -69,7 +74,7 @@ qLR         ldy #0
             lda (q_point),y
             cmp #'('
             beq .qright
-.rts        rts
+            rts             ; Z=0: failure
 .qright     iny
             jsr qYspaces
             lda (q_point),y
@@ -82,8 +87,11 @@ qLR         ldy #0
             iny             ; consume the ')'
             jmp qYconsume   ; TCO
 
-;   ♠Z,q_value ♣? ♡? Consume a symbol (no more than 2 chars!)
-qsym        rts
+;   ♠Z,q_value ♣A,Y ♡? Consume a sym1 (1 char
+;   Assumes that leading spaces have been consumed.
+qsym1
+            ldy #1          ; Z=0 to indicate failure
+            rts
 
 
 

@@ -87,7 +87,10 @@ qlist       ldy #0
             cmp #'('
             beq .list
             rts
-.list
+.list       ldx #q_value    ; newly allocated cell to q_value
+            jsr hcalloc
+            jsr qchar       ; consume the '('
+            ldy #0          ; z=1 success
             rts
 
 ;   ♠Z,q_value ♣A,Y ♡? Consume a sym1 (1 char

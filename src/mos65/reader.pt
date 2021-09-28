@@ -7,16 +7,21 @@ test_rig = '''
             cpu 6502
             include src/mos65/std.a65
 
-            org $30
+            org $20         ; ZP for support routines
+hc_top      equ $8000
+hc_bottom   ds 2
+
+            org $50         ; ZP for CUT
 q_point     ds 2            ; pointer to current parse point in input buffer
 q_value     ds 2            ; parsed value (if any)
 
-            org $280
+            org $280        ; non-ZP for CUT
 q_buf       ds $80
 q_buf_end
 
             org $800
             include src/mos65/objects.a65
+            include src/mos65/heap.a65
             include src/mos65/reader.a65
 '''
 
@@ -28,14 +33,16 @@ def qset(m, input):
         does not explicitly terminate the input with 0, though that will
         happen "automatically" when the simulator started with zeroed memory.
 
-        This also sets ``q_value`` to the sentinel $DEAD (57005), since any
-        test about to do a parse probably would be doing this anyway.
+        This also does the following additional setup useful to most tests:
+        - Set ``q_value`` to the sentinel $DEAD (57005).
+        - Call ``hcinit`` to initialize the heap.
     '''
     S = m.symtab
     buf = S.q_buf_end - 2 - len(input)
     m.deposit(buf, input)
     m.depword(S.q_point, buf)
     m.depword(S.q_value, 0xDEAD)
+    m.call(S.hcinit)
     return buf
 
 def S(name):
@@ -97,7 +104,7 @@ qF      = 'F'               # Failure, Z=0
     ('qLR',         S('nil'),   qS,  2,  b'()'),
     ('qLR',         S('nil'),   qS,  4,  b'(  )'),
     ('qlist',           None,   qF,  0,  b'x'),
-    ('qlist',         0x7FFE,   qS,  1,  b'('),     # first alloc from heap
+    ('qlist',         0x7FFC,   qS,  1,  b'('),     # first alloc from heap
     ('qsym1',           None,   qF,  0,  b'ab'),
     ('qsym1',      sym1('c'),   qS,  1,  b'c\x00'),
     ('qsym1',      sym1('d'),   qS,  1,  b'd '),

@@ -89,8 +89,23 @@ qLR         ldy #0
 
 ;   ♠Z,q_value ♣A,Y ♡? Consume a sym1 (1 char
 ;   Assumes that leading spaces have been consumed.
-qsym1
-            ldy #1          ; Z=0 to indicate failure
+qsym1       ldy #1          ; character after current one
+            lda (q_point),y ;   must be a terminator
+            beq .good       ; $00: end of parse
+            cmp #' '        ; space: end of token
+            beq .good
+            cmp #')'        ; close paren: end of list
+            beq .good
+            cmp #'('        ; open paren: start of next list
+            beq .good
+            rts             ; Z=0 return failure
+.good       lda #2          ; sym1 tag
+            sta q_value     ; tagged pointer LSB
+            dey             ; y=0
+            lda (q_point),y ; load character
+            sta q_value+1   ; tagged pointer MSB
+            jsr qchar       ; consume character we stored
+            ldy #0          ; Z=1 success
             rts
 
 

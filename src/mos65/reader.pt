@@ -42,10 +42,10 @@ def sym1(c):
     ' Return a sym1 object word containing `c`. '
     n = ord(c)
     if n > 0xFF: raise ValueError("Char {} (${:02X}) > $FF".format(repr(c), n))
-    return 0x0200 + n
+    return (n << 8) + 2
 
 @pytest.mark.parametrize('input, output', [
-    ('\x00', 0x0200), ('a',    0x0261), ('\x80', 0x0280), ('\xFF', 0x02FF),
+    ('\x00', 0x0002), ('a',    0x6102), ('\x80', 0x8002), ('\xFF', 0xFF02),
 ])
 def test_sym1(input, output):
     assert output == sym1(input)
@@ -85,11 +85,11 @@ qF      = 'F'               # Failure, Z=0
     ('qLR',             None,   qF,  0,  b'(('),
     ('qLR',         S('nil'),   qS,  2,  b'()'),
     ('qLR',         S('nil'),   qS,  4,  b'(  )'),
-    ('qsym1',           None,   qF,  0,  b''),
-    ('qsym1',           None,   qF,  0,  b'bc'),
-   #('qsym1',      sym1('d'),   qS,  1,  b'd '),
-   #('qsym1',      sym1('e'),   qS,  1,  b'e)'),
-   #('qsym1',      sym1('f'),   qS,  1,  b'f('),
+    ('qsym1',           None,   qF,  0,  b'ab'),
+    ('qsym1',      sym1('c'),   qS,  1,  b'c\x00'),
+    ('qsym1',      sym1('d'),   qS,  1,  b'd '),
+    ('qsym1',      sym1('e'),   qS,  1,  b'e)'),
+    ('qsym1',      sym1('f'),   qS,  1,  b'f('),
 ], ids=tmc_tid)
 def testq(m, R, S, qf, value, success, consumed, input):
     if value is None:       value = 0xDEAD      # sentinel set by qset

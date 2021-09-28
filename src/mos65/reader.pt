@@ -96,6 +96,8 @@ qF      = 'F'               # Failure, Z=0
     ('qLR',             None,   qF,  0,  b'(('),
     ('qLR',         S('nil'),   qS,  2,  b'()'),
     ('qLR',         S('nil'),   qS,  4,  b'(  )'),
+    ('qlist',           None,   qF,  0,  b'x'),
+    ('qlist',         0x7FFE,   qS,  1,  b'('),     # first alloc from heap
     ('qsym1',           None,   qF,  0,  b'ab'),
     ('qsym1',      sym1('c'),   qS,  1,  b'c\x00'),
     ('qsym1',      sym1('d'),   qS,  1,  b'd '),

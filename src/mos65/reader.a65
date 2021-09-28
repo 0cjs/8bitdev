@@ -81,19 +81,28 @@ qLR         ldy #0
             iny             ; consume the ')'
             jmp qYconsume   ; TCO
 
+;   ♠Z,q_value ♣AY  Parse a '(' as start of a list, a heap-allocated cons cell
+qlist       ldy #0
+            lda (q_point),Y
+            cmp #'('
+            beq .list
+            rts
+.list
+            rts
+
 ;   ♠Z,q_value ♣A,Y ♡? Consume a sym1 (1 char
 ;   Assumes that leading spaces have been consumed.
 qsym1       ldy #1          ; character after current one
             lda (q_point),y ;   must be a terminator
-            beq .good       ; $00: end of parse
+            beq .sym1       ; $00: end of parse
             cmp #' '        ; space: end of token
-            beq .good
+            beq .sym1
             cmp #')'        ; close paren: end of list
-            beq .good
+            beq .sym1
             cmp #'('        ; open paren: start of next list
-            beq .good
+            beq .sym1
             rts             ; Z=0 return failure
-.good       lda #2          ; sym1 tag
+.sym1       lda #2          ; sym1 tag
             sta q_value     ; tagged pointer LSB
             dey             ; y=0
             lda (q_point),y ; load character

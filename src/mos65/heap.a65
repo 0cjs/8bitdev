@@ -9,11 +9,9 @@
 
 ; ----------------------------------------------------------------------
 ;   Client-supplied constants and variables.
-;   Those marked with Z should be locations in the ZP for efficiency.
 ;
 ;   • hc_top        first address above the heap, for hc_init and GC
-;   • hc_bottom     Z word storing lowest allocated cons cell
-;   • hc_output     Z word storing addr of most recent allocation
+;   • hc_bottom     word storing lowest allocated cons cell
 
 ; ----------------------------------------------------------------------
 
@@ -29,17 +27,16 @@ hcinit
             sta hc_bottom+1
             rts
 
-;   Allocate a 2-word heap cell, returning pointer to it in `hc_output`.
-;   ♠hc_output ♣AY ♡X
+;   ♠X ♣AY  Allocate a 2-word heap cell, storing the pointer to it in 0,X
 ;
 hcalloc     lda hc_bottom       ; decrement LSB by 4
             sec
             sbc #4
-            sta hc_bottom
-            sta hc_output       ; also copy to output
+            sta hc_bottom       ; move heap bottom down
+            sta 0,X             ; also copy to output
             ldy hc_bottom+1     ; MSB for copy, possibly decremented first
             bcs .msb_ok         ; if no need to decrement MSB
             dey
             sty hc_bottom+1
-.msb_ok     sty hc_output+1
+.msb_ok     sty 1,X
             rts

@@ -8,7 +8,10 @@ test_rig = '''
             org $40
 hc_top      equ $8000
 hc_bottom   ds 2
-hc_output   ds 2
+
+            org $E0
+out0        dw $DEAD            ; storage for function outputs.
+out1        dw $BEEF
 
             org $1000
             include src/mos65/heap.a65
@@ -25,9 +28,15 @@ def test_init(m, S):
     m.call(S.hcinit)
     assert 0x8000 == m.word(S.hc_bottom)
 
-def test_alloc(m, S):
+def test_alloc(m, R, S):
     setheap(m)
-    m.depword(S.hc_output, 0xDEAD)
-    m.call(S.hcalloc)
-    assert (          0x7FFD,              0x7FFD,    ) \
-        == ( m.word(S.hc_output), m.word(S.hc_bottom))
+    assert (          0x8001,            0xDEAD,         0xBEEF) \
+        == ( m.word(S.hc_bottom), m.word(S.out0), m.word(S.out1))
+
+    m.call(S.hcalloc, R(x=S.out0))
+    assert (          0x7FFD,            0x7FFD,         0xBEEF) \
+        == ( m.word(S.hc_bottom), m.word(S.out0), m.word(S.out1))
+
+    m.call(S.hcalloc, R(x=S.out1))
+    assert (          0x7FF9,            0x7FFD,         0x7FF9) \
+        == ( m.word(S.hc_bottom), m.word(S.out0), m.word(S.out1))

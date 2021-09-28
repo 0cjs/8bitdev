@@ -5,8 +5,18 @@ import  pytest
 
 test_rig = '''
             cpu 6502
-            org $1000
             include src/mos65/std.a65
+
+            org $30
+q_point     ds 2            ; pointer to current parse point in input buffer
+q_value     ds 2            ; parsed value (if any)
+
+            org $280
+q_buf       ds $80
+q_buf_end
+
+            org $800
+            include src/mos65/objects.a65
             include src/mos65/reader.a65
 '''
 
@@ -21,10 +31,11 @@ def qset(m, input):
         This also sets ``q_value`` to the sentinel $DEAD (57005), since any
         test about to do a parse probably would be doing this anyway.
     '''
-    buf = 0x300 - 2 - len(input)
+    S = m.symtab
+    buf = S.q_buf_end - 2 - len(input)
     m.deposit(buf, input)
-    m.depword(m.symtab.q_point, buf)
-    m.depword(m.symtab.q_value, 0xDEAD)
+    m.depword(S.q_point, buf)
+    m.depword(S.q_value, 0xDEAD)
     return buf
 
 def S(name):

@@ -106,7 +106,6 @@ def testq(m, R, S, qf, value, success, consumed, input):
     if value is None:       value = 0xDEAD      # sentinel set by qset
     elif callable(value):   value = value(S)    # lazy symbol lookup
 
-    if isinstance(value, str): value = S[value]
     start = qset(m, input)
     flags = { qA: R(), qS: R(Z=1), qF: R(Z=0) }[success]
 

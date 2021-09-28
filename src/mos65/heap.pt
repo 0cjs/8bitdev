@@ -3,26 +3,31 @@ import  pytest
 
 test_rig = '''
             cpu 6502
-            org $1000
             include src/mos65/std.a65
+
+            org $40
+hc_top      equ $8000
+hc_bottom   ds 2
+hc_output   ds 2
+
+            org $1000
             include src/mos65/heap.a65
 '''
 
-def setheap(m, alloced=0x8001, base=0x8001):
-    ''' The default base and alloc values are selected deliberately to
+def setheap(m, bottom=0x8001):
+    ''' The default bottom-of-heap locatin is selected deliberately to
         force an MSB decrement on the first allocation.
     '''
-    m.depword(m.symtab.hc_alloced, alloced)
-    m.depword(m.symtab.hc_base, base)
+    m.depword(m.symtab.hc_bottom, bottom)
 
 def test_init(m, S):
-    setheap(m, 0xCCDD, 0xAABB)
+    setheap(m, 0xCCDD)
     m.call(S.hcinit)
-    assert (0x8000, 0x8000) == (m.word(S.hc_alloced), m.word(S.hc_base))
+    assert 0x8000 == m.word(S.hc_bottom)
 
 def test_alloc(m, S):
     setheap(m)
     m.depword(S.hc_output, 0xDEAD)
     m.call(S.hcalloc)
-    assert (          0x7FFD,              0x7FFD,               0x8001) \
-        == ( m.word(S.hc_output), m.word(S.hc_alloced), m.word(S.hc_base))
+    assert (          0x7FFD,              0x7FFD,    ) \
+        == ( m.word(S.hc_output), m.word(S.hc_bottom))

@@ -7,12 +7,15 @@
 ;   Currently this is allocate-only. There's no way of marking a cell as
 ;   used or free, so free space starts at the free space pointer.
 
-;   XXX These should be defined by the client.
-hc_top      equ $8000       ; default value of hc_base for testing
-hc_base     equ $40         ; first address above the start of the heap
-hc_alloced  equ $42         ; last allocated cons cell
-hc_output   equ $50         ; pointer to most recently allocated value
+; ----------------------------------------------------------------------
+;   Client-supplied constants and variables.
+;   Those marked with Z should be locations in the ZP for efficiency.
+;
+;   • hc_top        first address above the heap, for hc_init and GC
+;   • hc_bottom     Z word storing lowest allocated cons cell
+;   • hc_output     Z word storing addr of most recent allocation
 
+; ----------------------------------------------------------------------
 
 ;   ♣A♡XY  Initialize heap
 ;
@@ -20,25 +23,23 @@ hc_output   equ $50         ; pointer to most recently allocated value
 ;   destroys the system badly enough that nothing will run any more.
 ;
 hcinit
-            lda #MB(hc_top)
-            sta hc_base+1
-            sta hc_alloced+1
             lda #LB(hc_top)
-            sta hc_base
-            sta hc_alloced
+            sta hc_bottom
+            lda #MB(hc_top)
+            sta hc_bottom+1
             rts
 
 ;   Allocate a 2-word heap cell, returning pointer to it in `hc_output`.
 ;   ♠hc_output ♣AY ♡X
 ;
-hcalloc     lda hc_alloced      ; decrement LSB by 4
+hcalloc     lda hc_bottom       ; decrement LSB by 4
             sec
             sbc #4
-            sta hc_alloced
+            sta hc_bottom
             sta hc_output       ; also copy to output
-            ldy hc_alloced+1    ; MSB for copy, possibly decremented first
+            ldy hc_bottom+1     ; MSB for copy, possibly decremented first
             bcs .msb_ok         ; if no need to decrement MSB
             dey
-            sty hc_alloced+1
+            sty hc_bottom+1
 .msb_ok     sty hc_output+1
             rts

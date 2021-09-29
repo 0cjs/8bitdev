@@ -7,17 +7,20 @@ test_rig = '''
             cpu 6502
             include src/mos65/std.a65
 
-            org $20         ; ZP for support routines
+            org $20         ; ZP for support routines ----------------------
 hc_org      equ $8000
 hc_brk      ds 2
 
-            org $50         ; ZP for CUT
+            org $50         ; ZP for CUT ­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­­
 q_point     ds 2            ; pointer to current parse point in input buffer
+pstk_ptr    ds 2
 
-            org $E0         ; ZP for test rig
+            org $D0         ; ZP for test rig ------------------------------
+pstk_org    equ $D0         ; base of parse stack
+            org $E0
 value       ds 2            ; output from routines
 
-            org $280        ; non-ZP for CUT
+            org $280        ; non-ZP for CUT -------------------------------
 q_buf       ds $80
 q_buf_end
 
@@ -36,6 +39,7 @@ def qset(m, input):
         happen "automatically" when the simulator started with zeroed memory.
 
         This also does the following additional setup useful to most tests:
+        - Set pstk_ptr to pstk_org (initializing an empty parse stack)
         - Set ``value`` to the sentinel $DEAD (57005).
         - Call ``hcinit`` to initialize the heap.
     '''
@@ -43,6 +47,7 @@ def qset(m, input):
     buf = S.q_buf_end - 2 - len(input)
     m.deposit(buf, input)
     m.depword(S.q_point, buf)
+    m.deposit(S.pstk_ptr, S.pstk_org)
     m.depword(S.value, 0xDEAD)
     m.call(S.hcinit)
     return buf
@@ -126,3 +131,10 @@ def testq(m, R, S, qf, value, success, consumed, input):
     assert flags == m.regs
     assert (flags,   start + consumed,          value) \
         == (m.regs, m.word(S.q_point), m.word(S.value))
+
+def test_full_parse(m, R, S):
+    qset(m, b'(a () (b c))')
+    m.call(S.read)
+    def b(sym): return m.byte(sym)
+    assert (S.pstk_org - 2, ) \
+        == ( b(S.pstk_ptr), )

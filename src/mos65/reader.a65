@@ -1,6 +1,17 @@
 ;   a simple reader for (very limited) S-expressions
 
 ; ----------------------------------------------------------------------
+;   Client-supplied definitions:
+;   • Z:   must be allocated in zero page
+;   • B,W: allocated storage for byte/word;  A=address definition
+;   • ↑,↓: pointer that moves upward/downward in memory as it consumes
+;          (byte pointers are signed offsets from a base in ZP)
+;
+;   • q_point       ZW↑ current position in parse buffer
+;   • pstk_org      ZA  base of parse stack
+;   • pstk_ptr      ZB↓ current top of parse stack
+
+; ----------------------------------------------------------------------
 ;   parsers
 ;
 ;   q* indicates a parser at q_point, incrementing q_point to consume
@@ -113,8 +124,22 @@ qsym1       ldy #1          ; character after current one
             ldy #0          ; Z=1 success
             rts
 
+; ----------------------------------------------------------------------
 
-
+;   Read a line of input
+;   ♠X,q_point,pstk_ptr
+;
+;   • q_point must point to the start of the buffer to parse; on exit it
+;     will point to the first unconsumed byte, the $00 terminator.
+;   • pstk_ptr↓ will be decremented by 2 and on exit will be a tagged pointer
+;     to the parsed value (either the single value or a pointer to the first
+;     cons cell of a list of values, depending on the tag).
+;
+;   XXX Todo:
+;   • add check against pstk_limit?
+;
+read
+            rts
 
             end
 ----------------------------------------------------------------------

@@ -210,12 +210,22 @@ def asl(args):
         This works around various issues with ASL input and output file
         locations. See `runasl()` for details.
     '''
-    src_rel = Path(args[0])
     if len(args) != 1:
         #   Can't think of any reason we'd ever want to supply > one arg.
         raise ValueError('asl takes only one arg')
-    runasl(path.obj(src_rel.parent), src_rel.stem,
-        '    include "{}"'.format(src_rel))
+
+    rsrc    = Path(args[0])             # Used for assembler `include`
+    src     = path.proj(rsrc)
+    objdir  = path.obj(rsrc.parent)
+    objfile = objdir.joinpath(rsrc.name).with_suffix('.p')
+
+    if objfile.exists():
+        if objfile.stat().st_mtime > src.stat().st_mtime:
+            vprint(1, 'asl', '{} newer than {}, skipping' \
+                .format(path.pretty(objfile), rsrc))
+            return
+
+    runasl(objdir, rsrc.stem, '    include "{}"'.format(rsrc))
 
 def asltest(args):
     ''' Given a path to a pytest file realtive to B8_PROJDIR, build its
@@ -236,20 +246,30 @@ def asltest(args):
         Note that this simply builds the code under test; it does not
         actually run any tests.
     '''
-    ptfile_rel = Path(args[0])
     if len(args) != 1:
         #   Can't think of any reason we'd ever want to supply > one arg.
         raise ValueError('asltest takes only one arg')
 
+    ptfile_rel  = Path(args[0])             # includes .pt extension
+    ptfile      = path.proj(ptfile_rel)
+    ptfname     = ptfile_rel.stem           # filename: no path, no extension
+    objdir      = path.ptobj(ptfile_rel.parent)
+    objfile     = objdir.joinpath(ptfname).with_suffix('.p')
+
+    if objfile.exists():
+        if objfile.stat().st_mtime > ptfile.stat().st_mtime:
+            vprint(1, 'asltest', '{} newer than {}, skipping' \
+                .format(path.pretty(objfile), path.pretty(ptfile)))
+            return
+
     #   XXX copied from b8tool/pylib/pytest_pt.py
     #   but maybe duplicate code to keep that separable
-
-    modname = ptfile_rel.stem + '_pt' # Just for debugging; never in sys.modules
-    vprint(1, 'asltest', 'modname={} path={}'.format(modname, ptfile_rel))
-    testmodule_path = path.proj(ptfile_rel)
-    loader = importlib.machinery.SourceFileLoader(modname, str(testmodule_path))
+    modname = ptfname + '_pt' # Just for debugging; never in sys.modules
+    vprint(1, 'asltest', 'modname={} path={}' \
+        .format(modname, path.pretty(ptfile)))
+    loader = importlib.machinery.SourceFileLoader(modname, str(ptfile))
     spec = importlib.util.spec_from_file_location(
-        modname, str(testmodule_path), loader=loader)
+        modname, str(ptfile), loader=loader)
     if spec is None:
         #   This should never happen; if it does most likely we mucked up
         #   our loader setup or something like that.
@@ -257,7 +277,7 @@ def asltest(args):
             "Can't create spec for module %s at location %s" % (modname, path))
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    runasl(path.ptobj(ptfile_rel.parent), ptfile_rel.stem, module.test_rig)
+    runasl(objdir, ptfname, module.test_rig)
 
 def asx(args):
     ''' Run ASXXXX assembler. Currently this always runs ``as6500``.

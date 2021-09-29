@@ -22,6 +22,7 @@
 #   always use str() when passing path-like objects to standard library
 #   functions.
 
+from    argparse  import ArgumentParser
 from    collections  import namedtuple as ntup
 from    contextlib  import contextmanager
 from    itertools  import chain
@@ -70,20 +71,19 @@ def isa_from_path(path, return_none=False):
 ####################################################################
 #   Support routines
 
-VERBOSITY = 0
 def vprint(verbosity, prefix, *args, **kwargs):
     ''' Print for a given verbosity level.
 
-        The message will be emitted only if the global `VERBOSITY` is at
-        least as large as the `verbosity` argument.
+        The message will be emitted only if `ARGS.verbose` is at least as
+        large as the `verbosity` argument.
 
         `prefix` is printed right-justified in a fixed-width field,
         followed by a colon and the message in `args`. This helps commands
         and the like line up nicely to make scanning through the output
         easier.
     '''
-    global VERBOSITY
-    if verbosity <= VERBOSITY:
+    global ARGS
+    if verbosity <= ARGS.verbose:
         print('{:>8}:'.format(prefix), *args, **kwargs)
 
 def runtool(toolbin, *args, **kwargs):
@@ -430,6 +430,35 @@ def pytest(args):
 ####################################################################
 #   Top Level (Main)
 
+def parseargs():
+    ''' Parse arguments. If any of the arguments generate help messages,
+        this will also exit with an appropriate code.
+    '''
+    p = ArgumentParser(
+        description='Tool to build toolsets and code for 8-bit development.')
+    a = p.add_argument
+    a('-E', '--exclude',
+        help='for commands that do discovery, exclude these files/dirs')
+    a('--help-commands', action='store_true', help='print available commands')
+    a('-P', '--project-dir',
+        help='project directory; overrides B8_PROJDIR env var')
+    a('-v', '--verbose', action='count', default=0,
+        help='increase verbosity; may be used multiple times')
+    a('command', nargs='?',
+        help='command; --help-commands for a list')
+    a('args', nargs='*',
+        help="arguments to command (preceed with '--' to use args with '-')")
+
+    args = p.parse_args()
+    if args.help_commands:      help_commands(); exit(0)
+    if args.command is None:    p.print_help(); exit(0)
+    return args
+
+def help_commands():
+    print('{}: Command List'.format(sys.argv[0]))
+    for c in COMMANDS:
+        print('  {}'.format(c))
+
 COMMANDS = {
     'asl':      asl,        # Assemble program with Macroassembler AS
     'asltest':  asltest,    # Assemble unit test with Macroassembler AS
@@ -442,8 +471,13 @@ COMMANDS = {
 }
 
 if __name__ == '__main__':
+    global ARGS; ARGS = parseargs()
+
+    if ARGS.project_dir:    # override environment
+        path.B8_PROJDIR = path.strict_resolve(ARGS.project_dir)
     if path.B8_PROJDIR is None:
         raise RuntimeError('B8_PROJDIR not set')
+    vprint(1, 'projdir', str(path.proj()))
 
     #   Code common to several .pt files (including entire test suites) may
     #   be factored out into .py files that are imported by multiple .pt
@@ -458,8 +492,7 @@ if __name__ == '__main__':
 
     path.addbin(B8_HOME, 'bin')
 
-    #   XXX it's getting on time to use argparse
-    args = sys.argv[1:]   # make a copy without our program name
-    while args[0] == '-v': args.pop(0); VERBOSITY += 1
-    command = args.pop(0)
-    exit(COMMANDS[command](args))
+    cmdf = COMMANDS.get(ARGS.command)
+    if cmdf is None:
+        help_commands(); exit(2)
+    exit(cmdf(ARGS.args))

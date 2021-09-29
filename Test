@@ -65,9 +65,9 @@ $b8tool buildtoolset linapple
     $b8tool asx     src/asxxxx/simple.a65
     $b8tool asxlink src/asxxxx/simple simple
     $b8tool asx     src/asxxxx/reloctest.a65
-    $b8tool asxlink src/asxxxx/reloctest -b '_code=0x400'
+    $b8tool asxlink src/asxxxx/reloctest -- -b '_code=0x400'
     $b8tool asx     src/asxxxx/zptest.a65
-    $b8tool asxlink src/asxxxx/zptest -b '_code=0x0300'
+    $b8tool asxlink src/asxxxx/zptest -- -b '_code=0x0300'
 }
 
 ####################################################################

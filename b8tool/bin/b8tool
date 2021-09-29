@@ -254,6 +254,10 @@ def runasl(objdir, name, sourcecode):
         runtool('asl', *opts, srcfile, *endopts)
 
 def asl(args):
+    ' Call `asl1()` on each file in `args`. '
+    for src in args: asl1(src)
+
+def asl1(src):
     ''' Given a path to an assembler source file relative to `path.proj()`,
         generate an equivalent directory and under `path.obj()`, and invoke
         `runasl()` on a generated source file that includes the one given.
@@ -261,11 +265,7 @@ def asl(args):
         This works around various issues with ASL input and output file
         locations. See `runasl()` for details.
     '''
-    if len(args) != 1:
-        #   Can't think of any reason we'd ever want to supply > one arg.
-        raise ValueError('asl takes only one arg')
-
-    rsrc    = path.relproj(args[0])     # Used for assembler `include`
+    rsrc    = path.relproj(src)     # Used for assembler `include`
     src     = path.proj(rsrc)
     objdir  = path.obj(rsrc.parent)
     objfile = objdir.joinpath(rsrc.name).with_suffix('.p')
@@ -302,6 +302,67 @@ def asltest(args):
     objfile     = objdir.joinpath(ptfname).with_suffix('.p')
 
     runasl(objdir, ptfname, sandbox_loadmod(ptfile).test_rig)
+
+def aslauto(paths):
+    ''' Auto-discover and build ASL source files used by ``.pt`` files
+        under `paths`, except for those under sub-paths excluded with the
+        ``--exclude`` option.
+
+        ``.pt`` files will be loaded as Python modules and the final value
+        of the following global variables will be used to build sources:
+        * ``object_files``: a source file with extension ``.a*`` will be
+          found for each object file in the list and used to build that
+          object file with `asl1()`. If multiple source files match or no
+          matching source file can be found and error will be generated.
+        * ``test_rig``: An object file named for the `.pt` file will be
+          generated using using the code in ``test_rig`` by calling
+          `asltest()`.
+
+        XXX make this work for individual files
+    '''
+    if not paths:
+        paths = ('src',)
+
+    excludes_parts = tuple( path.proj(e).parts for e in ARGS.exclude )
+    def is_excluded(f):
+        for e in excludes_parts:
+            if e == f.parts[0:len(e)]:
+                vprint(1, 'build', 'excluded: {}'.format(path.pretty(f)))
+                return True
+        return False
+
+    asl_files = set()
+    asltest_files = set()
+    ptfiles = chain(*[ path.proj(p).rglob('*.pt') for p in paths ])
+    for f in ptfiles:
+        excluded = False
+        if is_excluded(f): continue
+        mod = sandbox_loadmod(f)
+        if hasattr(mod, 'test_rig'):
+            asltest_files.add(f)
+        if hasattr(mod, 'object_files'):
+            of = getattr(mod, 'object_files', None)
+            if isinstance(of, str):   # see conftest.py
+                asl_files.add(of)
+            else:
+                asl_files.update(of)
+
+    for obj in sorted(asl_files):
+        srcs = tuple(path.proj(obj).parent.glob(Path(obj).stem + '.a*'))
+        prettysrcs = list(map(path.pretty, srcs))   # list prints nicer
+        vprint(2, 'build', 'asl obj={} srcs={}'.format(obj, prettysrcs))
+        #   In theory we could build several `srcs` with the same name but
+        #   different extensions; in practice we don't support that due to
+        #   output file name collisions.
+        if len(srcs) == 1:
+            asl1(srcs[0])
+        else:
+            raise RuntimeError('Cannot find source for {} in {}' \
+                .format(obj, prettysrcs))
+
+    for pt in sorted(asltest_files):
+        vprint(2, 'build', 'asltest {}'.format(path.pretty(pt)))
+        asltest([pt])
 
 def asx(args):
     ''' Run ASXXXX assembler. Currently this always runs ``as6500``.
@@ -379,6 +440,10 @@ def asxlink(args):
         remove_formfeeds(objstem + '.map')
 
 def a2dsk(args):
+    ' Call `a2dsk1()` on each file in `args`. '
+    for src in args: a2dsk1(src)
+
+def a2dsk1(srcfile):
     ''' Assemble a program with Macroassembler AS and build a bootable
         Apple II ``.dsk`` image containing that program and a ``HELLO``
         that will run it. This calls `asl` to do the assembly; `args` will
@@ -387,7 +452,7 @@ def a2dsk(args):
         The program is typically run with something like::
 
             linapple --conf b8tool/share/linapple.conf \
-                 --d1 .build/obj/exe/a2/charset.dsk
+                --d1 .build/obj/exe/a2/charset.dsk
 
         XXX We should work out an option to do this automatically.
 
@@ -409,18 +474,18 @@ def a2dsk(args):
     #     currently usually come in as strings from command lines, but
     #     possibly Path objects from other code.
 
-    srcfile = args[0]
-    srcdir, name = os.path.split(str(srcfile))
-    name, _ = os.path.splitext(name)
+    #   XXX srcfile = path.proj(srcfile) breaks; this needs to be fixed
+    a2name = Path(srcfile).stem.upper()
+
     def binfile(ext=''):
-        return str(path.obj(srcdir, name)) + ext
+        return str(path.obj(srcfile).with_suffix(ext))
 
     #   Generate an Apple II 'B' file (machine language program)
-    asl(args)
+    asl1(srcfile)
     runtool('p2a2bin', binfile('.p'), stdout_path=binfile())
 
     #   Generate the Applesoft BASIC HELLO program to run the above.
-    bootprog = '10 PRINT CHR$(4);"BRUN {}"'.format(name.upper()).encode('ASCII')
+    bootprog = '10 PRINT CHR$(4);"BRUN {}"'.format(a2name).encode('ASCII')
     runtool('tokenize_asoft', input=bootprog, stdout_path=binfile('.HELLO'))
 
     #   Build a disk image with the above and a HELLO that willl run it.
@@ -429,7 +494,7 @@ def a2dsk(args):
     shutil.copyfile(str(baseimg), str(img))
     def dos33(*command):
         runtool('dos33', '-y', str(img), *command)
-    dos33('SAVE', 'B', binfile(), name.upper())
+    dos33('SAVE', 'B', binfile(), a2name)
     dos33('DELETE', 'HELLO')    # Avoids annoying SAVE overwrite warning.
     dos33('SAVE', 'A', binfile('.HELLO'), 'HELLO')
     #   Seems not required, but make sure HELLO is run on boot anyway.
@@ -473,8 +538,9 @@ def parseargs():
     p = ArgumentParser(
         description='Tool to build toolsets and code for 8-bit development.')
     a = p.add_argument
-    a('-E', '--exclude',
-        help='for commands that do discovery, exclude these files/dirs')
+    a('-E', '--exclude', default=[], action='append',
+        help='for commands that do discovery, exclude these files/dirs'
+             ' (can be specified multiple times)')
     a('--help-commands', action='store_true', help='print available commands')
     a('-P', '--project-dir',
         help='project directory; overrides B8_PROJDIR env var')
@@ -492,12 +558,13 @@ def parseargs():
 
 def help_commands():
     print('{}: Command List'.format(sys.argv[0]))
-    for c in COMMANDS:
+    for c in sorted(COMMANDS):
         print('  {}'.format(c))
 
 COMMANDS = {
-    'asl':      asl,        # Assemble program with Macroassembler AS
-    'asltest':  asltest,    # Assemble unit test with Macroassembler AS
+    'asl':      asl,        # Assemble single program with Macroassembler AS
+    'asltest':  asltest,    # Assemble single unit test with Macroassembler AS
+    'aslauto':  aslauto,    # Discover and build all ASL stuff in given dirs
     'asx':      asx,        # ASXXXX assembler
     'asxlink':  asxlink,    # ASXXXX linker
     'a2dsk':    a2dsk,      # Apple II .dsk image that boots and runs program
@@ -513,6 +580,8 @@ if __name__ == '__main__':
         path.B8_PROJDIR = path.strict_resolve(ARGS.project_dir)
     if path.B8_PROJDIR is None:
         raise RuntimeError('B8_PROJDIR not set')
+    vprint(1, '========',
+        'b8tool command={} args={}'.format(ARGS.command, ARGS.args))
     vprint(1, 'projdir', str(path.proj()))
 
     #   Code common to several .pt files (including entire test suites) may

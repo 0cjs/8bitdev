@@ -24,6 +24,7 @@
 
 from    collections  import namedtuple as ntup
 from    contextlib  import contextmanager
+from    itertools  import chain
 from    os.path  import abspath, dirname
 from    pathlib  import Path
 from    site  import addsitedir
@@ -69,6 +70,26 @@ def isa_from_path(path, return_none=False):
 ####################################################################
 #   Support routines
 
+VERBOSITY = 0
+def vprint(verbosity, prefix, *args, **kwargs):
+    ''' Print for a given verbosity level.
+
+        The message will be emitted only if the global `VERBOSITY` is at
+        least as large as the `verbosity` argument.
+
+        `prefix` is printed right-justified in a fixed-width field,
+        followed by a colon and the message in `args`. This helps commands
+        and the like line up nicely to make scanning through the output
+        easier.
+    '''
+    global VERBOSITY
+    if verbosity <= VERBOSITY:
+        print('{:>8}:'.format(prefix), *args, **kwargs)
+
+def runtool(toolbin, *args, **kwargs):
+    vprint(2, 'exec', ' '.join(chain([toolbin], args)))
+    run.tool(toolbin, *args, **kwargs)
+
 @contextmanager
 def cwd(target):
     ''' Change the current working directory to `target` for the duration of
@@ -81,6 +102,7 @@ def cwd(target):
     '''
     oldcwd = Path.cwd()
     target.mkdir(parents=True, exist_ok=True)
+    vprint(2, 'chdir', str(target))
     os.chdir(str(target))
     try:
         yield
@@ -103,12 +125,6 @@ def remove_formfeeds(filepath):
     '''
     f = Path(filepath)
     f.write_text(f.read_text().replace('\f', '\n'))
-
-VERBOSITY = 0
-def vprint(verbosity, *args, **kwargs):
-    global VERBOSITY
-    if verbosity <= VERBOSITY:
-        print(*args, **kwargs)
 
 ####################################################################
 #   Tool Set Builds
@@ -165,14 +181,14 @@ def runasl(objdir, name, sourcecode):
         things like test rig setup if the source code is assembling a test
         rig to be unit-tested.
     '''
-    vprint(1, 'runasl: name={} objdir={}'.format(name, path.pretty(objdir)))
+    vprint(1, 'runasl', 'name={} objdir={}'.format(name, path.pretty(objdir)))
 
     opts = [
         '-codepage', 'utf-8',
         '-qxx',
         '-U',                   # Case-sensitive symbols. This can be set
                                 # only with a command-line option.
-        '-i', path.proj(),
+        '-i', str(path.proj()),
         ]
     endopts = [ '-L', '-s', '-g', ]
 
@@ -184,7 +200,7 @@ def runasl(objdir, name, sourcecode):
         with open(srcfile, 'w', newline='\n') as f:
             f.write('    page 0\n')                     # Disable pagination
             f.write(sourcecode)
-        run.tool('asl', *opts, srcfile, *endopts)
+        runtool('asl', *opts, srcfile, *endopts)
 
 def asl(args):
     ''' Given a path to an assembler source file relative to `path.proj()`,
@@ -229,7 +245,7 @@ def asltest(args):
     #   but maybe duplicate code to keep that separable
 
     modname = ptfile_rel.stem + '_pt' # Just for debugging; never in sys.modules
-    vprint(1, 'asltest: modname={} path={}'.format(modname, ptfile_rel))
+    vprint(1, 'asltest', 'modname={} path={}'.format(modname, ptfile_rel))
     testmodule_path = path.proj(ptfile_rel)
     loader = importlib.machinery.SourceFileLoader(modname, str(testmodule_path))
     spec = importlib.util.spec_from_file_location(
@@ -272,8 +288,7 @@ def asx(args):
     objfile = objdir.joinpath(srcfile.stem)
 
     objdir.mkdir(parents=True, exist_ok=True)
-    run.tool('as6500', asmopts, str(objfile), str(srcfile), *args[2:],
-        is32bit=True)
+    runtool('as6500', asmopts, str(objfile), str(srcfile), *args[2:])
 
 def asxlink(args):
     ''' Link ASXXXX assembler output.
@@ -314,7 +329,7 @@ def asxlink(args):
     #   option parsing code.) The current behaviour isn't causing much
     #   pain, so this has not yet been fixed.
     with cwd(objdir):
-        run.tool('aslink', linkopts, objstem, *args[1:], is32bit=True)
+        runtool('aslink', linkopts, objstem, *args[1:], is32bit=True)
         remove_formfeeds(objstem + '.lst')
         remove_formfeeds(objstem + '.rst')
         remove_formfeeds(objstem + '.map')
@@ -358,18 +373,18 @@ def a2dsk(args):
 
     #   Generate an Apple II 'B' file (machine language program)
     asl(args)
-    run.tool('p2a2bin', binfile('.p'), stdout_path=binfile())
+    runtool('p2a2bin', binfile('.p'), stdout_path=binfile())
 
     #   Generate the Applesoft BASIC HELLO program to run the above.
     bootprog = '10 PRINT CHR$(4);"BRUN {}"'.format(name.upper()).encode('ASCII')
-    run.tool('tokenize_asoft', input=bootprog, stdout_path=binfile('.HELLO'))
+    runtool('tokenize_asoft', input=bootprog, stdout_path=binfile('.HELLO'))
 
     #   Build a disk image with the above and a HELLO that willl run it.
     baseimg = path.tool('src/diskimg/a2/EMPTY-DOS33-48K-V254.dsk')
     img     = binfile('.dsk')
     shutil.copyfile(str(baseimg), str(img))
     def dos33(*command):
-        run.tool('dos33', '-y', str(img), *command)
+        runtool('dos33', '-y', str(img), *command)
     dos33('SAVE', 'B', binfile(), name.upper())
     dos33('DELETE', 'HELLO')    # Avoids annoying SAVE overwrite warning.
     dos33('SAVE', 'A', binfile('.HELLO'), 'HELLO')

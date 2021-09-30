@@ -265,7 +265,7 @@ def asl(args):
         #   Can't think of any reason we'd ever want to supply > one arg.
         raise ValueError('asl takes only one arg')
 
-    rsrc    = Path(args[0])             # Used for assembler `include`
+    rsrc    = path.relproj(args[0])     # Used for assembler `include`
     src     = path.proj(rsrc)
     objdir  = path.obj(rsrc.parent)
     objfile = objdir.joinpath(rsrc.name).with_suffix('.p')
@@ -295,7 +295,7 @@ def asltest(args):
         #   Can't think of any reason we'd ever want to supply > one arg.
         raise ValueError('asltest takes only one arg')
 
-    ptfile_rel  = Path(args[0])             # includes .pt extension
+    ptfile_rel  = path.relproj(args[0])     # includes .pt extension
     ptfile      = path.proj(ptfile_rel)
     ptfname     = ptfile_rel.stem           # filename: no path, no extension
     objdir      = path.ptobj(ptfile_rel.parent)

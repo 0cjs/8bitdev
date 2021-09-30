@@ -10,6 +10,8 @@ def test_pretty():
     assert '/ff/bar' == pretty('/ff/bar')
     assert 'foo/bar' == pretty('foo/bar')
     assert 'foo/bar' == pretty(proj('foo/bar'))
+    assert 'None'    == pretty(None)
+    assert '3'       == pretty(3)
 
 def test_b8home_path_is_absolute():
     p = str(b8home('test'))

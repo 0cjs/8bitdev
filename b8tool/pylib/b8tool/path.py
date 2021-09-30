@@ -24,9 +24,28 @@
 '''
 
 from    pathlib  import Path
+from    platform import python_version
 import  os
 
-B8_PROJDIR = os.environ.get('B8_PROJDIR')
+def strict_resolve(p):
+    ''' Handle various forms of input for B8_PROJDIR and similar paths.
+        - If `None`, we just leave it as `None`.
+        - If not a `Path`, we make it one.
+        - Do a strict resolve (ensuring that the directory or file exists) in
+          both current (Python ≥3.6) and older (≤3.5) versions of the API.
+
+        XXX it might also be nice to generate a more precise exception
+        message on failure. Or perhaps we should exit with EX_NOINPUT (66)?
+    '''
+    if p is None:
+        return None
+    if python_version() < '3.6':
+        return Path(p).resolve()
+    else:
+        return Path(p).resolve(strict=True)
+
+B8_PROJDIR = strict_resolve(os.environ.get('B8_PROJDIR'))
+
 
 ####################################################################
 #   Public API for getting/creating paths
@@ -37,7 +56,7 @@ def proj(*components):
         Most other path functions eventually call this one.
     '''
     if B8_PROJDIR:
-        return Path(B8_PROJDIR, *components)
+        return B8_PROJDIR.joinpath(*components)
     else:
         raise NameError('B8_PROJDIR not set in environment')
 
@@ -51,20 +70,21 @@ def relproj(path):
     except ValueError:
         return Path(path)
 
-def pretty(s):
-    ''' If `s` is a path where `B8_PROJDIR` is its prefix, return, `s` with
-        that prefix and its slash removed, i.e. a relative path from
-        `B8_PROJDIR`. Otherwise return `s` unmodified. This reduces noise
-        when printing diagnostics while still giving complete path
-        information.
+def pretty(path):
+    ''' If `path` is a path under `B8_PROJDIR`, return, a `str` version of
+        the path relative to `B8_PROJDIR`. Otherwise return `str(path)`.
+        This reduces noise when printing diagnostics while still giving
+        complete path information.
 
-        This accepts plain `str` as well as `Path` objects.
+        This will never raise an exception for bad input unless `str(path)`
+        fails.
     '''
-    s = str(s)
-    if s.startswith(B8_PROJDIR + '/'):
-        return s[len(B8_PROJDIR)+1:]
-    else:
-        return s
+    try:
+        return str(Path(path).relative_to(B8_PROJDIR))
+    except (TypeError, ValueError):
+        #   TypeError: B8_PROJDIR (or possibly path) is None
+        #   ValueError: Path(path) is not below B8_PROJDIR
+        return str(path)
 
 def b8home(*components):
     ''' The path to the b8tool repo or installation.

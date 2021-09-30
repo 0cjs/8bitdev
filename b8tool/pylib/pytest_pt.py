@@ -67,6 +67,9 @@ def pt_pyimport(self, modname=None, ensuresyspath=True):
     modname = self.purebasename + '_pt'
     path = str(self)
 
+    #   The following somewhat duplicates other code in b8tool, but we want
+    #   to be able to extract this module and use it separately.
+
     #   If we are configured to use the assertion-rewriting loader
     #   (_pytest.assertion.rewrite.AssertionRewritingHook), use that
     #   to load the test code. Otherwise use the standard Python loader.

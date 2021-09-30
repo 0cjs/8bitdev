@@ -86,6 +86,57 @@ def vprint(verbosity, prefix, *args, **kwargs):
     if verbosity <= ARGS.verbose:
         print('{:>8}:'.format(prefix), *args, **kwargs)
 
+SANDBOX_MODULES = {}
+def sandbox_loadmod(modpath):
+    ''' Load `modpath` as a Python module and return it, but without
+        entering it into `sys.modules`. This is usually used for retrieving
+        values from test modules without having to figure out where they
+        might be integrated into the module hierarchy.
+
+        The loaded modules are cached with key `modpath` to re-running
+        them every time they are needed.
+
+        Modules that throw exceptions will abort the interpreter, as any
+        other code would. However, as special support for modules that use
+        ``pytest.skip(..., allow_module_level=True)``, if an exception is
+        thrown and its type name includes ``Skipped``, we do not raise the
+        exception and abort but instead carry on. (The module will be
+        evaluated up to that point.)
+    '''
+    #   We do our own caching instead of using functools.lru_cache so that
+    #   we set the key and log cache hits.
+    cache_key = path.pretty(modpath)
+    vprint(1, 'loadmod', 'path={}'.format(cache_key))
+
+    module = SANDBOX_MODULES.get(cache_key)
+    if module:
+        vprint(2, 'loadmod', '{} from cache'.format(module.__name__))
+        return module
+
+    #   The module name is used only for debugging, so make it simple.
+    modname = str(Path(modpath).name).translate(str.maketrans('.', '_'))
+    vprint(2, 'loadmod', 'loading as {}'.format(modname))
+    loader = importlib.machinery.SourceFileLoader(modname, str(modpath))
+    spec = importlib.util.spec_from_file_location(
+        modname, str(modpath), loader=loader)
+    if spec is None:
+        #   This should never happen; if it does most likely we mucked up
+        #   our loader setup or something like that.
+        raise ImportError(
+            "Can't create spec for module %s at location %s" % (modname, path))
+    module = importlib.util.module_from_spec(spec)
+    try:
+        spec.loader.exec_module(module)
+    except BaseException as ex:
+        vprint(2, 'loadmod', 'module exec exception={} {}' \
+            .format(type(ex), getattr(ex, 'msg', '<no `msg` attribute>')))
+        if 'Skipped' in str(type(ex)):  # hack for pytest module skips
+            vprint(2, 'loadmod', 'pytest `Skipped`')
+        else:
+            raise
+    SANDBOX_MODULES[cache_key] = module
+    return module
+
 def runtool(toolbin, *args, **kwargs):
     vprint(2, 'exec', ' '.join(chain([toolbin], args)))
     run.tool(toolbin, *args, **kwargs)
@@ -250,22 +301,7 @@ def asltest(args):
     objdir      = path.ptobj(ptfile_rel.parent)
     objfile     = objdir.joinpath(ptfname).with_suffix('.p')
 
-    #   XXX copied from b8tool/pylib/pytest_pt.py
-    #   but maybe duplicate code to keep that separable
-    modname = ptfname + '_pt' # Just for debugging; never in sys.modules
-    vprint(1, 'asltest', 'modname={} path={}' \
-        .format(modname, path.pretty(ptfile)))
-    loader = importlib.machinery.SourceFileLoader(modname, str(ptfile))
-    spec = importlib.util.spec_from_file_location(
-        modname, str(ptfile), loader=loader)
-    if spec is None:
-        #   This should never happen; if it does most likely we mucked up
-        #   our loader setup or something like that.
-        raise ImportError(
-            "Can't create spec for module %s at location %s" % (modname, path))
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    runasl(objdir, ptfname, module.test_rig)
+    runasl(objdir, ptfname, sandbox_loadmod(ptfile).test_rig)
 
 def asx(args):
     ''' Run ASXXXX assembler. Currently this always runs ``as6500``.

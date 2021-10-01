@@ -219,12 +219,6 @@ def asl(args):
     objdir  = path.obj(rsrc.parent)
     objfile = objdir.joinpath(rsrc.name).with_suffix('.p')
 
-    if objfile.exists():
-        if objfile.stat().st_mtime > src.stat().st_mtime:
-            vprint(1, 'asl', '{} newer than {}, skipping' \
-                .format(path.pretty(objfile), rsrc))
-            return
-
     runasl(objdir, rsrc.stem, '    include "{}"'.format(rsrc))
 
 def asltest(args):
@@ -255,12 +249,6 @@ def asltest(args):
     ptfname     = ptfile_rel.stem           # filename: no path, no extension
     objdir      = path.ptobj(ptfile_rel.parent)
     objfile     = objdir.joinpath(ptfname).with_suffix('.p')
-
-    if objfile.exists():
-        if objfile.stat().st_mtime > ptfile.stat().st_mtime:
-            vprint(1, 'asltest', '{} newer than {}, skipping' \
-                .format(path.pretty(objfile), path.pretty(ptfile)))
-            return
 
     #   XXX copied from b8tool/pylib/pytest_pt.py
     #   but maybe duplicate code to keep that separable

@@ -94,4 +94,4 @@ $b8tool asl \
     --
 $b8tool a2dsk exe/a2/charset.a65
 
-$b8tool pytest "$@"
+$b8tool pytest -- "$@"

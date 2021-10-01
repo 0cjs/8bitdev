@@ -51,6 +51,14 @@ export B8_PROJDIR=$(cd "$(dirname "$0")" && pwd -P)
 export BUILDDIR="$B8_PROJDIR/.build"
 all_tools="$B8_PROJDIR/.all-tools"
 
+#   Creating this file is useful to slightly speed the edit/build/test
+#   cycle when working on "regular" ASL code; the toolsets and asxxx builds
+#   are the majority of the wall clock time when running only a few tests.
+#   This file is never ignored or committed so `git status` will make it
+#   clear you're not building everything that might be changed.
+#   XXX This can go when we move more stuff into a single b8tool invocation.
+fast_hack="$B8_PROJDIR/.fast-hack"
+
 b8tool="$B8_PROJDIR/b8tool/bin/b8tool"
 b8_plib="$B8_PROJDIR/b8tool/pylib"      # used locally; not part of b8tool
 
@@ -69,10 +77,10 @@ esac; done
 
 checkpy; . $B8_PROJDIR/activate -q -p "$py"
 
-build_toolsets
+[[ -f $fast_hack ]] || build_toolsets
 [[ $PATH =~ ^$B8_PROJDIR/bin:|:$B8_PROJDIR/bin:|:$B8_PROJDIR/bin$ ]] \
     || export PATH="$B8_PROJDIR/bin:$PATH"
-build_asxxxx
+[[ -f $fast_hack ]] || build_asxxxx
 
 $b8tool aslauto exe/ src/ --exclude=src/asxxxx/
 #   Top-level programs whose build is not triggered by automated tests.

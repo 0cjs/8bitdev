@@ -138,7 +138,8 @@ qsym1       ldy #1          ; character after current one
 ;   XXX Todo:
 ;   • add check against pstk_limit?
 ;
-read
+read        ldx #pstk_org-2 ; first entry on parse stack
+            jsr hcalloc     ;   points to cons cell that is root of Sexpr
             rts
 
             end

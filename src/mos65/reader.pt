@@ -132,9 +132,49 @@ def testq(m, R, S, qf, value, success, consumed, input):
     assert (flags,   start + consumed,          value) \
         == (m.regs, m.word(S.q_point), m.word(S.value))
 
-def test_full_parse(m, R, S):
-    qset(m, b'(a () (b c))')
+def hcalloc_addrs(m, n):
+    ' Return a list of the first _n_ addresses allocated by ``hcalloc``. '
+    org   = m.symtab.hc_org
+    size  = 4
+    start = org - (n * size)
+    return tuple(range(org - size, start - size, -size))
+
+def test_read(m, R, S):
+    qset(m, b'(a () (b c) d)')
+    #         ││ k
+    #         ││
+    #         │└────────── pstk[0].car
+    #         └─────────── pstk[0] → $7FFC cons cell
+
     m.call(S.read)
-    def b(sym): return m.byte(sym)
-    assert (S.pstk_org - 2, ) \
-        == ( b(S.pstk_ptr), )
+
+    def b(addr): return m.byte(addr)
+    def car(addr): return m.word(addr)
+    def cdr(addr): return m.word(addr+2)
+
+    nil = 0
+    #   First three addresses on parse stack.
+    p0, p1, p2 = S.pstk_org - 2, S.pstk_org - 4, S.pstk_org - 6
+    #   First seven addresses allocated in heap
+    a0, a1, a2, a3, a4, a5, a6 = hcalloc_addrs(m, 7)
+
+    #   Data structure as (location, value) pairs:
+    actual, expected = zip(*(
+        ( m.regs.x, p0          ),  # one entry left on parse stack,
+        (  car(p0), a0          ),  # pointing to first alloc
+        (  car(a0), sym1('a')   ),  # list[0] = 'a
+        (  cdr(a0), a1          ),
+        (  car(a1), nil         ),  # list[1] = nil
+        (  cdr(a1), a2          ),
+        (  car(a2), a3          ),  # list[2] = sublist
+
+        (  car(a3), sym1('b')   ),  # sublist[0] = 'b
+        (  cdr(a3), a4          ),
+        (  car(a4), sym1('c')   ),  # sublist[1] = 'c
+        (  cdr(a4), nil         ),
+
+        (  cdr(a2), a5          ),
+        (  car(a5), sym1('d')   ),  # list[3] = 'd
+        (  cdr(a5), nil         ),
+    ))
+    assert actual == expected           # diff prints as -expected, +actual

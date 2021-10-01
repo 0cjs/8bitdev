@@ -362,7 +362,7 @@ def a2dsk(args):
 
         The program is typically run with something like::
 
-            linapple --conf tool/linapple/linapple.conf \
+            linapple --conf b8tool/share/linapple.conf \
                 --d1 .build/obj/exe/a2/charset.dsk
 
         XXX We should work out an option to do this automatically.

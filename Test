@@ -19,6 +19,32 @@ checkpy() {
 }
 
 ####################################################################
+#   Build functions
+
+build_toolsets() {
+    [[ -f $all_tools ]] && $b8tool buildtoolset asxxxx
+    $b8tool buildtoolset asl
+    $b8tool buildtoolset diskimg
+    $b8tool buildtoolset dos33fs
+    $b8tool buildtoolset linapple
+}
+
+#   ASxxxx builds
+#   Due to issues with 32-bit binaries, run only when $all_tools set.
+build_asxxxx() {
+    [[ -f $all_tools ]] || return 0
+    #   Though we don't need to explicitly specify `simple` as an input
+    #   file for the link (aslink would get it from the output file) we
+    #   do so anyway to test that b8tool handles it correctly.
+    $b8tool asx     src/asxxxx/simple.a65
+    $b8tool asxlink src/asxxxx/simple simple
+    $b8tool asx     src/asxxxx/reloctest.a65
+    $b8tool asxlink src/asxxxx/reloctest -- -b '_code=0x400'
+    $b8tool asx     src/asxxxx/zptest.a65
+    $b8tool asxlink src/asxxxx/zptest -- -b '_code=0x0300'
+}
+
+####################################################################
 #   Main
 
 export B8_PROJDIR=$(cd "$(dirname "$0")" && pwd -P)
@@ -43,38 +69,12 @@ esac; done
 
 checkpy; . $B8_PROJDIR/activate -q -p "$py"
 
-[[ -f $all_tools ]] && $b8tool buildtoolset asxxxx
-$b8tool buildtoolset asl
-$b8tool buildtoolset diskimg
-$b8tool buildtoolset dos33fs
-$b8tool buildtoolset linapple
+build_toolsets
 [[ $PATH =~ ^$B8_PROJDIR/bin:|:$B8_PROJDIR/bin:|:$B8_PROJDIR/bin$ ]] \
     || export PATH="$B8_PROJDIR/bin:$PATH"
-
-#   In the following builds we have no dependency graph, so everything is
-#   rebuilt each time. Fortunately this is quite fast.
-
-####################################################################
-#   ASxxxx builds
-#   Due to issues with 32-bit binaries, run only when $all_tools set.
-
-[[ -f $all_tools ]] && {
-    #   Though we don't need to explicitly specify `simple` as an input
-    #   file for the link (aslink would get it from the output file) we
-    #   do so anyway to test that b8tool handles it correctly.
-    $b8tool asx     src/asxxxx/simple.a65
-    $b8tool asxlink src/asxxxx/simple simple
-    $b8tool asx     src/asxxxx/reloctest.a65
-    $b8tool asxlink src/asxxxx/reloctest -- -b '_code=0x400'
-    $b8tool asx     src/asxxxx/zptest.a65
-    $b8tool asxlink src/asxxxx/zptest -- -b '_code=0x0300'
-}
-
-####################################################################
-#   AS builds
+build_asxxxx
 
 $b8tool aslauto exe/ src/ --exclude=src/asxxxx/
-
 #   Top-level programs whose build is not triggered by automated tests.
 $b8tool asl \
     src/asl/nomacro.a65 \
@@ -85,8 +85,5 @@ $b8tool asl \
     exe/tmc68/hello.a68 exe/tmc68/pmon.a68 \
     --
 $b8tool a2dsk exe/a2/charset.a65
-
-####################################################################
-#   Tests
 
 $b8tool pytest "$@"

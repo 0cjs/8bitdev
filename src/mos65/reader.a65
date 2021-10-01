@@ -137,10 +137,55 @@ qsym1       ldy #1          ; character after current one
 ;
 ;   XXX Todo:
 ;   • add check against pstk_limit?
+;   • to keep things simple, it must be a list
 ;
-read        ldx #pstk_org-2 ; first entry on parse stack
-            jsr hcalloc     ;   points to cons cell that is root of Sexpr
-            rts
+read        brk
+            ldx #pstk_org-2 ; first entry on parse stack
+            jsr qlist       ;    points to first cons cell of list
+            bne .rts        ; if can't parse a list, Z=0 and return failure
+
+            dex             ; push parse stack
+            dex
+            lda 3,X         ; copy pointer to allocated cons cell
+            sta 1,X         ;   to new stack entry
+            lda 2,X
+            sta 0,X
+
+.inlist     ;   We're appending items to a list and the top of the parse
+            ;   stack (X) points to a freshly allocated cons.
+            jsr qIXatom       ; can we parse an atom to [0,X] ?
+            bne .startlist  ; no, we must be starting a list
+            jsr inc2Xptr    ; increment the pointer to point to the cdr
+            jsr qendlist    ; are we at the end of the list?
+            bne .nextatom   ; no, prepare to parse another atom
+
+.endlist    ;   Finish this list
+            ;   Parse stack (X) points to cdr of final element.
+            lda #nil        ; nil intrinsic constant MSB and LSB
+            sta (0,X)       ; set cdr LSB
+            jsr inc1Xptr
+            sta (0,X)       ; set cdr MSB
+            ;   Pop the parse stack and terminate if done.
+            inx
+            inx
+            cpx #pstk_org-2 ; did we pop off last working element?
+            bne .inlist     ; no, carry on with this stacked list
+.rts        rts             ; yes, X=1 return success
+
+            ;   We know we're going to parse another atom, so allocate
+            ;   a cons cell for it and append it to the list.
+.nextatom   jsr hcXalloc    ; no, allocate next cell for next parse
+                            ;   putting address in cdr of current cell
+            lda (0,X)
+            tay             ; Y = cdr LSB
+            jsr inc1Xptr
+            lda (0,X)       ; A = cdr MSB
+            sta 1,X         ; replace current stack entry with pointer
+            tya             ;   to new cell
+            sta 1,X
+            clc
+            bcc .inlist     ; and do next atom
+
 
             end
 ----------------------------------------------------------------------

@@ -57,7 +57,7 @@ b8_plib="$B8_PROJDIR/b8tool/pylib"      # used locally; not part of b8tool
 #   • -A: build and use all tools
 #   All args after these are passed on to pytest.
 while [[ ${#@} -gt 0 ]]; do case "$1" in
-    -C)     shift; rm -rf "$BUILDDIR";;
+    -C)     shift; rm -rf "$BUILDDIR" $fast_hack;;
     -c)     shift; rm -rf "$BUILDDIR"/{obj,ptobj,pytest,virtualenv};;
     -A)     shift; touch "$all_tools";;
     *)      break;;

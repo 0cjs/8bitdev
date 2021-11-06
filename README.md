@@ -32,11 +32,11 @@ Files:
 - [`README.md`]: This file.
 - [`Test`]: Installs third-party tools where necessary, builds the code and
   runs the unit tests. (Bash.)
-- [`activate`]: When sourced in Bash (`. ./activate`) activates the Python
+- [`pactivate`]: When sourced in Bash (`. ./pactivate`) activates the Python
   virtual environment, building a new one (and installing the packages
   listed in [`requirements.txt`], such as py65 and pytest) if necessary. You
   can also directly run programs in the virtual environment without
-  separately starting it by running them from `.build/virtualenv/bin/`.
+  separately activating it by running them from `.build/virtualenv/bin/`.
   Deactivate the virtual environment with `deactivate`.
 
 Directories:
@@ -182,10 +182,10 @@ Execution:
 
 [`README.md`]: README.md
 [`Test`]: Test
-[`activate`]: activate
 [`bin/`]: bin/
 [`exe/`]: exe/
 [`lib/testmc/`]: lib/testmc/
+[`pactivate`]: https://github.com/0cjs/pactivate
 [`requirements.txt`]: requirements.txt
 [`src/`]: src/
 [`tmp/`]: tmp/

@@ -1,0 +1,99 @@
+#   pactivate v0.2  https://github.com/0cjs/pactivate
+
+[ -n "$BASH_VERSION" ] || { echo 1>&2 "source (.) this with Bash."; exit 9; }
+#   https://stackoverflow.com/a/28776166/107294
+(return 0 2>/dev/null) \
+    || { echo 1>&2 "source (.) pactivate with Bash."; exit 9; }
+
+__pa_cleanup() {
+    unset __pa_cleanup __pa_echo \
+        __pa_builddir __pa_quiet __pa_python __pa_python_deref __pa_pyver \
+        __pa_bootdir __pa_basedir __pa_requirements
+}
+__pa_echo() { [[ -n $__pa_quiet ]] || echo "$@"; }
+
+__pa_basedir=$(cd "$(dirname "$BASH_SOURCE")" && pwd -P)
+__pa_builddir=
+__pa_quiet=
+while [[ $# -gt 0 ]]; do case "$1" in
+    -b) shift; __pa_builddir="$1"; shift;;
+    -B) shift; __pa_basedir="$1"; shift;;
+    -q) shift; __pa_quiet=-q;;
+    *)  echo 1>&2 "pactivate: unknown argument: $1"; __pa_cleanup; return 2;;
+esac; done;
+
+__pa_python=python3     # XXX should default to `py` for Windows
+#   Even if it's a dangling link (-e fails) we use it so that user sees error.
+[[ -e $__pa_basedir/.python || -L $__pa_basedir/.python ]] \
+    && __pa_python=$__pa_basedir/.python
+"$__pa_python" --version >/dev/null 2>&1 || {
+    [[ -L $__pa_python ]] \
+        && echo "$__pa_python -> $(readlink "$__pa_python")"
+    $__pa_python --version || true      # Display the suppressed error message
+    echo 1>&2 "pactivate: bad python interpreter"
+    __pa_cleanup; return 3
+}
+#   $__pa_pyver is empty for "modern" versions of Python (i.e., those that
+#   can use the current get-pip.py, 3.6 and above) and otherwise is the
+#   major.minor revision number, suitable for use in the URL to download
+#   an alternate version of get-pip.py.
+__pa_pyver=$("$__pa_python" -c '
+from platform import *;
+if (python_version() < "3.6"):
+    print("{}.{}".format(*python_version_tuple()))
+')
+
+__pa_requirements="$__pa_basedir/requirements.txt"
+
+[[ -z $__pa_builddir ]] && __pa_builddir=$(cd "$__pa_basedir" && pwd -P)/.build
+
+__pa_bootdir="$__pa_builddir/bootstrap/pactivate${__pa_pyver}"
+mkdir -p "$__pa_bootdir"    # also ensures that $__pa_builddir exists
+
+[[ -x $__pa_bootdir/bin/pip ]] || {
+    echo "----- Installing bootstrap pip (ver=${__pa_pyver:-latest})"
+    curl ${__pa_quiet:+--silent} \
+        "https://bootstrap.pypa.io/pip/$__pa_pyver/get-pip.py" \
+        | "$__pa_python" - $__pa_quiet -t "$__pa_bootdir"
+    PYTHONPATH="$__pa_bootdir" "$__pa_bootdir/bin/pip" --version
+}
+
+[[ -d $__pa_bootdir/virtualenv/ ]] || {
+    echo '----- Installing bootstrap virtualenv'
+    PYTHONPATH="$__pa_bootdir" "$__pa_bootdir/bin/pip" \
+        $__pa_quiet install -t "$__pa_bootdir" virtualenv
+}
+
+[[ -d $__pa_builddir/virtualenv/ ]] || {
+    echo '----- Building virtualenv'
+    echo -n "Using $__pa_python"
+    if [[ -L $__pa_python ]]; then
+        #   MacOS readlink has no -f option, so we must do this the hard
+        #   way. Fortunately we already know that the binary exists and is
+        #   a Python interpreter.
+        __pa_python_deref=$(readlink "$__pa_python")
+        __pa_python_deref=$(cd "$__pa_basedir" \
+            && cd $(dirname "$__pa_python_deref") \
+            && pwd -P)/$(basename "$__pa_python_deref")
+        echo " -> $__pa_python_deref"
+    else
+        __pa_python_deref="$__pa_python"
+        echo
+    fi
+    echo -n "Version: " && "$__pa_python" --version
+    PYTHONPATH="$__pa_bootdir" "$__pa_python_deref" -s -m virtualenv \
+        $__pa_quiet --prompt $(dirname "$__pa_basedir") \
+        "$__pa_builddir/virtualenv/" \
+    && [[ -f "$__pa_requirements" ]] \
+    && "$__pa_builddir/virtualenv/bin/pip" \
+        install $__pa_quiet -r "$__pa_requirements"
+}
+
+cmp -s $(type -p "$__pa_python") "$__pa_builddir/virtualenv/bin/python" || (
+    ve=$("$__pa_builddir"/virtualenv/bin/python --version 2>&1)
+    pa=$("$__pa_python" --version 2>&1)
+    echo 1>&2 "WARNING: virtualenv/bin/python ($ve) is not $__pa_python ($pa)"
+    )
+
+. "$__pa_builddir"/virtualenv/*/activate
+__pa_cleanup

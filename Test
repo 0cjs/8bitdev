@@ -7,17 +7,6 @@ die() {
     exit $exitcode
 }
 
-#   If $py is unset, set it to a reasonable default. Either way, confirm
-#   that it appears to be a Python 3 interpreter.
-#
-checkpy() {
-    : ${py:=python3}
-    #   stderr not redirected here so user sees any error from run attempt.
-    "$py" --version >/dev/null || die 2 "Bad Python interpreter: $py"
-    local v=$("$py" --version 2>&1 | head -1)
-    [[ $v = 'Python 3.'* ]] || die 2 "Bad Python version: $v"
-}
-
 ####################################################################
 #   Build functions
 
@@ -69,13 +58,12 @@ b8_plib="$B8_PROJDIR/b8tool/pylib"      # used locally; not part of b8tool
 #   All args after these are passed on to pytest.
 while [[ ${#@} -gt 0 ]]; do case "$1" in
     -C)     shift; rm -rf "$BUILDDIR";;
-    -c)     shift; rm -rf "$BUILDDIR"/{obj,ptobj,pytest};;
+    -c)     shift; rm -rf "$BUILDDIR"/{obj,ptobj,pytest,virtualenv};;
     -A)     shift; touch "$all_tools";;
-    -p)     shift; py="$1"; shift;;
     *)      break;;
 esac; done
 
-checkpy; . $B8_PROJDIR/activate -q -p "$py"
+. $B8_PROJDIR/pactivate -q
 
 [[ -f $fast_hack ]] || build_toolsets
 [[ $PATH =~ ^$B8_PROJDIR/bin:|:$B8_PROJDIR/bin:|:$B8_PROJDIR/bin$ ]] \

@@ -3,4 +3,5 @@ __pycache__/
 /.all-tools
 /.build/
 /.download/
+/.python
 /tmp/

@@ -32,8 +32,8 @@ Files:
 - [`README.md`]: This file.
 - [`Test`]: Installs third-party tools where necessary, builds the code and
   runs the unit tests. (Bash.)
-- [`pactivate`]: When sourced in Bash (`. ./pactivate`) activates the Python
-  virtual environment, building a new one (and installing the packages
+- [`b8tool/pactivate`]: When sourced in Bash (`. ./pactivate`) activates the
+  Python virtual environment, building a new one (and installing the packages
   listed in [`requirements.txt`], such as py65 and pytest) if necessary. You
   can also directly run programs in the virtual environment without
   separately activating it by running them from `.build/virtualenv/bin/`.

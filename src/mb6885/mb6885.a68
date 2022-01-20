@@ -1,0 +1,16 @@
+;   6800 code to be tested on Hitachi MB-6885
+
+                cpu 6800
+
+                org $3000
+
+;   Sample routine to write a number into memory.
+;
+;   In monitor (`MON`), `M` `3000` and type in assembled data, `G` `3000`
+;   to run, then `D` `3000` to see the result changed at $3010.
+;
+writeEE         ldaa #$EE
+                staa $3010
+                swi
+
+.exit           rts

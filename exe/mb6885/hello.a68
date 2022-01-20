@@ -1,0 +1,24 @@
+;   "Hello, world" for MB-6885
+;
+;   This uses the default stack configuration.
+;   It ignores (we hope) the invalid opcode $02 at the end and continues
+;   on to the RTS, which returns to the monitor.
+
+            cpu 6800
+            include "src/mc68/std.a68"
+
+;   Place this 4K below the end of RAM.
+;
+;   The following will set RAMEND to $2FFF to prevent
+;   BASIC from overwriting the code.
+;
+;   POKE $08,$2F,$FF:NEW
+;
+            org $3000
+            jmp start
+
+            include "src/mb6885/bios.a68"
+start
+            include "src/mc68/hello.a68"
+            end hello
+            swi

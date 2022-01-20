@@ -1,0 +1,15 @@
+;   Hitachi MB-6885 BIOS definitions
+;
+;   For more information, see the MB-6885 manual
+;
+
+prnl            ldaa #$0D
+                ; jsr  prchar
+                ; rts
+                jmp prchar
+;rdchar          equ $F012
+rdchar          ldaa $9C    ; checker-board pattern for cursor
+                jmp $F012
+prchar          equ $F015
+
+errbeep         rts

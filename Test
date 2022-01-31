@@ -71,15 +71,22 @@ esac; done
 [[ -f $fast_hack ]] || build_asxxxx
 
 $b8tool aslauto exe/ src/ --exclude=src/asxxxx/
-#   Top-level programs whose build is not triggered by automated tests.
-$b8tool asl \
-    src/asl/nomacro.a65 \
-    exe/a1/charset.a65 \
-    src/a2/misc.a65 \
-    src/fm7.a69 \
-    exe/jr200/hello.a68 exe/jr200/pmon.a68 src/jr200/jr200.a68 \
-    exe/tmc68/hello.a68 exe/tmc68/pmon.a68 \
-    --
+manual_build=(
+    #   Top-level programs whose build is not triggered by automated tests.
+    src/asl/nomacro.a65         # Test/demo for ASL macro expansion
+    exe/a1/charset.a65
+    src/a2/misc.a65
+    src/fm7.a69
+    src/jr200/jr200.a68 exe/jr200/hello.a68 exe/jr200/pmon.a68
+    exe/tmc68/hello.a68 exe/tmc68/pmon.a68
+)
+$b8tool asl "${manual_build[@]}"
+
+#   This builds an Apple II disk image from an AS source file. Probably
+#   this should be in smaller steps so we can extend the idea to building
+#   output for other microcomputers where we may want, e.g., a raw file
+#   for an emulator, a tape image with that file, and a disk image with
+#   that file that autoboots, all from the same build.
 $b8tool a2dsk exe/a2/charset.a65
 
 $b8tool pytest -- "$@"

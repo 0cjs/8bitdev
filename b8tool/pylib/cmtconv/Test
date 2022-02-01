@@ -156,7 +156,9 @@ cmtconv="$basedir/bin/cmtconv"
 . "$projdir"/b8tool/pactivate -q -B "$projdir"
 
 ttdir="$projdir/.build/cmtconv-test"
-mkdir -p $ttdir
+#   We remove all temporary files and results from previous runs to avoid
+#   potentially false test results or developer confusion when debugging.
+rm -rf "$ttdir"; mkdir -p "$ttdir"
 cd $ttdir       # In case anything's trying to read or write random files.
 
 test_ptowav

@@ -14,14 +14,14 @@ set -eu -o pipefail
 
 die() { echo 2>&1 FAILURE: "$@"; exit 1; }
 
+#   This test's output file is also used by wavtodump().
 test_ptowav() {
     echo ====================================
-    #   XXX hello.p below needs to be committed as test data, rather than
-    #   relying on the project having built it from source.
-    "$cmtconv" -p jr200 -f hello -i obj $projdir/.build/obj/exe/jr200/hello.p \
-        $ttdir/hello.wav \
+    "$cmtconv" -p jr200 -f hello -i obj $libdir/_testfiles/jr200.p \
+        $ttdir/jr200.wav \
         || die run jr-200-obj-to-audio
-    file $ttdir/hello.wav | grep -s 'mono 44100 Hz' || die ofile jr200-obj-to-audio
+    file $ttdir/jr200.wav | grep -s 'mono 44100 Hz' \
+        || die ofile jr200-obj-to-audio
 }
 
 test_cjrtowav() {
@@ -50,14 +50,14 @@ ____
 
 test_wavtodump() {
     echo ====================================
-    "$cmtconv" -p jr200 -o bin $ttdir/hello.wav $ttdir/hello.dump \
+    "$cmtconv" -p jr200 -o bin $ttdir/jr200.wav $ttdir/jr200.dump \
         || die run jr-200-tape-dump
-    cat > $ttdir/hello.dump.expected <<_____
+    cat > $ttdir/jr200.dump.expected <<_____
 00000000: bd f0 0f ce 70 1d 8d 1d bd e8 fe 81 03 27 09 81  ....p........'..
 00000010: 0d 27 ed bd eb e7 20 f0 bd f0 0f 02 39 48 65 6c  .'.... .....9Hel
 00000020: 6c 6f 3a 20 00 a6 00 27 06 bd eb e7 08 20 f6 39  lo: ...'..... .9
 _____
-    xxd -g1 $ttdir/hello.dump | diff -u $ttdir/hello.dump.expected - \
+    xxd -g1 $ttdir/jr200.dump | diff -u $ttdir/jr200.dump.expected - \
         || die ofile jr-200-tape-dump
 }
 
@@ -145,6 +145,7 @@ ____
 
 ####################################################################
 
+libdir=$(cd "$(dirname "$0")" && pwd -P)
 basedir=$(cd "$(dirname "$0")/../.." && pwd -P)
 cmtconv="$basedir/bin/cmtconv"
 

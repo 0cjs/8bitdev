@@ -48,7 +48,8 @@ all_tools="$B8_PROJDIR/.all-tools"
 #   XXX This can go when we move more stuff into a single b8tool invocation.
 fast_hack="$B8_PROJDIR/.fast-hack"
 
-b8tool="$B8_PROJDIR/b8tool/bin/b8tool"
+b8bin="$B8_PROJDIR/b8tool/bin"
+b8tool="$b8bin/b8tool"
 b8_plib="$B8_PROJDIR/b8tool/pylib"      # used locally; not part of b8tool
 
 #   Leading command line args (these must be at the start):
@@ -89,6 +90,15 @@ $b8tool asl "${manual_build[@]}"
 #   for an emulator, a tape image with that file, and a disk image with
 #   that file that autoboots, all from the same build.
 $b8tool a2dsk exe/a2/charset.a65
+
+#   Various other builds of things from .p files.
+#   Not yet figured out how this should be integrated into b8tool.
+
+objdir="$BUILDDIR/obj"
+"$b8bin/cmtconv" -p jr200 -i obj \
+    -f HELLO "$objdir/exe/jr200/hello.p" "$objdir/exe/jr200/hello.wav"
+"$b8bin/cmtconv" -p mb6885 -i obj \
+    -f HELLO.B "$objdir/exe/mb6885/hello.p" "$objdir/exe/mb6885/hello.wav"
 
 #   Unit Tests
 $b8tool pytest -- "$@"

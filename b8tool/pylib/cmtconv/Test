@@ -18,7 +18,7 @@ die() { echo 2>&1 FAILURE: "$@"; exit 1; }
 #   This test's output file is also used by wavtodump().
 test_ptowav() {
     qecho ====================================
-    "$cmtconv" -p jr200 -f hello -i obj $libdir/_testfiles/jr200.p \
+    "$cmtconv" $verbose -p jr200 -f hello -i obj $libdir/_testfiles/jr200.p \
         $ttdir/jr200.wav \
         || die run jr-200-obj-to-audio
     file $ttdir/jr200.wav | grep $quiet -s 'mono 44100 Hz' \
@@ -43,7 +43,7 @@ test_cjrtowav() {
     02 2A FF FF   00 00
         00
 ____
-    "$cmtconv" -p jr200 $ttdir/2.cjr $ttdir/2.wav \
+    "$cmtconv" $verbose -p jr200 $ttdir/2.cjr $ttdir/2.wav \
         || die run jr200-cjr-to-audio
     file $ttdir/2.wav | grep $quiet -s 'mono 44100 Hz' \
         || die ofile jr200-cjr-to-audio
@@ -51,7 +51,7 @@ ____
 
 test_wavtodump() {
     qecho ====================================
-    "$cmtconv" -p jr200 -o bin $ttdir/jr200.wav $ttdir/jr200.dump \
+    "$cmtconv" $verbose -p jr200 -o bin $ttdir/jr200.wav $ttdir/jr200.dump \
         || die run jr-200-tape-dump
     cat > $ttdir/jr200.dump.expected <<_____
 00000000: bd f0 0f ce 70 1d 8d 1d bd e8 fe 81 03 27 09 81  ....p........'..
@@ -65,7 +65,7 @@ _____
 test_cmtconv_cas2bin() {
     local ofile=$ttdir/5.cas.bin
     qecho ====================================
-    "$cmtconv" -o bin $ttdir/2.cjr $ofile
+    "$cmtconv" $verbose -o bin $ttdir/2.cjr $ofile
     echo >$ofile.expected "aa55aa55"
     xxd -ps $ofile | diff -u $ofile.expected -
 }
@@ -73,7 +73,7 @@ test_cmtconv_cas2bin() {
 test_cmtconv_bin2cas() {
     local ofile=$ttdir/c.bin.cas
     qecho ====================================
-    echo 'ABCDEFGH' | "$cmtconv" -i bin -f PROG -l 0x8AA - $ofile
+    echo 'ABCDEFGH' | "$cmtconv" $verbose -i bin -f PROG -l 0x8AA - $ofile
     cat > $ofile.expected <<_____
 00000000: 02 2a 00 1a ff ff 50 52 4f 47 00 00 00 00 00 00  .*....PROG......
 00000010: 00 00 00 00 00 00 01 00 ff ff ff ff ff ff ff ff  ................
@@ -110,7 +110,7 @@ test_mb_bin_to_audio() {
     AA AA AA AA AA AA AA AA AA AA AA AA AA AA AA AA
     EE EE EE EE EE EE EE EE EE EE EE EE EE EE EE EE
 ____
-    "$cmtconv" -p MB-6885 -f TEST.B -l 8192 $ifile $ofile \
+    "$cmtconv" $verbose -p MB-6885 -f TEST.B -l 8192 $ifile $ofile \
         || die run mb-bin-to-audio
     file $ofile | grep $quiet -s 'mono 44100 Hz' \
         || die ofile mb-bin-to-audio
@@ -120,7 +120,7 @@ test_mb_tape_dump() {
     local ifile=$ttdir/mb_1.wav
     local ofile=$ttdir/mb_1_out.bin
     qecho ====================================
-    "$cmtconv" -p MB-6885 $ifile $ofile \
+    "$cmtconv" $verbose -p MB-6885 $ifile $ofile \
         || die run mb-tape-dump
     cat >${ofile}.expected <<____
 00000000: 00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f  ................
@@ -150,7 +150,13 @@ libdir=$(cd "$(dirname "$0")" && pwd -P)
 basedir=$(cd "$(dirname "$0")/../.." && pwd -P)
 cmtconv="$basedir/bin/cmtconv"
 
-quiet=${1-}  # Hack to collect -q if on comand line
+quiet=
+verbose=
+while [[ ${#@} -gt 0 ]]; do case "$1" in
+    -q)     quiet=-q; shift;;
+    -v)     verbose="$verbose -v"; shift;;
+    *)      die "Bad arg to Test: $1";;
+esac; done
 
 #   If b8tool appears to be a submodule, use the parent virtualenv.
 [[ -d $basedir/../.build/virtualenv/ ]] \

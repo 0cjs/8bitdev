@@ -76,6 +76,13 @@ __Simulators and Emulators__:
   run unit tests.
 - The [LinApple] Apple II emulator can be used to run Apple II programs.
 
+#### ASL (The Macroassembler AS) Notes
+
+Versions 1.42 builds 205 through at least 218 are broken for 8bitdev due to
+the "Symbols in Segment NOTHING" section disappearing from the map file.
+See [`b8tool.toolset.asl`](b8tool/pylib/b8tool/toolset/asl.py) for more
+details.
+
 #### ASxxxx Notes
 
 The Linux binaries provided for ASxxxx are 32-bit, and on 64-bit systems

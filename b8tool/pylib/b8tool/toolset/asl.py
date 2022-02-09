@@ -17,6 +17,17 @@ from    b8tool.toolset.setup  import *
 
 class ASL(Setup):
 
+    #   ASL Version Information:
+    #
+    #   1.42 Builds 205 through at least 218 are broken for 8bitdev; from
+    #   205 the "Symbols in Segment NOTHING" section has disappeared from
+    #   the .map file (using the default format=MAP) so that user-defined
+    #   symbols such as as "negoffcalc equ negoff(no_data_end)" (from
+    #   src/asl/simple.asl) as well as predefined symbols such as
+    #   "ARCHITECTURE" and "BIGENDIAN" are no longer present in the file.
+    #   (A bug report was sent to the as-users@ccac.rwth-aachen.de list on
+    #   2022-02-09.)
+
     def __init__(self):
         super().__init__()
         self.source_repo = 'https://github.com/KubaO/asl.git'

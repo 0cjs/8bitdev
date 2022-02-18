@@ -134,9 +134,10 @@ class Block(object):
             not the correct magic value.
         '''
         if bytes(headerbytes[0:2]) != cls.MAGIC:
-            raise ValueError(
-                'Bad magic: expected={:02X}{:02X} actual={:02X}{:02X}'.format(
-                    cls.MAGIC[0], cls.MAGIC[1], headerbytes[0], headerbytes[1]))
+            raise ValueError('Bad magic for block ${:02X}:'
+                ' expected=${:02X}{:02X} actual=${:02X}{:02X}'.format(
+                    self.block_num, cls.MAGIC[0], cls.MAGIC[1],
+                    headerbytes[0], headerbytes[1]))
 
     def __init__(self, file_type, basic_block_num, file_name, block_num, addr,
             data):
@@ -155,9 +156,9 @@ class Block(object):
             raise self.ChecksumError('expected={:02X}, actual={:02X}'
                 .format(expected_checksum, checksum))
         if end_magic is not None and end_magic != self.END_MAGIC[0]:
-            raise ValueError('Bad magic at end of block, '
-                'expected={:02X}, actual={:02X}'.format(
-                    self.END_MAGIC[0], end_magic))
+            raise ValueError('Bad magic at end of block ${:02X}: '
+                'expected=${:02X}, actual=${:02X}'.format(
+                    self.block_num, self.END_MAGIC[0], end_magic))
 
     @property
     def is_eof(self):

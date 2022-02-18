@@ -18,7 +18,7 @@ hello       jsr prnl
 
 .exit       jsr prnl                ; simulator output starts on new line
             db  $02                 ; invalid opcode causes simulator exit
-            rts                     ; JR-200 falls through and ret to monitor
+            rts                     ; real 6800s fall through above and return
 
 message     db  "Hello: \0"
 

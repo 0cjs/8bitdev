@@ -1,0 +1,33 @@
+;   keymatrix: (eventually) scan the keyboard and display matrix switch status
+
+;   To build the .PRG, hexdump it, and then run it in VICE:
+;     ./Test src/a1/ && .build/tool/bin/p2bin -e 0x1001 -S L2 .build/obj/exe/cbm-ted/keymatrix.p keymatrix.prg && xxd -g1 keymatrix.prg && xplus4 -autostartprgmode 1 -silent -model c16 keymatrix.prg
+
+            cpu     6502
+            include "src/mos65/std.a65"
+
+;---------------------------------------------------------------------
+;   BASIC/ML bootstrap
+
+;BASTEXT    equ     $1001       ; BASIC 2.0 on C64
+BASTEXT     equ     $1001       ; BASIC 3.5 on C16, C116, PLUS/4
+
+;   BASIC tokens
+REM         equ     $8F
+SYS         equ     $9E
+
+bootstrap   org     BASTEXT     ; BASIC text area
+            dw      .end        ; pointer to next line after this one
+            dw      10          ; line number
+            db      SYS, "4109" ; $100D; XXX we should be calculating this
+            db      $00         ; end of BASIC line
+.end        dw      $0000       ; end of BASIC program
+
+;---------------------------------------------------------------------
+;   Foresman, PRG for Commodore Plus/4:
+;   • p.306 P.318 Operating System Subroutine Descriptions
+
+CINT        equ $FF81           ; ♣AXY init screen editor; clears screen
+
+            jsr CINT
+            rts

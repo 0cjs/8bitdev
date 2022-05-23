@@ -15,7 +15,16 @@ def test_super_init(m):
     assert 0 == len(m.symtab)
 
 def test_Machine_memory_zeroed(m):
-    assert [0]*0x10000 == m.mpu.memory
+    for addr in range(0, 0x10000):
+        assert 0 == m.mpu.memory[addr]
+    return
+
+    #   My original test was this, which is faster when slicing m.mpu.memory
+    #   returns a list of int (as it does when using py65's native int list
+    #   or ObservableMemory wrapping it), but fails (and very slowly) when
+    #   a returned slice is a bytearray.
+    mlen = 0x10000
+    assert [0]*mlen == m.mpu.memory[0:mlen]
 
 def test_Machine_setregs(m):
     m.setregs(R(y=4, a=2))

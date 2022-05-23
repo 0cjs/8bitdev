@@ -4,12 +4,23 @@
 
 from    numbers  import Integral
 from    py65.devices.mpu6502  import MPU
+from    testmc.generic.iomem  import IOMem
 from    sys import stderr
 
 from    testmc.generic  import *
 from    testmc.mos65.instructions  import Instructions
 
 from    testmc.tool import asl, asxxxx
+
+#   We don't use ObservableMemory, but if we did, we'd need this.
+#
+#class ObservableMemorySeq(ObservableMemory):
+#    ''' Our GenericMachine (`testmc.generic.memory.MemoryAccess`, actually)
+#        needs a standard sequence function that ObservableMemory does not
+#        provide.
+#    '''
+#    def __len__(self):
+#        return len(self._subject)
 
 class Machine(GenericMachine):
 
@@ -30,7 +41,23 @@ class Machine(GenericMachine):
 
     def __init__(self):
         super().__init__()
-        self.mpu = MPU()
+
+        #   To implement functions simulating memory-mapped I/O we could
+        #   use py65.memory.ObservableMemory, but it's almost 3× slower
+        #   than the list of int that MPU() uses by default. Instead we use
+        #   our own IOMem which is only about 15% slower than the list of
+        #   int (perhaps because it's a bytearray and/or because it
+        #   subclasses instead of accessing a separate object.)
+        #
+        #   py65 may rely on the memory returning an int instead of some
+        #   sort of byte when individual elements are accessed, but if it
+        #   does it doesn't matter because bytearray's [] returns an int
+        #   when a single element is read. But this hasn't been tested with
+        #   py65's unit tests (though it has with many of 8bitdev's tests).
+        #
+        self.mpu = MPU(memory=IOMem())      # defaults to 64K
+        self.get_memory_seq().copyapi(self)
+
         self.regsobj = self.mpu
 
     def _stackaddr(self, depth, size):

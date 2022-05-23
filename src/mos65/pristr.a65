@@ -1,0 +1,58 @@
+;   pristr: print inline string
+
+;   Index base address to get the addr that JSR pushed on the stack.
+;   TSX and then load this indexed with X to load the LSB.
+;   (Use irtsaddr+1 for the MSB.)
+;   Remember! The pushed address is ONE LESS than the address to which
+;   we will return.
+;
+irtsaddr    EQU $101
+
+;---------------------------------------------------------------------
+;   External Configuration: the following must be defined by the client
+;
+;   prchar: print the character in A.
+;
+;   pristr_ptr: a zero page word for the address for indirect access to
+;   data in calling code. We do not care what this is used for between
+;   calls to pristr.
+
+;   Abort assembly with a clear message if an essential definition is missing.
+    set ______,
+    pushv , prchar, pristr_ptr
+    popv  , ______, ______
+
+;---------------------------------------------------------------------
+;   ♣AX pristr: print inline string
+;
+;   Using `prchar`, print the $00-terminated string from memory immediately
+;   after the call to this subroutine. (This requires a JSR.) There is no
+;   limit on the size of the string.
+;
+;   This requires one word of zero-page storage, pristr_ptr, for only the
+;   duration of each call to this routine. It may destroy additional
+;   registers from the `prchar` call.
+;
+pristr      tsx                     ; copy retaddr-1 to pristr_ptr
+            lda irtsaddr,X          ;   LSB
+            sta pristr_ptr
+            lda irtsaddr+1,X        ;   MSB
+            sta pristr_ptr+1
+            ldx #0
+.nextbyte   inc pristr_ptr          ; increment data pointer
+            bne +
+            inc pristr_ptr+1
++           lda (pristr_ptr,X)      ; next char; is it 0?
+            beq .done               ;   yes: we're finished printing
+            jsr prchar
+            clc                     ; same size, so might as well
+            bcc .nextbyte           ;   make jump relocatable
+
+.done       ;   Fixup return address. We did not increment past the $00
+            ;   terminator, so it is the correct retaddr-1 expected by RTS.
+            tsx
+            lda pristr_ptr
+            sta irtsaddr,X
+            lda pristr_ptr+1
+            sta irtsaddr+1,X
+            rts

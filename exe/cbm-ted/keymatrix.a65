@@ -5,6 +5,7 @@
 
             cpu     6502
             include "src/mos65/std.a65"
+            include "src/cbm/kernal.a65"    ; KERNAL call definitions
 
 ;---------------------------------------------------------------------
 ;   BASIC/ML bootstrap
@@ -24,10 +25,16 @@ bootstrap   org     BASTEXT     ; BASIC text area
 .end        dw      $0000       ; end of BASIC program
 
 ;---------------------------------------------------------------------
-;   Foresman, PRG for Commodore Plus/4:
-;   • p.306 P.318 Operating System Subroutine Descriptions
 
-CINT        equ $FF81           ; ♣AXY init screen editor; clears screen
+prchar      equ CHROUT          ; ♡AXY send char in A to output channel.
+                                ;   default screen, otherwise OPEN, CHOUT first.
 
-            jsr CINT
+;---------------------------------------------------------------------
+
+            jsr CINT            ; ♣AXY set up default I/O devices,
+                                ;   init screen editor, clear screen
+            lda #'H'
+            jsr prchar
+            lda #'I'
+            jsr prchar
             rts

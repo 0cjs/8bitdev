@@ -1,0 +1,21 @@
+from    testmc.mos65  import Machine
+from    inspect  import currentframe
+
+object_files = 'src/tmc65/bioscode.p'
+
+def test_prchar(m, S, R):
+    _, outchars = m.setiostreams(S.charoutport)
+    m.call(S.prchar, R(a=ord('_')))
+    m.call(S.prchar, R(a=ord('\r')))
+    assert b'_\r' == outchars.getvalue()
+
+def test_rdchar(m, S, R):
+    m.setiostreams(S.charinport, b'~\n')
+    for char in ('~', '\n'):
+        m.call(S.rdchar)
+        assert R(a=ord(char)) == m.regs
+
+def test_prnl(m, S, R):
+    _, outchars = m.setiostreams(S.charoutport)
+    m.call(S.prnl)
+    assert b'\n' == outchars.getvalue()

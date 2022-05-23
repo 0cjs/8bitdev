@@ -1,0 +1,54 @@
+;   CBM KERNAL Routines
+
+;---------------------------------------------------------------------
+;   References (p=page, P=PDF page):
+;   * Commodore 64 Programmer's Reference Guide
+;     - p.272 P.290 User Callable Kernal Routines
+;   * Merten, Meyer _Programmer's Reference Guide for the Commodore Plus/4._
+;     Scott, Foresman and Company, 1986.
+;     - p.306 P.318 Operating System Subroutine Descriptions.
+
+;---------------------------------------------------------------------
+;   VIC-20, C64 and TED (C16, C116, Plus/4) KERNAL routine jump table
+;   XXX These are probably common to the PET, too, but check that.
+;   The Plus/4 changed some names in its PRG (given in the comments).
+;
+CINT        equ     $FF81   ; init screen editor/clear screen
+IOINIT      equ     $FF84   ; initialize I/O
+RAMTAS      equ     $FF87   ; RAM test, init, other setup
+RESTOR      equ     $FF8A   ; restore default I/O vectors
+VECTOR      equ     $FF8D   ; read/set vectored I/O
+SETMSG      equ     $FF90   ; control KERNAL messages
+SECOND      equ     $FF93   ; send secondary addr after LISTEN
+TKSA        equ     $FF96   ; send secondary addr after TALK
+MEMTOP      equ     $FF99   ; read/set top of memory
+MEMBOT      equ     $FF9C   ; read/set bottom of memory
+SCNKEY      equ     $FF9F   ; scan keyboard to input queue
+SETTMO      equ     $FFA2   ; set timeout on serial bus
+ACPTR       equ     $FFA5   ; input byte from serial
+CIOUT       equ     $FFA8   ; output byte to serial port
+UNTLK       equ     $FFAB   ; SIO bus command UNTALK
+UNLSN       equ     $FFAE   ; SIO bus command UNLISTEN
+LISTEN      equ     $FFB1   ; SIO bus command
+TALK        equ     $FFB4   ; SIO bus command
+READST      equ     $FFB7   ; read I/O status word                  READSS
+SETLFS      equ     $FFBA   ; set logical, 1st and 2nd addrs
+SETNAM      equ     $FFBD   ; set file name
+OPEN        equ     $FFC0   ; open a logical file
+CLOSE       equ     $FFC3   ; close specified logical file
+CHKIN       equ     $FFC6   ; open chan for input
+CHKOUT      equ     $FFC9   ; open chan for output                  CHOUT
+CLRCHN      equ     $FFCC   ; close input/output chans              CLRCH
+CHRIN       equ     $FFCF   ; input char from chan or kb/screen     BASIN
+CHROUT      equ     $FFD2   ; output char to chan                   BSOUT
+LOAD        equ     $FFD5   ; load RAM from device                  LOADSP
+SAVE        equ     $FFD8   ; save RAM to device                    SAVESP
+SETTIM      equ     $FFDB   ; set real-time clock
+RDTIM       equ     $FFDE   ; read real-time clock
+STOP        equ     $FFE1   ; check for stop key
+GETIN       equ     $FFE4   ; get char from keyboard queue
+CLALL       equ     $FFE7   ; close all chans/files
+UDTIM       equ     $FFEA   ; increment real-time clock
+SCREEN      equ     $FFED   ; return X,Y organization of screen     SCRORG
+PLOT        equ     $FFF0   ; read/set X,Y cursor pos
+IOBASE      equ     $FFF3   ; return base addr of I/O devices

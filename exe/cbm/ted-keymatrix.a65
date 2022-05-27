@@ -73,7 +73,7 @@ gCBM        equ     '='         ; commodore key
                                 ;   init screen editor, clear screen
 
             jsr pristr
-            db  [7]" ", "C16 KEYMATRIX V0.0.1 CJS"
+            db  [7]" ", "C16 KEYMATRIX V0.1.0 CJS"
             db  NL, [6]_hh,   _hd, [32]_hh
             db  NL, "    65",_vv,"  3 10  9  7 17 14 15 18 CN2 PIN"
             db  NL, "CN2 29",_vv," K7 K6 K5 K4 K3 K2 K1 K0 TED PIN"

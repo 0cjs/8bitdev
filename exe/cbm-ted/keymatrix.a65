@@ -1,7 +1,19 @@
-;   keymatrix: (eventually) scan the keyboard and display matrix switch status
+;   keymatrix: scan TED keyboard and display matrix switch status
+;
+;   This works on all TED machines: C16, C116, Plus/4.
+;
+;   The matrix is displayed in reverse order from the service manual
+;   (which also has a two rows and two columns swapped) because we
+;   want to display most significant to least significant bits, the
+;   way we read binary. This also means we reverse our scan directions
+;   from the MSB to LSB the kernal KERNAL does: instead of 6529 outputs P0
+;   to P7 we scan P7 to P0 (MSB to LSB), and instead of bits 0 to 7 in
+;   each row we can bits 7 to 0. (The direction of scan is noticable only
+;   the slow modes.)
+;
 
 ;   To build the .PRG, hexdump it, and then run it in VICE:
-;     ./Test src/a1/ && .build/tool/bin/p2bin -e 0x1001 -S L2 .build/obj/exe/cbm-ted/keymatrix.p keymatrix.prg && xxd -g1 keymatrix.prg && xplus4 -autostartprgmode 1 -silent -model c16 keymatrix.prg
+;     ./Test src/a1/ && .build/tool/bin/p2bin -e 0x1001 -S L2 .build/obj/exe/cbm-ted/keymatrix.p keymatrix.prg && xplus4 -autostartprgmode 1 -silent -model c16 keymatrix.prg
 
             cpu     6502
             include "src/mos65/std.a65"
@@ -26,15 +38,364 @@ bootstrap   org     BASTEXT     ; BASIC text area
 
 ;---------------------------------------------------------------------
 
-prchar      equ CHROUT          ; ♡AXY send char in A to output channel.
-                                ;   default screen, otherwise OPEN, CHOUT first.
+;   PETSCII graphics: line drawing chars for chart
+_vv         equ      98         ; │ vertical line
+_hh         equ      99         ; ─ horizontal line
+_hv         equ     123         ; ┼ horizontal and vertical intersection
+_vr         equ     171         ; ├ vertical and right intersection
+_hu         equ     177         ; ┴ horizontal and up intersection
+_hd         equ     178         ; ┬ horizontal and down intersection
+_rvs_on     equ      18
+_rvs_off    equ     146
+
+rvs         macro   c
+            db  "  ", _rvs_on, c, _rvs_off
+            endm
+
+;   PETSCII graphics chars to represent non-alphanumeric kyes on the matrix
+gDEL        equ     166         ; shaded box
+gRET        equ     'R'         ; return
+gPND        equ      92         ; pound currency symbol
+gUP         equ      94         ; up arrow
+gDOWN       equ     _hd         ; down arrow: ┬
+gLEFT       equ      95         ; left arrow
+gRIGHT      equ     _vr         ; right arrow: ├
+gHOME       equ     'H'
+gSTOP       equ     118         ; RUN/STOP: cross
+gSHIFT      equ     'S'
+gCTRL       equ     'C'
+gCBM        equ     '='         ; commodore key
 
 ;---------------------------------------------------------------------
+;   Set up the screen showing the key matrix
 
             jsr CINT            ; ♣AXY set up default I/O devices,
                                 ;   init screen editor, clear screen
-            lda #'H'
-            jsr prchar
-            lda #'I'
-            jsr prchar
+
+            jsr pristr
+            db  [7]" ", "C16 KEYMATRIX V0.0.1 CJS"
+            db  NL, [6]_hh,   _hd, [32]_hh
+            db  NL, "    65",_vv,"  3 10  9  7 17 14 15 18 CN2 PIN"
+            db  NL, "CN2 29",_vv," K7 K6 K5 K4 K3 K2 K1 K0 TED PIN"
+            db  NL, [6]_hh,  _hv, [32]_hh
+
+            db  NL, "  6 P7",_vv
+            rvs                 gSTOP
+            db                      "  Q"
+            rvs                        gCBM
+            db                            "     2"
+            rvs                                gCTRL
+            rvs                                   gHOME
+            db                                        "  1"
+
+            db  NL, " 16 P6",_vv,"  /  +  ="
+            rvs                             'E' ; ESC
+            db                      "  ",gRIGHT,"  ;  *  ",gLEFT
+
+            db  NL, "  1 P5",_vv,"  ,  -  :  .  ",gUP,"  L  P  ",gDOWN
+            db  NL, " 13 P4",_vv,"  N  O  K  M  0  J  I  9"
+            db  NL, " 11 P3",_vv,"  V  U  H  B  8  G  Y  7"
+            db  NL, " 12 P2",_vv,"  X  T  F  C  6  D  R  5"
+            db  NL, "  8 P1",_vv
+            rvs                gSHIFT
+            db                      "  E  S  Z  4  A  W  3"
+
+            db  NL, " 19 P0",_vv,"  @"
+            rvs                       '3'
+            rvs                          '2'
+            rvs                             '1'
+            rvs                                '4'
+            db                             "  ",gPND
+            rvs                                    gRET
+            db                                   "  ",gDEL
+
+            db  NL, [6]_hh,   _hu, [32]_hh
+            db  NL, "HOLD ",_rvs_on,"HELP",_rvs_off," WITH: "
+            db  NL, "  "
+            db      _rvs_on,"F3",_rvs_off,"=EXIT "
+            db      _rvs_on,"F1",_rvs_off,"=SLOWCOL "
+            db      _rvs_on,"F2",_rvs_off,"=SLOWROW "
+            db  NL, 0
+
+;---------------------------------------------------------------------
+;   Zero-page storage
+
+            ;   $03-$06 is "Storage for RENUMBER" on the
+            ;   Plus/4. It stomps on the (generally unused)
+            ;   pointers to ROM FP routines on the C64.
+
+            ;   $61-$70 is the FACs on C64/TED; $63-$72 where the FACs
+            ;   on the C128. These may stomp on the monitor's T0/T1/T2
+            ;   temporary variables. Using them also corrupts the current
+            ;   BASIC program.
+
+            ;   $D8-$E8 is "free zero page area for applications" on Plus/4
+
+pristr_ptr  equ     $D8         ; 2b word for pristr
+screenptr   equ     $DA         ; 2b pointer into screen/colour attr memory
+currows     equ     $DC         ; 1b current row output bits
+fkeys       equ     $DD         ; function keys currently being held down
+                                ;   (for commands)
+flags       equ     $DE         ; program configuration:
+                                ;   b7: 1=delay between row scans
+                                ;   b6: 1=delay between column scans
+tmp0        equ     $DF         ; 1b short-term use by subroutines
+
+;---------------------------------------------------------------------
+
+row0        equ %11111110       ; row output for row 0
+row7        equ $7F             ; row output for row 7
+
+kdown       equ  81             ; keydown screen code: ●
+kup         equ  32             ; keyup   screen code ' '
+;   We considered screen code 87 (○) for keyup, but it makes the screen
+;   a lot more busy and harder to read.
+;   (Ideally we'd change background colour, but that's a lot more difficult
+;   due to it reducing the charset to 64 characters.)
+
+screenbase  equ $0C00           ; C16 start of screen memory
+colorsbase  equ $0800           ; C16 start of colour attribute memory
+;   Matrix upper left is vertical line at 5 lines down, 8 chars across
+matrix_ul   equ 40*5 + 6
+
+init
+            ; DEBUG show matrix slots
+           ;lda #LB(screenbase + matrix_ul)
+           ;sta screenptr
+           ;lda #MB(screenbase + matrix_ul)
+           ;sta screenptr+1
+           ;lda #$53 ; ♡
+           ;jsr fillrows
+           ;rts
+
+            ;   set matrix locations to a colour so they stand out better
+            lda #LB(colorsbase + matrix_ul)
+            sta screenptr
+            lda #MB(colorsbase + matrix_ul)
+            sta screenptr+1
+            lda #2  ; red
+            jsr fillrows
+
+            ;   print keyup screen codes in their correct spots
+            jsr home
+            lda #kup
+            jsr fillrows
+
+            lda #0
+            sta flags
+            sta fkeys           ; no function keys pressed
+            lda #$FF            ; all cols high (scan nothing)
+            jsr readcols
+
+            sei                 ; stop KERNAL keyboard scans
+mainloop    ;   We want to check for command input before, rather than during,
+            ;   the scan for two reasons:
+            ;   1. The exit must happen outside the loop so that we don't
+            ;      end up with the saved current cols values on the stack,
+            ;      which would leave us in a funny state (garbage screen).
+            ;   2. When row scan speed is commanded from slow back to fast,
+            ;      the user must hold down the keys for some time until we
+            ;      come back to scanning that row; leaving it at slow speed
+            ;      for the rest of the rows gives the user more time to lift
+            ;      off the keys when he sees that it's been scanned.
+            jsr chkcommand      ; check for command input
+            bcs .exit           ;   exit if commanded
+            jsr home            ; next display on screen row 7
+            lda #row7           ; scan keyboard matrix row 7
+            sta currows
+.nextrow    lda #$6B            ; ├ mark row we're going to scan
+            ldy #0
+            sta (screenptr),Y
+            bit flags           ; row scan delay enabled?
+            bpl +               ;   N flag clear = bit 7 clear = no delay
+            jsr delay
++           jsr readcols
+            pha                 ; save current columns values
+            lda currows         ; is curent row
+            cmp #row0           ;   row 0?
+            bne .notrow0        ; no: carry on
+            pla                 ; yes, get columns values
+            pha
+            eor #$FF            ;   flip all bits to get positive logic
+            and #%01111000      ;   mask out all but function keys
+            sta fkeys           ;   and store it in saved fkeys
+.notrow0    ldx #8              ; 8 columns to display
+            ldy #2              ; column K7 offset on screen
+.nextcol    ;   XXX the col scan delay is a bit problematic because once it's
+            ;   on it takes a _long_ time (up to 120 delays) to turn off.
+            ;   Is there a better way to do this?
+            bit flags           ; col scan delay enabled?
+            bvc +               ;   V flag clear = bit 6 clear = no delay
+            jsr delay
++           pla                 ; get current columns values
+            rol                 ; next column value out to C flag
+            pha                 ; save remaining columns values
+            lda #kup            ; assume key not pressed
+            bcs .notdown        ; if key not pressed, skip next load
+            lda #kdown          ; key is pressed
+.notdown    sta (screenptr),Y
+            iny                 ; move display pointer to next column
+            iny
+            iny
+            dex                 ; done all 8 cols?
+            bne .nextcol        ;   no: do next one
+            pla                 ; garbage-collect saved columns values
+            lda #$5D            ; │ unmark row we're scanning
+            ldy #0
+            sta (screenptr),Y
+            jsr incrow          ; next display on next row of screen
+            sec                 ; 1 bit to rotate into `currows`
+            ror currows         ; next row
+            lda currows
+            cmp #$FF            ; all rows done?
+            bne .nextrow
+            beq mainloop        ; BRA
+
+.exit       jsr pristr
+            db  "EXITING",$00
+            lda #'.'
+            ldx #4              ; delay exit to give user time to lift keys
+.exitdelay  jsr delay
+            jsr prchar          ; print a '.'
+            dex
+            bne .exitdelay
+            cli                 ; restore KERNAL keyboard scanning
             rts
+
+;----------------------------------------------------------------------
+;   Command handling
+
+F4          equ %00001000       ; a.k.a. HELP
+F1          equ %00010000
+F2          equ %00100000
+F3          equ %01000000
+
+d_flags     equ screenbase+33   ; debug display on top line
+
+chkcommand  lda fkeys
+            and #F4             ; HELP (F4) pressed?
+            beq .done           ;   no: any other fkey presses are not a command
+
+            lda fkeys
+            and #F3             ; F3 also pressed?
+            beq .f2             ;   no: look for other commands
+            sec                 ;   yes: indicate exit
+            rts
+
+.f2         lda fkeys
+            and #F2             ; F2 also pressed?
+            beq .f1             ;   no
+            lda #$40            ;   yes: flip slow row mode
+            eor flags
+            sta flags
+            clc
+            bcc .updated
+
+.f1         lda fkeys
+            and #F1             ; F1 also pressed?
+            beq .done           ;   no
+            lda #$80            ;   yes: flip slow column mode
+            eor flags
+            sta flags
+
+.updated    lda flags           ; flags status updated
+            sta d_flags         ; display the change
+            jsr delay           ; give user time to lift keys
+            jsr delay           ; give user time to lift keys
+            jsr delay           ; give user time to lift keys
+.done       clc                 ; indicate no exit
+            rts
+
+;---------------------------------------------------------------------
+;   Subroutines
+
+rowsout     equ $FD30               ; keyboard matrix row outputs
+                                    ; MOS 6829 (U13) Single Port Interface
+colsin      equ $FF08               ; keyboard matrix column inputs
+                                    ; TED keyboard port
+d_rowsout  equ screenbase+35        ; debug display on top line
+d_rowsin   equ screenbase+37
+d_colsin   equ screenbase+39
+
+;   ♠A♡XY Set the row outputs given in `currows`, read col inputs, return in A.
+readcols    lda currows
+            sta d_rowsout
+            sta rowsout
+            lda rowsout
+            sta d_rowsin
+            sta colsin          ; latch data
+            lda colsin          ; read latched data
+            sta tmp0            ; first read
+            sta colsin
+            lda colsin
+            cmp tmp0            ; second read same?
+            bne readcols        ;   no: spurious read, try again
+            sta d_colsin
+            rts
+
+;   ♡AXY short delay
+delay       pha
+            txa
+            pha
+            tya
+            pha
+            lda #1              ; ~1/2 second
+.outera     ldx #0
+.middlex    ldy #0
+.innery     dey
+            bne .innery
+            dex
+            bne .middlex
+            sec                 ; clear borrow bit
+            sbc #1
+            bne .outera
+            pla
+            tay
+            pla
+            tax
+            pla
+            rts
+
+;   ♣A ♡XY Set `screenptr` to row 7 of the matrix on screen
+home        lda #LB(screenbase + matrix_ul)
+            sta screenptr
+            lda #MB(screenbase + matrix_ul)
+            sta screenptr+1
+            rts
+
+;   Fill the matrix locations starting at `screenptr` with the value in A.
+;   The matrix locations are 8 rows of 8 chars at 3-column intervals.
+fillrows    ldx #8              ; 8 rows
+.nextrow    ldy #2              ; start at first column, row scanning dot + 2
+.nextcol    sta (screenptr),Y
+           ;jsr delay ; XXX DEBUG
+            iny
+            iny
+            iny
+            cpy #8*3            ; 8 cols at 3-col intervals
+            bcc .nextcol
+            jsr incrow
+            dex
+            bne .nextrow
+
+;   ♡AXY Increment `screenptr` by one screen row
+incrow      pha
+            lda screenptr
+            clc
+            adc #40
+            sta screenptr
+            bcc +
+            inc screenptr+1
++           pla
+            rts
+
+;---------------------------------------------------------------------
+
+NL          equ $8D             ; PETSCII LF, printing it also does CR
+
+;   Definitions for pristr
+prchar      equ CHROUT          ; ♡AXY send char in A to out channnel.
+                                ;   default screen, otherwise OPEN, CHOUT first.
+;pristr_ptr                     ; defined in zero-page section above
+
+            include "src/mos65/pristr.a65"

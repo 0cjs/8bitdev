@@ -1,4 +1,4 @@
-;   keymatrix: scan TED keyboard and display matrix switch status
+;   ted-keymatrix: scan TED keyboard and display matrix switch status
 ;
 ;   This works on all TED machines: C16, C116, Plus/4.
 ;
@@ -12,8 +12,8 @@
 ;   the slow modes.)
 ;
 
-;   To build the .PRG, hexdump it, and then run it in VICE:
-;     ./Test src/a1/ && .build/tool/bin/p2bin -e 0x1001 -S L2 .build/obj/exe/cbm-ted/keymatrix.p keymatrix.prg && xplus4 -autostartprgmode 1 -silent -model c16 keymatrix.prg
+;   To build the .PRG and then run it in VICE:
+;     ./Test src/mos65/pristr.pt && .build/tool/bin/p2bin -e 0x1001 -S L2 .build/obj/exe/cbm/ted-keymatrix.p tmp/ted-keymatrix.prg && xplus4 -silent -autostartprgmode 1 -model c16 tmp/ted-keymatrix.prg
 
             cpu     6502
             include "src/mos65/std.a65"

@@ -77,7 +77,7 @@ manual_build=(
     src/asl/nomacro.a65         # Test/demo for ASL macro expansion
     exe/a1/charset.a65
     src/a2/misc.a65
-    exe/cbm-ted/keymatrix.a65
+    exe/cbm/ted-keymatrix.a65
     src/fm7.a69
     src/jr200/jr200.a68 exe/jr200/hello.a68 exe/jr200/pmon.a68
     src/mb6885/mb6885.a68 exe/mb6885/hello.a68 exe/mb6885/pmon.a68

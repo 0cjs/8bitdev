@@ -13,7 +13,7 @@
 ;
 
 ;   To build the .PRG and then run it in VICE:
-;     ./Test src/mos65/pristr.pt && .build/tool/bin/p2bin -e 0x1001 -S L2 .build/obj/exe/cbm/ted-keymatrix.p tmp/ted-keymatrix.prg && xplus4 -silent -autostartprgmode 1 -model c16 tmp/ted-keymatrix.prg
+;     ./Test src/mos65/pristr.pt && .build/tool/bin/p2bin -e 0x1001 -S L2 .build/obj/exe/cbm/ted-keymatrix.p tmp/TED-KEYMATRIX.PRG && xplus4 -silent -autostartprgmode 1 -model c16 tmp/TED-KEYMATRIX.PRG
 
             cpu     6502
             include "src/mos65/std.a65"
@@ -73,7 +73,7 @@ gCBM        equ     '='         ; commodore key
                                 ;   init screen editor, clear screen
 
             jsr pristr
-            db  [7]" ", "C16 KEYMATRIX V0.1.0 CJS"
+            db  [7]" ", "C16 KEYMATRIX V0.1.1 CJS"
             db  NL, [6]_hh,   _hd, [32]_hh
             db  NL, "    65",_vv,"  3 10  9  7 17 14 15 18 CN2 PIN"
             db  NL, "CN2 29",_vv," K7 K6 K5 K4 K3 K2 K1 K0 TED PIN"
@@ -323,9 +323,19 @@ readcols    lda currows
             sta rowsout
             lda rowsout
             sta d_rowsin
-            sta colsin          ; latch data
+            ;   When the data is latched, the values of D1 and D2 on the data
+            ;   bus determine whether the joysticks are sensed. If either is
+            ;   low, pin 8 on the corresponding joystick port will be low,
+            ;   allowing the joystick switches to bring the sense lines
+            ;   attached to K0-K7,K6,K7 low; these may be seen as keystrokes.
+            ;   Ensuring that D1 and D2 are high ensures that pin 8 will be
+            ;   high on the joystick ports, thus the joystick switches will
+            ;   never be sensed.
+            lda #$FF            ; D1,D2=high to disable joystick sensing
+            sta colsin          ; latch data (bits 2/3 high ensures no JS sense)
             lda colsin          ; read latched data
             sta tmp0            ; first read
+            lda #$FF
             sta colsin
             lda colsin
             cmp tmp0            ; second read same?

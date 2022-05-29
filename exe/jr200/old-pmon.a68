@@ -29,7 +29,7 @@ rdlinebuf_end equ $1E0  ;   52 characters.
             ;   whatever configuration has been set up. (I.e., the
             ;   developer should do a `CLEAR $7000` before the MLOAD.)
 
-            include "src/mc68/pmon.a68"
+            include "src/old-pmon/pmon.a68"
 
             if pmon_ramlo_end >= $100
                 error 'Direct page overflow: last addr=\{pmon_ramlo_end}'

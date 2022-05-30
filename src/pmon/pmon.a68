@@ -1,0 +1,79 @@
+;   pmon: a machine-language monitor
+
+; ----------------------------------------------------------------------
+;   Memory Configuration
+
+;   The memory areas used by the monitor are configured by constants that
+;   must be defined before this file included.
+;
+;   `pmon_ramlo` and `pmon_ramhi` are the two blocks of RAM storage
+;   required by the monitor. Each may be anywhere in memory, but there is a
+;   slight code size and performance benefit to having `pmon_ramlo` in the
+;   direct page.
+;
+;   `pmon_ramhi` may be left undefined to place that area immediately after
+;   `pmon_ramlo`
+;
+;   `pmon_org` sets the start of the code.
+;
+;   XXX define pmon_ramlo_end and pmon_ramhi_end? Test usefulness with
+;   usage of these forward definitions.
+
+;   Abort assembly with a clear message if an essential definition is missing.
+    set ______,
+    pushv , pmon_ramlo, pmon_org
+    popv  , ______,     ______
+
+; ----------------------------------------
+;   "Low" area aimed at maximum gain from minimum direct page usage.
+;
+;   It's a convention in this repo to have _[axbyij] zero pages words
+;   defined for arithmetic routine parameters/returns/counters so we re-use
+;   this here for temp space for non-arithemtic routines.
+;
+            org pmon_ramlo
+
+_a          ds  2
+_x          ds  2
+_i          ds  1
+
+pmon_ramlo_end equ *
+
+; ----------------------------------------
+;   "High" area that gains little from being in the direct page.
+;   If `pmon_ramhi` is not defined, this starts immediately after `pmon_ramlo`.
+
+        if defined(pmon_ramhi)
+            org pmon_ramhi
+        endif
+
+cmdtbl      ds  2       ; pointer to command table (see below)
+;   Saved register values (same memory order as interrupt stack frame):
+Rcc         ds  1       ; condition codes
+Rb          ds  1       ; accumulator B
+Ra          ds  1       ; accumulator A
+Rx          ds  2       ; index register X
+Rpc         ds  2       ; program counter
+Rsp         ds  2       ; stack pointer
+
+pmon_ramhi_end equ *
+
+; ----------------------------------------------------------------------
+;   Code
+
+            org pmon_org
+
+; ----------------------------------------------------------------------
+;   Command loop
+
+init        ldx #banner
+            jsr prstr0
+            jsr prnl
+            rts         ; XXX immediate exit
+
+banner      db 'pmon 2022-05-30 cjs\r\n',0
+
+; ----------------------------------------------------------------------
+;   pr* - printing output
+
+            include "src/mc68/pr.a68"

@@ -1,0 +1,33 @@
+;   pmon for `testmc.mc6800` simulator.
+
+;   Chdir to your project directory and run this with:
+;     ./Test && B8_PROJDIR=`pwd` b8tool/bin/tmc6800 .build/obj/exe/tmc68/pmon.p
+
+            cpu 6800
+            include "src/mc68/std.a68"
+            include "src/tmc68/bios.a68"    ; bin/tmc6800 will load bioscode
+
+pmon_ramlo  equ $20     ; pmon_ramhi unset = immediately after pmon_memlo
+pmon_org    equ $F000   ; monitor in top 4 KB
+
+            include "src/pmon/pmon.a68"
+
+reset:      ;   Machine initialisation
+            ldx #$BFFF      ; stack immediately below I/O
+            txs
+            jsr init        ; quit command returns to next instruction
+
+            ;   The following opcode is invalid on 6800 and 6801/6803, and
+            ;   so should cause the simulator to exit. We avoid using $00
+            ;   to differentiate this from an exit due to execution of
+            ;   unset memory, and also avoid the easily-remembered $02-$05
+            ;   to let programmers use those for their own exception points.
+            db  $CF
+
+            jmp reset       ; failing that, restart monitor
+
+            ds mvec_IRQ-*   ; relative space reservation detects size overflow
+            dw 0            ; IRQ vector
+            dw 0            ; SWI vector
+            dw 0            ; NMI vector
+            dw reset        ; RESET vector

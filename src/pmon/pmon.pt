@@ -1,0 +1,12 @@
+from    testmc  import *
+from    testmc.mc6800  import *
+
+R = Machine.Registers
+
+test_rig = '''
+                cpu 6800
+                org $1000
+'''
+
+def test_XXX():
+    assert 1

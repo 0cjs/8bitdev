@@ -1,0 +1,25 @@
+;   pmon in RAM for Hitachi MB-6885
+
+            cpu 6800
+
+            org $3000
+            jmp pmon_org
+
+pmon_ramlo  equ $E1     ; FIXME: need to check this...
+pmon_org    equ $3100   ; Monitor at top of built-in RAM;
+pmon_ramhi  equ $3F80   ;   POKE $08,$2E,$FF:NEW to keep BASIC from stomping it.
+
+            include "src/mc68/std.a68"
+            include "src/mb6885/bios.a68"
+
+            include "src/pmon/pmon.a68"
+            include "src/mb6885/common.a68"
+
+            if pmon_ramlo_end >= $100
+                error 'Direct page overflow: last addr=\{pmon_ramlo_end}'
+            endif
+            ds pmon_ramhi-*     ; detect code area overflow
+            if pmon_ramhi_end >= $8000
+                error 'JR-200 RAM overflow: last addr=\{pmon_ramhi_end}'
+            endif
+

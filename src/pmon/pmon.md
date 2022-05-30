@@ -316,16 +316,25 @@ from this; it's loaded from the remembered value of the `a0000` parameter.
     by printing CR NL where CR would normally be used. (XXX Also handle
     backspace differently?)
 
-- `?`: Calculate/display a word value. On execution this prints the current
-  remembered value in hex, decimal, as a pair of ASCII characters and as a
-  pair of screen codes on systems with text video displays. Parameters:
+- `?`: Calculate/display a word value. On execution this prints a newline
+  followed by `=`, the current remembered value in hex, in decimal, as a
+  pair of ASCII characters and as a pair of screen codes on systems with
+  text video displays. (As a special case, this command's user typing is
+  left on the terminal so she can see what operations she performed.) All
+  the following parameters operate immediately, rather than waiting for an
+  Enter/Return to signal command execution/termination.
   - `v0000`: set the current remembered value to the given parameter value.
-  - Binary operations on remembered value and parameter value, setting
-    remembered value to the result: `p0000` unsigned add ("plus"); `m0000`
-    unsigned subtract ("minus"); `a0000` AND; `o0000` OR; `x0000` exclusive
-    OR ("XOR"); `<F` shift left 0 to 15 bits; `>F` arithmetic shift right
-    0-15 bits. (XXX Add 8- and 16-bit rotates?)
-  - `wA`: write the remmebered value to user variable _A._
+  - Binary operations on remembered value and parameter value, setting the
+    remembered value to the result:
+    - `+0000`, `p0000`: unsigned add ("plus")
+    - `-0000`, `m0000`:  unsigned subtract ("minus")
+    - `a0000`: logical AND
+    - `o0000`: logical OR
+    - `x0000`: logical exclusive OR ("XOR")
+    - `<F`: shift left 0 to 15 bits
+    - `>F`: arithmetic shift right 0-15 bits
+    - XXX Add 8- and 16-bit rotates?
+  - `wA`: write the remembered value to user variable _A._
 
 - `/`: Set/display user variables. Parameters `a` through `z` represent
   each user variable. (XXX figure out the details of this. Probably all
@@ -425,3 +434,22 @@ in this section.
 - `m` is reserved for a "safe" (non-modifying) command as it's "memory
   dump" in CBM monitors. (It's "modify memory" in others, but in those it
   prints a prompt that makes it very obvious what it's doing.)
+
+
+To-do
+-----
+
+- Consider allowing base 2 and base 10 input. There are several issues we
+  need to deal with:
+  - Prefixes that shift mode. These probably want to be characters we're
+    not using as parameter characters so as to avoid confusion, especially
+    in the face of typos (such as forgetting to type the parameter
+    character before trying to enter a number).
+  - Prefixes could potentially be invisible (Ctrl-B for binary, Ctrl-T for
+    base 10?) but that would probably be far too confusing.
+  - `%` for binary and `#` for base-10 would probably work well.
+  - Since these would produce longer numbers we need to deal with
+    write-over in deposits, e.g., `0123: 45 67 89` depositing on the first
+    byte could end up as `0123: #1237 89` at or just before terminating
+    input for that character, so we need to rewrite the values ahead, as
+    well.

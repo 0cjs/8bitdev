@@ -19,9 +19,25 @@ build_toolsets() {
 }
 
 #   ASxxxx builds
-#   Due to issues with 32-bit binaries, run only when $all_tools set.
 build_asxxxx() {
+    #   Due to issues with 32-bit binaries, run only when $all_tools set.
     [[ -f $all_tools ]] || return 0
+
+    local sources=$(echo src/asxxxx/*.a*)
+    [[ -f $fast_hack ]] && {
+        #   Because they do no dependency checks, the builds below rebuild
+        #   everything whether needed or not. To speed things in fast_hack
+        #   mode we do a basic depenendency check "by hand" (which is
+        #   probably not all that reliable) and let the full rebuild go
+        #   ahead only if we notice something needs to be rebuilt.
+        local need_rebuild= src obj
+        for src in $sources; do
+            obj=.build/obj/src/asxxxx/$(basename ${src%.*}).bin
+            [[ $src -nt $obj ]] && need_rebuild=1
+        done
+        [[ -z $need_rebuild ]] && return
+    }
+
     #   Though we don't need to explicitly specify `simple` as an input
     #   file for the link (aslink would get it from the output file) we
     #   do so anyway to test that b8tool handles it correctly.
@@ -69,7 +85,10 @@ esac; done
 [[ -f $fast_hack ]] || build_toolsets
 [[ $PATH =~ ^$B8_PROJDIR/bin:|:$B8_PROJDIR/bin:|:$B8_PROJDIR/bin$ ]] \
     || export PATH="$B8_PROJDIR/bin:$PATH"
-[[ -f $fast_hack ]] || build_asxxxx
+
+#   Builds of asxxxx sources are a completely separate thing right now
+#   so that we can more easily skip the (re-)builds if $fast_hack is set.
+build_asxxxx
 
 $b8tool aslauto exe/ src/ --exclude=src/asxxxx/
 manual_build=(

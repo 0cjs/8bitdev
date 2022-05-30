@@ -78,10 +78,6 @@ ongoing parameter value input input for an option which allows you to enter
 less than the full number of digits for things like numeric option
 parameters.
 
-`$` is a special parameter character: it will immediately terminate command
-input and print the command character followed by all parameters and their
-current values.
-
 ### Command Parameters
 
 Parameters not specified use their previously remembered value or, in some
@@ -127,6 +123,13 @@ For all of the above that accept a number, the value may be of the form
 significant bits corresponding to the length of the parameter value will be
 used: bit 0 for boolean, bits 4-0 for nybble, bits 7-0 for byte, and all
 bits for word.
+
+`$` is a special parameter character for all commands with the following
+subfunctions:
+- `$$`: terminate command input and print `=`, the command character, and
+  all parameters and their current values.
+- `$=`: As with `$$`, but after that it resets all parameters to their
+  default values and again prints out the current values.
 
 XXX Add `.` as a byte/word parameter value to increment the currently
 remembered value by a command-specific amount? Would this be useful for

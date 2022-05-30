@@ -1,12 +1,37 @@
 ;   pr - routines for formatting and printing output
 
 ;   Required definitions:
-;   • _a:   input variable (_b and _c will be added as necessary)
-;   • _x:   output variable (_y and _z will be added as necessary)
+;   • _a:       input variable (_b and _c will be added as necessary)
+;   • _x:       output variable (_y and _z will be added as necessary)
+;   • prchar    print character in A
+;
+;   All routines below may destroy any registers destroyed by prchar.
+;
 
 SPACE       equ ' '
 DEL         equ $7F
 
+; ----------------------------------------------------------------------
+;   ♠X ♣A ♡B  Print $00-terminated string at X
+;
+;   Leaves X pointing to the terminating $00 byte.
+;
+;   This is provided for systems where the BIOS does not already supply
+;   an appropriate routine. (Since we don't know what a BIOS may destroy,
+;   this actually makes no guarantees about the registers.)
+;
+
+    .ifndef prstr0               ; may be provided by BIOS
+prstr0      lda A,0,X
+            beq .done
+            jsr prchar
+            inx
+            bra prstr0
+.done       rts
+    .endif ; !defined(prstr0)
+
+
+; ----------------------------------------------------------------------
 ;   ♣A Print value in A as hex to the character output port.
 ;   Falls through to prnyb.
 prhex       psh A
@@ -31,6 +56,7 @@ prspace     lda A,#SPACE
             jsr prchar
             rts
 
+; ----------------------------------------------------------------------
 ;   ♣A Print any (8-bit) value "visibly" as one character.
 ;
 ;   The output is always a character from the printable ASCII range. Bit 7

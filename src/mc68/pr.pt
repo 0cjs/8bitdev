@@ -16,6 +16,13 @@ _x          equ $32
 
 '''
 
+@pytest.mark.parametrize('str', [b'abc', b'01\n23', b''])
+def test_prstr0(m, S, R, loadbios, str):
+    _, output = loadbios('tmc68')
+    m.deposit(0x37FD, str + b'\x00XYZ')     # guard values
+    m.call(S.prstr0, R(x=0x37FD))
+    assert str == output.getvalue()
+
 @pytest.mark.parametrize('val, char', (
     (0x00, b'0'), (0x01, b'1'), (0x0E, b'E'), (0x0F, b'F'),
     (0x10, b'0'), (0xFE, b'E'),

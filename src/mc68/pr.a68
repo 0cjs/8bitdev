@@ -3,9 +3,11 @@
 ;   Required definitions:
 ;   • _a:       input variable (_b and _c will be added as necessary)
 ;   • _x:       output variable (_y and _z will be added as necessary)
-;   • prchar    print character in A
+;   • prchar    ♡ABX print character in A
 ;
-;   All routines below may destroy any registers destroyed by prchar.
+;   Pretty much everything in this repo assumes that `prchar` preserves
+;   A, B and X. If your particular BIOS print character routine does not,
+;   it should be wrapped in a `prchar` that does.
 ;
 
 SPACE       equ ' '
@@ -32,7 +34,7 @@ prstr0      lda A,0,X
 
 
 ; ----------------------------------------------------------------------
-;   ♣A Print value in A as hex to the character output port.
+;   ♣A ♡BX Print value in A as hex to the character output port.
 ;   Falls through to prnyb.
 prhex       psh A
             lsr A
@@ -43,7 +45,7 @@ prhex       psh A
             pul A
             ; fallthrough
 
-;   ♣A Print lower nybble of A to the character output port.
+;   ♣A ♡BX Print lower nybble of A to the character output port.
 prnyb       and A,#$0F
             add A,#'0'
             cmp A,#'9'+1
@@ -51,13 +53,13 @@ prnyb       and A,#$0F
             add A,#'A'-'9'-1
 .digit      jmp prchar          ; RTS (TCO)
 
-;   ♣A Print a space.
+;   ♣A ♡BX Print a space.
 prspace     lda A,#SPACE
             jsr prchar
             rts
 
 ; ----------------------------------------------------------------------
-;   ♣A Print any (8-bit) value "visibly" as one character.
+;   ♣A ♡BX Print any (8-bit) value "visibly" as one character.
 ;
 ;   The output is always a character from the printable ASCII range. Bit 7
 ;   is ignored, characters in the control sticks ($00-$1F) are shifted
@@ -85,7 +87,7 @@ prvischar   and A,#$7F          ; clear bit 7
             rts
 
 ; ----------------------------------------------------------------------
-;   ♣A,B,X,_a  Print unsigned 16-bit int at (X) in decimal.
+;   ♣ABX,_a,_x  Print unsigned 16-bit int at (X) in decimal.
 ;
 ;   This uses the relatively simple and fast "multiple subtraction of
 ;   factors" method: count all the 10,000s you can subtract, print out

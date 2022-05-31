@@ -55,8 +55,7 @@ prnyb       and A,#$0F
 
 ;   ♣A ♡BX Print a space.
 prspace     lda A,#SPACE
-            jsr prchar
-            rts
+            jmp prchar          ; RTS (TCO)
 
 ; ----------------------------------------------------------------------
 ;   ♣A ♡BX Print any (8-bit) value "visibly" as one character.
@@ -83,8 +82,7 @@ prvischar   and A,#$7F          ; clear bit 7
             ;   into the upper-case sticks, except for DEL where it's
             ;   moved down by 40 into the numeric/symbol stick.
             eor A,#(1<<6)
-.notctl     jsr prchar
-            rts
+.notctl     jmp prchar          ; RTS (TCO)
 
 ; ----------------------------------------------------------------------
 ;   ♣ABX,_a,_x  Print unsigned 16-bit int at (X) in decimal.
@@ -119,8 +117,7 @@ prdec_u16
 
             lda A,.n+1      ; remaining amount is final digit
             add A,#'0'
-            jsr prchar
-            rts
+            jmp prchar      ; RTS (TCO)
 
             ;   All possible 10^n (where n>0) factors of $FFFF, terminated
             ;   by low-byte 0. The termination is slightly tricky: it relies

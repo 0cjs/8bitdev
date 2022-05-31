@@ -2,18 +2,18 @@ pmon Monitor
 ============
 
 Features:
+- Designed for interactive exploration of the machine.
 - No input buffer required, just a minimal amount of memory for building
   byte and word values from hex input. (However, this means that each
   command is executed immediately after you've finished specifying its
-  parameters.) Normally RAM is used also for remembering the previous
-  parameters supplied to commands; we're working on ways to reduce this.
+  parameters.)
 - Minimises typing by keeping track of recently used command parameters and
-  allowing command execution without specifying them again.
-- Parsimonious with screen area. Generally your input is cleared and
-  written over by command output so that you can see more output on the
-  screen. Commands generally offer display parameters that let you display
-  the minimum amount of data you need, to help delay previous displays from
-  rolling off the screen.
+  allowing command execution without specifying them again. (We're working
+  on ways to and options for reducing the amount of memory this uses.)
+- Parsimonious with screen area on small terminals and video displays to
+  help delay information scrolling off the screen. Input is (usually)
+  cleared and written over by command output. Display commands have
+  parameters to help display just what you need as compactly as possible.
 
 
 Supported Hardware

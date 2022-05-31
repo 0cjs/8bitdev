@@ -58,7 +58,7 @@ Input and output are always lower case by default.
 Command Entry
 -------------
 
-At the `.` prompt you may enter a single-character command optionally
+At the `_` prompt you may enter a single-character command optionally
 followed by parameters that determine the behaviour of the command. After
 entering the command character, a single character identifies a particular
 parameter; this may be followed by by an parameter value such as an

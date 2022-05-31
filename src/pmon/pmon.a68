@@ -24,15 +24,28 @@
     pushv , pmon_ramlo, pmon_org
     popv  , ______,     ______
 
+; ----------------------------------------------------------------------
+;   Standard functions, macros and definitions
+;   (Much of this should probably be moved to `stddef`.)
+
+;   ASCII character definitions
+BEL         equ $07             ; bell ('\a')
+BS          equ $08             ; backspace ('\b')
+LF          equ $0A             ; line feed ('\n')
+CR          equ $0D             ; carriage return ('\r')
+
+;   Monitor definitions
+PROMPT      equ '_'
+
 ; ----------------------------------------
 ;   "Low" area aimed at maximum gain from minimum direct page usage.
-;
-;   It's a convention in this repo to have _[axbyij] zero pages words
-;   defined for arithmetic routine parameters/returns/counters so we re-use
-;   this here for temp space for non-arithemtic routines.
+;   This does not actually _have_ to be in the direct page, however.
 ;
             org pmon_ramlo
 
+;   It's a convention in this repo to have _[axbyij] zero pages words
+;   defined for arithmetic routine parameters/returns/counters so we re-use
+;   this here for temp space for non-arithemtic routines.
 _a          ds  2
 _x          ds  2
 _i          ds  1
@@ -41,6 +54,8 @@ pmon_ramlo_end equ *
 
 ; ----------------------------------------
 ;   "High" area that gains little from being in the direct page.
+;   (This may be because few instructions access it or because accesses are
+;   usually with instructions that have no shorter direct page version.)
 ;   If `pmon_ramhi` is not defined, this starts immediately after `pmon_ramlo`.
 
         if defined(pmon_ramhi)
@@ -56,6 +71,9 @@ Rx          ds  2       ; index register X
 Rpc         ds  2       ; program counter
 Rsp         ds  2       ; stack pointer
 
+pricount    ds  1       ; printed input count: how far we need to backspace to
+                        ;   clear the currently pending or previous input value
+
 pmon_ramhi_end equ *
 
 ; ----------------------------------------------------------------------
@@ -66,14 +84,74 @@ pmon_ramhi_end equ *
 ; ----------------------------------------------------------------------
 ;   Command loop
 
-init        ldx #banner
+init        ;   The machine state at this entry point may not be particularly
+            ;   meaningful, but has some potentially useful information.
+            psh A               ; cannot STA until flags are saved
+            tpa
+            sta A,Rcc
+            pul A
+            sta A,Ra
+            sta B,Rb
+            stx Rx
+            tsx
+            stx Rsp             ; just our own stack pointer
+            lda A,1,X           ; saved PC shows where exit command will return
+            sta A,Rpc
+            lda A,2,X
+            sta A,Rpc+1
+
+            ldx #banner
             jsr prstr0
             jsr prnl
-            rts         ; XXX immediate exit
 
+            lda #0
+            sta pricount
+            ; XXX init cmdtable
+
+            bra qcommand        ; XXX use pristr here instead
+
+;   Keep banner near start so it's easy to see in dumps of the file.
 banner      db 'pmon 2022-05-30 cjs\r\n',0
+
+qcommand    ;   Command read mode
+            lda A,#CR           ; ensure we're at beginning of line
+            jsr prchar
+            lda A,#PROMPT
+            jsr prchar
+.rdcmdchar  jsr rd1
+            jsr prchar
+
+            ;   XXX for the moment, all we do is accept an exit command
+            ;   or generate an error.
+            cmp A,#'x'
+            beq .exit
+            jsr perror
+            bra .rdcmdchar
+.exit       ;   Leave the prompt and command character on the screen so we
+            ;   see why we exited.
+            jsr prnl
+            rts
+
+;   ♣A Generate an error tone and backspace over the bad input.
+;   Assumes that at least one character has been echoed (pricount > 0).
+;   Does not overwrite the bad input so that you see the character that
+;   caused the error under the cursor.
+perror      lda A,#BEL
+            jsr prchar
+            lda A,#BS
+-           jsr prchar
+            dec pricount
+            bne -
+            rts
 
 ; ----------------------------------------------------------------------
 ;   pr* - printing output
 
             include "src/mc68/pr.a68"
+
+; ----------------------------------------------------------------------
+;   rd* - reading input
+
+;   ♠A  Blocking read of one character with increment of character input count.
+rd1         inc pricount
+            jmp rdchar          ; RTS

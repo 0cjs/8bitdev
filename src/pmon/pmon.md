@@ -58,50 +58,80 @@ Input and output are always lower case by default.
 Command Entry
 -------------
 
-At the `_` prompt you may enter a single-character command optionally
-followed by parameters that determine the behaviour of the command. After
-entering the command character, a single character identifies a particular
-parameter; this may be followed by by an parameter value such as an
-address. Unrecognised command and parameter characters will print the
-character, backspace over it and generate an error beep.
+Invalid input will generate a beep and move your cursor to the start of the
+invalid input. (The invalid input is not overwritten with spaces so that
+you can see what input caused the error.)
 
-Backspace just after a command or parameter character will clear that
-command/parameter character (unless the parameter takes no value, in which
-case it has already updated the command parameters), leaving you ready to
-enter another one. Backspace at any other time (including after a space
-that followed a command character, parameter character or parameter value) will
-generate an error beep.
+At any time you are in one of the following _input modes:_
+- Command mode, immediately after the `_` prompt. The next character typed
+  indicates the command.
+- Parameter mode, immediately after typing a either command character or a
+  parameter character and any value it may need. The next character typed
+  is Return/Enter to execute the command, Space to print a blank space (for
+  readability only) or another parameter character.
+- Value mode, immediately after typing a parameter character for a
+  parameter that takes a value.
+
+Cancelling input is done as follows:
+- In any mode you may type Ctrl-X to cancel the command. Any parameter
+  values you have changed will remain changed. The cursor will be returned
+  to the start of the line just after the prompt, but what you typed will
+  not be erased.
+- Immediately after entering a valid command character you may type
+  Backspace to cancel that command.
+- Immediately after a parameter character that requires a value you may
+  type Backspace to cancel that parameter character. Parameter characters
+  that do not take a value have immediate effect and typing Backspace after
+  them is an error.
+- Before completing value entry you may type Backspace to cancel _all_
+  characters entered so far for that value. The cursor will be returned to
+  just after the parameter character; your the characters you previously
+  typed will not be erased.
 
 Return/Enter will terminate command/parameter input, print a CR (leaving
-the cursor on the same line) and execute the command. Space will terminate
-ongoing parameter value input input for an option which allows you to enter
-less than the full number of digits for things like numeric option
-parameters.
+the cursor on the same line) and execute the command. (Letting command
+output overwrite the command and parameters saves space on the screen.)
+Space will terminate ongoing parameter value input input for an option
+which allows you to enter less than the full number of digits for things
+like numeric option parameters.
 
 ### Command Parameters
 
 Parameters not specified use their previously remembered value or, in some
 cases, a default value. Parameter value input directly follows the
-parameter character:
-- Space will print the currently remembered value.
+parameter character. A space will not be printed after the parameter value
+unless the user typed it to terminate parameter value input before typing
+the full number of digits.
+- Space will print the currently remembered value at the current cursor
+  location and leave you in parameter character input mode.
 - Hex digits will set the value. Type either all required nybbles or end
   with a space, whereupon the most significant unspecified nybbles will be
   assumed to be 0. (I.e., for a word value, `E ` will be taken to mean
-  $000E.) A space will not be printed after the parameter value unless the
-  user typed it to terminate parameter value input before typing the full
-  number of digits.
-
+  $000E.)
 - `/A`, where _A_ is any letter, will use the value from user variable _A._
-- `@AB`, where _A_ is a command character and _B_ is a valid parameter
+- `$AB`, where _A_ is a command character and _B_ is a valid parameter
   character for that command, will use the remembered value for that
   parameter to that command. (E.g., `es1234 ` followed by `l@xs` will
   examine memory starting at $1234 and then disassemble memory starting at
   that same location.)
-- Invalid characters and invalid values will print a `?` and beep to
-  indicate an error and you will be left in value input mode for that
-  parameter. (XXX or in parameter input mode?)
+- `@0000`/`#0000`, where _0000_ is an address, will use the word/byte value
+  at that address in memory. Word values are read using the machine endian
+  order.
+- `&R `/`&R00`/`&R-00` where _R_ is a letter representing a machine
+  register, will use the (saved) value from that machine register. The `00`
+  and `-00` forms will add or subtract the addtional value to/from the
+  register value.
+- `*R `/`*R00`/`*R-00` is available only for 16-bit registers; it will use
+  the value at the memory location the register points to. The numeric
+  forms will add/subtract the additional value to/from the register value
+  before dereferencing the pointer.
+- Invalid characters and invalid values will print a `?`, beep to
+  indicate an error, and you will be left in value input mode for that
+  parameter. Note that following a "short" value with space will finish
+  value entry (XXX or in parameter input mode?)
 - XXX should we support backspace during value input, or just leave it as
   an error that clear all value input to that point?
+- XXX Expand the add/subtract syntax?
 
 Parameters specified more than once will use the most recently specified
 value. Thus during parameter input you can type `p p0 ` to show the current

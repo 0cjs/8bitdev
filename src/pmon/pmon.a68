@@ -37,6 +37,22 @@ CR          equ $0D             ; carriage return ('\r')
 ;   Monitor definitions
 PROMPT      equ '_'
 
+;   Command table entries and types
+CT_END      equ $00             ; end of table/end of entry
+CT_CONTINUE equ $01             ; continuation "command"
+CTP_WORD    equ $FF             ; parameter with word value
+CTP_BYTE    equ $FE             ;     "      "   byte value
+CTP_CHAR    equ $FD             ;     "      "   character value
+CTP_NYBBLE  equ $FC             ;     "      "   nybble value
+CTP_B7      equ %10000000       ;     "      "   boolean value stored in bit 7
+CTP_B6      equ %01000000       ;     "      "      "      "      "   "   "  6
+CTP_B5      equ %00100000       ;     "      "      "      "      "   "   "  5
+CTP_B4      equ %00010000       ;     "      "      "      "      "   "   "  4
+CTP_B3      equ %00001000       ;     "      "      "      "      "   "   "  3
+CTP_B2      equ %00000100       ;     "      "      "      "      "   "   "  2
+CTP_B1      equ %00000010       ;     "      "      "      "      "   "   "  1
+CTP_B0      equ %00000001       ;     "      "      "      "      "   "   "  0
+
 ; ----------------------------------------
 ;   "Low" area aimed at maximum gain from minimum direct page usage.
 ;   This does not actually _have_ to be in the direct page, however.
@@ -118,18 +134,29 @@ qcommand    ;   Command read mode
             jsr prchar
             lda A,#PROMPT
             jsr prchar
-.rdcmdchar  jsr rd1
+
+.rdcmdchar  ;   Standard commands will RTS when done, so set up the stack so
+            ;   that after we JMP to them they will return here.
+            ;   (Essentially, continuation-passing style.)
+            lda A,#LB(.rdcmdchar)
+            psh A
+            lda A,#MB(.rdcmdchar)
+            psh A
+
+            jsr rd1
             jsr prchar
 
             ;   XXX for the moment, all we do is accept an exit command
             ;   or generate an error.
             cmp A,#'x'
-            beq .exit
-            jsr perror
-            bra .rdcmdchar
-.exit       ;   Leave the prompt and command character on the screen so we
-            ;   see why we exited.
-            jsr prnl
+            bne +
+            jmp Cexit
++           jmp perror          ; RTS TCO
+
+Cexit       jsr prnl            ; leave prompt and command char on the screen
+                                ;   so we see why we exited
+            pul A               ; remove return address so we return to the
+            pul A               ;   _caller_ of the main loop
             rts
 
 ;   ♣A Generate an error tone and backspace over the bad input.
@@ -143,6 +170,10 @@ perror      lda A,#BEL
             dec pricount
             bne -
             rts
+
+;   Default command table.
+cmdtbl_default
+            db $00              ; end of table
 
 ; ----------------------------------------------------------------------
 ;   pr* - printing output

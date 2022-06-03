@@ -4,9 +4,37 @@ from    testmc.mc6800  import *
 R = Machine.Registers
 
 test_rig = '''
-                cpu 6800
-                org $1000
+            cpu 6800
+            org $1000
+
+pmon_ramlo  equ $80
+pmon_org    equ $1000
+            include src/mc68/std.a68
+            include src/tmc68/bios.a68
+            include src/pmon/pmon.a68
+
+            org $4FFF
+ct1
+            db  'a'
+            dw  cmd_a
+            db  'x',$FF     ; parameters
+            db  'y',$FE     ; parameters
+            dw  CT_END
+
+            db  CT_CONTINUE
+            dw  ct2
+
+            org $5EEE
+ct2
+            db  'b'
+            dw  cmd_b
+            db  'x',$FF     ; parameters
+            db  'y',$FE     ; parameters
+            dw  CT_END
+
+cmd_a       rts
+cmd_b       rts
 '''
 
-def test_XXX():
+def test_ct_():
     assert 1

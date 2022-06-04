@@ -1,5 +1,6 @@
 from    testmc  import *
 from    testmc.mc6800  import *
+import  pytest
 
 R = Machine.Registers
 
@@ -7,7 +8,7 @@ test_rig = '''
             cpu 6800
             org $1000
 
-pmon_ramlo  equ $80
+pmon_ramlo  equ $0080
 pmon_org    equ $1000
             include src/mc68/std.a68
             include src/tmc68/bios.a68
@@ -15,26 +16,43 @@ pmon_org    equ $1000
 
             org $4FFF
 ct1
-            db  'a'
-            dw  cmd_a
-            db  'x',$FF     ; parameters
-            db  'y',$FE     ; parameters
-            dw  CT_END
+            db  'a'             ; command character
+cmd_a       dw  cmd_a_ep        ; command entrypoint
+            db  'x',CTP_WORD    ; parameters
+            db  'y',CTP_BYTE
+            db  CTP_END
 
             db  CT_CONTINUE
             dw  ct2
 
             org $5EEE
 ct2
-            db  'b'
-            dw  cmd_b
-            db  'x',$FF     ; parameters
-            db  'y',$FE     ; parameters
-            dw  CT_END
+            db  'n'             ; command with no parameters
+            dw  0
+            db CTP_END
 
-cmd_a       rts
-cmd_b       rts
+            db  'b'
+cmd_b       dw  cmd_b_ep
+            db  'x',CTP_BYTE
+            db  'y',CTP_WORD
+            db  CTP_END
+
+            db  CT_END
+cmd_err     dw  Cerror
+
+cmd_a_ep    rts
+cmd_b_ep    rts
+cmd_err_ep  equ Cerror
 '''
 
-def test_ct_():
-    assert 1
+@pytest.mark.parametrize('cmdchar, sym', [
+    (ord('a'),  'cmd_a'),
+    (ord('b'),  'cmd_b'),
+    (ord('w'),  'cmd_err'),
+    (0xFF,      'cmd_err'),
+])
+def test_ct_(m, S, R, cmdchar, sym):
+    m.depword(S.cmdtbl, S.ct1)
+    m.call(S.cmdlookup, R(a=cmdchar, x=0xFFFF))
+    print('entry:', m.hexdump(m.x - 1, 9))
+    assert (cmdchar, S[sym], S[sym + '_ep']) == (m.a, m.x, m.word(m.x))

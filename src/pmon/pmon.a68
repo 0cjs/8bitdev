@@ -40,6 +40,7 @@ PROMPT      equ '_'
 ;   Command table entries and types
 CT_END      equ $00             ; end of table/end of entry
 CT_CONTINUE equ $01             ; continuation "command"
+CTP_END     equ $00             ; end of parameters
 CTP_WORD    equ $FF             ; parameter with word value
 CTP_BYTE    equ $FE             ;     "      "   byte value
 CTP_CHAR    equ $FD             ;     "      "   character value
@@ -122,7 +123,8 @@ init        ;   The machine state at this entry point may not be particularly
 
             lda #0
             sta pricount
-            ; XXX init cmdtable
+            ldx #cmdtabl_rom
+            stx cmdtbl
 
             bra qcommand        ; XXX use pristr here instead
 
@@ -135,9 +137,8 @@ qcommand    ;   Command read mode
             lda A,#PROMPT
             jsr prchar
 
-.rdcmdchar  ;   Standard commands will RTS when done, so set up the stack so
-            ;   that after we JMP to them they will return here.
-            ;   (Essentially, continuation-passing style.)
+.rdcmdchar  ;   Commands RTS when done, so we set up the stack with a return to
+            ;   here and JMP to the command. (Continuation-passing style.)
             lda A,#LB(.rdcmdchar)
             psh A
             lda A,#MB(.rdcmdchar)
@@ -145,25 +146,39 @@ qcommand    ;   Command read mode
 
             jsr rd1
             jsr prchar
+            jsr cmdlookup
+            ldx ,X              ; load command entry point
+            jmp ,X              ; command will RTS to above
 
-            ;   XXX for the moment, all we do is accept an exit command
-            ;   or generate an error.
-            cmp A,#'x'
-            bne +
-            jmp Cexit
-+           jmp perror          ; RTS TCO
+; ----------------------------------------------------------------------
+;   Fixed ("ROM") command table. This is our default command table, but
+;   users may override it by changing `cmdtbl` to point to their own
+;   command table which usually would continue back to this after they
+;   define their own commands.
+;
+cmdtabl_rom
+            db  'x'
+            dw  Cexit
+            db  CTP_END
 
+            db  CT_END          ;   matches all command chars
+            dw  Cerror
+
+; ----------------------------------------------------------------------
+;   Command implementations
+
+;   Exit the monitor back to whatever called it.
 Cexit       jsr prnl            ; leave prompt and command char on the screen
                                 ;   so we see why we exited
-            pul A               ; remove return address so we return to the
-            pul A               ;   _caller_ of the main loop
+            pul A               ; remove continuation return address so we
+            pul A               ;   return to whatever called the monitor
             rts
 
 ;   ♣A Generate an error tone and backspace over the bad input.
 ;   Assumes that at least one character has been echoed (pricount > 0).
 ;   Does not overwrite the bad input so that you see the character that
 ;   caused the error under the cursor.
-perror      lda A,#BEL
+Cerror      lda A,#BEL
             jsr prchar
             lda A,#BS
 -           jsr prchar
@@ -171,9 +186,39 @@ perror      lda A,#BEL
             bne -
             rts
 
-;   Default command table.
-cmdtbl_default
-            db $00              ; end of table
+; ----------------------------------------------------------------------
+
+;   ♠X ♡A ♣B  Starting at command table pointed to by `cmdtbl`, find command
+;   entry for char given in A or the first match-all/error entry. A is
+;   preserved and X points to the address after the command letter, which
+;   address contains the address of the command code entry point.
+cmdlookup   ldx cmdtbl
+.checkentry lda B,,X            ; table end (match any) marker (CT_END)?
+            beq .found          ;   yes: found our entry for "not found"
+            dec B               ; -1: table continuation marker (CT_CONTINUE)?
+            bne .cmd_entry      ;   no: it's a command entry
+            ;   continuation entry
+            inx                 ; increment to continuation address
+            ldx ,X
+            bra .checkentry
+
+            ;   command entry
+.cmd_entry  cmp A,,X            ; matches command letter?
+            beq .found          ;   yes: we're done
+            inx                 ; increment past command addr
+            inx                 ;   (may contain 0 bytes)
+            inx
+.find_next  tst ,X              ; end of parameters (CT_END)?
+            beq .param_end      ;   yes: XXX
+            inx                 ; move past this parameter
+            inx
+            bra .find_next
+
+.param_end  inx                 ; move forward to next entry
+            bra .checkentry
+
+.found      inx                 ; move forward to command address
+            rts
 
 ; ----------------------------------------------------------------------
 ;   pr* - printing output

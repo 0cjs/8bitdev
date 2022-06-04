@@ -386,7 +386,8 @@ start to finish and the first matching entry is used.
       Addrs Description
       ──────────────────────────────────────────────────────────
             End of Table
-      00    $00 value
+      00    $00 value (= "always match")
+      01-02 address of "command not found" handler
       ──────────────────────────────────────────────────────────
             Continue With Another Table
       00    $01 value

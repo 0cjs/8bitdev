@@ -38,21 +38,23 @@ cmd_b       dw  cmd_b_ep
             db  CTP_END
 
             db  CT_END
-cmd_err     dw  Cerror
 
 cmd_a_ep    rts
 cmd_b_ep    rts
-cmd_err_ep  equ Cerror
 '''
 
 @pytest.mark.parametrize('cmdchar, sym', [
     (ord('a'),  'cmd_a'),
     (ord('b'),  'cmd_b'),
-    (ord('w'),  'cmd_err'),
-    (0xFF,      'cmd_err'),
 ])
-def test_ct_(m, S, R, cmdchar, sym):
+def test_cmdlookup_success(m, S, R, cmdchar, sym):
     m.depword(S.cmdtbl, S.ct1)
-    m.call(S.cmdlookup, R(a=cmdchar, x=0xFFFF))
+    m.call(S.cmdlookup, R(a=cmdchar, x=0xFFFF, C=1))
     print('entry:', m.hexdump(m.x - 1, 9))
-    assert (cmdchar, S[sym], S[sym + '_ep']) == (m.a, m.x, m.word(m.x))
+    assert (cmdchar, 0, S[sym], S[sym + '_ep']) == (m.a, m.C, m.x, m.word(m.x))
+
+@pytest.mark.parametrize('cmdchar', [0xFF, 0x00, 0x01, ord('Z')])
+def test_cmdlookup_failure(m, S, R, cmdchar):
+    m.depword(S.cmdtbl, S.ct1)
+    m.call(S.cmdlookup, R(a=cmdchar, x=0xFFFF, C=0))
+    assert R(C=1, a=cmdchar) == m.regs

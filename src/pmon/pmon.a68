@@ -129,24 +129,38 @@ init        ;   The machine state at this entry point may not be particularly
             bra qcommand        ; XXX use pristr here instead
 
 ;   Keep banner near start so it's easy to see in dumps of the file.
-banner      db 'pmon 2022-05-30 cjs\r\n',0
+banner      db 'pmon 2022-05-30 cjs',0
 
 qcommand    ;   Command read mode
-            lda A,#CR           ; ensure we're at beginning of line
-            jsr prchar
+            jsr lineCR          ; ensure we're at beginning of line
             lda A,#PROMPT
             jsr prchar
 
-.rdcmdchar  ;   Commands RTS when done, so we set up the stack with a return to
+            ;   Commands RTS when done, so we set up the stack with a return to
             ;   here and JMP to the command. (Continuation-passing style.)
-            lda A,#LB(.rdcmdchar)
+            lda A,#LB(qcommand)
             psh A
-            lda A,#MB(.rdcmdchar)
+            lda A,#MB(qcommand)
             psh A
 
             jsr rd1
             jsr prchar
             jsr cmdlookup
+            bcc .foundcmd
+
+            ;   Unknown command: generate an error tone and backspace over
+            ;   the bad input. Does not overwrite the bad input so that you
+            ;   see the character that caused the error under the cursor.
+            lda A,#BEL
+            jsr prchar
+            lda A,#BS
+            jsr prchar
+            dec pricount
+            rts                 ; continue with qcommand
+
+.foundcmd
+            jsr lineCR          ; we overwrite command entry
+                                ;   XXX do we want to wipe it with spaces?
             ldx ,X              ; load command entry point
             jmp ,X              ; command will RTS to above
 
@@ -157,12 +171,15 @@ qcommand    ;   Command read mode
 ;   define their own commands.
 ;
 cmdtabl_rom
+            db  'b'
+            dw  Cbanner
+            db  CTP_END
+
             db  'x'
             dw  Cexit
             db  CTP_END
 
-            db  CT_END          ;   matches all command chars
-            dw  Cerror
+            db  CT_END
 
 ; ----------------------------------------------------------------------
 ;   Command implementations
@@ -174,33 +191,27 @@ Cexit       jsr prnl            ; leave prompt and command char on the screen
             pul A               ;   return to whatever called the monitor
             rts
 
-;   ♣A Generate an error tone and backspace over the bad input.
-;   Assumes that at least one character has been echoed (pricount > 0).
-;   Does not overwrite the bad input so that you see the character that
-;   caused the error under the cursor.
-Cerror      lda A,#BEL
-            jsr prchar
-            lda A,#BS
--           jsr prchar
-            dec pricount
-            bne -
-            rts
+;   Print the banner (XXX just for testing)
+Cbanner     ldx #banner
+            jsr prstr0
+            jmp prnl            ; RTS TCO
 
 ; ----------------------------------------------------------------------
 
-;   ♠X ♡A ♣B  Starting at command table pointed to by `cmdtbl`, find command
-;   entry for char given in A or the first match-all/error entry. A is
-;   preserved and X points to the address after the command letter, which
-;   address contains the address of the command code entry point.
+;   ♠Xc ♡A ♣B  Starting at command table pointed to by `cmdtbl`, find the
+;   command entry for char given in A. A is always preserved. On failure
+;   the carry is set; on success the carry is clear and X points to the
+;   address after the command letter, which in turn contains the address of
+;   the command code entry point.
 cmdlookup   ldx cmdtbl
-.checkentry lda B,,X            ; table end (match any) marker (CT_END)?
-            beq .found          ;   yes: found our entry for "not found"
-            dec B               ; -1: table continuation marker (CT_CONTINUE)?
-            bne .cmd_entry      ;   no: it's a command entry
-            ;   continuation entry
-            inx                 ; increment to continuation address
-            ldx ,X
-            bra .checkentry
+
+            ;   parse type of command table entry
+.qentry     lda B,,X            ; CT_END?
+            beq .notfound       ;   yes: failure to match
+            dec B               ; was 1, CT_CONTINUE?
+            bne .cmd_entry      ;   no: it's a regular command entry
+            ldx 1,X             ; load continuation address
+            bra .qentry         ; continue parsing table
 
             ;   command entry
 .cmd_entry  cmp A,,X            ; matches command letter?
@@ -208,22 +219,32 @@ cmdlookup   ldx cmdtbl
             inx                 ; increment past command addr
             inx                 ;   (may contain 0 bytes)
             inx
-.find_next  tst ,X              ; end of parameters (CT_END)?
+.next_param tst ,X              ; end of parameters (CT_END)?
             beq .param_end      ;   yes: XXX
             inx                 ; move past this parameter
             inx
-            bra .find_next
+            bra .next_param
 
 .param_end  inx                 ; move forward to next entry
-            bra .checkentry
+            bra .qentry
 
-.found      inx                 ; move forward to command address
+.notfound   sec                 ; indicate failure, X is don't-care
+.found      ;   if found, carry clear on entry because we arrived via `beq`,
+            ;   thus success already indicated
+            inx                 ; move forward to command address
             rts
 
 ; ----------------------------------------------------------------------
 ;   pr* - printing output
 
             include "src/mc68/pr.a68"
+
+;   ♡ABX Move to the start of the _current_ line, as a CR usually does.
+lineCR      psh a
+            lda A,#CR
+            jsr prchar
+            pul a
+            rts
 
 ; ----------------------------------------------------------------------
 ;   rd* - reading input

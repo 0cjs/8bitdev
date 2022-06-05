@@ -33,6 +33,7 @@ BEL         equ $07             ; bell ('\a')
 BS          equ $08             ; backspace ('\b')
 LF          equ $0A             ; line feed ('\n')
 CR          equ $0D             ; carriage return ('\r')
+CAN         equ $18             ; cancel (Ctrl-X)
 
 ;   Monitor definitions
 PROMPT      equ '_'
@@ -160,11 +161,13 @@ qcommand    ;   Command read mode
 
 .foundcmd   jsr qparams         ; parse parameters
             bcc .execute        ; got CR to execute
-            rts                 ; got cancel; start parsing new cmd on this line
-                                ;   via continuation
+            rts                 ; got cancel; use continuation to start parsing
+                                ;   new command on this same line
 
 .execute    jsr lineCR          ; we overwrite command entry
-                                ;   XXX do we want to wipe it with spaces?
+            ;   XXX Should we try to wipe the line with some spaces? Or just
+            ;   leave it to output routines to decide how much to clear
+            ;   after what they print?
             ldx cmdentry        ; load pointer to command table entry
             ldx 1,X             ; load execution addr of that command
             jmp ,X              ; command will RTS to above
@@ -199,14 +202,16 @@ Cexit       jsr prnl            ; leave prompt and command char on the screen
 ;   Print the banner (XXX just for testing)
 Cbanner     ldx #banner
             jsr prstr0
+            jsr prspace         ; a few spaces to ensure end of string is clear
+            jsr prspace         ;   if we had lots of parameters on line
             jmp prnl            ; RTS TCO
 
 ; ----------------------------------------------------------------------
-
 ;   ♠Xc ♡A ♣B  Starting at command table pointed to by `cmdtbl`, find the
 ;   entry in that table for char given in A. A is always preserved. On
 ;   failure the carry is set; on success the carry is clear and `cmdentry`
 ;   points to the entry in the command table.
+;
 cmdlookup   ldx cmdtbl
 
             ;   parse type of command table entry
@@ -238,9 +243,20 @@ cmdlookup   ldx cmdtbl
             stx cmdentry
             rts
 
+; ----------------------------------------------------------------------
 ;   parse parameters for a command
-qparams    ;jsr rd1
-            ;   XXX before we've parsed any params, backspace is also cancel
+;
+qparams     jsr rd1
+            cmp A,#BS           ; before we've parsed any params,
+            beq .cancel         ;   backspace also cancels command
+
+.checkchar  cmp A,#CAN
+            beq .cancel
+            cmp A,#CR
+            beq .execute
+            jsr prvischar       ; XXX for the moment, just echo
+            jsr rd1
+            bra .checkchar
 
 .execute    clc                 ; execute indicator
             rts
@@ -266,5 +282,11 @@ lineCR      psh a
 ;   rd* - reading input
 
 ;   ♠A  Blocking read of one character with increment of character input count.
+;       This also converts DEL to BS because we have no special use for
+;       separating the two in this system.
 rd1         inc pricount
-            jmp rdchar          ; RTS
+            jsr rdchar          ; RTS
+            cmp A,#DEL
+            bne +
+            lda A,#BS
++           rts

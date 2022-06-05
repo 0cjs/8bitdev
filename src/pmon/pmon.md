@@ -229,11 +229,12 @@ however. All parameters are remembered separately for every command.
 
 ### Memory/Data Display/Change Commands
 
-- `r`: Display/set registers. Each parameter character corresponds to a register.
-  Registers can be individually displayed during parameter entry by typing the
-  register letter followed by a space, and set with register letter
-  followed by a value (and optional space). The entire set of registers
-  will be displayed after pressing Return/Enter to terminate parameter entry.
+- `r`: Display/set registers. Each parameter character corresponds to a
+  register. Registers can be individually displayed during parameter entry
+  by typing the register letter followed by a space, and set with register
+  letter followed by a value (and optional space). The entire set of
+  registers will be displayed after pressing Return/Enter to terminate
+  parameter entry.
   - Parameters common to all CPUs are `p` (program counter), `s` (stack),
     and `f` (flags, status, condition codes or program status register).
   - 8080: `p0000`, `s0000`, `f00`, `a00`,

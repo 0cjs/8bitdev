@@ -187,6 +187,23 @@ cmdtabl_rom
             dw  Cexit
             db  CTP_END
 
+            db  'o'
+            dw  Cout
+            db  'a', CTP_WORD
+            db  'v', CTP_BYTE   ; value to write
+          ; db  'm', CTP_B7     ; use memory-mapped I/O; not present on 6800
+            db CTP_END
+
+            db  'r'
+            dw  Cregs
+            db  'p', CTP_WORD
+            db  's', CTP_WORD
+            db  'f', CTP_BYTE
+            db  'a', CTP_BYTE
+            db  'b', CTP_BYTE
+            db  'x', CTP_WORD
+            db  CTP_END
+
             db  CT_END
 
 ; ----------------------------------------------------------------------
@@ -205,6 +222,12 @@ Cbanner     ldx #banner
             jsr prspace         ; a few spaces to ensure end of string is clear
             jsr prspace         ;   if we had lots of parameters on line
             jmp prnl            ; RTS TCO
+
+;   Send byte to output port etc.
+Cout        db $02              ; end simulator w/invalid instruction
+
+;   Modify/print registers
+Cregs       db $03              ; end simulator w/invalid instruction
 
 ; ----------------------------------------------------------------------
 ;   ♠Xc ♡A ♣B  Starting at command table pointed to by `cmdtbl`, find the

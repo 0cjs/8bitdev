@@ -122,8 +122,7 @@ init        ;   The machine state at this entry point may not be particularly
             jsr prstr0
             jsr prnl
 
-            lda #0
-            sta pricount
+            ;   No need to init pricount since our first lineCR will do it.
             ldx #cmdtabl_rom
             stx cmdtbl
 
@@ -240,10 +239,13 @@ cmdlookup   ldx cmdtbl
             rts
 
 ;   parse parameters for a command
-qparams
+qparams    ;jsr rd1
             ;   XXX before we've parsed any params, backspace is also cancel
-            sec                 ; cancel
-            clc                 ; execute
+
+.execute    clc                 ; execute indicator
+            rts
+
+.cancel     sec                 ; cancel indicator
             rts
 
 ; ----------------------------------------------------------------------
@@ -252,7 +254,9 @@ qparams
             include "src/mc68/pr.a68"
 
 ;   ♡ABX Move to the start of the _current_ line, as a CR usually does.
+;        Also clears `pricount` since we now have no printed input to BS over.
 lineCR      psh a
+            clr pricount
             lda A,#CR
             jsr prchar
             pul a

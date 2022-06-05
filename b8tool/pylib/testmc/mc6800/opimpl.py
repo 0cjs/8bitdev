@@ -16,13 +16,15 @@ class InvalidOpcode(RuntimeError):
     ''' Since it is designed for testing code, the simulator
         will not execute invalid opcodes, instead raising an exception.
     '''
-    def __init__(self, opcode, pc):
-        self.opcode = opcode
-        self.pc = pc
-        super().__init__('opcode=${:02X} pc=${:04X}'.format(opcode, pc))
+    def __init__(self, opcode, regs):
+        self.opcode = opcode; self.regs = regs
+        super().__init__('op=${:02X}, {}'.format(opcode, regs))
 
 def invalid(m):
-    raise InvalidOpcode(m.mem[incword(m.pc, -1)], m.pc-1)
+    #   The PC PC has already been advanced past the opcode; undo this.
+    pc = incword(m.pc, -1)
+    regs = m.regs.clone(pc=pc)
+    raise InvalidOpcode(m.mem[pc], regs)
 
 ####################################################################
 #   Address handling, reading data at the PC

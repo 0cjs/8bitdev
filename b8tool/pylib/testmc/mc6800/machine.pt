@@ -73,7 +73,15 @@ def test_step_invalid(m, opcode):
     m.setregs(R(pc=0x103))
     with pytest.raises(Machine.InvalidOpcode) as ex:
         m.step(2)
-    assert ex.match(r'^opcode=\${:02X} pc=\$0104$'.format(opcode))
+    assert ex.match(r'^op=\${:02X},.*pc=0104 '.format(opcode))
+
+def test_step_invalid_FFFF(m):
+    ' Ensure PC is correct when bad opcode executed at $FFFF. '
+    m.deposit(0xFFFF, [0x05])
+    m.setregs(R(pc=0xFFFF))
+    with pytest.raises(Machine.InvalidOpcode) as ex:
+        m.step(1)
+    assert ex.match(r'^op=\$05,.*pc=FFFF ')
 
 def test_step(m):
     ''' Smoke test; the detailed work of instruction execution is covered

@@ -313,8 +313,8 @@ def test_invalid_opcodes():
         addr = 0x00E0 + i
         with pytest.raises(InvalidOpcode) as ex:
             runop([op], startaddr=addr)
-        assert (op, addr) == (ex.value.opcode, ex.value.pc)
-        assert ex.match(r'^opcode=\${:02X} pc=\${:04X}$'.format(op, addr))
+        assert (op, addr) == (ex.value.opcode, ex.value.regs.pc)
+        assert ex.match(r'^op=\${:02X}.* pc={:04X} '.format(op, addr))
 
 def test_NOP():
     #   The test framework will ensure that nothing but the PC has changed.

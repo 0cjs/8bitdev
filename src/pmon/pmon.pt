@@ -14,47 +14,47 @@ pmon_org    equ $1000
             include src/tmc68/bios.a68
             include src/pmon/pmon.a68
 
+; ----------------------------------------------------------------------
+;   Mock command table(s) for testing
+
             org $4FFF
-ct1
-            db  'a'             ; command character
-cmd_a       dw  cmd_a_ep        ; command entrypoint
+cmdtbl_1
+cmdentry_a  db  'a'             ; command character
+            dw  $0000           ; command entrypoint (testing zeros here)
             db  'x',CTP_WORD    ; parameters
             db  'y',CTP_BYTE
             db  CTP_END
 
             db  CT_CONTINUE
-            dw  ct2
+            dw  cmdtbl_2
 
             org $5EEE
-ct2
-            db  'n'             ; command with no parameters
-            dw  0
+cmdtbl_2
+cmdentry_n  db  'n'             ; command with no parameters
+            dw  $1234
             db CTP_END
 
-            db  'b'
-cmd_b       dw  cmd_b_ep
+cmdentry_b  db  'b'
+            dw  $100B
             db  'x',CTP_BYTE
             db  'y',CTP_WORD
             db  CTP_END
 
             db  CT_END
 
-cmd_a_ep    rts
-cmd_b_ep    rts
+; ----------------------------------------------------------------------
 '''
 
-@pytest.mark.parametrize('cmdchar, sym', [
-    (ord('a'),  'cmd_a'),
-    (ord('b'),  'cmd_b'),
-])
-def test_cmdlookup_success(m, S, R, cmdchar, sym):
-    m.depword(S.cmdtbl, S.ct1)
-    m.call(S.cmdlookup, R(a=cmdchar, x=0xFFFF, C=1))
-    print('entry:', m.hexdump(m.x - 1, 9))
-    assert (cmdchar, 0, S[sym], S[sym + '_ep']) == (m.a, m.C, m.x, m.word(m.x))
+@pytest.mark.parametrize('cmdchar', ['a', 'b'])
+def test_cmdlookup_success(m, S, R, cmdchar):
+    m.depword(S.cmdtbl, S.cmdtbl_1)
+    m.call(S.cmdlookup, R(a=ord(cmdchar), x=0xFFFF, C=1))
+    cmdentry = m.word(S.cmdentry)
+    print('entry:', m.hexdump(cmdentry, 9))
+    assert (ord(cmdchar), 0, S['cmdentry_' + cmdchar]) == (m.a, m.C, cmdentry)
 
 @pytest.mark.parametrize('cmdchar', [0xFF, 0x00, 0x01, ord('Z')])
 def test_cmdlookup_failure(m, S, R, cmdchar):
-    m.depword(S.cmdtbl, S.ct1)
+    m.depword(S.cmdtbl, S.cmdtbl_1)
     m.call(S.cmdlookup, R(a=cmdchar, x=0xFFFF, C=0))
     assert R(C=1, a=cmdchar) == m.regs

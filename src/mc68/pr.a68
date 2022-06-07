@@ -32,6 +32,27 @@ prstr0      lda A,0,X
 .done       rts
     .endif ; !defined(prstr0)
 
+;   ♣AX,_x pristr: print inline string
+;
+;   Using `prchar`, print the $00-terminated string from memory immediately
+;   after the call to this subroutine. (This requires a JSR.) There is no
+;   limit on the size of the string.
+;
+pristr      tsx
+            ldx ,X              ; return address
+.nextchar   lda A,,X
+            beq .done
+            jsr prchar
+            inx
+            bra .nextchar
+.done       inx                 ; skip past terminator
+            stx _x              ; save new return address
+            tsx
+            lda A,_x
+            sta A,0,X
+            lda A,_x+1
+            sta A,1,X
+            rts
 
 ; ----------------------------------------------------------------------
 ;   Print values in hex

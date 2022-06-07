@@ -9,11 +9,16 @@ test_rig = '''
             cpu 6800
             org $1000
             include src/tmc68/bios.a68
+            include src/mc68/std.a68
             include src/mc68/pr.a68
 
 _a          equ $30
 _x          equ $32
 
+T_pristr    jsr pristr
+            db  "abc\\n",$01,$FF,$00
+            lda #$EA
+            rts
 '''
 
 param = pytest.mark.parametrize
@@ -24,6 +29,12 @@ def test_prstr0(m, S, R, loadbios, str):
     m.deposit(0x37FD, str + b'\x00XYZ')     # guard values
     m.call(S.prstr0, R(x=0x37FD))
     assert str == output.getvalue()
+
+def test_pristr(m, S, R, loadbios):
+    _, output = loadbios('tmc68')
+    m.call(S.T_pristr, R(a=0x55))
+    assert (b'abc\n\x01\xFF', R(a=0xEA)) == (output.getvalue(), m.regs)
+
 
 ####################################################################
 

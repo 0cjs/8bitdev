@@ -142,7 +142,7 @@ Parameter letters are followed by values are of the following types:
   waiting for any further input.
 - Boolean (`x1`): follow the parameter letter with `0`, `1` or `.`. `0`
   sets the parameter to false, `1` to true, and `.` prints and sets the
-  inverse of the current value.
+  inverse of the current value. (The default value of most boolean flags is 1.)
 - Nybble (`xF`): 1 hex digit.
 - Byte (`x00`): 1-2 hex digits.
 - Word (`x0000`): 1-4 hex digits.
@@ -164,6 +164,16 @@ subfunctions:
 XXX Add `.` as a byte/word parameter value to increment the currently
 remembered value by a command-specific amount? Would this be useful for
 anything but start address?
+
+### User Variables
+
+The monitor has up to 24 user variables named `a` through `z`. These may be
+read via the parameter input mechanism above (e.g., at the command prompt
+type `?v/i` to show the value of user variable `i`). Some commands have a
+`w` parameter for writing their output to a user variable; this parameter
+may be given value `/` to indicate that the output should not be written to
+any user variable (e.g. `?w/v3 ` will print the value 3, but not write it
+to any user variable).
 
 
 Commands
@@ -188,11 +198,12 @@ however. All parameters are remembered separately for every command.
     /   display/set user variables
     :   deposit data into memory†
     ?   calculate/display values
-    c   call (execute via JSR; RTS returns to monitor)
+    c   checksum/CRC of a memory range
     e   examine memory
     f   fill memory
-    g   goto (execute via JMP)
     i   input from device
+    j   execute code (JMP/JSR)
+    k   execute code (alternate for `j` with its own saved params)
     l   disassemble ("list")
     n   single-step ("next instruction")
     o   output to device
@@ -226,6 +237,11 @@ however. All parameters are remembered separately for every command.
 
 - `v`: Compare ("verify") memory. Parameters and behaviour same as `t`/copy:
   SP `a0000` and `e0000` for the source; target address is `t0000`.
+
+- `c`: Checksum/CRC a range of memory. SP `a0000` and `e0000`.
+  Prints the memory range and CRC16 of the data in that range.
+  - `wA`: write the lowest 16 bits of the checksum/CRC to to user variable _A._
+  - XXX add params for other algorithms?
 
 ### Memory/Data Display/Change Commands
 
@@ -324,16 +340,18 @@ XXX Add `v1` param to turn on/off deposit verification?
 ### Code Execution Commands
 
 All commands below load all registers from the saved values (dispalyed/set
-with `r`) before executing. For `c` and `g` the program counter is excepted
+with `r`) before executing. For `j` and `k` the program counter is excepted
 from this; it's loaded from the remembered value of the `a0000` parameter.
 
-- `c`: Call (execute via JSR). Pushes return to monitor address on stack.
-  SP `a0000`.
-- `g`: Goto (execute via JMP). RTS will use ???. (XXX figure this out.)
-  SP `a0000`.
+- `j`: (JMP/JSR) restore all registers and execute code. SP `a0000` and:
+  - `r1`: after restoring the stack pointer, push a return address to the
+    monitor on to the stack. This allows the routine to execute RTS to
+    return to the monitor, which will save the registers upon return.
+- `k`: alternate for `j`. This has a separate set of parameters so that
+  you can easily switch between executing two different routines.
 - `&`: Continue execuction via return from interrupt. This allows
   "breakpoints by hand" by inserting `BRK`, `SWI` or similar instructions
-  into your code.
+  into your code. (XXX do we need this, or can it be a `j`/`k` option?)
 - `n`: Single step ("next instruction"). Not yet implemented.
   XXX Maybe give it a count or breakpoint address or something to print a
   trace of several instructions? Also a delay between instructions when
@@ -445,7 +463,7 @@ command is typed, and then parse the user-supplied parameter values.
 
 It might also make sense to reserve two or more areas particular to groups
 of commands such as display commands (`x`, `l`, etc.) and execution
-commands (`c`, `g`, `$`). This would allow looping through
+commands (`j`, `k`, `&`). This would allow looping through
 deposit-call-examine cycles while maintaining remembered values.
 
 

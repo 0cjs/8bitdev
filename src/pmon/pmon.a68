@@ -69,6 +69,8 @@ _x          ds  2
 _i          ds  1
 
 pmon_ramlo_end equ *
+;   Here we could check for and warn about direct page overflow, but
+;   perhaps that's better left to the machine-specific code.
 
 ; ----------------------------------------
 ;   "High" area that gains little from being in the direct page.
@@ -100,8 +102,48 @@ pmon_ramhi_end equ *
 
             org pmon_org
 
+;   Our entry point is at the start, but immediately after that we place
+;   (ROM-able) data that the user may want to easily view.
+start       jmp init
+
+banner      db 'pmon 2022-05-30 cjs',0
+
 ; ----------------------------------------------------------------------
-;   Command loop
+;   Fixed ("ROM") command table. This is our default command table, but
+;   users may override it by changing `cmdtbl` to point to their own
+;   command table which usually would continue back to this after they
+;   define their own commands.
+;
+cmdtabl_rom
+            db  'b'
+            dw  Cbanner
+            db  CTP_END
+
+            db  'x'
+            dw  Cexit
+            db  CTP_END
+
+            db  'o'
+            dw  Cout
+            db  'a', CTP_WORD
+            db  'v', CTP_BYTE   ; value to write
+          ; db  'm', CTP_B7     ; use memory-mapped I/O; not present on 6800
+            db CTP_END
+
+            db  'r'
+            dw  Cregs
+            db  'p', CTP_WORD
+            db  's', CTP_WORD
+            db  'f', CTP_BYTE
+            db  'a', CTP_BYTE
+            db  'b', CTP_BYTE
+            db  'x', CTP_WORD
+            db  CTP_END
+
+            db  CT_END
+
+; ----------------------------------------------------------------------
+;   Initialisation and command loop
 
 init        ;   The machine state at this entry point may not be particularly
             ;   meaningful, but has some potentially useful information.
@@ -128,9 +170,6 @@ init        ;   The machine state at this entry point may not be particularly
             stx cmdtbl
 
             bra qcommand        ; XXX use pristr here instead
-
-;   Keep banner near start so it's easy to see in dumps of the file.
-banner      db 'pmon 2022-05-30 cjs',0
 
 qcommand    ;   Command read mode
             jsr lineCR          ; ensure we're at beginning of line
@@ -171,63 +210,6 @@ qcommand    ;   Command read mode
             ldx cmdentry        ; load pointer to command table entry
             ldx 1,X             ; load execution addr of that command
             jmp ,X              ; command will RTS to above
-
-; ----------------------------------------------------------------------
-;   Fixed ("ROM") command table. This is our default command table, but
-;   users may override it by changing `cmdtbl` to point to their own
-;   command table which usually would continue back to this after they
-;   define their own commands.
-;
-cmdtabl_rom
-            db  'b'
-            dw  Cbanner
-            db  CTP_END
-
-            db  'x'
-            dw  Cexit
-            db  CTP_END
-
-            db  'o'
-            dw  Cout
-            db  'a', CTP_WORD
-            db  'v', CTP_BYTE   ; value to write
-          ; db  'm', CTP_B7     ; use memory-mapped I/O; not present on 6800
-            db CTP_END
-
-            db  'r'
-            dw  Cregs
-            db  'p', CTP_WORD
-            db  's', CTP_WORD
-            db  'f', CTP_BYTE
-            db  'a', CTP_BYTE
-            db  'b', CTP_BYTE
-            db  'x', CTP_WORD
-            db  CTP_END
-
-            db  CT_END
-
-; ----------------------------------------------------------------------
-;   Command implementations
-
-;   Exit the monitor back to whatever called it.
-Cexit       jsr prnl            ; leave prompt and command char on the screen
-                                ;   so we see why we exited
-            pul A               ; remove continuation return address so we
-            pul A               ;   return to whatever called the monitor
-            rts
-
-;   Print the banner (XXX just for testing)
-Cbanner     ldx #banner
-            jsr prstr0
-            jsr prspace         ; a few spaces to ensure end of string is clear
-            jsr prspace         ;   if we had lots of parameters on line
-            jmp prnl            ; RTS TCO
-
-;   Send byte to output port etc.
-Cout        db $02              ; end simulator w/invalid instruction
-
-;   Modify/print registers
-Cregs       db $03              ; end simulator w/invalid instruction
 
 ; ----------------------------------------------------------------------
 ;   ♠Xc ♡A ♣B  Starting at command table pointed to by `cmdtbl`, find the
@@ -286,6 +268,30 @@ qparams     jsr rd1
 
 .cancel     sec                 ; cancel indicator
             rts
+
+; ----------------------------------------------------------------------
+;   Command implementations
+
+;   Exit the monitor back to whatever called it.
+Cexit       jsr prnl            ; leave prompt and command char on the screen
+                                ;   so we see why we exited
+            pul A               ; remove continuation return address so we
+            pul A               ;   return to whatever called the monitor
+            rts
+
+;   Print the banner (XXX just for testing)
+Cbanner     ldx #banner
+            jsr prstr0
+            jsr prspace         ; a few spaces to ensure end of string is clear
+            jsr prspace         ;   if we had lots of parameters on line
+            jmp prnl            ; RTS TCO
+
+;   Send byte to output port etc.
+Cout        db $02              ; end simulator w/invalid instruction
+
+;   Modify/print registers
+Cregs       db $03              ; end simulator w/invalid instruction
+
 
 ; ----------------------------------------------------------------------
 ;   pr* - printing output

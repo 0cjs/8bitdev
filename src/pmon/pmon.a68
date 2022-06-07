@@ -183,20 +183,13 @@ qcommand    ;   Command read mode
             lda A,#MB(qcommand)
             psh A
 
-            jsr rd1
-            jsr prchar
+            jsr rdche0
             jsr cmdlookup
             bcc .foundcmd
-
-            ;   Unknown command: generate an error tone and backspace over
-            ;   the bad input. Does not overwrite the bad input so that you
-            ;   see the character that caused the error under the cursor.
-            lda A,#BEL
-            jsr prchar
-            lda A,#BS
-            jsr prchar
-            dec pricount        ; we backspaced over the rd1 pricount
-            rts                 ; continue with qcommand
+            ;   Backspace over the bad character (if it was printed),
+            ;   signal error with a beep and continue with qcommand
+            ;   via stacked continuation.
+            bra errorbs         ; RTS TCO
 
 .foundcmd   jsr qparams         ; parse parameters
             bcc .execute        ; got CR to execute
@@ -210,6 +203,24 @@ qcommand    ;   Command read mode
             ldx cmdentry        ; load pointer to command table entry
             ldx 1,X             ; load execution addr of that command
             jmp ,X              ; command will RTS to above
+
+;   Backspace over bad input and generate an error tone.
+;   The backspace does not overwrite the bad input so that you see under
+;   the cursor the character that caused the error.
+;   The backspace is not printed if pricount is 0 as that means the
+;   bad input was a non-printing char that was not echoed.
+errorbs     jsr pri_bs
+errorbel    lda A,#BEL
+            jsr prchar
+            rts
+
+;   Backspace over a "pending input" printed character, if we have one.
+pri_bs      tst pricount        ; did we print something we need to BS over?
+            bne +               ;   yes: print a backspace
+            rts
++           dec pricount
+            lda A,#BS
+            jmp prchar          ; RTS TCO
 
 ; ----------------------------------------------------------------------
 ;   ♠Xc ♡A ♣B  Starting at command table pointed to by `cmdtbl`, find the
@@ -249,24 +260,39 @@ cmdlookup   ldx cmdtbl
             rts
 
 ; ----------------------------------------------------------------------
-;   parse parameters for a command
-;
-qparams     jsr rd1
+;   Parameter parsing
+
+;   Parse all parameters for a command, returning with carry clear
+;   on execute or carry set if the command is cancelled.
+qparams     jsr rdche           ; we may still BS over the command
             cmp A,#BS           ; before we've parsed any params,
             beq .cancel         ;   backspace also cancels command
-
-.checkchar  cmp A,#CAN
+            clr pricount        ; the command is now accepted
+.checkchar  cmp A,#' '          ; when looking for a new param char, spaces
+            beq .ok             ;   are accepted and printed
+            cmp A,#CAN
             beq .cancel
             cmp A,#CR
             beq .execute
-            jsr prvischar       ; XXX for the moment, just echo
-            jsr rd1
+            bsr qparam          ; valid parameter character?
+            bcc .ok             ;   yes: continue reading parameters
+            jsr errorbs         ;   no: back up cursor and...
+.ok         jsr rdche0          ; start a new parameter read
             bra .checkchar
 
 .execute    clc                 ; execute indicator
             rts
 
-.cancel     sec                 ; cancel indicator
+.cancel     jsr pri_bs
+            sec                 ; cancel indicator
+            rts
+
+;   Parse character in A as a parameter, including any following value.
+;   This assumes that the character has not yet be echoed.
+;   Return carry clear if it was valid, or set if it was not found.
+qparam      cmp A,#'w'          ; XXX for the moment, 'w' and above are
+                                ;   considered valid param chars;
+                                ;   all else are invalid.
             rts
 
 ; ----------------------------------------------------------------------
@@ -310,12 +336,23 @@ lineCR      psh a
 ; ----------------------------------------------------------------------
 ;   rd* - reading input
 
-;   ♠A  Blocking read of one character with increment of character input count.
-;       This also converts DEL to BS because we have no special use for
-;       separating the two in this system.
-rd1         inc pricount
-            jsr rdchar          ; RTS
-            cmp A,#DEL
+;   ♠A  Blocking read and echo of one character with increment of
+;   characters printed count pricount. Non-printing chars are not echoed
+;   and pricount is not incremented, but the character is still returned.
+;   This converts DEL to BS because we have no special use for separating
+;   the two in this system and it makes printable determination easier.
+;
+;   The `rdche0` entry point will clear pricount before reading, indicating
+;   that everything read before that is to be consider valid, completed
+;   input that should not be backspaced over if there's an error.
+;
+rdche0      clr pricount
+rdche       jsr rdchar
+            cmp A,#DEL          ; convert DEL to BS
             bne +
             lda A,#BS
-+           rts
++           cmp A,#' '          ; printable?
+            bcs .rts            ;   no: we're done
+            inc pricount
+            jmp prchar          ; RTS TCO
+.rts        rts

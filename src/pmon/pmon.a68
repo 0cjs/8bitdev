@@ -68,6 +68,8 @@ _a          ds  2
 _x          ds  2
 _i          ds  1
 
+tmpx        equ _x              ; for use within one routine only
+
 pmon_ramlo_end equ *
 ;   Here we could check for and warn about direct page overflow, but
 ;   perhaps that's better left to the machine-specific code.
@@ -259,6 +261,16 @@ cmdlookup   ldx cmdtbl
             stx cmdentry
             rts
 
+;   ♡A Look up param char in A in `cmdentry`, returning carry set on failure.
+;   If found, carry is clear, B contains value type and _a points to value loc.
+paramlookup
+            cmp A,#'w'          ; XXX for the moment, 'w' and above are
+                                ;    found, all else not
+            bcs .rts
+            lda B,CTP_NYBBLE    ; XXX just for testing
+            ldx #_x             ; XXX value loc always _x
+.rts        rts
+
 ; ----------------------------------------------------------------------
 ;   Parameter parsing
 
@@ -290,9 +302,47 @@ qparams     jsr rdche           ; we may still BS over the command
 ;   Parse character in A as a parameter, including any following value.
 ;   This assumes that the character has not yet be echoed.
 ;   Return carry clear if it was valid, or set if it was not found.
-qparam      cmp A,#'w'          ; XXX for the moment, 'w' and above are
-                                ;   considered valid param chars;
-                                ;   all else are invalid.
+qparam
+.xtmp       equ _x
+            jsr paramlookup     ; valid parameter char?
+            bcc +               ;   yes: get value
+            rts                 ;   no: carry set to indicate error
++           clr pricount        ; parameter char is accepted
+            com B               ; $FF,$FE,$FD,... → $00,$01,$02,...
+            asl B               ; double it to get index
+            ldx qpvaltab
+            jsr addXB           ; add index
+            ldx ,X              ; look up parser for this type
+            jmp ,X              ; RTS TCO  and start it
+
+;   Parsers for the different types of parameter values.
+qpvaltab    dw  qpval_word      ; $FF CTP_WORD
+            dw  qpval_byte      ; $FE CTP_BYTE
+            dw  qpval_char      ; $FD CTP_CHAR
+            dw  qpval_nyb       ; $FC CTP_NYBBLE
+
+qpval_word
+            jsr pristr
+            db  "qpval_word",$00  ,$05
+            sec
+            rts
+
+qpval_byte
+            jsr pristr
+            db  "qpval_byte",$00  ,$05
+            sec
+            rts
+
+qpval_char
+            jsr pristr
+            db  "qpval_char",$00  ,$05
+            sec
+            rts
+
+qpval_nyb
+            jsr pristr
+            db  "qpval_nyb",$00  ,$05
+            sec
             rts
 
 ; ----------------------------------------------------------------------
@@ -356,3 +406,17 @@ rdche       jsr rdchar
             inc pricount
             jmp prchar          ; RTS TCO
 .rts        rts
+
+; ----------------------------------------------------------------------
+;   Utility routines
+
+;   ♠X♣B,tmpx  X ← X + B unsigned
+addXB       stx     tmpx
+            add     B,tmpx+1
+            sta     B,tmpx+1
+            bcc     .done
+            lda     B,tmpx
+            inc     B
+            sta     B,tmpx
+.done       ldx     tmpx
+            rts

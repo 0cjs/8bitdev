@@ -16,14 +16,18 @@ _x          equ $32
 
 '''
 
-@pytest.mark.parametrize('str', [b'abc', b'01\n23', b''])
+param = pytest.mark.parametrize
+
+@param('str', [b'abc', b'01\n23', b''])
 def test_prstr0(m, S, R, loadbios, str):
     _, output = loadbios('tmc68')
     m.deposit(0x37FD, str + b'\x00XYZ')     # guard values
     m.call(S.prstr0, R(x=0x37FD))
     assert str == output.getvalue()
 
-@pytest.mark.parametrize('val, char', (
+####################################################################
+
+@param('val, char', (
     (0x00, b'0'), (0x01, b'1'), (0x0E, b'E'), (0x0F, b'F'),
     (0x10, b'0'), (0xFE, b'E'),
 ), ids=tmc_tid)
@@ -32,7 +36,7 @@ def test_prnyb(m, S, R, loadbios, val, char):
     m.call(S.prnyb, R(a=val))
     assert char == output.getvalue()
 
-@pytest.mark.parametrize('val, chars', (
+@param('val, chars', (
     (0x00, b'00'), (0x0F, b'0F'), (0xA0, b'A0'), (0xFF, b'FF'),
 ), ids=tmc_tid)
 def test_prhex(m, S, R, loadbios, val, chars):
@@ -40,7 +44,9 @@ def test_prhex(m, S, R, loadbios, val, chars):
     m.call(S.prhex, R(a=val))
     assert chars == outchars.getvalue()
 
-@pytest.mark.parametrize('char, output', [
+####################################################################
+
+@param('char, output', [
     (0x20, ' '), (0x5A, 'Z'), (0x7E, '~'),  # printable range
     (0xA0, ' '), (0xDA, 'Z'), (0xFE, '~'),  # high bit set
     (0x00, '@'), (0x1F, '_'),               # control chars
@@ -52,7 +58,9 @@ def test_prvischar(m, R, S, loadbios, char, output):
     m.call(S.prvischar, R(a=char))
     assert output == str(ostream.getvalue(), encoding='ASCII')
 
-@pytest.mark.parametrize('n', [
+####################################################################
+
+@param('n', [
     0, 3, 15, 16, 17, 255, 256, 257, 999, 1000, 2001, 3002, 9999,
     10000, 10001, 16383, 16384, 16385, 32768, 33879, 0xFFFE, 0xFFFF,
 ])

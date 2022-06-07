@@ -34,8 +34,9 @@ prstr0      lda A,0,X
 
 
 ; ----------------------------------------------------------------------
-;   ♣A ♡BX Print value in A as hex to the character output port.
-;   Falls through to prnyb.
+;   Print values in hex
+
+;   ♣A ♡BX Print value in A as 2 hex digits.
 prhex       psh A
             lsr A
             lsr A
@@ -45,7 +46,7 @@ prhex       psh A
             pul A
             ; fallthrough
 
-;   ♣A ♡BX Print lower nybble of A to the character output port.
+;   ♣A ♡BX Print lower nybble of A as 1 hex digit.
 prnyb       and A,#$0F
             add A,#'0'
             cmp A,#'9'+1

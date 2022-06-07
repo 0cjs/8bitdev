@@ -44,6 +44,16 @@ def test_prhex(m, S, R, loadbios, val, chars):
     m.call(S.prhex, R(a=val))
     assert chars == outchars.getvalue()
 
+@param('val, chars', (
+    (0x0000, b'0000'),
+    (0x1234, b'1234'),
+    (0xFEDC, b'FEDC'),
+))
+def test_prhexX(m, S, R, loadbios, val, chars):
+    _, outchars = loadbios('tmc68')
+    m.call(S.prhexX, R(x=val))
+    assert (R(x=val+0), chars) == (m.regs, outchars.getvalue())
+
 ####################################################################
 
 @param('char, output', [

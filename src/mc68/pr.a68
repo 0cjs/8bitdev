@@ -36,6 +36,13 @@ prstr0      lda A,0,X
 ; ----------------------------------------------------------------------
 ;   Print values in hex
 
+;   ♣A,_x ♡BX Print value in X as 4 hex digits
+prhexX      stx _x
+prhex_x     lda A,_x
+            bsr prhex
+            lda A,_x+1
+            bra prhex           ; RTS TCO
+
 ;   ♣A ♡BX Print value in A as 2 hex digits.
 prhex       psh A
             lsr A

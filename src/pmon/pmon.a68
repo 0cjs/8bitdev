@@ -261,14 +261,16 @@ cmdlookup   ldx cmdtbl
             stx cmdentry
             rts
 
-;   ♡A Look up param char in A in `cmdentry`, returning carry set on failure.
-;   If found, carry is clear, B contains value type and _a points to value loc.
+;   ♠B,_a♡A  Look up param char in A in `cmdentry`. returning carry set on
+;   failure. If found, carry is clear, B contains value type and _a points
+;   to value loc.
 paramlookup
             cmp A,#'w'          ; XXX for the moment, 'w' and above are
                                 ;    found, all else not
             bcs .rts
-            lda B,CTP_NYBBLE    ; XXX just for testing
+            lda B,#CTP_NYBBLE    ; XXX just for testing
             ldx #_x             ; XXX value loc always _x
+            stx _a
 .rts        rts
 
 ; ----------------------------------------------------------------------
@@ -302,15 +304,14 @@ qparams     jsr rdche           ; we may still BS over the command
 ;   Parse character in A as a parameter, including any following value.
 ;   This assumes that the character has not yet be echoed.
 ;   Return carry clear if it was valid, or set if it was not found.
-qparam
-.xtmp       equ _x
-            jsr paramlookup     ; valid parameter char?
+qparam      jsr paramlookup     ; valid parameter char?
             bcc +               ;   yes: get value
             rts                 ;   no: carry set to indicate error
 +           clr pricount        ; parameter char is accepted
             com B               ; $FF,$FE,$FD,... → $00,$01,$02,...
+                                ; XXX sets carry, do we need EOR B,#$FF ?
             asl B               ; double it to get index
-            ldx qpvaltab
+            ldx #qpvaltab
             jsr addXB           ; add index
             ldx ,X              ; look up parser for this type
             jmp ,X              ; RTS TCO  and start it
@@ -323,25 +324,25 @@ qpvaltab    dw  qpval_word      ; $FF CTP_WORD
 
 qpval_word
             jsr pristr
-            db  "qpval_word",$00  ,$05
+            db  ":qpval_word:",0
             sec
             rts
 
 qpval_byte
             jsr pristr
-            db  "qpval_byte",$00  ,$05
+            db  ":qpval_byte:",0
             sec
             rts
 
 qpval_char
             jsr pristr
-            db  "qpval_char",$00  ,$05
+            db  ":qpval_char:",0
             sec
             rts
 
 qpval_nyb
             jsr pristr
-            db  "qpval_nyb",$00  ,$05
+            db  ":qpval_nyb:",0
             sec
             rts
 

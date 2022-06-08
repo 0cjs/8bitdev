@@ -65,61 +65,58 @@ you can see what input caused the error.)
 At any time you are in one of the following _input modes:_
 - Command: immediately after the `_` prompt. The next character typed
   indicates the command.
-- Parameter character: immediately after typing a either command character
-  or a parameter character and any value it may need. The next character
-  typed may be: Return/Enter to execute the command; Space to print a blank
-  space (for readability only); or another parameter character.
-- Parameter value: immediately after typing a parameter character for a
+- Parameter character (_paramchar_): immediately after typing either a
+  command character or a paramchar and any value it may need. The next
+  character typed may be: Return/Enter to execute the command; Space to
+  print a blank space (for readability only); or another paramchar.
+- Parameter value (_paramval_): immediately after typing a paramchar for a
   parameter that takes a value.
 
 Cancelling input:
-- In any mode you may type Ctrl-X to cancel the command. Any parameter
-  values you have changed will remain changed. The cursor will be returned
-  to the start of the line just after the prompt, but what you typed will
-  not be erased.
+- In any mode you may type Ctrl-X to cancel the command. Any paramvals you
+  have changed will remain changed. The cursor will be returned to the
+  start of the line just after the prompt, but what you typed will not be
+  erased.
 - Immediately after entering a valid command character you may type
   Backspace to cancel that command.
-- Immediately after a parameter character that requires a value you may
-  type Backspace to cancel that parameter character. Parameter characters
-  that do not take a value have immediate effect and typing Backspace after
-  them is an error.
+- Immediately after a paramchar that requires a value you may type
+  Backspace to cancel that paramchar. Paramchars that do not take a value
+  have immediate effect and typing Backspace after them is an error.
 - Before completing value entry you may type Backspace to cancel _all_
   characters entered so far for that value. The cursor will be returned to
-  just after the parameter character; your the characters you previously
-  typed will not be erased.
+  just after the paramchar; your the characters you previously typed will
+  not be erased.
 
 Completing input:
 - Return/Enter will terminate parameter input, print a CR (leaving the
   cursor on the same line) and execute the command. (Letting command output
   overwrite the command and parameters saves space on the screen.)
-- Space will terminate ongoing parameter value input input for an option
-  which allows you to enter less than the full number of digits for things
-  like numeric option parameters.
+- Space will terminate ongoing paramval input input for an option which
+  allows you to enter less than the full number of digits for things like
+  numeric option parameters.
 
 ### Command Parameter Values
 
 Parameters not specified use their previously remembered value or, in some
 cases, a default value.
 
-Parameter characters are followed by values are of the following types.
-(`x` below is the parameter character.)
+Paramchars (`x` below) are followed by values of the following types.
 - Word (`x0000`): 1-4 hex digits.
 - Byte (`x00`): 1-2 hex digits.
 - Nybble (`xF`): 1 hex digit.
-- User variable (`xU`): case-insensitive user variable letter (A-Z),
-  or `/` to indicate no variable. Default value is `/`.
-- Boolean (`x1`): follow the parameter letter with:
+- User variable (`xU`): case-insensitive user variable letter (A-Z), or `/`
+  to indicate no variable. Default value is `/`.
+- Boolean (`x1`): follow the paramchar with:
   - `0` or `1` to set the value to off/false or on/true
   - `.` to print and sets the inverse of the current value.
   - The default value of most boolean flags is 1.
 
-Parameter value input directly follows the parameter character. A space
-will not be printed after the parameter value unless the user typed it to
-terminate parameter value input before typing the full number of digits. In
-all cases the actual value used is printed immediately after the parameter
-character; if a location to look up the value (e.g., a user variable or
-memory location) the location will be overwritten with the value from that
-location.
+Paramval input directly follows the paramchar. A space will not be printed
+after the paramval unless the user typed it to terminate paramval input
+before typing the full number of digits. In all cases the actual value used
+is printed immediately after the paramchar; if a location to look up the
+value (e.g., a user variable or memory location) the location will be
+overwritten with the value from that location.
 
 When a looked up value (from a user variable, memory location, etc.) is
 larger than the input value type; the least significant bits of the looked
@@ -129,7 +126,7 @@ take the lowest four bits, and parameters expecting a boolean will take the
 least significant bit.
 
 - Space will print the currently remembered value at the current cursor
-  location and leave you in parameter character input mode.
+  location and leave you in paramchar input mode.
 - Hex digits will set the value. Type either all required nybbles or end
   with a space, whereupon the most significant unspecified nybbles will be
   assumed to be 0. (I.e., for a word value, `E ` will be taken to mean
@@ -139,15 +136,14 @@ least significant bit.
 - `/u`, where _u_ is any letter, will use the value from user variable _u._
   Byte and smaller values will use the LSB from the user variable when it
   is typed in lower case, or the MSB when typed in upper case.
-- `$AB`, where _A_ is a command character and _B_ is a valid parameter
-  character for that command, will use the remembered value for that
-  parameter to that command. (E.g., `es1234 ` followed by `l$xs` will
-  examine memory starting at $1234 and then disassemble memory starting at
-  that same location.)
+- `$AB`, where _A_ is a command character and _B_ is a valid paramchar for
+  that command, will use the remembered value for that parameter to that
+  command. (E.g., `es1234 ` followed by `l$xs` will examine memory starting
+  at $1234 and then disassemble memory starting at that same location.)
 - `@0000`/`#0000`, where _0000_ is an address, will use the word/byte value
   at that address in memory. Word values are read using the machine endian
-  order. When a word lookup is done and the parameter value is byte sized
-  the LSB of the word will be used.
+  order. When a word lookup is done and the paramval is byte sized the LSB
+  of the word will be used.
 - `&R `/`&R00`/`&R-00` where _R_ is a letter representing a machine
   register, will use the (saved) value from that machine register. The `00`
   and `-00` forms will add or subtract the addtional (hex) value to/from
@@ -169,16 +165,16 @@ Parameters specified more than once will use the most recently specified
 value. Thus during parameter input you can type `p p0 ` to show the current
 value and then change it to a new value.
 
-`$` is a special parameter character for all commands with the following
+`$` is a special paramchar for all commands with the following
 subfunctions:
 - `$$`: terminate command input and print `=`, the command character, and
   all parameters and their current values.
 - `$=`: As with `$$`, but after that it resets all parameters to their
   default values and again prints out the current values.
 
-XXX Add `.` as a byte/word parameter value to increment the currently
-remembered value by a command-specific amount? Would this be useful for
-anything but start address?
+XXX Add `.` as a byte/word paramval to increment the currently remembered
+value by a command-specific amount? Would this be useful for anything but
+start address?
 
 ### User Variables
 
@@ -187,28 +183,28 @@ case-insensitive, so `A` through `Z` may also be used. The case you use
 makes a difference only when looking up a value for use as a byte or
 smaller value; see above.)
 
-These may be read via the parameter input mechanism above (e.g., at the
+These may be read via the paramval input mechanism above (e.g., at the
 command prompt type `?v/i` or `?v/I` to show the value of user variable
 `i`). Some commands have a `w` parameter for writing their output to a user
-variable; this parameter may be given value `/` to indicate that the output
-should not be written to any user variable (e.g. `?w/v3 ` will print the
-value 3, but not write it to any user variable).
+variable; this parameter may be given the value `/` to indicate that the
+output should not be written to any user variable (e.g. `?w/v3 ` will print
+the value 3, but not write it to any user variable).
 
 
 Commands
 --------
 
-Parameter letters below are followed by further characters to indicate the
-type of their value; see the parameter value types list above.
+Paramchars below are followed by further characters to indicate the type of
+their value; see the paramval types list above.
 
 The following are some standard parameters common to multiple commands.
-(Commands using these note them with "SP" below.) Not all commands using
-parameters with these letters will be using these standard parameters,
-however. All parameters are remembered separately for every command.
+(Commands using these note them with "Sparams" below.) Not all commands
+using these paramchars will be using these standard parameters, however.
+All parameters are remembered separately for every command.
 - `a0000`: Primary address (start address for data display, etc.).
 - `n`, `p`: Next and previous primary address. Increments or decrements `a`
   address by a command-specific amount.
-- `e0000`: End address (1 past the last address used by the command).
+- `e0000`: End address: 1 + the last address used by the command
 
 ### Command Summary
 
@@ -235,7 +231,7 @@ however. All parameters are remembered separately for every command.
 
 ### Memory/Data Display Commands
 
-- `e`: Examine memory. SP `a0000`, `n`, `p`, `e0000`, and:
+- `e`: Examine memory. Sparams `a0000`, `n`, `p`, `e0000`, and:
   - `l00`: Number of lines to display. 0 means display to end address.
   - `w0`: Number of values to display per line ("width"). 1-F; 0=16.
   - `h1`: enable hex display of each value.
@@ -245,31 +241,31 @@ however. All parameters are remembered separately for every command.
     removes most spaces.
 
 - `i`: Input from device. This command reads just one address and is
-  guaranteed to read it only once. SP `a0000`, `n`, `p`, and:
+  guaranteed to read it only once. Sparams `a0000`, `n`, `p`, and:
   - `m1`: Use memory mapped I/O. `1` is the standard memory address space
     on all machines. `0` uses I/O address space on Intel/Zilog CPUs (the
     MSB is ignored) and may use a system-specific MSB or bank on systems
     without an I/O address space (Motorola, MOS).
 
 - `l`: Disassemble ("list") instructions. (Not yet implemented.)
-  SP `a0000`, `n`, `p`.
+  Sparams `a0000`, `n`, `p`.
 
 - `v`: Compare ("verify") memory. Parameters and behaviour same as `t`/copy:
-  SP `a0000` and `e0000` for the source; target address is `t0000`.
+  Sparams `a0000` and `e0000` for the source; target address is `t0000`.
 
-- `c`: Checksum/CRC a range of memory. SP `a0000` and `e0000`.
+- `c`: Checksum/CRC a range of memory. Sparams `a0000` and `e0000`.
   Prints the memory range and CRC16 of the data in that range.
   - `wU`: write the lowest 16 bits of the checksum/CRC to to user variable _U._
   - XXX add params for other algorithms?
 
 ### Memory/Data Display/Change Commands
 
-- `r`: Display/set registers. Each parameter character corresponds to a
-  register. Registers can be individually displayed during parameter entry
-  by typing the register letter followed by a space, and set with register
-  letter followed by a value (and optional space). The entire set of
-  registers will be displayed after pressing Return/Enter to terminate
-  parameter entry.
+- `r`: Display/set registers. Each paramchar corresponds to a register.
+  Registers can be individually displayed during parameter entry by typing
+  the register letter followed by a space, and set with register letter
+  followed by a value (and optional space). The entire set of registers
+  will be displayed after pressing Return/Enter to terminate parameter
+  entry.
   - Parameters common to all CPUs are `p` (program counter), `s` (stack),
     and `f` (flags, status, condition codes or program status register).
   - 8080: `p0000`, `s0000`, `f00`, `a00`,
@@ -286,10 +282,9 @@ however. All parameters are remembered separately for every command.
 
 The `:` command starts deposit of data into memory.† Unlike the other
 commands, this command starts execution with space entered while input of a
-new parameter character is pending. (I.e., `: ` or `:s1234  ` will start
-accepting data for deposit, `:s123 ` will wait for another parameter
-character or space. The only parameters are those to set the start address:
-SP `a0000`, `n`, `p`.
+new paramchar is pending. (I.e., `: ` or `:s1234  ` will start accepting
+data for deposit, `:s123 ` will wait for another paramchar or space. The
+only parameters are those to set the start address: Sparams `a0000`, `n`, `p`.
 
 When deposit starts, the cursor is returned to the start of the line, the
 current address and the following 8 bytes of data are printed, and the
@@ -324,19 +319,19 @@ XXX Add `v1` param to turn on/off deposit verification?
 
 ### Memory/Data Change Commands
 
-- `f`: Fill memory. SP `a0000`, `e0000`. `v0000` specifies the fill value.
+- `f`: Fill memory. Sparams `a0000`, `e0000`. `v0000` specifies the fill value.
 
-- `t`: copy ("move") memory. SP `a0000` and `e0000` for the source; `t0000`
-  gives the target address. If the target address is between the start and
-  end addresses the copy will start at the end address - 1 and work down to
-  the start address, otherwise it will start at the start address and work
-  up.
+- `t`: copy ("move") memory. Sparams `a0000` and `e0000` for the source;
+  `t0000` gives the target address. If the target address is between the
+  start and end addresses the copy will start at the end address - 1 and
+  work down to the start address, otherwise it will start at the start
+  address and work up.
   - If parameter `v1` is set, each byte will be read after it's written and
     the copy will be aborted if the byte fails to read back correctly.
 
 - `o`: Output to device. This command writes just one address and (unlike
   the deposit command) is guaranteed both never to read the address and to
-  write it only once. SP `a0000`, `n`, `p`, and:
+  write it only once. Sparams `a0000`, `n`, `p`, and:
   - `v00`: The value to write.
   - `m1`: Use memory mapped I/O. `1` is the standard memory address space
     on all machines. `0` uses I/O address space on Intel/Zilog CPUs (the
@@ -346,8 +341,7 @@ XXX Add `v1` param to turn on/off deposit verification?
 - `s`: Load/save/verify data from/to offline storage (tape, serial port in
   S-record or Intel hex format, xmodem upload/download, read or write
   programmable ROMs, etc.). Starting/ending/entrypoint addresses will be
-  printed after load. SP `a0000` (start address), `e0000` (end address + 1),
-  and:
+  printed after load. Sparams `a0000` (start address), `e0000`, and:
   - `a0000` specifies the address at which to load or save data; `aFFFF`
     indicates that the load address(es) should be taken from the file.
   - If the file format includes an entrypoint or execution address, user
@@ -362,7 +356,7 @@ All commands below load all registers from the saved values (dispalyed/set
 with `r`) before executing. For `j` and `k` the program counter is excepted
 from this; it's loaded from the remembered value of the `a0000` parameter.
 
-- `j`: (JMP/JSR) restore all registers and execute code. SP `a0000` and:
+- `j`: (JMP/JSR) restore all registers and execute code. Sparams `a0000` and:
   - `r1`: after restoring the stack pointer, push a return address to the
     monitor on to the stack. This allows the routine to execute RTS to
     return to the monitor, which will save the registers upon return.
@@ -416,10 +410,10 @@ from this; it's loaded from the remembered value of the `a0000` parameter.
 Command and Parameter Tables
 ----------------------------
 
-Commands and their parameters (including parameter character, value type
-and the location where the value is stored) are stored in and read from a
-table that may be replaced by the user. The table is scanned in order from
-start to finish and the first matching entry is used.
+Commands and their parameters (including the paramchar, value type and the
+location where the value is stored) are stored in and read from a table
+that may be replaced by the user. The table is scanned in order from start
+to finish and the first matching entry is used.
 
       Addrs Description
       ──────────────────────────────────────────────────────────
@@ -438,18 +432,18 @@ start to finish and the first matching entry is used.
       ..    $00 value indicating end of entry
       ──────────────────────────────────────────────────────────
 
-Parameter values are stored starting at the address given in $03-$04 above
-in the same order as listed in the parameters list, each using only on the
-amount of storage required for that parameter.
+Paramvals are stored starting at the address given in $03-$04 above in the
+same order as listed in the parameters list, each using only on the amount
+of storage required for that parameter.
 
 Each entry in the parameter list is two or four bytes. The first two are
 always the parameter and byte specifying the type. "Immediate" parameters
 will be followed by two more bytes specifying the address to be called
 (JSR) by the parser read and process subsequent input from the user. (The
-command character and parameter character will be placed in registers
-before the call.) On return from the immediate parameter read routine the
-cursor may have moved but the user will still be in parameter input mode
-for the current command.
+command character and paramchar will be placed in registers before the
+call.) On return from the immediate parameter read routine the cursor may
+have moved but the user will still be in parameter input mode for the
+current command.
 
 The types are as follows; `Stg` indicates the number of bytes of storage
 used in the parameter value storage area.
@@ -513,9 +507,9 @@ To-do
 - Consider allowing base 2 and base 10 input. There are several issues we
   need to deal with:
   - Prefixes that shift mode. These probably want to be characters we're
-    not using as parameter characters so as to avoid confusion, especially
-    in the face of typos (such as forgetting to type the parameter
-    character before trying to enter a number).
+    not using as paramchars so as to avoid confusion, especially in the
+    face of typos (such as forgetting to type the paramchar before trying
+    to enter a number).
   - Prefixes could potentially be invisible (Ctrl-B for binary, Ctrl-T for
     base 10?) but that would probably be far too confusing.
   - `%` for binary and `#` for base-10 would probably work well.

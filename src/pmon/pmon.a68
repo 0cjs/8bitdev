@@ -44,8 +44,8 @@ CT_CONTINUE equ $01             ; continuation "command"
 CTP_END     equ $00             ; end of parameters
 CTP_WORD    equ $FF             ; parameter with word value
 CTP_BYTE    equ $FE             ;     "      "   byte value
-CTP_CHAR    equ $FD             ;     "      "   character value
-CTP_NYBBLE  equ $FC             ;     "      "   nybble value
+CTP_NYBBLE  equ $FD             ;     "      "   nybble value
+CTP_UVAR    equ $FC             ;     "      "   user variable letter
 CTP_B7      equ %10000000       ;     "      "   boolean value stored in bit 7
 CTP_B6      equ %01000000       ;     "      "      "      "      "   "   "  6
 CTP_B5      equ %00100000       ;     "      "      "      "      "   "   "  5
@@ -268,7 +268,7 @@ paramlookup
             cmp A,#'w'          ; XXX for the moment, 'w' and above are
                                 ;    found, all else not
             bcs .rts
-            lda B,#CTP_NYBBLE    ; XXX just for testing
+            lda B,#CTP_NYBBLE   ; XXX just for testing
             ldx #_x             ; XXX value loc always _x
             stx _a
 .rts        rts
@@ -319,8 +319,8 @@ qparam      jsr paramlookup     ; valid parameter char?
 ;   Parsers for the different types of parameter values.
 qpvaltab    dw  qpval_word      ; $FF CTP_WORD
             dw  qpval_byte      ; $FE CTP_BYTE
-            dw  qpval_char      ; $FD CTP_CHAR
             dw  qpval_nyb       ; $FC CTP_NYBBLE
+            dw  qpval_uvar      ; $FD CTP_UVAR
 
 qpval_word
             jsr pristr
@@ -334,9 +334,9 @@ qpval_byte
             sec
             rts
 
-qpval_char
+qpval_uvar
             jsr pristr
-            db  ":qpval_char:",0
+            db  ":qpval_uvar:",0
             sec
             rts
 

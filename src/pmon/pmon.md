@@ -63,16 +63,16 @@ invalid input. (The invalid input is not overwritten with spaces so that
 you can see what input caused the error.)
 
 At any time you are in one of the following _input modes:_
-- Command mode, immediately after the `_` prompt. The next character typed
+- Command: immediately after the `_` prompt. The next character typed
   indicates the command.
-- Parameter mode, immediately after typing a either command character or a
-  parameter character and any value it may need. The next character typed
-  is Return/Enter to execute the command, Space to print a blank space (for
-  readability only) or another parameter character.
-- Value mode, immediately after typing a parameter character for a
+- Parameter character: immediately after typing a either command character
+  or a parameter character and any value it may need. The next character
+  typed may be: Return/Enter to execute the command; Space to print a blank
+  space (for readability only); or another parameter character.
+- Parameter value: immediately after typing a parameter character for a
   parameter that takes a value.
 
-Cancelling input is done as follows:
+Cancelling input:
 - In any mode you may type Ctrl-X to cancel the command. Any parameter
   values you have changed will remain changed. The cursor will be returned
   to the start of the line just after the prompt, but what you typed will
@@ -88,71 +88,86 @@ Cancelling input is done as follows:
   just after the parameter character; your the characters you previously
   typed will not be erased.
 
-Return/Enter will terminate command/parameter input, print a CR (leaving
-the cursor on the same line) and execute the command. (Letting command
-output overwrite the command and parameters saves space on the screen.)
-Space will terminate ongoing parameter value input input for an option
-which allows you to enter less than the full number of digits for things
-like numeric option parameters.
+Completing input:
+- Return/Enter will terminate parameter input, print a CR (leaving the
+  cursor on the same line) and execute the command. (Letting command output
+  overwrite the command and parameters saves space on the screen.)
+- Space will terminate ongoing parameter value input input for an option
+  which allows you to enter less than the full number of digits for things
+  like numeric option parameters.
 
-### Command Parameters
+### Command Parameter Values
 
 Parameters not specified use their previously remembered value or, in some
-cases, a default value. Parameter value input directly follows the
-parameter character. A space will not be printed after the parameter value
-unless the user typed it to terminate parameter value input before typing
-the full number of digits.
+cases, a default value.
+
+Parameter characters are followed by values are of the following types.
+(`x` below is the parameter character.)
+- Word (`x0000`): 1-4 hex digits.
+- Byte (`x00`): 1-2 hex digits.
+- Nybble (`xF`): 1 hex digit.
+- User variable (`xU`): case-insensitive user variable letter (A-Z),
+  or `/` to indicate no variable. Default value is `/`.
+- Boolean (`x1`): follow the parameter letter with:
+  - `0` or `1` to set the value to off/false or on/true
+  - `.` to print and sets the inverse of the current value.
+  - The default value of most boolean flags is 1.
+
+Parameter value input directly follows the parameter character. A space
+will not be printed after the parameter value unless the user typed it to
+terminate parameter value input before typing the full number of digits. In
+all cases the actual value used is printed immediately after the parameter
+character; if a location to look up the value (e.g., a user variable or
+memory location) the location will be overwritten with the value from that
+location.
+
+When a looked up value (from a user variable, memory location, etc.) is
+larger than the input value type; the least significant bits of the looked
+up value will be used. I.e., parameters expecting a byte value will take
+the LSB of a lookup returning a word, parameters expecting a nybble will
+take the lowest four bits, and parameters expecting a boolean will take the
+least significant bit.
+
 - Space will print the currently remembered value at the current cursor
   location and leave you in parameter character input mode.
 - Hex digits will set the value. Type either all required nybbles or end
   with a space, whereupon the most significant unspecified nybbles will be
   assumed to be 0. (I.e., for a word value, `E ` will be taken to mean
   $000E.)
-- `/A`, where _A_ is any letter, will use the value from user variable _A._
+- `'a` where _a_ is any character will use the ASCII value of that
+  character.
+- `/u`, where _u_ is any letter, will use the value from user variable _u._
+  Byte and smaller values will use the LSB from the user variable when it
+  is typed in lower case, or the MSB when typed in upper case.
 - `$AB`, where _A_ is a command character and _B_ is a valid parameter
   character for that command, will use the remembered value for that
-  parameter to that command. (E.g., `es1234 ` followed by `l@xs` will
+  parameter to that command. (E.g., `es1234 ` followed by `l$xs` will
   examine memory starting at $1234 and then disassemble memory starting at
   that same location.)
 - `@0000`/`#0000`, where _0000_ is an address, will use the word/byte value
   at that address in memory. Word values are read using the machine endian
-  order.
+  order. When a word lookup is done and the parameter value is byte sized
+  the LSB of the word will be used.
 - `&R `/`&R00`/`&R-00` where _R_ is a letter representing a machine
   register, will use the (saved) value from that machine register. The `00`
-  and `-00` forms will add or subtract the addtional value to/from the
-  register value.
+  and `-00` forms will add or subtract the addtional (hex) value to/from
+  the register value.
 - `*R `/`*R00`/`*R-00` is available only for 16-bit registers; it will use
   the value at the memory location the register points to. The numeric
   forms will add/subtract the additional value to/from the register value
   before dereferencing the pointer.
-- Invalid characters and invalid values will print a `?`, beep to
-  indicate an error, and you will be left in value input mode for that
-  parameter. Note that following a "short" value with space will finish
-  value entry (XXX or in parameter input mode?)
-- XXX should we support backspace during value input, or just leave it as
-  an error that clear all value input to that point?
+- Invalid characters and invalid values will beep to indicate an error,
+  backspace over the offending input and you will be left in value input
+  mode for that parameter. Note that following a "short" value with space
+  will finish value entry.
+- XXX should we support backspace over a single char during value input, or
+  just leave it as an error that clears the entire value input to that
+  point?
 - XXX Expand the add/subtract syntax?
 
 Parameters specified more than once will use the most recently specified
 value. Thus during parameter input you can type `p p0 ` to show the current
 value and then change it to a new value.
-
-Parameter letters are followed by values are of the following types:
-- No value (`x`): an "immediate" parameter immediately takes effect without
-  waiting for any further input.
-- Boolean (`x1`): follow the parameter letter with `0`, `1` or `.`. `0`
-  sets the parameter to false, `1` to true, and `.` prints and sets the
-  inverse of the current value. (The default value of most boolean flags is 1.)
-- Nybble (`xF`): 1 hex digit.
-- Byte (`x00`): 1-2 hex digits.
-- Word (`x0000`): 1-4 hex digits.
-- Letter (`xA`): 1 ASCII letter. (XXX case-insensitive? Probably not.)
-
-For all of the above that accept a number, the value may be of the form
-`/A` to enter the value currently in user variable _A._ The least
-significant bits corresponding to the length of the parameter value will be
-used: bit 0 for boolean, bits 4-0 for nybble, bits 7-0 for byte, and all
-bits for word.
 
 `$` is a special parameter character for all commands with the following
 subfunctions:
@@ -167,13 +182,17 @@ anything but start address?
 
 ### User Variables
 
-The monitor has up to 24 user variables named `a` through `z`. These may be
-read via the parameter input mechanism above (e.g., at the command prompt
-type `?v/i` to show the value of user variable `i`). Some commands have a
-`w` parameter for writing their output to a user variable; this parameter
-may be given value `/` to indicate that the output should not be written to
-any user variable (e.g. `?w/v3 ` will print the value 3, but not write it
-to any user variable).
+The monitor has up to 24 user variables named `a` through `z`. (The name is
+case-insensitive, so `A` through `Z` may also be used. The case you use
+makes a difference only when looking up a value for use as a byte or
+smaller value; see above.)
+
+These may be read via the parameter input mechanism above (e.g., at the
+command prompt type `?v/i` or `?v/I` to show the value of user variable
+`i`). Some commands have a `w` parameter for writing their output to a user
+variable; this parameter may be given value `/` to indicate that the output
+should not be written to any user variable (e.g. `?w/v3 ` will print the
+value 3, but not write it to any user variable).
 
 
 Commands
@@ -240,7 +259,7 @@ however. All parameters are remembered separately for every command.
 
 - `c`: Checksum/CRC a range of memory. SP `a0000` and `e0000`.
   Prints the memory range and CRC16 of the data in that range.
-  - `wA`: write the lowest 16 bits of the checksum/CRC to to user variable _A._
+  - `wU`: write the lowest 16 bits of the checksum/CRC to to user variable _U._
   - XXX add params for other algorithms?
 
 ### Memory/Data Display/Change Commands
@@ -386,7 +405,7 @@ from this; it's loaded from the remembered value of the `a0000` parameter.
     - `<F`: shift left 0 to 15 bits
     - `>F`: arithmetic shift right 0-15 bits
     - XXX Add 8- and 16-bit rotates?
-  - `wA`: write the remembered value to user variable _A._
+  - `wU`: write the remembered value to user variable _U._
 
 - `/`: Set/display user variables. Parameters `a` through `z` represent
   each user variable. (XXX figure out the details of this. Probably all

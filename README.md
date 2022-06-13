@@ -1,6 +1,21 @@
 8bitdev
 =======
 
+Contents:
+- File and Directory Organization
+  - ASL (The Macroassembler AS) Notes
+  - ASxxxx Notes
+- Third-party Development Tools
+  - VICE: The Versatile Commodore Emulator
+  - MAME Multi-system Emulators
+- Additional Third-party Tools
+  - VICE: The Versatile Commodore Emulator
+  - MAME Multi-system Emulators
+- Additional Tool Information
+  - Playing CMT (Cassette Tape) Images
+  - The py65 Monitor
+
+
 This repo is used by cjs for development of programs in 8-bit assembly
 languages (for a variety of platforms) and tools to aid this development.
 It includes:
@@ -126,6 +141,16 @@ version of what's found at <https://docs.mamedev.org>
 
 Additional Tool Information
 ---------------------------
+
+### Playing CMT (Cassette Tape) Images
+
+`b8tool/bin/cmtconv` is used to generate `.wav` files that can be played
+into microcomputers. It can be handy to play these directly from your
+development host, and even more handy to add an separate audio interface
+(usually USB) to dedicate to this. On Linux systems, `pactl list short
+sinks` will show a list of all sink (output) numbers, names and other
+information. A name from this list can be passed to `paplay -D NAME
+.build/obj/exe/…/….wav` to load the image on your microcomputer.
 
 ### The py65 Monitor
 

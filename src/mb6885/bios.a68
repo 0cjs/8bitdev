@@ -1,15 +1,20 @@
-;   Hitachi MB-6885 BIOS definitions
+;   Hitachi MB-6885 (Basic Master Jr.) BIOS definitions
 ;
-;   For more information, see the MB-6885 manual
+;   For more information, see the MB-6885 manual.
 ;
+;   NOTE: This must be symbol definitions only, and not include code!
 
-prnl            ldaa #$0D
-                ; jsr  prchar
-                ; rts
-                jmp prchar
-;rdchar          equ $F012
-rdchar          ldaa $9C    ; checker-board pattern for cursor
-                jmp $F012
-prchar          equ $F015
+;   This is not quite equivalant to the "standard" rdchar because it
+;   uses the value in A to determine the character blinked for the cursor.
+;   We leave it undefined because most users will want to define their
+;   down that uses whatever cursor they find appropriate.
+;rdchar     equ     ASCIN
+ASCIN       equ     $0028       ; default: JMP to CHRGET
+CHRGET      equ     $F012       ; ♠A ♡BX blocking read of char from input
 
-errbeep         rts
+prchar      equ     ASCOUT
+ASCOUT      equ     $002B       ; default: JMP to CHROUT
+CHROUT      equ     $F015       ; ♡ABX send char in A to output
+
+errbeep     equ     bell
+bell        equ     $F248       ; ♣A ♡BX sound the console bell

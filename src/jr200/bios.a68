@@ -14,7 +14,7 @@ rdchar          equ $E8FE   ; ♠A read a char from the keyboard
 readln          equ $E927   ; ♠$18E read and zero-terminate input
 prreadln        equ $EAD0   ; pstring + readln + CMP $03
 prcr            equ $EB21   ; ♣A print a CR using prchar; usu. use prnl instead
-prchar          equ $EBE7   ; ♠A ♡ABX print char
+prchar          equ $EBE7   ; ♡ABX print char in A
 clrscrp         equ $EC7F   ; clear screen
 prstr8b         equ $EFF0   ; ♠X prstr8 unless prb_quiet ≠ $00
 prstr8          equ $EFF9   ; ♠X print bit-7-set-terminated string

@@ -23,6 +23,7 @@ hello       jsr prnl
 message     db  "Hello: \0"
 
 ;   Print the 0-terminated string pointed to by X.
+;   XXX This should be a common routine in src/mc68/pr.a68
 prstr       lda A,0,X
             beq .done
             jsr prchar

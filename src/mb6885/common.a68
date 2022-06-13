@@ -1,0 +1,30 @@
+;   Hitachi MB-6885 (Basic Master Jr.) common code/BIOS support
+;
+;   The BIOS in the MB-6885 has some quirks, such as needing an argument
+;   to rdchar to determine the cursor to use and CR generating a newline.
+;   This set of routines is commonly used to work around these issues.
+
+;   Dependencies:
+;           include "src/mb6885/bios.a68"
+
+;   Define mb6885_cursor this if you want a different character flashed for
+;   your cursor. The default is a block; common options are:
+;   • '*' $2A asterisk (used by the monitor)
+;   • '_' $5F underscore (used by BASIC)
+;   • '`' $60 solid block
+;   •     $9D checkerboard pattern
+;
+    ifndef mb6885_cursor
+mb6885_cursor   equ $60     ; block cursor
+    endif
+
+; ♠A ♡AX blocking read of char from input
+rdchar      lda A,#mb6885_cursor
+            jmp ASCIN     ; RTS TCO
+
+; ♡ABX print platform-appropriate newline
+prnl        psh A
+            lda A,#$0D      ; CR does newline on MB-6885
+            jsr prchar
+            pul A
+            rts

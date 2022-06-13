@@ -152,6 +152,14 @@ sinks` will show a list of all sink (output) numbers, names and other
 information. A name from this list can be passed to `paplay -D NAME
 .build/obj/exe/…/….wav` to load the image on your microcomputer.
 
+Recording should be done not with `parec` (which always writes the output
+in raw format) but `parecord` (use SIGINT to stop recording):
+
+    parecord --file-format=wav --format=u8 --channels=1 -d SRCNAME FILE.wav
+
+The `pavucontrol` window can be used to view levels during recording and
+playback.
+
 ### The py65 Monitor
 
 py65 includes a monitor, `py65mon`, that can be run from the command

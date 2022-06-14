@@ -4,7 +4,7 @@
 ;   See the "CMT" section of README.md for how to play it.
 ;
 ;   This uses the default stack configuration.
-;   It ignores (we hope) the invalid opcode $02 at the end and continues
+;   It ignores the invalid opcode $02 at the end and continues
 ;   on to the RTS, which returns to the monitor.
 
             cpu 6800

@@ -7,7 +7,7 @@
 
 pmon_ramlo  equ $E1     ; FIXME: need to check this...
 pmon_org    equ $3100   ; Monitor at top of built-in RAM;
-pmon_ramhi  equ $3F80   ;   POKE $08,$2E,$FF:NEW to keep BASIC from stomping it.
+pmon_ramhi  equ $3F00   ;   POKE $08,$2E,$FF:NEW to keep BASIC from stomping it.
 
             include "src/mc68/std.a68"
             include "src/mb6885/bios.a68"

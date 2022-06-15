@@ -80,9 +80,9 @@ pmon_ramlo_end equ *
 ;   usually with instructions that have no shorter direct page version.)
 ;   If `pmon_ramhi` is not defined, this starts immediately after `pmon_ramlo`.
 
-        if defined(pmon_ramhi)
+    .ifdef pmon_ramhi
             org pmon_ramhi
-        endif
+    .endif
 
 cmdtbl      ds  2       ; pointer to command table (see below)
 cmdpvbase   ds  2       ; pointer to start of parameter values for all cmds
@@ -97,7 +97,7 @@ Rsp         ds  2       ; stack pointer
 pricount    ds  1       ; printed input count: how far we need to backspace to
                         ;   clear the currently pending or previous input value
 cmdentry    ds  2       ; pointer to entry found by cmdlookup
-cmdepvals   ds  2       ; pointer to start of parameter values for cmd above
+cmdpvals    ds  2       ; pointer to start of parameter values for cmd above
 
 pmon_ramhi_end equ *
 
@@ -105,9 +105,9 @@ pmon_ramhi_end equ *
 ;   Parameter values, user variables, etc. start at pmon_ramhi_end unless
 ;   otherwise specified.
 
-        if defined(pmon_vars)
+    .ifdef pmon_vars
             org pmon_vars
-        endif
+    .endif
 
 cmdpvbase_default   equ     *
 
@@ -242,10 +242,13 @@ pri_bs      tst pricount        ; did we print something we need to BS over?
 ; ----------------------------------------------------------------------
 ;   ♠Xc ♡A ♣B  Starting at command table pointed to by `cmdtbl`, find the
 ;   entry in that table for char given in A. A is always preserved. On
-;   failure the carry is set; on success the carry is clear and `cmdentry`
-;   points to the entry in the command table.
+;   failure the carry is set; on success the carry is clear, `cmdentry`
+;   points to the entry in the command table, and `cmdpvals` points to
+;   the start of the parameter values for that command.
 ;
-cmdlookup   ldx cmdtbl
+cmdlookup   ldx cmdpvbase
+            stx cmdpvals
+            ldx cmdtbl
 
             ;   parse type of command table entry
 .qentry     stx cmdentry        ; save the command entry we're checking
@@ -264,6 +267,7 @@ cmdlookup   ldx cmdtbl
             inx                 ;   (may contain $00 values)
 .next_param tst ,X              ; end of parameters (CT_END)?
             beq .param_end      ;   yes: get ready for next entry
+    ; XXX add paramval size to cmdpvals
             inx                 ; move past this parameter
             inx
             bra .next_param

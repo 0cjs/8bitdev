@@ -250,9 +250,7 @@ pri_bs      tst pricount        ; did we print something we need to BS over?
 ;     table; `cmdpvals` points to the start of the parameter values for
 ;     that command.
 ;
-cmdlookup
-.xtmp       equ _a
-            ldx cmdpvbase
+cmdlookup   ldx cmdpvbase
             stx cmdpvals
             ldx cmdtbl
 

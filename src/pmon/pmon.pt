@@ -59,6 +59,20 @@ cmdentry_d  db  'd'
 
 param = pytest.mark.parametrize
 
+@param('result, x, b', (
+    ( 0x1000, 0x1000, 0x00 ),
+    ( 0x2001, 0x2000, 0x01 ),
+    ( 0x30FF, 0x3000, 0xFF ),
+    ( 0x4100, 0x40FF, 0x01 ),
+    ( 0x0001, 0xFFFF, 0x02 ),
+))
+def test_addXB(m, S, R, result, x, b):
+    a = b ^ 0xA5
+    inputs = R(x=x, b=b, a=a)
+    print(inputs)
+    m.call(S.addXB, inputs)
+    assert R(x=result, a=a) == m.regs
+
 @param('ctp_type_sym, ctp_len', [
     ('CTP_WORD', 2),
     ('CTP_BYTE', 1), ('CTP_NYBBLE', 1), ('CTP_UVAR', 1),
@@ -100,17 +114,3 @@ def test_cmdlookup_failure(m, S, R, cmdchar):
 
     m.call(S.cmdlookup, R(a=cmdchar, x=0xFFFF, C=0))
     assert (R(C=1, a=cmdchar), cmdpvals_end) == (m.regs,  m.word(S.cmdpvals))
-
-@param('result, x, b', (
-    ( 0x1000, 0x1000, 0x00 ),
-    ( 0x2001, 0x2000, 0x01 ),
-    ( 0x30FF, 0x3000, 0xFF ),
-    ( 0x4100, 0x40FF, 0x01 ),
-    ( 0x0001, 0xFFFF, 0x02 ),
-))
-def test_addXB(m, S, R, result, x, b):
-    a = b ^ 0xA5
-    inputs = R(x=x, b=b, a=a)
-    print(inputs)
-    m.call(S.addXB, inputs)
-    assert R(x=result, a=a) == m.regs

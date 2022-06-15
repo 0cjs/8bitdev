@@ -233,7 +233,8 @@ pri_bs      tst pricount        ; did we print something we need to BS over?
 cmdlookup   ldx cmdtbl
 
             ;   parse type of command table entry
-.qentry     lda B,,X            ; CT_END?
+.qentry     stx cmdentry        ; save the command entry we're checking
+            lda B,,X            ; CT_END?
             beq .notfound       ;   yes: failure to match
             dec B               ; was 1, CT_CONTINUE?
             bne .cmd_entry      ;   no: it's a regular command entry
@@ -258,7 +259,6 @@ cmdlookup   ldx cmdtbl
 .notfound   sec                 ; indicate failure, X is don't-care
 .found      ;   if found, carry clear on entry because we arrived via `beq`,
             ;   thus success already indicated
-            stx cmdentry
             rts
 
 ;   ♠B,_a♡A  Look up param char in A in `cmdentry`. returning carry set on

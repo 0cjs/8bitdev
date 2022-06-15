@@ -399,6 +399,9 @@ qparam      jsr paramlookup     ; valid parameter char?
             jmp ,X              ; RTS TCO  and start it
 
 ;   Parsers for the different types of parameter values.
+;   XXX These need unit tests and then can probably be optimised into
+;   something smaller.
+
 qpvaltab    dw  qpval_word      ; $FF CTP_WORD
             dw  qpval_byte      ; $FE CTP_BYTE
             dw  qpval_nyb       ; $FC CTP_NYBBLE

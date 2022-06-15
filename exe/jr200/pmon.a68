@@ -6,7 +6,7 @@
 
 pmon_ramlo  equ $E1     ; $E1-$FF not used by monitor or BASIC
 pmon_org    equ $7000   ; Monitor at top of built-in RAM;
-pmon_ramhi  equ $7F80   ;   `CLEAR $7000` to keep BASIC from stomping it.
+pmon_ramhi  equ $7F00   ;   `CLEAR $7000` to keep BASIC from stomping it.
 
             ;   MLOAD leaves the BASIC program intact; it's not clear what
             ;   happens if the loaded code overwrites part of the existing

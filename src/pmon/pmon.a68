@@ -38,22 +38,25 @@ CAN         equ $18             ; cancel (Ctrl-X)
 ;   Monitor definitions
 PROMPT      equ '_'
 
-;   Command table entries and types
+;   Command table entries types
 CT_END      equ $00             ; end of table/end of entry
 CT_CONTINUE equ $01             ; continuation "command"
+;   Command parameter value (paramval) types
+;   XXX commented out ones below cannot be used until the unit tests
+;       for addBpvsize() tests them
 CTP_END     equ $00             ; end of parameters
 CTP_WORD    equ $FF             ; parameter with word value
 CTP_BYTE    equ $FE             ;     "      "   byte value
 CTP_NYBBLE  equ $FD             ;     "      "   nybble value
 CTP_UVAR    equ $FC             ;     "      "   user variable letter
-CTP_B7      equ %10000000       ;     "      "   boolean value stored in bit 7
-CTP_B6      equ %01000000       ;     "      "      "      "      "   "   "  6
-CTP_B5      equ %00100000       ;     "      "      "      "      "   "   "  5
-CTP_B4      equ %00010000       ;     "      "      "      "      "   "   "  4
-CTP_B3      equ %00001000       ;     "      "      "      "      "   "   "  3
-CTP_B2      equ %00000100       ;     "      "      "      "      "   "   "  2
-CTP_B1      equ %00000010       ;     "      "      "      "      "   "   "  1
-CTP_B0      equ %00000001       ;     "      "      "      "      "   "   "  0
+;CTP_B7      equ %10000000       ;     "      "   boolean value stored in bit 7
+;CTP_B6      equ %01000000       ;     "      "      "      "      "   "   "  6
+;CTP_B5      equ %00100000       ;     "      "      "      "      "   "   "  5
+;CTP_B4      equ %00010000       ;     "      "      "      "      "   "   "  4
+;CTP_B3      equ %00001000       ;     "      "      "      "      "   "   "  3
+;CTP_B2      equ %00000100       ;     "      "      "      "      "   "   "  2
+;CTP_B1      equ %00000010       ;     "      "      "      "      "   "   "  1
+;CTP_B0      equ %00000001       ;     "      "      "      "      "   "   "  0
 
 ; ----------------------------------------
 ;   "Low" area aimed at maximum gain from minimum direct page usage.
@@ -291,10 +294,15 @@ cmdlookup
             rts
 
 ;   ♠B ♡AX  Add to B the storage size of the command table paramval spec
-;           (paramchar byte followed by CTP_* value byte) to which X points.
-;
-addBpvsize
-            inc B   ; XXX bogus
+;           (paramchar byte followed by CTP_* paramtype byte) to which X points.
+addBpvsize  psh A
+            ;   XXX currently handles only byte and word lengths
+            lda A,1,X
+            cmp A,#CTP_WORD
+            bne .notword
+            inc B
+.notword    inc B
+            pul A
             rts
 
 ;   ♠B,_a♡A  Look up command parameter given in A.

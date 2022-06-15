@@ -49,6 +49,23 @@ cmdentry_b  db  'b'
 
 param = pytest.mark.parametrize
 
+@param('ctp_type_sym, ctp_len', [
+    ('CTP_WORD', 2),
+    ('CTP_BYTE', 1),
+    ('CTP_NYBBLE', 1),
+    ('CTP_UVAR', 1),
+    #   XXX how to deal with boolean? need to look at _prev_ entry
+    #       but how do we know if we have a previous entry?
+])
+def test_addBpvsize(m, R, S, ctp_type_sym, ctp_len):
+    ctp_type = S[ctp_type_sym]
+    addr = 0xA000 + ctp_type
+    print('{}=${:02X} len={} addr=${:04X}'.format(
+        ctp_type_sym, ctp_type, ctp_len, addr))
+    m.deposit(addr, [ord('a'), ctp_type])   # param entry is paramchar, valtype
+    m.call(S.addBpvsize, R(a=0xEA, b=0x10, x=addr))
+    assert R(a=0xEA, b=0x10 + ctp_len, x=addr) == m.regs
+
 @param('cmdchar', ['a', 'b'])
 def test_cmdlookup_success(m, S, R, cmdchar):
     m.depword(S.cmdtbl, S.cmdtbl_1)

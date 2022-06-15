@@ -85,6 +85,7 @@ pmon_ramlo_end equ *
         endif
 
 cmdtbl      ds  2       ; pointer to command table (see below)
+cmdpvbase   ds  2       ; pointer to start of parameter values for all cmds
 ;   Saved register values (same memory order as interrupt stack frame):
 Rcc         ds  1       ; condition codes
 Rb          ds  1       ; accumulator B
@@ -96,8 +97,19 @@ Rsp         ds  2       ; stack pointer
 pricount    ds  1       ; printed input count: how far we need to backspace to
                         ;   clear the currently pending or previous input value
 cmdentry    ds  2       ; pointer to entry found by cmdlookup
+cmdepvals   ds  2       ; pointer to start of parameter values for cmd above
 
 pmon_ramhi_end equ *
+
+; ----------------------------------------
+;   Parameter values, user variables, etc. start at pmon_ramhi_end unless
+;   otherwise specified.
+
+        if defined(pmon_vars)
+            org pmon_vars
+        endif
+
+cmdpvbase_default   equ     *
 
 ; ----------------------------------------------------------------------
 ;   Code
@@ -170,8 +182,11 @@ init        ;   The machine state at this entry point may not be particularly
             ;   No need to init pricount since our first lineCR will do it.
             ldx #cmdtabl_rom
             stx cmdtbl
-
-            bra qcommand        ; XXX use pristr here instead
+            ldx #cmdpvbase_default
+            stx cmdpvbase
+            ;   XXX Clear memory from cmdpvbase through length of params.
+            ;       Possibly we should be testing it too, to ensure that
+            ;       it's not accidentally overflowed RAM or whatever.
 
 qcommand    ;   Command read mode
             jsr lineCR          ; ensure we're at beginning of line
@@ -261,9 +276,9 @@ cmdlookup   ldx cmdtbl
             ;   thus success already indicated
             rts
 
-;   ♠B,_a♡A  Look up param char in A in `cmdentry`. returning carry set on
-;   failure. If found, carry is clear, B contains value type and _a points
-;   to value loc.
+;   ♠B,_a♡A  Find in `cmdentry` the param char given in A, returning carry
+;   set on failure. If found, carry is clear, B contains the value type
+;   (CPT_*) and `_a` points to the value location.
 paramlookup
             cmp A,#'w'          ; XXX for the moment, 'w' and above are
                                 ;    found, all else not

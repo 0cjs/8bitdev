@@ -132,7 +132,7 @@ banner      db 'pmon 2022-05-30 cjs',0
 ;   command table which usually would continue back to this after they
 ;   define their own commands.
 ;
-cmdtabl_rom
+cmdtbl_rom
             db  'b'
             dw  Cbanner
             db  CTP_END
@@ -184,7 +184,7 @@ init        ;   The machine state at this entry point may not be particularly
             jsr prnl
 
             ;   No need to init pricount since our first lineCR will do it.
-            ldx #cmdtabl_rom
+            ldx #cmdtbl_rom
             stx cmdtbl
             ldx #cmdpvbase_default
             stx cmdpvbase

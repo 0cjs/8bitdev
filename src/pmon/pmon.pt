@@ -38,6 +38,16 @@ cmdentry_b  db  'b'
             dw  $100B
             db  'x',CTP_BYTE
             db  'y',CTP_WORD
+            db  'n',CTP_NYBBLE
+            db  'u',CTP_UVAR
+            db  CTP_END
+
+cmdentry_c  db  'c'
+            dw  $100C
+            db  CTP_END
+
+cmdentry_d  db  'd'
+            dw  $100D
             db  CTP_END
 
             db  CT_END
@@ -51,9 +61,7 @@ param = pytest.mark.parametrize
 
 @param('ctp_type_sym, ctp_len', [
     ('CTP_WORD', 2),
-    ('CTP_BYTE', 1),
-    ('CTP_NYBBLE', 1),
-    ('CTP_UVAR', 1),
+    ('CTP_BYTE', 1), ('CTP_NYBBLE', 1), ('CTP_UVAR', 1),
     #   XXX how to deal with boolean? need to look at _prev_ entry
     #       but how do we know if we have a previous entry?
 ])
@@ -66,17 +74,20 @@ def test_addBpvsize(m, R, S, ctp_type_sym, ctp_len):
     m.call(S.addBpvsize, R(a=0xEA, b=0x10, x=addr))
     assert R(a=0xEA, b=0x10 + ctp_len, x=addr) == m.regs
 
-@param('cmdchar', ['a', 'b'])
-def test_cmdlookup_success(m, S, R, cmdchar):
+@param('cmdchar, cpvals_offset', [
+    #   The vals offsets are calculated by hand from the test command tbl above.
+    ('a', 0), ('b', 3), ('c', 8), ('d', 8),
+])
+def test_cmdlookup_success(m, S, R, cmdchar, cpvals_offset):
     m.depword(S.cmdtbl, S.cmdtbl_1)
-    m.depword(S.cmdpvbase, 0x7FFF)
+    m.depword(S.cmdpvbase, 0x7FFD)
 
     m.call(S.cmdlookup, R(a=ord(cmdchar), x=0xFFFF, C=1))
 
     cmdentry = m.word(S.cmdentry); print('entry:', m.hexdump(cmdentry, 9))
     cmdpvals = m.word(S.cmdpvals); print('pvals:', m.hexdump(cmdpvals, 9))
-    assert (ord(cmdchar), False, S['cmdentry_' + cmdchar], 0xFFFF) \
-        == (m.a,          m.C,   cmdentry,                 cmdpvals)
+    assert (ord(cmdchar), False, S['cmdentry_'+cmdchar], 0x7FFD+cpvals_offset) \
+        == (m.a,          m.C,   cmdentry,               cmdpvals)
 
 @param('cmdchar', [0xFF, 0x00, 0x01, ord('Z')])
 def test_cmdlookup_failure(m, S, R, cmdchar):
@@ -84,8 +95,8 @@ def test_cmdlookup_failure(m, S, R, cmdchar):
     cmdpvbase = 0x7FFF + cmdchar    # test at different locations
     m.depword(S.cmdpvbase, cmdpvbase)
     #   Length of variables area below manually calculated
-    #   from CTP_* values in test command table.
-    cmdpvals_end = cmdpvbase + 6
+    #   from CTP_* values in test command table above.
+    cmdpvals_end = cmdpvbase + 8
 
     m.call(S.cmdlookup, R(a=cmdchar, x=0xFFFF, C=0))
     assert (R(C=1, a=cmdchar), cmdpvals_end) == (m.regs,  m.word(S.cmdpvals))

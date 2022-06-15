@@ -58,8 +58,8 @@ def test_cmdlookup_success(m, S, R, cmdchar):
 
     cmdentry = m.word(S.cmdentry); print('entry:', m.hexdump(cmdentry, 9))
     cmdpvals = m.word(S.cmdpvals); print('pvals:', m.hexdump(cmdpvals, 9))
-    assert (ord(cmdchar), 0, S['cmdentry_' + cmdchar], 0xDEAD) \
-        == (m.a, m.C, cmdentry, cmdpvals)
+    assert (ord(cmdchar), False, S['cmdentry_' + cmdchar], 0xFFFF) \
+        == (m.a,          m.C,   cmdentry,                 cmdpvals)
 
 @param('cmdchar', [0xFF, 0x00, 0x01, ord('Z')])
 def test_cmdlookup_failure(m, S, R, cmdchar):
@@ -71,7 +71,6 @@ def test_cmdlookup_failure(m, S, R, cmdchar):
     cmdpvals_end = cmdpvbase + 6
 
     m.call(S.cmdlookup, R(a=cmdchar, x=0xFFFF, C=0))
-
     assert (R(C=1, a=cmdchar), cmdpvals_end) == (m.regs,  m.word(S.cmdpvals))
 
 @param('result, x, b', (

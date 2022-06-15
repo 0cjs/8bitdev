@@ -240,13 +240,16 @@ pri_bs      tst pricount        ; did we print something we need to BS over?
             jmp prchar          ; RTS TCO
 
 ; ----------------------------------------------------------------------
-;   ♠Xc ♡A ♣B  Starting at command table pointed to by `cmdtbl`, find the
-;   entry in that table for char given in A. A is always preserved. On
-;   failure the carry is set; on success the carry is clear, `cmdentry`
-;   points to the entry in the command table, and `cmdpvals` points to
-;   the start of the parameter values for that command.
+;   ♠Xc ♡A ♣B,_a  Starting at command table pointed to by `cmdtbl`, find the
+;                 entry in that table for char given in A, which is preserved.
+;   • Failure: returns with carry set.
+;   • Success: carry clear; `cmdentry` points to the entry in the command
+;     table; `cmdpvals` points to the start of the parameter values for
+;     that command.
 ;
-cmdlookup   ldx cmdpvbase
+cmdlookup
+.xtmp       equ _a
+            ldx cmdpvbase
             stx cmdpvals
             ldx cmdtbl
 
@@ -265,14 +268,21 @@ cmdlookup   ldx cmdpvbase
             inx                 ; increment past command char
             inx                 ; increment past command exec addr
             inx                 ;   (may contain $00 values)
+            lda B,#0            ; init size of paramvals
 .next_param tst ,X              ; end of parameters (CT_END)?
             beq .param_end      ;   yes: get ready for next entry
-    ; XXX add paramval size to cmdpvals
+            bsr addBpvsize      ; add this paramval size
             inx                 ; move past this parameter
             inx
             bra .next_param
 
 .param_end  inx                 ; move forward to next entry
+            stx cmdentry
+            ldx cmdpvals        ; move cmdpvals
+            bsr addXB           ;   forward to
+            stx cmdpvals        ;   start of next command's values
+            ldx cmdentry        ; XXX we have unnecessary loads/stores
+                                ;   in this routine: refactor it
             bra .qentry
 
 .notfound   sec                 ; indicate failure, X is don't-care
@@ -280,9 +290,27 @@ cmdlookup   ldx cmdpvbase
             ;   thus success already indicated
             rts
 
-;   ♠B,_a♡A  Find in `cmdentry` the param char given in A, returning carry
+;   ♠B ♡AX  Add to B the storage size of the command table paramval spec
+;           (paramchar byte followed by CTP_* value byte) to which X points.
+;
+addBpvsize
+            inc B   ; XXX bogus
+            rts
+
+;   ♠B,_a♡A  Look up command parameter given in A.
+;
+;   Find in `cmdentry` the param char given in A, returning carry
 ;   set on failure. If found, carry is clear, B contains the value type
 ;   (CPT_*) and `_a` points to the value location.
+;
+;   Enter with `cmdentry` pointing to the entry in the command table and
+;   `cmdpvals` pointing to the first value entry for that command. (This is
+;   the output of `cmdlookup`.)
+;
+;   Failure returns with carry set. On success, carry is clear, B contains
+;   the value type (CPT_*) and `_a` points to the value location.
+;   `cmdentry` and `paramval` are preserved.
+;
 paramlookup
             cmp A,#'w'          ; XXX for the moment, 'w' and above are
                                 ;    found, all else not
@@ -291,6 +319,20 @@ paramlookup
             ldx #_x             ; XXX value loc always _x
             stx _a
 .rts        rts
+
+; ----------------------------------------------------------------------
+;   Utility routines used nearby (so we can BSR instead of JSR)
+
+;   ♠X♣B,tmpx  X ← X + B unsigned
+addXB       stx     tmpx
+            add     B,tmpx+1
+            sta     B,tmpx+1
+            bcc     .done
+            lda     B,tmpx
+            inc     B
+            sta     B,tmpx
+.done       ldx     tmpx
+            rts
 
 ; ----------------------------------------------------------------------
 ;   Parameter parsing
@@ -426,17 +468,3 @@ rdche       jsr rdchar
             inc pricount
             jmp prchar          ; RTS TCO
 .rts        rts
-
-; ----------------------------------------------------------------------
-;   Utility routines
-
-;   ♠X♣B,tmpx  X ← X + B unsigned
-addXB       stx     tmpx
-            add     B,tmpx+1
-            sta     B,tmpx+1
-            bcc     .done
-            lda     B,tmpx
-            inc     B
-            sta     B,tmpx
-.done       ldx     tmpx
-            rts

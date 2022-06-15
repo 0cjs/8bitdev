@@ -390,7 +390,15 @@ qparam      jsr paramlookup     ; valid parameter char?
             bcc +               ;   yes: get value
             rts                 ;   no: carry set to indicate error
 +           clr pricount        ; parameter char is accepted
-            com B               ; $FF,$FE,$FD,... → $00,$01,$02,...
+
+            jsr rdche           ; first char we read may always
+            cmp A,#' '          ;   be a space
+            bne .input          ; not space: start of value input
+            jsr pparam          ; is space: print the current value instead
+            clc                 ; there was no error
+            rts
+
+.input      com B               ; $FF,$FE,$FD,... → $00,$01,$02,...
                                 ; XXX sets carry, do we need EOR B,#$FF ?
             asl B               ; double it to get index
             ldx #qpvaltab
@@ -398,7 +406,14 @@ qparam      jsr paramlookup     ; valid parameter char?
             ldx ,X              ; look up parser for this type
             jmp ,X              ; RTS TCO  and start it
 
+pparam
+            jsr pristr
+            db  ":pparam:",0
+            rts
+
 ;   Parsers for the different types of parameter values.
+;   These are entered with the first character already read into A
+;   because the caller had to check to make sure it isn't a space.
 ;   XXX These need unit tests and then can probably be optimised into
 ;   something smaller.
 

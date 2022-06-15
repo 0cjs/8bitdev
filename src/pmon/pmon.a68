@@ -68,11 +68,10 @@ CTP_UVAR    equ $FC             ;     "      "   user variable letter
 ;   defined for arithmetic routine parameters/returns/counters so we re-use
 ;   this here for temp space for non-arithemtic routines.
 _a          ds  2
-_x          ds  2
+_x          ds  2               ; used by many generic `pr*` routines
 _i          ds  1
 
 tmpx        equ _a              ; for use within one routine only
-pvalp       equ _x              ; pointer to a parameter value
 
 pmon_ramlo_end equ *
 ;   Here we could check for and warn about direct page overflow, but
@@ -102,6 +101,9 @@ pricount    ds  1       ; printed input count: how far we need to backspace to
                         ;   clear the currently pending or previous input value
 cmdentry    ds  2       ; pointer to entry found by cmdlookup
 cmdpvals    ds  2       ; pointer to start of parameter values for cmd above
+pvalp       ds  2       ; printer to one particular value to read/print
+                        ;   (don't use _x; that's used by printing routines)
+
 
 pmon_ramhi_end equ *
 
@@ -394,7 +396,8 @@ qparam      jsr paramlookup     ; valid parameter char?
             jsr rdche           ; first char we read may always
             cmp A,#' '          ;   be a space
             bne .input          ; not space: start of value input
-            jsr pparam          ; is space: print the current value instead
+            jsr pri_bs          ; is space: backspace over it and print the
+            jsr ppval           ;   current value instead of taking input
             clc                 ; there was no error
             rts
 
@@ -406,9 +409,39 @@ qparam      jsr paramlookup     ; valid parameter char?
             ldx ,X              ; look up parser for this type
             jmp ,X              ; RTS TCO  and start it
 
-pparam
-            jsr pristr
-            db  ":pparam:",0
+;   Print a paramter value.
+;
+;   Enter with the the value type (CPT_*) in B and `pvalp` pointing to the
+;   value's location. (This is the return state of `paramlookup`.)
+;
+ppval       ldx pvalp
+            cmp B,#$81          ; ≤$80 is a boolean bit
+            bcs .bitval
+
+            inc B               ; $FF (CTP_WORD) → $00?
+            bne +
+            ldx ,X              ; print word
+            jmp prhexX          ; RTS TCO
+
++           lda A,,X            ; all following ≤byte value from A
+            inc B               ; $FE (CTP_BYTE) → $00?
+            bne +
+            jmp prhex           ; RTS TCO
+
++           inc B               ; $FD (CTP_NYBBLE) → $00?
+            bne +
+            jmp prnyb           ; RTS TCO
+
++           inc B               ; $FC (CTP_UVAR) → $00?
+            bne +
+            jmp prvischar       ; RTS TCO
+
++           jsr pristr          ; XXX
+            db  "ppval BADTYPE",0
+            rts
+
+.bitval     jsr pristr          ; XXX
+            db  ":ppval:BITVAL:",0
             rts
 
 ;   Parsers for the different types of parameter values.

@@ -88,9 +88,23 @@ def test_addBpvsize(m, R, S, ctp_type_sym, ctp_len):
     m.call(S.addBpvsize, R(a=0xEA, b=0x10, x=addr))
     assert R(a=0xEA, b=0x10 + ctp_len, x=addr) == m.regs
 
-def test_paramlookup(m, R, S):
-    assert S.paramlookup
-    assert 0
+@param('cmdentry_sym, paramchar, valtype_sym, valoff', [
+    ('cmdentry_b', 'n', 'CTP_NYBBLE', 3),
+])
+def test_paramlookup_success(m, R, S,
+        cmdentry_sym, paramchar, valtype_sym, valoff):
+    pchar = ord(paramchar)
+    valstart = 0x9000 + pchar
+    m.depword(S.cmdentry, S[cmdentry_sym])
+    m.depword(S.cmdpvals, valstart)
+    m.call(S.paramlookup, R(a=pchar, b=0x7F, C=True))
+    assert (R(a=pchar, C=False, b=S[valtype_sym]), valstart + valoff) \
+        == (m.regs,                                m.word(S.pvalp))
+
+def test_paramlookup_failure(m, R, S):
+    m.depword(S.cmdentry, S.cmdentry_b)
+    m.call(S.paramlookup, R(a=0xFF))
+    assert R(C=True) == m.regs
 
 @param('cmdchar, cpvals_offset', [
     #   The vals offsets are calculated by hand from the test command tbl above.

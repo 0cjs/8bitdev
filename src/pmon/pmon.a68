@@ -71,7 +71,8 @@ _a          ds  2
 _x          ds  2
 _i          ds  1
 
-tmpx        equ _x              ; for use within one routine only
+tmpx        equ _a              ; for use within one routine only
+pvalp       equ _x              ; pointer to a parameter value
 
 pmon_ramlo_end equ *
 ;   Here we could check for and warn about direct page overflow, but
@@ -243,8 +244,8 @@ pri_bs      tst pricount        ; did we print something we need to BS over?
             jmp prchar          ; RTS TCO
 
 ; ----------------------------------------------------------------------
-;   ♠Xc ♡A ♣B,_a  Starting at command table pointed to by `cmdtbl`, find the
-;                 entry in that table for char given in A, which is preserved.
+;   ♠Xc ♡A ♣B Starting at command table pointed to by `cmdtbl`, find the
+;       entry in that table for char given in A, which is preserved.
 ;   • Failure: returns with carry set.
 ;   • Success: carry clear; `cmdentry` points to the entry in the command
 ;     table; `cmdpvals` points to the start of the parameter values for
@@ -303,28 +304,42 @@ addBpvsize  psh A
             pul A
             rts
 
-;   ♠B,_a♡A  Look up command parameter given in A.
-;
-;   Find in `cmdentry` the param char given in A, returning carry
-;   set on failure. If found, carry is clear, B contains the value type
-;   (CPT_*) and `_a` points to the value location.
+;   ♠B,pvalp ♣X ♡A  Look up command parameter given in A.
 ;
 ;   Enter with `cmdentry` pointing to the entry in the command table and
 ;   `cmdpvals` pointing to the first value entry for that command. (This is
 ;   the output of `cmdlookup`.)
 ;
-;   Failure returns with carry set. On success, carry is clear, B contains
-;   the value type (CPT_*) and `_a` points to the value location.
-;   `cmdentry` and `paramval` are preserved.
+;   If the char in A does not match a paramchar in `cmdentry` this will
+;   return failure indicated by carry set. Otherwise, carry is clear, B
+;   contains the value type (CPT_*) and `pvalp` points to the value location
+;   at the appropriate offset past cmdpvals.
 ;
-paramlookup
-            cmp A,#'w'          ; XXX for the moment, 'w' and above are
-                                ;    found, all else not
-            bcs .rts
-            lda B,#CTP_NYBBLE   ; XXX just for testing
-            ldx #_x             ; XXX value loc always _x
-            stx _a
-.rts        rts
+;   A, `cmdentry` and `paramval` are preserved.
+;   XXX Possibly A need not be preserved, and perhaps should be retval.
+;
+paramlookup ldx cmdentry
+            lda B,#0            ; offset to paramval
+            inx                 ; skip command character
+.next       inx                 ; skip paramchar (1st time: entrypoint MSB)
+            inx                 ; skip paramtype (1st time: entrypoint LSB)
+            cmp A,,X            ; this parameter matches?
+            beq .match          ;   yes: collect information
+            bsr addBpvsize      ; move to next parameter value
+            tst ,X              ; CTP_END?
+            bne .next           ;   no: try matching next param spec
+            sec                 ; error flag
+            rts
+.match
+            psh A
+            lda A,1,X           ; param type
+            ldx cmdpvals        ; to base of this command's paramval area
+            bsr addXB           ;   add offset for this parameter
+            stx pvalp
+            tab                 ; param type to proper return register
+            pul A
+            clc
+            rts
 
 ; ----------------------------------------------------------------------
 ;   Utility routines used nearby (so we can BSR instead of JSR)

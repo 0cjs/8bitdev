@@ -88,6 +88,10 @@ def test_addBpvsize(m, R, S, ctp_type_sym, ctp_len):
     m.call(S.addBpvsize, R(a=0xEA, b=0x10, x=addr))
     assert R(a=0xEA, b=0x10 + ctp_len, x=addr) == m.regs
 
+def test_paramlookup(m, R, S):
+    assert S.paramlookup
+    assert 0
+
 @param('cmdchar, cpvals_offset', [
     #   The vals offsets are calculated by hand from the test command tbl above.
     ('a', 0), ('b', 3), ('c', 8), ('d', 8),

@@ -232,18 +232,23 @@ qcommand    ;   Command read mode
 ;   the cursor the character that caused the error.
 ;   The backspace is not printed if pricount is 0 as that means the
 ;   bad input was a non-printing char that was not echoed.
-errorbs     jsr pri_bs
+errorbs     jsr pri_bs1
 errorbel    lda A,#BEL
             jsr prchar
             rts
 
-;   Backspace over a "pending input" printed character, if we have one.
-pri_bs      tst pricount        ; did we print something we need to BS over?
-            bne +               ;   yes: print a backspace
-            rts
-+           dec pricount
+;   ♣A Backspace over one "pending input" printed character, if we have one.
+pri_bs1     tst pricount        ; did we print something we need to BS over?
+            bne pribs_dec       ;   yes: print a backspace
+pribs_rts   rts
+pribs_dec   dec pricount
             lda A,#BS
             jmp prchar          ; RTS TCO
+;   ♣A Backspace over all "pending input" printed characters, if any.
+pri_bsN     tst pricount        ; "pending" input still printed?
+            beq pribs_rts
+            bsr pribs_dec       ;   yes: backspace over it
+            bra pri_bsN         ;     and check again
 
 ; ----------------------------------------------------------------------
 ;   ♠Xc ♡A ♣B Starting at command table pointed to by `cmdtbl`, find the
@@ -362,9 +367,9 @@ addXB       stx     tmpx
 
 ;   Parse all parameters for a command, returning with carry clear
 ;   on execute or carry set if the command is cancelled.
-qparams     jsr rdche           ; we may still BS over the command
-            cmp A,#BS           ; before we've parsed any params,
-            beq .cancel         ;   backspace also cancels command
+qparams     jsr rdche           ; before we've parsed the first paramchar
+            cmp A,#BS           ;   we may still backspace over the command
+            beq .cancel         ;   which will cancel the entire command
             clr pricount        ; the command is now accepted
 .checkchar  cmp A,#' '          ; when looking for a new param char, spaces
             beq .ok             ;   are accepted and printed
@@ -381,7 +386,7 @@ qparams     jsr rdche           ; we may still BS over the command
 .execute    clc                 ; execute indicator
             rts
 
-.cancel     jsr pri_bs
+.cancel     jsr pri_bs1
             sec                 ; cancel indicator
             rts
 
@@ -391,23 +396,28 @@ qparams     jsr rdche           ; we may still BS over the command
 qparam      jsr paramlookup     ; valid parameter char?
             bcc +               ;   yes: get value
             rts                 ;   no: carry set to indicate error
-+           clr pricount        ; parameter char is accepted
-
-            jsr rdche           ; first char we read may always
-            cmp A,#' '          ;   be a space
-            bne .input          ; not space: start of value input
-            jsr pri_bs          ; is space: backspace over it and print the
-            jsr ppval           ;   current value instead of taking input
-            clc                 ; there was no error
++           jsr rdche           ; first char for any type has extra parsing
+            ;   BS backspaces over the paramchar and skips value entry.
+            cmp A,#BS
+            bne +
+            jsr pri_bs1         ; backspace over paramchar
+            clc
             rts
-
-.input      com B               ; $FF,$FE,$FD,... → $00,$01,$02,...
+            ;   Space prints the current value of the param
++           cmp A,#' '
+            bne +
+            jsr pri_bs1         ; backspace over the space and
+            jsr ppval           ;   print the current value of that param
+            clc
+            rts
+            ;   Value input; dispatch based on type
++           com B               ; $FF,$FE,$FD,... → $00,$01,$02,...
                                 ; XXX sets carry, do we need EOR B,#$FF ?
             asl B               ; double it to get index
             ldx #qpvaltab
             jsr addXB           ; add index
             ldx ,X              ; look up parser for this type
-            jmp ,X              ; RTS TCO  and start it
+            jmp ,X              ; and start it (RTS TCO)
 
 ;   Print a paramter value.
 ;
@@ -458,25 +468,25 @@ qpvaltab    dw  qpval_word      ; $FF CTP_WORD
 qpval_word
             jsr pristr
             db  ":qpval_word:",0
-            sec
+            clc
             rts
 
 qpval_byte
             jsr pristr
             db  ":qpval_byte:",0
-            sec
+            clc
             rts
 
 qpval_uvar
             jsr pristr
             db  ":qpval_uvar:",0
-            sec
+            clc
             rts
 
 qpval_nyb
             jsr pristr
             db  ":qpval_nyb:",0
-            sec
+            clc
             rts
 
 ; ----------------------------------------------------------------------

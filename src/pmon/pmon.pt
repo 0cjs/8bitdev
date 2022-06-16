@@ -88,6 +88,30 @@ def test_addBpvsize(m, R, S, ctp_type_sym, ctp_len):
     m.call(S.addBpvsize, R(a=0xEA, b=0x10, x=addr))
     assert R(a=0xEA, b=0x10 + ctp_len, x=addr) == m.regs
 
+@param('routine, pricount_in, pricount_out, output', [
+    ('bs1', 0, 0, b''  ),   ('bsN', 0, 0, b''),
+    ('bs1', 1, 0, b'\b'),   ('bsN', 1, 0, b'\b'),
+    ('bs1', 2, 1, b'\b'),   ('bsN', 2, 0, b'\b\b'),
+    ('bs1', 3, 2, b'\b'),   ('bsN', 3, 0, b'\b\b\b'),
+])
+def test_pri_bs(m, R, S, loadbios, routine, pricount_in, output, pricount_out):
+    m.deposit(S.pricount, pricount_in)
+    _, ostream = loadbios('tmc68')
+    m.call(S['pri_' + routine])
+    assert (pricount_out, output) == (m.byte(S.pricount), ostream.getvalue())
+
+@param('parser, input, valword, output', [
+    ('byte', b'fe', 0xFE00, b'XXX')
+])
+@pytest.mark.skip   # XXX
+def test_qpval(m, R, S, loadbios, parser, input, valword, output):
+    valaddr = 0x7000 + sum(input)
+    m.depword(S.pvalp, valaddr)
+    m.depword(valaddr, 0xAD9C)      # sentinel
+    istream, ostream = loadbios('tmc68', input[1:])
+    m.call(S['qpval_' + parser], R(a=input[0]))
+    assert (valword, output) == (m.word(valaddr), ostream.getvalue())
+
 @param('cmdentry_sym, paramchar, valtype_sym, valoff', [
     ('cmdentry_b', 'n', 'CTP_NYBBLE', 3),
 ])

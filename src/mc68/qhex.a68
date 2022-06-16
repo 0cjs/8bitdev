@@ -24,11 +24,8 @@
 ;   minimal RAM.
 
 qhexword    lda B,#4            ; parse up to 4 digits
-            bra qhex
-
+            db $7D              ; TST skips next two bytes
 qhexbyte    lda B,#2
-            ;   fallthrough
-
 qhex        clr qhex_out        ; current result: $0000
             clr qhex_out+1
             asl B               ; remaining max digit count in B[7‥3]
@@ -41,10 +38,8 @@ qhex        clr qhex_out        ; current result: $0000
             ora B,#4
 
 .nextchar   lda A,,X
-            bsr qdigit
+            bsr qhexdigit
             bmi .exit           ; bad digit, return
-            cmp A,#$0F+1
-            bcc .exit           ; digit in base >16
             inx                 ; consume this character
             asl A               ; shift value to upper nybble
             asl A

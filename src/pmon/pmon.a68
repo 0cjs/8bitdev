@@ -194,18 +194,16 @@ init        ;   The machine state at this entry point may not be particularly
             ;       Possibly we should be testing it too, to ensure that
             ;       it's not accidentally overflowed RAM or whatever.
 
-qcommand    ;   Command read mode
-            jsr lineCR          ; ensure we're at beginning of line
-            lda A,#PROMPT
-            jsr prchar
-
-            ;   Commands RTS when done, so we set up the stack with a return to
+qcommand    ;   Commands RTS when done, so we set up the stack with a return to
             ;   here and JMP to the command. (Continuation-passing style.)
             lda A,#LB(qcommand)
             psh A
             lda A,#MB(qcommand)
             psh A
 
+            jsr lineCR          ; ensure we're at beginning of line
+            lda A,#PROMPT
+            jsr prchar
             jsr rdche0
             jsr cmdlookup
             bcc .foundcmd
@@ -227,12 +225,11 @@ qcommand    ;   Command read mode
             ldx 1,X             ; load execution addr of that command
             jmp ,X              ; command will RTS to above
 
-;   Backspace over bad input and generate an error tone.
-;   The backspace does not overwrite the bad input so that you see under
-;   the cursor the character that caused the error.
-;   The backspace is not printed if pricount is 0 as that means the
-;   bad input was a non-printing char that was not echoed.
-errorbs     jsr pri_bs1
+;   Backspace over bad input characters (all chars echoed by `rdche` since
+;   `pricount` was last cleared) and generate an error tone. The backspace
+;   does not overwrite the bad input so that you see under the cursor the
+;   character that caused the error.
+errorbs     jsr pri_bsN
 errorbel    lda A,#BEL
             jsr prchar
             rts

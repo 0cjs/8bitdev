@@ -21,6 +21,27 @@ from src.qdigit import (
     test_qdigit_error_exhaustive    as test_qdigit_error_exhaustive_6800,
     )
 
+#   XXX move this up to generic code?
+@pytest.mark.parametrize('char, num', [
+    ('0', 0x0), ('1', 0x1), ('8', 0x8),  ('9', 0x9),
+    ('A', 0xA), ('a', 0xA), ('F', 0xF),  ('f',0xF),
+])
+def test_qhexdigit_good(m, R, char, num):
+    m.call(m.symtab.qhexdigit, R(a=ord(char), N=1))
+    assert R(a=num, N=0) == m.regs
+
+@pytest.mark.parametrize('char', [
+    '\x00', '/',                        # chars below digits
+    ':', '@',                           # chars between digits and letters
+    'G', 'g',                           # chars above valid letters
+   #'\x7F', '\x80', '\x81',
+   #'\xAF', '\xB0', '\xB9', '\xBa',     # MSb set: '/', '0', '9', ':'
+   #'\xC7', '\xE7', '\xFF',             # MSb set: 'G', 'g'
+    ])
+def test_qhexdigit_error(m, R, char):
+    m.call(m.symtab.qhexdigit, R(a=ord(char), N=0))
+    assert R(N=1) == m.regs
+
 ####################################################################
 #   qhexword, qhexbyte
 

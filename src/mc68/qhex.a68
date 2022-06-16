@@ -81,3 +81,16 @@ qdigit      cmp A,#'9'+1
             sub A,#'A'-$0A
             cmp A,#$0A          ; set N if < $0A
 .exit       rts
+
+;   ♠A ♡BX Convert ASCII hex digit in A to binary. Returns:
+;   • Good digit: N flag clear and binary digit in A
+;   • Bad  digit: N flag set and A destroyed
+qhexdigit   bsr qdigit
+            bmi .rts            ; covers non-digit/non-alpha errors
+            ;   We know we're in the range 0-40 ($00-$28), thus subtracting
+            ;   $80 would always give a negative result. Subtracting
+            ;   another $10 would roll over and make the result positive
+            ;   again if the original value had been $00-$0F. So we can use
+            ;   CMP to clear the N flag for $00-$0F, and set it for $10-$7F.
+            cmp A,#$80+$10      ; did it convert a hex digit?
+.rts        rts

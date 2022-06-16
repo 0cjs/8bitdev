@@ -103,6 +103,7 @@ cmdentry    ds  2       ; pointer to entry found by cmdlookup
 cmdpvals    ds  2       ; pointer to start of parameter values for cmd above
 pvalp       ds  2       ; printer to one particular value to read/print
                         ;   (don't use _x; that's used by printing routines)
+qhex_out    ds  2       ; value we're building from user input
 
 
 pmon_ramhi_end equ *
@@ -210,7 +211,7 @@ qcommand    ;   Commands RTS when done, so we set up the stack with a return to
             ;   Backspace over the bad character (if it was printed),
             ;   signal error with a beep and continue with qcommand
             ;   via stacked continuation.
-            bra errorbs         ; RTS TCO
+            bra errorbsN        ; RTS TCO
 
 .foundcmd   jsr qparams         ; parse parameters
             bcc .execute        ; got CR to execute
@@ -225,11 +226,12 @@ qcommand    ;   Commands RTS when done, so we set up the stack with a return to
             ldx 1,X             ; load execution addr of that command
             jmp ,X              ; command will RTS to above
 
-;   Backspace over bad input characters (all chars echoed by `rdcharep`
-;   since calling `rdcharep0` or `pricount` was last cleared) and generate
-;   an error tone. The backspace does not overwrite the bad input so that
-;   you see under the cursor the character that caused the error.
-errorbs     jsr pri_bsN
+;   Backspace over bad input characters (all N or just 1 chars echoed by
+;   `rdcharep` since calling `rdcharep0` or `pricount` was last cleared)
+;   and generate an error tone. The backspace does not overwrite the bad
+;   input so that you see under the cursor the char that caused the error.
+errorbsN    bsr pri_bsN
+errorbs1    bsr pri_bs1         ; no effect if bsN ate all the pricount
 errorbel    lda A,#BEL
             jsr prchar
             rts
@@ -376,14 +378,14 @@ qparams     jsr rdcharep        ; before we've parsed the first paramchar
             beq .execute
             bsr qparam          ; valid parameter character?
             bcc .ok             ;   yes: continue reading parameters
-            jsr errorbs         ;   no: back up cursor and...
+            jsr errorbsN        ;   no: back up cursor and...
 .ok         jsr rdcharep0       ; start a new parameter read
             bra .checkchar
 
 .execute    clc                 ; execute indicator
             rts
 
-.cancel     jsr pri_bs1
+.cancel     jsr pri_bs1         ; remember, only printable input was echoed
             sec                 ; cancel indicator
             rts
 
@@ -395,6 +397,7 @@ qparam      jsr paramlookup     ; valid parameter char?
             rts                 ;   no: carry set to indicate error
 +           jsr rdcharep        ; first char for any type has extra parsing
             ;   BS backspaces over the paramchar and skips value entry.
+            ;   XXX is this already taken care of by BS check in qpval_*?
             cmp A,#BS
             bne +
             jsr pri_bs1         ; backspace over paramchar
@@ -468,12 +471,17 @@ qpval_word
             clc
             rts
 
-qpval_byte
-            cmp A,#BS           ; cancel entry?
-            beq .done
-            jsr pristr
-            db  ":qpval_byte:",0
+qpval_byte  cmp A,#BS           ; cancel entry?
+            beq .cancel
+            jsr qhexdigit       ; otherwise it must be the next hex digit
+            bpl +               ; N not set means it's ok
+            jsr errorbs1        ; otherwise it's a bad digit
++           jsr rdcharep
+            bra qpval_byte
+
 .done       clc
+            rts
+.cancel     sec
             rts
 
 qpval_uvar
@@ -487,6 +495,8 @@ qpval_nyb
             db  ":qpval_nyb:",0
             clc
             rts
+
+            include "src/mc68/qhex.a68"     ; XXX should ifdef out unused stuff
 
 ; ----------------------------------------------------------------------
 ;   Command implementations

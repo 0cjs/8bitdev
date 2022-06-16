@@ -398,7 +398,7 @@ qparam      jsr paramlookup     ; valid parameter char?
             cmp A,#BS
             bne +
             jsr pri_bs1         ; backspace over paramchar
-            clc
+            clc                 ; this is a correction, not an error
             rts
             ;   Space prints the current value of the param
 +           cmp A,#' '
@@ -469,9 +469,11 @@ qpval_word
             rts
 
 qpval_byte
+            cmp A,#BS           ; cancel entry?
+            beq .done
             jsr pristr
             db  ":qpval_byte:",0
-            clc
+.done       clc
             rts
 
 qpval_uvar

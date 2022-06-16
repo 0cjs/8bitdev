@@ -101,13 +101,13 @@ def test_pri_bs(m, R, S, loadbios, routine, pricount_in, output, pricount_out):
     assert (pricount_out, output) == (m.byte(S.pricount), ostream.getvalue())
 
 @param('parser, input, valword, output', [
-    ('byte', b'fe', 0xFE00, b'XXX')
+    ('byte', b'\b', 0xDEAD, b'\b')
+   #('byte', b'fe', 0xFE00, b'fe')
 ])
-@pytest.mark.skip   # XXX
 def test_qpval(m, R, S, loadbios, parser, input, valword, output):
     valaddr = 0x7000 + sum(input)
     m.depword(S.pvalp, valaddr)
-    m.depword(valaddr, 0xAD9C)      # sentinel
+    m.depword(valaddr, 0xDEAD)      # sentinel
     istream, ostream = loadbios('tmc68', input[1:])
     m.call(S['qpval_' + parser], R(a=input[0]))
     assert (valword, output) == (m.word(valaddr), ostream.getvalue())

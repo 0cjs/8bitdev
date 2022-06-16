@@ -204,7 +204,7 @@ qcommand    ;   Commands RTS when done, so we set up the stack with a return to
             jsr lineCR          ; ensure we're at beginning of line
             lda A,#PROMPT
             jsr prchar
-            jsr rdche0
+            jsr rdcharep0
             jsr cmdlookup
             bcc .foundcmd
             ;   Backspace over the bad character (if it was printed),
@@ -225,10 +225,10 @@ qcommand    ;   Commands RTS when done, so we set up the stack with a return to
             ldx 1,X             ; load execution addr of that command
             jmp ,X              ; command will RTS to above
 
-;   Backspace over bad input characters (all chars echoed by `rdche` since
-;   `pricount` was last cleared) and generate an error tone. The backspace
-;   does not overwrite the bad input so that you see under the cursor the
-;   character that caused the error.
+;   Backspace over bad input characters (all chars echoed by `rdcharep`
+;   since calling `rdcharep0` or `pricount` was last cleared) and generate
+;   an error tone. The backspace does not overwrite the bad input so that
+;   you see under the cursor the character that caused the error.
 errorbs     jsr pri_bsN
 errorbel    lda A,#BEL
             jsr prchar
@@ -364,7 +364,7 @@ addXB       stx     tmpx
 
 ;   Parse all parameters for a command, returning with carry clear
 ;   on execute or carry set if the command is cancelled.
-qparams     jsr rdche           ; before we've parsed the first paramchar
+qparams     jsr rdcharep        ; before we've parsed the first paramchar
             cmp A,#BS           ;   we may still backspace over the command
             beq .cancel         ;   which will cancel the entire command
             clr pricount        ; the command is now accepted
@@ -377,7 +377,7 @@ qparams     jsr rdche           ; before we've parsed the first paramchar
             bsr qparam          ; valid parameter character?
             bcc .ok             ;   yes: continue reading parameters
             jsr errorbs         ;   no: back up cursor and...
-.ok         jsr rdche0          ; start a new parameter read
+.ok         jsr rdcharep0       ; start a new parameter read
             bra .checkchar
 
 .execute    clc                 ; execute indicator
@@ -393,7 +393,7 @@ qparams     jsr rdche           ; before we've parsed the first paramchar
 qparam      jsr paramlookup     ; valid parameter char?
             bcc +               ;   yes: get value
             rts                 ;   no: carry set to indicate error
-+           jsr rdche           ; first char for any type has extra parsing
++           jsr rdcharep        ; first char for any type has extra parsing
             ;   BS backspaces over the paramchar and skips value entry.
             cmp A,#BS
             bne +
@@ -528,17 +528,18 @@ lineCR      psh a
 ;   rd* - reading input
 
 ;   ♠A  Blocking read and echo of one character with increment of
-;   characters printed count pricount. Non-printing chars are not echoed
+;   characters printed count `pricount`. Non-printing chars are not echoed
 ;   and pricount is not incremented, but the character is still returned.
+;
+;   The `rdcharep0` entry point will clear pricount before reading, indicating
+;   that everything read before this read is to be consider valid, completed
+;   input that should not be backspaced over if there's an error.
+;
 ;   This converts DEL to BS because we have no special use for separating
 ;   the two in this system and it makes printable determination easier.
 ;
-;   The `rdche0` entry point will clear pricount before reading, indicating
-;   that everything read before that is to be consider valid, completed
-;   input that should not be backspaced over if there's an error.
-;
-rdche0      clr pricount
-rdche       jsr rdchar
+rdcharep0   clr pricount
+rdcharep    jsr rdchar
             cmp A,#DEL          ; convert DEL to BS
             bne +
             lda A,#BS

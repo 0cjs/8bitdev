@@ -115,16 +115,24 @@ def test_errorbs(m, R, S, loadbios, routine, pricount_in, pricount_out, output):
     m.call(S['error' + routine])
     assert (pricount_out, output) == (m.byte(S.pricount), ostream.getvalue())
 
-@param('parser, input, valword, output', [
-    ('byte', b'\b', WSNTNL, b'\b')
-   #('byte', b'fe', 0xFE00, b'fe')
+@param('parser,   input,        valword, output', [
+      ('byte',    b'\b',        WSNTNL,  b'\b'          ),
+      ('byte',    b'9\b',       WSNTNL,  b'\b\b'        ),
+      ('byte',    b'93\b',      WSNTNL,  b'3\b\b\b'     ),
+      ('byte',    b'fe ',       0xFEad,  b'e \b'        ),
+      ('byte',    b'DC ',       0xDCad,  b'C \b'        ),
 ])
 def test_qpval(m, R, S, loadbios, parser, input, valword, output):
     valaddr = 0x7000 + sum(input)
-    m.deposit(S.pricount, 1)    # the first character is already read, in A
     m.depword(S.pvalp, valaddr)
     m.depword(valaddr, WSNTNL)
+
+    #   pricount = number of printing chars echoed so far
+    pricount = 1                        # the paramchar
+    if input != b'\b': pricount +=1     # first value char, if echoed
+    m.deposit(S.pricount, pricount)
     istream, ostream = loadbios('tmc68', input[1:])
+
     m.call(S['qpval_' + parser], R(a=input[0]))
     assert (valword, output) == (m.word(valaddr), ostream.getvalue())
 

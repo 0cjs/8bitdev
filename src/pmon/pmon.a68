@@ -226,6 +226,9 @@ qcommand    ;   Commands RTS when done, so we set up the stack with a return to
             ldx 1,X             ; load execution addr of that command
             jmp ,X              ; command will RTS to above
 
+; ----------------------------------------------------------------------
+;   Backspace and error routines
+
 ;   Backspace over bad input characters (all N or just 1 chars echoed by
 ;   `rdcharep` since calling `rdcharep0` or `pricount` was last cleared)
 ;   and generate an error tone. The backspace does not overwrite the bad
@@ -415,44 +418,9 @@ qparam      jsr paramlookup     ; valid parameter char?
                                 ; XXX sets carry, do we need EOR B,#$FF ?
             asl B               ; double it to get index
             ldx #qpvaltab
-            jsr addXB           ; add index
+            bsr addXB           ; add index
             ldx ,X              ; look up parser for this type
             jmp ,X              ; and start it (RTS TCO)
-
-;   Print a paramter value.
-;
-;   Enter with the the value type (CPT_*) in B and `pvalp` pointing to the
-;   value's location. (This is the return state of `paramlookup`.)
-;
-ppval       ldx pvalp
-            cmp B,#$81          ; ≤$80 is a boolean bit
-            bcs .bitval
-
-            inc B               ; $FF (CTP_WORD) → $00?
-            bne +
-            ldx ,X              ; print word
-            jmp prhexX          ; RTS TCO
-
-+           lda A,,X            ; all following ≤byte value from A
-            inc B               ; $FE (CTP_BYTE) → $00?
-            bne +
-            jmp prhex           ; RTS TCO
-
-+           inc B               ; $FD (CTP_NYBBLE) → $00?
-            bne +
-            jmp prnyb           ; RTS TCO
-
-+           inc B               ; $FC (CTP_UVAR) → $00?
-            bne +
-            jmp prvischar       ; RTS TCO
-
-+           jsr pristr          ; XXX
-            db  "ppval BADTYPE",0
-            rts
-
-.bitval     jsr pristr          ; XXX
-            db  ":ppval:BITVAL:",0
-            rts
 
 ;   Parsers for the different types of parameter values.
 ;   These are entered with the first character already read into A
@@ -497,6 +465,42 @@ qpval_nyb
             rts
 
             include "src/mc68/qhex.a68"     ; XXX should ifdef out unused stuff
+
+; ----------------------------------------------------------------------
+;   Print a paramter value.
+;
+;   Enter with the the value type (CPT_*) in B and `pvalp` pointing to the
+;   value's location. (This is the return state of `paramlookup`.)
+;
+ppval       ldx pvalp
+            cmp B,#$81          ; ≤$80 is a boolean bit
+            bcs .bitval
+
+            inc B               ; $FF (CTP_WORD) → $00?
+            bne +
+            ldx ,X              ; print word
+            jmp prhexX          ; RTS TCO
+
++           lda A,,X            ; all following ≤byte value from A
+            inc B               ; $FE (CTP_BYTE) → $00?
+            bne +
+            jmp prhex           ; RTS TCO
+
++           inc B               ; $FD (CTP_NYBBLE) → $00?
+            bne +
+            jmp prnyb           ; RTS TCO
+
++           inc B               ; $FC (CTP_UVAR) → $00?
+            bne +
+            jmp prvischar       ; RTS TCO
+
++           jsr pristr          ; XXX
+            db  "ppval BADTYPE",0
+            rts
+
+.bitval     jsr pristr          ; XXX
+            db  ":ppval:BITVAL:",0
+            rts
 
 ; ----------------------------------------------------------------------
 ;   Command implementations

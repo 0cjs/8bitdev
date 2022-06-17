@@ -121,6 +121,7 @@ def test_errorbs(m, R, S, loadbios, routine, pricount_in, pricount_out, output):
 ])
 def test_qpval(m, R, S, loadbios, parser, input, valword, output):
     valaddr = 0x7000 + sum(input)
+    m.deposit(S.pricount, 1)    # the first character is already read, in A
     m.depword(S.pvalp, valaddr)
     m.depword(valaddr, WSNTNL)
     istream, ostream = loadbios('tmc68', input[1:])

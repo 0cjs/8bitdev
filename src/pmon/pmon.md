@@ -63,29 +63,30 @@ invalid input. (The invalid input is not overwritten with spaces so that
 you can see what input caused the error.)
 
 At any time you are in one of the following _input modes:_
-- Command: immediately after the `_` prompt. The next character typed
-  indicates the command.
-- Parameter character (_paramchar_): immediately after typing either a
+- __Command:__ immediately after the `_` prompt. The next character typed
+  indicates the command. Immediately after typing the command you may type
+  a Backspace to cancel that command.
+- __Paramchar__ (parameter character): immediately after typing either a
   command character or a paramchar and any value it may need. The next
-  character typed may be: Return/Enter to execute the command; Space to
-  print a blank space (for readability only); or another paramchar.
-- Parameter value (_paramval_): immediately after typing a paramchar for a
-  parameter that takes a value.
-
-Cancelling input:
-- In any mode you may type Ctrl-X to cancel the command. Any paramvals you
-  have changed will remain changed. The cursor will be returned to the
-  start of the line just after the prompt, but what you typed will not be
-  erased.
-- Immediately after entering a valid command character you may type
-  Backspace to cancel that command.
-- Immediately after a paramchar that requires a value you may type
-  Backspace to cancel that paramchar. Paramchars that do not take a value
-  have immediate effect and typing Backspace after them is an error.
-- Before completing value entry you may type Backspace to cancel _all_
-  characters entered so far for that value. The cursor will be returned to
-  just after the paramchar; your the characters you previously typed will
-  not be erased.
+  character typed may be:
+  - Return/Enter to execute the command with the current paramvals.
+  - Ctrl-X (CAN) to cancel the command. Any paramvals you've changed will
+    remain changed. The cursor will be returned to the start of the line,
+    but your previous input will be left visible.
+  - a paramchar, which will take you to paramval input mode (below)
+  - Space to print a blank space (useful for readability)
+- __Paramval__ (parameter value): immediately after typing a paramchar.
+  Here you may type:
+  - Space to print the parameter value and return to paramchar mode.
+  - Other characters to enter a parameter value. Once the value has been
+    typed, you must type Space to set the new parameter value and return to
+    paramchar mode. (XXX The space is not printed; we need to see if this
+    makes the UI too difficult and we should print it to make it more clear
+    that we're back in paramchar input mode.)
+  - Backspace to cancel input for this parameter and go back to paramchar
+    mode. (The cursor will be backspaced over the pending input that has
+    been ignored.)
+  - XXX Return/Ctrl-X will not execute/cancel the command here; is that ok?
 
 Completing input:
 - Return/Enter will terminate parameter input, print a CR (leaving the

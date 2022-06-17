@@ -431,10 +431,14 @@ qparamval   jsr paramlookup     ; valid parameter char?
             ldx #qpvaltab
             bsr addXB           ; add index
             ldx ,X              ; look up parser for this type
+            clr qhex_out        ; clear area where we'll build the input value
+            clr qhex_out+1
             jmp ,X              ; and start it (RTS TCO)
 
 ;   Parsers for the different types of parameter values. These are entered
-;   with the first character already read into A and echoed.
+;   with the first character already read into A and echoed, the value type
+;   (CPT_*) in B and `pvalp` pointing to the value's location. (These
+;   latter two are the return state of `paramlookup`.)
 ;
 ;   These are essentially the "bottom half" of `qparamval` and return
 ;   directly to qparams. Though they have a little bit in common (e.g.,
@@ -442,6 +446,11 @@ qparamval   jsr paramlookup     ; valid parameter char?
 ;   to make it worth trying to push any of this up into the top half;
 ;   things like how we store the paramval we've read vary a lot with the
 ;   data type.
+;
+;   These use `qhex_out` for temporary storage while building the input
+;   value. (XXX This is partly because that symbols is required by
+;   `qhexword` etc. from qhex.a68, which we routines we actually dont' use
+;   and should not include.)
 ;
 ;   XXX These need unit tests and then can probably be optimised into
 ;   something smaller.
@@ -457,23 +466,51 @@ qpval_word
             clc
             rts
 
-qpval_byte  cmp A,#BS           ; cancel entry?
-            bne +               ;   no: skip
-            jsr pri_bsN         ; backspace over entire entry inc. paramchar
-            rts
-
+qpval_byte  lda B,#2            ; read up to two digits
+.qchar      cmp A,#BS           ; cancel entry?
+            bne +               ;   no: skip next instr
+            jmp pri_bsN         ;   yes: clear entry/paramchar (RTS TCO)
 +           cmp A,#' '          ; completed entry?
-            bne +               ;   no: skip
-            ; XXX save value
-            rts
-
-+           jsr qhexdigit       ; read and add another hex digit to value
-            bpl +               ; N clear means it's ok
-            jsr errorbs1        ; bad digit: backspace over it and beep
+            beq .complete       ;   yes: save it and return
+            tst B               ; full on digits?
+            bne +               ;   no: we can try to parse this one
+            jsr errorbs1        ;   yes: don't accept it (waiting for space)
+            bra .rdnext
++           jsr qhexdigit       ; valid digit?
+            bpl +               ;   yes (N clear): add to value we're building
+            jsr errorbs1        ;   no (N set): bad digit
                                 ;   XXX prints BS even if rdcharep didn't echo
-+           ; XXX store digit
-            jsr rdcharep
-            bra qpval_byte_r
++           bsr add_digit
+            dec B               ; one less to read
+.rdnext     jsr rdcharep
+            bra .qchar
+
+.complete   jsr pri_bs1         ; back over the space that finished input
+            lda qhex_out+1      ; save the value we built
+            ldx pvalp           ;   to the paramval location
+            sta ,X
+            rts                 ; to `qparamval` caller
+
+;   Add value in low nybble of A as next hex digit of qhex_out.
+add_digit   ;   move value to high nybble
+            asl A
+            asl A
+            asl A
+            asl A
+            ;   shift value into qhex_out
+            asl A
+            rol qhex_out+1
+            rol qhex_out
+            asl A               ; bit 2
+            rol qhex_out+1
+            rol qhex_out
+            asl A               ; bit 3
+            rol qhex_out+1
+            rol qhex_out
+            asl A               ; bit 4
+            rol qhex_out+1
+            rol qhex_out
+            rts
 
 qpval_uvar
             jsr pristr

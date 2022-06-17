@@ -369,52 +369,63 @@ addXB       stx     tmpx
 
 ;   Parse all parameters for a command, returning with carry clear
 ;   on execute or carry set if the command is cancelled.
+;
+;   This routine is responsible for reading the paramchar and interpreting
+;   "non-parameter" command read at that point: space, execute, and cancel
+;   command. Otherwise it passes the character on to qparamval which is
+;   responsible for any further parameter input and errors, returning to
+;   this when all is complete and we are ready to start paramchar input
+;   again. (This routine does not know or care if the qparamval generated
+;   an error or not.)
+;
 qparams     jsr rdcharep        ; before we've parsed the first paramchar
             cmp A,#BS           ;   we may still backspace over the command
             beq .cancel         ;   which will cancel the entire command
             clr pricount        ; the command is now accepted
 .checkchar  cmp A,#' '          ; when looking for a new param char, spaces
-            beq .ok             ;   are accepted and printed
+            beq .nextpchar      ;   are accepted and printed
             cmp A,#CAN
             beq .cancel
             cmp A,#CR
-            beq .execute
-            bsr qparam          ; valid parameter character?
-            bcc .ok             ;   yes: continue reading parameters
-            jsr errorbsN        ;   no: back up cursor and...
-.ok         jsr rdcharep0       ; start a new parameter read
+            beq .rts            ; = carry cleared: execute command
+            bsr qparamval       ; process paramchar and further input,
+                                ;   also handiling/displaying any errors
+.nextpchar  jsr rdcharep0       ; start a new parameter read
             bra .checkchar
 
-.execute    clc                 ; execute indicator
-            rts
-
-.cancel     jsr pri_bs1         ; remember, only printable input was echoed
+.cancel     jsr pri_bsN         ; remember, only printable input was echoed
             sec                 ; cancel indicator
-            rts
+.rts        rts
 
 ;   Parse character in A as a parameter, including any following value.
-;   This assumes that the character has not yet be echoed.
-;   Return carry clear if it was valid, or set if it was not found.
-qparam      jsr paramlookup     ; valid parameter char?
-            bcc +               ;   yes: get value
-            rts                 ;   no: carry set to indicate error
-+           jsr rdcharep        ; first char for any type has extra parsing
-            ;   BS backspaces over the paramchar and skips value entry.
-            ;   XXX is this already taken care of by BS check in qpval_*?
-            cmp A,#BS
-            bne +
-            jsr pri_bs1         ; backspace over paramchar
-            clc                 ; this is a correction, not an error
+;   This assumes that the character has been echoed and handles backspacing
+;   over it if it's not a valid paramchar.
+;
+;   Returns nothing. This handles all error checking and display, including
+;   when the paramchar is bad, the value is bad, or the user cancels
+;   paramval input.
+;
+;   Note that `qparams` above handles command execute/cancel (Return/Ctrl-X)
+;   inputs; this does not. It's not clear if this should since the paramval
+;   input then not only has to pass that information back up somehow but also
+;   decide, e.g., does Ctrl-X cancel the paramval input?
+;
+qparamval   jsr paramlookup     ; valid parameter char?
+            bcc .readvalue      ;   yes: read value
+            jsr errorbsN        ;   no: indicate error and we're done
             rts
+
+.readvalue  jsr rdcharep        ; first character of value
             ;   Space prints the current value of the param
-+           cmp A,#' '
+            cmp A,#' '
             bne +
             jsr pri_bs1         ; backspace over the space and
             jsr ppval           ;   print the current value of that param
-            clc
             rts
-            ;   Value input; dispatch based on type
-+           com B               ; $FF,$FE,$FD,... → $00,$01,$02,...
+            ;   Value input; dispatch based on type.
+            ;   (This also handles a backspace that cancels this parameter.)
++           com B               ; B from `paramlookup` above:
+                                ; $FF,$FE,$FD,... → $00,$01,$02,...
                                 ; XXX sets carry, do we need EOR B,#$FF ?
             asl B               ; double it to get index
             ldx #qpvaltab
@@ -422,9 +433,16 @@ qparam      jsr paramlookup     ; valid parameter char?
             ldx ,X              ; look up parser for this type
             jmp ,X              ; and start it (RTS TCO)
 
-;   Parsers for the different types of parameter values.
-;   These are entered with the first character already read into A
-;   because the caller had to check to make sure it isn't a space.
+;   Parsers for the different types of parameter values. These are entered
+;   with the first character already read into A and echoed.
+;
+;   These are essentially the "bottom half" of `qparamval` and return
+;   directly to qparams. Though they have a little bit in common (e.g.,
+;   handling backspace to cancel paramval input), there's not enough there
+;   to make it worth trying to push any of this up into the top half;
+;   things like how we store the paramval we've read vary a lot with the
+;   data type.
+;
 ;   XXX These need unit tests and then can probably be optimised into
 ;   something smaller.
 
@@ -440,17 +458,22 @@ qpval_word
             rts
 
 qpval_byte  cmp A,#BS           ; cancel entry?
-            beq .cancel
-            jsr qhexdigit       ; otherwise it must be the next hex digit
-            bpl +               ; N not set means it's ok
-            jsr errorbs1        ; otherwise it's a bad digit
-+           jsr rdcharep
-            bra qpval_byte
+            bne +               ;   no: skip
+            jsr pri_bsN         ; backspace over entire entry inc. paramchar
+            rts
 
-.done       clc
++           cmp A,#' '          ; completed entry?
+            bne +               ;   no: skip
+            ; XXX save value
             rts
-.cancel     sec
-            rts
+
++           jsr qhexdigit       ; read and add another hex digit to value
+            bpl +               ; N clear means it's ok
+            jsr errorbs1        ; bad digit: backspace over it and beep
+                                ;   XXX prints BS even if rdcharep didn't echo
++           ; XXX store digit
+            jsr rdcharep
+            bra qpval_byte_r
 
 qpval_uvar
             jsr pristr

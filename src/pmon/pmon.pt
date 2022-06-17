@@ -46,6 +46,10 @@ cmdentry_c  db  'c'
             dw  $100C
             db  CTP_END
 
+cmdentry_X  db $18
+            dw  $1018
+            db  CTP_END
+
 cmdentry_d  db  'd'
             dw  $100D
             db  CTP_END
@@ -116,11 +120,17 @@ def test_errorbs(m, R, S, loadbios, routine, pricount_in, pricount_out, output):
     assert (pricount_out, output) == (m.byte(S.pricount), ostream.getvalue())
 
 @param('parser,   input,        valword, output', [
-      ('byte',    b'\b',        WSNTNL,  b'\b'          ),
-      ('byte',    b'9\b',       WSNTNL,  b'\b\b'        ),
-      ('byte',    b'93\b',      WSNTNL,  b'3\b\b\b'     ),
-      ('byte',    b'fe ',       0xFEad,  b'e \b'        ),
-      ('byte',    b'DC ',       0xDCad,  b'C \b'        ),
+      ('byte',    b'\b',        WSNTNL,  b'\b'              ),
+      ('byte',    b'9\b',       WSNTNL,  b'\b\b'            ),
+      ('byte',    b'93\b',      WSNTNL,  b'3\b\b\b'         ),
+      ('byte',    b'fe ',       0xFEad,  b'e \b'            ),
+      ('byte',    b'DC ',       0xDCad,  b'C \b'            ),
+      ('word',    b'\b',        WSNTNL,  b'\b'              ),
+      ('word',    b'8\b',       WSNTNL,  b'\b\b'            ),
+      ('word',    b'87\b',      WSNTNL,  b'7\b\b\b'         ),
+      ('word',    b'8765\b',    WSNTNL,  b'765\b\b\b\b\b'   ),
+      ('word',    b'8 ',        0x0008,  b' \b'             ),
+      ('word',    b'8765 ',     0x8765,  b'765 \b'          ),
 ])
 def test_qpval(m, R, S, loadbios, parser, input, valword, output):
     valaddr = 0x7000 + sum(input)
@@ -128,8 +138,9 @@ def test_qpval(m, R, S, loadbios, parser, input, valword, output):
     m.depword(valaddr, WSNTNL)
 
     #   pricount = number of printing chars echoed so far
-    pricount = 1                        # the paramchar
-    if input != b'\b': pricount +=1     # first value char, if echoed
+    pricount = 1                            # the paramchar
+    if input[0] >= ord(' '): pricount += 1  # first value char, if echoed
+
     m.deposit(S.pricount, pricount)
     istream, ostream = loadbios('tmc68', input[1:])
 
@@ -157,8 +168,15 @@ def test_paramlookup_failure(m, R, S):
 @param('cmdchar, cpvals_offset', [
     #   The vals offsets are calculated by hand from the test command tbl above.
     ('a', 0), ('b', 3), ('c', 8), ('d', 8),
+    ('\x18', 8),    # Ctrl-X
 ])
 def test_cmdlookup_success(m, S, R, cmdchar, cpvals_offset):
+    if cmdchar >= ' ':
+        symname = 'cmdentry_' + cmdchar
+    else:
+        #   Control-char commands use upper case equiv. for test symbol
+        symname = 'cmdentry_' + chr(ord(cmdchar) + ord('@'))
+
     m.depword(S.cmdtbl, S.cmdtbl_1)
     m.depword(S.cmdpvbase, 0x7FFD)
 
@@ -166,8 +184,8 @@ def test_cmdlookup_success(m, S, R, cmdchar, cpvals_offset):
 
     cmdentry = m.word(S.cmdentry); print('entry:', m.hexdump(cmdentry, 9))
     cmdpvals = m.word(S.cmdpvals); print('pvals:', m.hexdump(cmdpvals, 9))
-    assert (ord(cmdchar), False, S['cmdentry_'+cmdchar], 0x7FFD+cpvals_offset) \
-        == (m.a,          m.C,   cmdentry,               cmdpvals)
+    assert (ord(cmdchar), False, S[symname], 0x7FFD+cpvals_offset) \
+        == (m.a,          m.C,   cmdentry,   cmdpvals)
 
 @param('cmdchar', [0xFF, 0x00, 0x01, ord('Z')])
 def test_cmdlookup_failure(m, S, R, cmdchar):

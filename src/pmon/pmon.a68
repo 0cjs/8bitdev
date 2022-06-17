@@ -136,6 +136,10 @@ banner      db 'pmon 2022-05-30 cjs',0
 ;   define their own commands.
 ;
 cmdtbl_rom
+            db  CAN             ; Ctrl-X. It might be nice if this were an
+            dw  Cclearline      ;   "immediate effect" command, but not sure
+            db  CTP_END         ;   it's worth it just for this.
+
             db  'b'
             dw  Cbanner
             db  CTP_END
@@ -378,10 +382,10 @@ addXB       stx     tmpx
 ;   again. (This routine does not know or care if the qparamval generated
 ;   an error or not.)
 ;
-qparams     jsr rdcharep        ; before we've parsed the first paramchar
-            cmp A,#BS           ;   we may still backspace over the command
+qparams     clr pricount        ; start of input is char we're about to read
+            jsr rdcharep
+            cmp A,#BS           ; we may still backspace over the command
             beq .cancel         ;   which will cancel the entire command
-            clr pricount        ; the command is now accepted
 .checkchar  cmp A,#' '          ; when looking for a new param char, spaces
             beq .nextpchar      ;   are accepted and printed
             cmp A,#CAN
@@ -393,7 +397,8 @@ qparams     jsr rdcharep        ; before we've parsed the first paramchar
 .nextpchar  jsr rdcharep0       ; start a new parameter read
             bra .checkchar
 
-.cancel     jsr pri_bsN         ; remember, only printable input was echoed
+.cancel     lda #BS             ; we must also backspace over the command char
+            jsr prchar          ;   XXX but broken if command char was non-print
             sec                 ; cancel indicator
 .rts        rts
 
@@ -460,19 +465,37 @@ qpvaltab    dw  qpval_word      ; $FF CTP_WORD
             dw  qpval_nyb       ; $FC CTP_NYBBLE
             dw  qpval_uvar      ; $FD CTP_UVAR
 
-qpval_word
-            jsr pristr
-            db  ":qpval_word:",0
-            clc
-            rts
+qpval_word  lda B,#4            ; read up to four digits
+            jsr qpval_hex       ; completed read returns here;
+                                ;   canceled read returns to our caller
+            jsr pri_bs1         ; back over the space that finished input
+            ldx pvalp           ; to the paramval location
+            lda A,qhex_out      ;   save the MSB
+            sta ,X
+            lda A,qhex_out+1    ;   and the LSB
+            sta 1,X
+            rts                 ; to `qparamval` caller
 
 qpval_byte  lda B,#2            ; read up to two digits
-.qchar      cmp A,#BS           ; cancel entry?
-            bne +               ;   no: skip next instr
-            jmp pri_bsN         ;   yes: clear entry/paramchar (RTS TCO)
+            jsr qpval_hex       ; completed read returns here;
+                                ;   canceled read returns to our caller
+            jsr pri_bs1         ; back over the space that finished input
+            lda qhex_out+1      ; save the value we built
+            ldx pvalp           ;   to the paramval location
+            sta ,X
+            rts                 ; to `qparamval` caller
+
+
+qpval_hex   cmp A,#BS           ; cancel entry?
+            bne +               ;   no: skip
+            pul A               ; remove caller's address from stack so it
+            pul A               ;    doesn't try to store partial paramval read
+            jmp pri_bsN         ; clear entry/paramchar (RTS TCO)
+
 +           cmp A,#' '          ; completed entry?
-            beq .complete       ;   yes: save it and return
-            tst B               ; full on digits?
+            bne +               ;   no: continue entry
+            rts                 ;   yes: caller will save the paramval
++           tst B               ; full on digits?
             bne +               ;   no: we can try to parse this one
             jsr errorbs1        ;   yes: don't accept it (waiting for space)
             bra .rdnext
@@ -483,13 +506,7 @@ qpval_byte  lda B,#2            ; read up to two digits
 +           bsr add_digit
             dec B               ; one less to read
 .rdnext     jsr rdcharep
-            bra .qchar
-
-.complete   jsr pri_bs1         ; back over the space that finished input
-            lda qhex_out+1      ; save the value we built
-            ldx pvalp           ;   to the paramval location
-            sta ,X
-            rts                 ; to `qparamval` caller
+            bra qpval_hex
 
 ;   Add value in low nybble of A as next hex digit of qhex_out.
 add_digit   ;   move value to high nybble
@@ -570,6 +587,18 @@ Cexit       jsr prnl            ; leave prompt and command char on the screen
                                 ;   so we see why we exited
             pul A               ; remove continuation return address so we
             pul A               ;   return to whatever called the monitor
+            rts
+
+;   Print spaces to clear off any text on the current line.
+;   This is handy if you want to clear the command input line after
+;   a ^X to cancel a previous command.
+Cclearline  lda #' '
+            ldb #30             ; avoid scrolling 32-column displays
+-           jsr prchar
+            dec B
+            bne -
+            lda #CR
+            jsr prchar
             rts
 
 ;   Print the banner (XXX just for testing)

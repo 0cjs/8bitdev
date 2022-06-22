@@ -540,7 +540,7 @@ qpval_uvar
             include "src/mc68/qhex.a68"     ; XXX should ifdef out unused stuff
 
 ; ----------------------------------------------------------------------
-;   Print a paramter value.
+;   Print a paramval.
 ;
 ;   Enter with the the value type (CPT_*) in B and `pvalp` pointing to the
 ;   value's location. (This is the return state of `paramlookup`.)

@@ -163,6 +163,7 @@ cmdtbl_rom
             db  'a', CTP_BYTE
             db  'b', CTP_BYTE
             db  'x', CTP_WORD
+            db  'z', CTP_NYBBLE ; XXX for testing only
             db  CTP_END
 
             db  CT_END
@@ -480,11 +481,19 @@ qpval_byte  lda B,#2            ; read up to two digits
             jsr qpval_hex       ; completed read returns here;
                                 ;   canceled read returns to our caller
             jsr pri_bs1         ; back over the space that finished input
-            lda qhex_out+1      ; save the value we built
-            ldx pvalp           ;   to the paramval location
+            ldx pvalp           ; to the paramval location
+            lda qhex_out+1      ;   save the value we built
             sta ,X
             rts                 ; to `qparamval` caller
 
+qpval_nyb   lda B,#1            ; read up to two digits
+            jsr qpval_hex       ; completed read returns here;
+                                ;   canceled read returns to our caller
+            jsr pri_bs1         ; back over the space that finished input
+            ldx pvalp           ; to the paramval location
+            lda qhex_out+1      ;   save the value we built
+            sta ,X
+            rts                 ; to `qparamval` caller
 
 qpval_hex   cmp A,#BS           ; cancel entry?
             bne +               ;   no: skip
@@ -532,12 +541,6 @@ add_digit   ;   move value to high nybble
 qpval_uvar
             jsr pristr
             db  ":qpval_uvar:",0
-            clc
-            rts
-
-qpval_nyb
-            jsr pristr
-            db  ":qpval_nyb:",0
             clc
             rts
 

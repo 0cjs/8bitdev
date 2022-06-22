@@ -120,17 +120,27 @@ def test_errorbs(m, R, S, loadbios, routine, pricount_in, pricount_out, output):
     assert (pricount_out, output) == (m.byte(S.pricount), ostream.getvalue())
 
 @param('parser,   input,        valword, output', [
+      #   Confirmed inputs
+      ('byte',    b'fe ',       0xFEad,  b'e \b'            ),
+      ('byte',    b'DC ',       0xDCad,  b'C \b'            ),
+      ('word',    b'8 ',        0x0008,  b' \b'             ),
+      ('word',    b'8765 ',     0x8765,  b'765 \b'          ),
+      ('nyb',     b'F ',        0x0Fad,  b' \b'             ),
+      #   Cancelled inputs of varying sizes
       ('byte',    b'\b',        WSNTNL,  b'\b'              ),
       ('byte',    b'9\b',       WSNTNL,  b'\b\b'            ),
       ('byte',    b'93\b',      WSNTNL,  b'3\b\b\b'         ),
-      ('byte',    b'fe ',       0xFEad,  b'e \b'            ),
-      ('byte',    b'DC ',       0xDCad,  b'C \b'            ),
       ('word',    b'\b',        WSNTNL,  b'\b'              ),
       ('word',    b'8\b',       WSNTNL,  b'\b\b'            ),
       ('word',    b'87\b',      WSNTNL,  b'7\b\b\b'         ),
       ('word',    b'8765\b',    WSNTNL,  b'765\b\b\b\b\b'   ),
-      ('word',    b'8 ',        0x0008,  b' \b'             ),
-      ('word',    b'8765 ',     0x8765,  b'765 \b'          ),
+      ('nyb',     b'\b',        WSNTNL,  b'\b'              ),
+      ('nyb',     b'7\b',       WSNTNL,  b'\b\b'            ),
+      #   Overrun errors
+      ('byte',    b'9AB\b',     WSNTNL,  b'AB\b\a'          + b'\b\b\b' ),
+      ('byte',    b'9ABCD\b',   WSNTNL,  b'AB\b\aC\b\aD\b\a' + b'\b\b\b'  ),
+      #   Bad char errors
+      ('byte',    b'9G ',       0x09ad,  b'G\b\a \b')   # XXX BROKEN
 ])
 def test_qpval(m, R, S, loadbios, parser, input, valword, output):
     valaddr = 0x7000 + sum(input)

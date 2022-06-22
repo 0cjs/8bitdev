@@ -504,8 +504,9 @@ qpval_hex   cmp A,#BS           ; cancel entry?
             bpl +               ;   yes (N clear): add to value we're building
             jsr errorbs1        ;   no (N set): bad digit
                                 ;   XXX prints BS even if rdcharep didn't echo
+            bra ++
 +           bsr add_digit
-            dec B               ; one less to read
++           dec B               ; one less to read
 .rdnext     jsr rdcharep
             bra qpval_hex
 

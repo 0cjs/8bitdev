@@ -148,7 +148,7 @@ cmdtbl_rom
             dw  Cexamine
             db  's',CTP_WORD    ; start addr
             db  'l',CTP_BYTE    ; lines
-            db  'w',CTP_NYBBLE  ; width (bytes per line)
+            db  'w',CTP_BYTE    ; width (bytes per line)
             db  CTP_END
 
             db  'o'
@@ -662,7 +662,38 @@ Cregs       ldx cmdpvals
             rts
 
 ;   Examine values in memory
-Cexamine    rts
+Cexamine    ldx cmdpvals
+.width      = _i
+            ;   XXX what we really need here is for the cmdtable entries to be
+            ;   generated using macros that will build labels for the offsets
+            ;   (4 and 3 below) so we don't need to hardcode them manually.
+            lda A,2,X           ; lines to print
+            psh A
+            lda B,3,X           ; width/bytes per line
+            sta B,.width
+            ldx ,X              ; start address
+
+.line       pul A               ; remaining lines to print
+            tst A
+            beq .rts
+            dec A
+            psh A
+            jsr prhexX          ; start line with address
+            lda #':'
+            jsr prchar
+            dex
+            lda B,.width
+
+.byte       jsr prspace
+            jsr prhexXpp
+            dec B
+            bne .byte
+
+            jsr prnl
+            inx
+            bra .line
+
+.rts        rts
 
 
 ; ----------------------------------------------------------------------

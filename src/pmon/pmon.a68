@@ -614,8 +614,6 @@ Cbanner     ldx #banner
             jsr prspace         ;   if we had lots of parameters on line
             jmp prnl            ; RTS TCO
 
-Cexamine    rts
-
 ;   Send byte to output port etc.
 Cout        db $02              ; end simulator w/invalid instruction
 
@@ -662,6 +660,9 @@ Cregs       ldx cmdpvals
 
             jsr prnl
             rts
+
+;   Examine values in memory
+Cexamine    rts
 
 
 ; ----------------------------------------------------------------------

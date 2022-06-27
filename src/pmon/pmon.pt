@@ -64,6 +64,9 @@ cmdentry_d  db  'd'
 param       = pytest.mark.parametrize
 WSNTNL      = 0xDEAD                    # word sentinel; 57005 decimal
 
+####################################################################
+#   Utility routines
+
 @param('result, x, b', (
     ( 0x1000, 0x1000, 0x00 ),
     ( 0x2001, 0x2000, 0x01 ),
@@ -118,6 +121,9 @@ def test_errorbs(m, R, S, loadbios, routine, pricount_in, pricount_out, output):
     _, ostream = loadbios('tmc68')
     m.call(S['error' + routine])
     assert (pricount_out, output) == (m.byte(S.pricount), ostream.getvalue())
+
+####################################################################
+#   Command line, parameter and value parsing
 
 @param('parser,   input,        valword, output', [
       #   Confirmed inputs
@@ -208,3 +214,15 @@ def test_cmdlookup_failure(m, S, R, cmdchar):
 
     m.call(S.cmdlookup, R(a=cmdchar, x=0xFFFF, C=0))
     assert (R(C=1, a=cmdchar), cmdpvals_end) == (m.regs,  m.word(S.cmdpvals))
+
+####################################################################
+#   Commands
+
+def test_Cregs(m, S, R, loadbios):
+    _, ostream = loadbios('tmc68')
+    m.deposit(0x5000, [0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef, 0x12])
+    m.depword(S.cmdpvals, 0x5000)
+    m.call(S.Cregs)
+    assert b'p0123 s4567 f89 aAB bCD xEF12 \n' \
+        == ostream.getvalue()
+

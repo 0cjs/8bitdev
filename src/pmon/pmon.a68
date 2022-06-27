@@ -623,6 +623,10 @@ Cout        db $02              ; end simulator w/invalid instruction
 Cregs       ldx cmdpvals
             dex
 
+            ;   This can probably be made significantly more compact, but
+            ;   we're waiting for a bit more stuff to get written in order
+            ;   to see what similar code we might be able to re-use.
+
             lda #'p'
             jsr prchar
             jsr prhexXpp

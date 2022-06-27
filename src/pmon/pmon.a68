@@ -151,10 +151,6 @@ cmdtbl_rom
             db  'w',CTP_NYBBLE  ; width (bytes per line)
             db  CTP_END
 
-            db  'x'
-            dw  Cexit
-            db  CTP_END
-
             db  'o'
             dw  Cout
             db  'a', CTP_WORD
@@ -170,6 +166,10 @@ cmdtbl_rom
             db  'a', CTP_BYTE
             db  'b', CTP_BYTE
             db  'x', CTP_WORD
+            db  CTP_END
+
+            db  'x'
+            dw  Cexit
             db  CTP_END
 
             db  CT_END

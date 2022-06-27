@@ -1,0 +1,246 @@
+#!/usr/bin/env python3
+#
+#   analyze-cmt - analysis of attempts to read CMT audio files
+#
+#   This has various options that attempt different interprations and analyses
+#   of CMT data at the various levels up to bytes: pulse widths/baud rates,
+#   mark/space, the bitstream, and then byte framing.
+#
+
+import  wave
+from    os.path  import abspath, dirname, join
+from    site  import addsitedir
+from    argparse import ArgumentParser
+from    functools import partial
+import  sys, os
+
+#   Configure and use b8tool's Python library path
+B8_HOME = dirname(dirname(abspath(__file__)))
+
+parseint = partial(int, base=0)     # Parse an int recognizing 0xNN etc.
+
+def parse_args():
+    p = ArgumentParser(description='''
+            Analyse tape format audio''',
+        epilog='''
+        ''')
+    a = p.add_argument
+    a('-r', '--report-bauds', action='store_true' ) # count cycles per well-known baud rates
+    a('-e', '--extended-baud-rates', action='store_true')
+    a('-t', '--tolerance',type=float, default=0.25)
+    a('-b', '--bitstream', action='store_true')
+    a('-B', '--bytes', action='store_true')
+    a('-m', '--mark-baud', type=int, default=2400)
+    a('--mark-pulses', type=int, default=2)
+    a('-s', '--space-baud', type=int, default=1200)
+    a('--space-pulses', type=int, default=2)
+    a('--start', default='m')
+    a('--stop', default='ss')
+    a('--reverse-bits', action='store_true')
+    a('--invert-bits', action='store_true')
+    a('-p', '--to-pulses', action='store_true')
+    a('-P', '--from-pulses', action='store_true')
+    a('-w','--save-wav', action='store_true')
+    a('-v', '--verbose', action='count', default=0)
+
+    a('input', help="input file ('-' for stdin)")
+    a('output', help="output file ('-' for stdout)")
+
+    args = p.parse_args()
+    lg.set_verbosity(args.verbose)
+
+    if args.input == '-':               args.input = sys.stdin.buffer
+    else:                               args.input = open(args.input, 'br')
+    if args.output == '-':              args.output = sys.stdout.buffer
+    elif args.output is not None:       args.output = open(args.output, 'bw')
+
+    # FIXME: proper handling of start/stop bits
+    args.pulse_decoder = au.PulseDecoder(args.mark_baud, args.mark_pulses,
+        args.space_baud, args.space_pulses,
+        args.invert_bits, args.reverse_bits,
+        (1,), (0,0))
+
+    args.pulse_encoder = au.Encoder(
+        args.mark_baud, args.mark_pulses,
+        args.space_baud, args.space_pulses,
+        args.invert_bits, args.reverse_bits,
+        (1,), (0,0))
+
+    return args
+
+def report_bauds(args, edges):
+    if args.extended_baud_rates:
+        bauds = [ 9600, 7200, 4800, 3600, 2400, 1800, 1200, 900, 600, 450, 300, 150, 110 ]
+    else:
+        bauds = [ 9600, 4800, 2400, 1200, 600, 300, 150, 110 ]
+    tol = args.tolerance
+    durs = [ (b, 0.5/((1.0+tol)*b) , 0.5/((1.0-tol)*b)) for b in bauds ]
+    hist = dict( (b, 0) for b in bauds )
+    hist[ 'low' ] = 0
+    hist[ 'high' ] = 0
+    hist[ 'unknown' ] = 0
+    for (_,_, dur) in edges:
+        if dur < durs[0][1]:
+            hist['low'] += 1
+        elif dur > durs[-1][2]:
+            hist['high'] += 1
+        else:
+            found = False
+            for (b,l,h) in durs:
+                if dur >= l and dur <= h:
+                    hist[b] += 1
+                    found = True
+                    break
+            if not found:
+                hist['unknown'] += 1
+    print(hist)
+
+# FIXME: add leader detection that works
+# for formats that use repeating mark or space instead of
+# an acutal pattern of bytes
+
+
+def dump_bitstream(args, edges):
+    pd = args.pulse_decoder
+    # # FIXME: Convert start/stop bits to tuples
+    # pd = au.PulseDecoder(args.mark_baud, args.mark_pulses,
+    #     args.space_baud, args.space_pulses,
+    #     False, False,
+    #     (1,), (0,0))
+    # read until mark/space
+    idx = None
+    i = 0
+    for e in edges:
+        if pd.classify_edge(e) in [au.PULSE_MARK, au.PULSE_SPACE]:
+            idx = i
+            break
+        i += 1
+    if idx is None:
+        return
+    # start dumping them
+    while idx < len(edges):
+        e = edges[idx]
+        c = pd.classify_edge(edges[idx]) 
+        if c == au.PULSE_MARK:
+            print('{:012.6f}, 1'.format(e[0]))
+            idx += args.mark_pulses
+        elif c == au.PULSE_SPACE:
+            print('{:012.6f}, 0'.format(e[0]))
+            idx += args.space_pulses
+        else:
+            print('{:012.6f}, X'.format(e[0]))
+            # FIXME: keep track of gaps
+            idx += 1
+
+
+def dump_bytes(args, edges):
+    # pd = au.PulseDecoder(args.mark_baud, args.mark_pulses,
+    #     args.space_baud, args.space_pulses,
+    #     False, False,
+    #     (1,), (0,0))
+    pd = args.pulse_decoder
+    # FIXME add mark/space only leader
+    # Find start bit patterm
+    (idx, _) = pd.next_mark(edges, 0)
+    #lg.v3('Mark at {}', edges[idx][0])
+    print('Mark at {}'.format(edges[idx][0]))
+
+    # Attempt to read a byte and keep trying until we get a byte
+    byte_read = False
+    while not byte_read and idx < len(edges):
+        try:
+            i = idx
+            (idx, b) = pd.read_byte(edges, idx)
+            byte_read = True
+            print('Byte read at {}'.format(edges[i][0]))
+        except Exception as ex:
+            idx += 1
+    
+    # Keep reading bytes until we can't
+    err = False
+    while idx < len(edges):
+        try:
+            (idx, b) = pd.read_byte(edges, idx)
+            c = '.' if b<32 or b>127 else chr(b)
+            print('{:012.6f}, {:02x}, {}'.format(edges[idx][0], b, c))
+            err = False
+        except Exception as ex:
+            print('{:012.6f}, failed to read'.format( edges[idx][0]))
+            err = True
+            idx += 1
+    return None
+
+# def convert_to_pulses(args, edges):
+
+# def convert_from_pulses():
+
+# save pulses
+def save_pulses(args, edges, sample_dur):
+    tau = 1.0 / 44100.0
+    for e in edges:
+        lvl = 0x01 if e[1] else 0x00
+        q = int(e[2] / tau)
+        q0 = (q // 256 // 256) % 256
+        q1 = (q // 256) % 256
+        q2 = q % 256
+        args.output.write(bytearray( (lvl, q0, q1, q2)))
+
+# load pulses
+def load_pulses(args):
+    tau = 1.0 / 44100.0
+    i = 0
+    edges = []
+    bs = None
+    while bs is None or len(bs) != 0:
+        bs = args.input.read(4)
+        if len(bs) == 0: break
+        lvl = bs[0] == 1
+        q = 256 * 256 * bs[1]
+        q += 256 * bs[2]
+        q += bs[3]
+        edges.append( (i * tau, lvl, q * tau ) )
+        i =+ q
+    return edges
+
+# save wav from pulses
+def save_wav(args, edges, sample_dur):
+    pulse_widths = [ e[2] for e in edges ]
+    amp = 64
+    mid = 128
+    samples = au.edges_to_samples( (au.sound(pulse_widths),) , sample_dur,
+        mid, mid-amp, mid+amp)
+    w = wave.open(args.output,'wb')
+    w.setnchannels(1)
+    w.setsampwidth(1)
+    w.setframerate(44100)
+    w.writeframes(bytes(samples))
+
+def main(args):
+    print(args)
+    if args.from_pulses:
+        edges = load_pulses(args)
+        sample_dur = 1.0 / 44100.0
+    else:
+        w = wave.open(args.input, 'rb')
+        if w.getnchannels() != 1 or w.getsampwidth() != 1:
+            raise ValueError('Only mono 8-bit wav files are supported')
+        rate = w.getframerate()
+        n_samples = w.getnframes()
+        samples = w.readframes(n_samples)
+        sample_dur = 1.0 / rate
+        edges = au.samples_to_timed_edges(samples, sample_dur)
+        if args.to_pulses:
+            save_pulses(args, edges, sample_dur)
+    if args.report_bauds:
+        report_bauds(args, edges)
+    if args.bitstream:
+        dump_bitstream(args, edges)
+    if args.bytes:
+        dump_bytes(args, edges)
+    if args.save_wav:
+        save_wav(args, edges, sample_dur)
+
+if __name__ == '__main__':
+    addsitedir(join(B8_HOME, 'pylib'))
+    import cmtconv.audio as au, cmtconv.logging as lg
+    main(parse_args())

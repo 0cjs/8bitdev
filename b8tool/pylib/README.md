@@ -16,3 +16,11 @@ b8tool command-line programs in `bin/` do the following:
 Many functions also expect the environment variable `B8_PROJDIR` to be set
 to point to the project directory (the build directory and the like reside
 under this). See the `b8tool.path` module for more details.
+
+### Tests
+
+Currently some of the code here does not have tests under this `b8tool/`
+but is "tested" by code in the `8bitdev` repo that contains this library.
+This obviously should be fixed before extracting `b8tool` as a separate
+repo. Code that needs tests here includes:
+- `b8tool/pylib/testmc/conftest.py`

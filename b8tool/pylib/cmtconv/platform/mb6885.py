@@ -134,9 +134,9 @@ class Block(object):
             not the correct magic value.
         '''
         if bytes(headerbytes[0:2]) != cls.MAGIC:
-            raise ValueError('Bad magic for block ${:02X}:'
+            raise ValueError('Bad magic,'
                 ' expected=${:02X}{:02X} actual=${:02X}{:02X}'.format(
-                    self.block_num, cls.MAGIC[0], cls.MAGIC[1],
+                    cls.MAGIC[0], cls.MAGIC[1],
                     headerbytes[0], headerbytes[1]))
 
     def __init__(self, file_type, basic_block_num, file_name, block_num, addr,

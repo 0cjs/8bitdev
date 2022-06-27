@@ -69,7 +69,10 @@ At any time you are in one of the following _input modes:_
 - __Paramchar__ (parameter character): immediately after typing either a
   command character or a paramchar and any value it may need. The next
   character typed may be:
-  - Return/Enter to execute the command with the current paramvals.
+  - Return/Enter (CR) to execute the command with the current paramvals,
+    overwriting the command input line with the first line of command output.
+  - Ctrl-J (LF) to print a newline and execute the command, preserving on
+    the screen the command and parameters that were typed in.
   - Ctrl-X (CAN) to cancel the command. Any paramvals you've changed will
     remain changed. The cursor will be returned to the start of the line,
     but your previous input will be left visible.

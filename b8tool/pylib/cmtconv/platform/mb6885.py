@@ -180,7 +180,9 @@ class Block(object):
                 # BASIC
                 # We have variable length blocks that seem to be filled
                 # with 0xff, and the last block seems to be length 1
-                return (self.addr == 0x0600 and len(self._data) == 1)
+                v3('is_eof, AUX, data = {:s}', str(self._data))
+                return (self.addr == 0x0600 and len(self._data) == 1
+                    and self._data[0] == 0xff)
         else:
             return False
 

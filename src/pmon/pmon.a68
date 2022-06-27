@@ -620,9 +620,7 @@ Cexamine    rts
 Cout        db $02              ; end simulator w/invalid instruction
 
 ;   Modify/print registers
-Cregs       jsr pristr
-            db  '6800: ',0
-            ldx cmdpvals
+Cregs       ldx cmdpvals
             dex
 
             lda #'p'

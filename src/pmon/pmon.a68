@@ -577,6 +577,9 @@ ppval       ldx pvalp
 
 ; ----------------------------------------------------------------------
 ;   Command implementations
+;   These are entered after setup by `cmdlookup` and `qparams`:
+;   • `cmdentry` points to the entry in the command table
+;   • `cmdpvals` points to the start of the parameter values
 
 ;   Exit the monitor back to whatever called it.
 Cexit       jsr prnl            ; leave prompt and command char on the screen
@@ -604,11 +607,52 @@ Cbanner     ldx #banner
             jsr prspace         ;   if we had lots of parameters on line
             jmp prnl            ; RTS TCO
 
+Cexamine    rts
+
 ;   Send byte to output port etc.
 Cout        db $02              ; end simulator w/invalid instruction
 
 ;   Modify/print registers
-Cregs       db $03              ; end simulator w/invalid instruction
+Cregs       jsr pristr
+            db  '6800: ',0
+            ldx cmdpvals
+            dex
+
+            lda #'p'
+            jsr prchar
+            jsr prhexXpp
+            jsr prhexXpp
+            jsr prspace
+
+            lda #'s'
+            jsr prchar
+            jsr prhexXpp
+            jsr prhexXpp
+            jsr prspace
+
+            lda #'f'
+            jsr prchar
+            jsr prhexXpp
+            jsr prspace
+
+            lda #'a'
+            jsr prchar
+            jsr prhexXpp
+            jsr prspace
+
+            lda #'b'
+            jsr prchar
+            jsr prhexXpp
+            jsr prspace
+
+            lda #'x'
+            jsr prchar
+            jsr prhexXpp
+            jsr prhexXpp
+            jsr prspace
+
+            jsr prnl
+            rts
 
 
 ; ----------------------------------------------------------------------

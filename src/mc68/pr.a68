@@ -64,6 +64,11 @@ prhex_x     lda A,_x
             lda A,_x+1
             bra prhex           ; RTS TCO
 
+;   ♣A ♡BX Print byte at [++X] or [X] as 2 hex digits.
+prhexXpp    inx
+prhexXp     lda A,,X
+            ; fallthrough
+
 ;   ♣A ♡BX Print value in A as 2 hex digits.
 prhex       psh A
             lsr A

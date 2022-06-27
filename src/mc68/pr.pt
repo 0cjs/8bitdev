@@ -52,8 +52,19 @@ def test_prnyb(m, S, R, loadbios, val, char):
 ), ids=tmc_tid)
 def test_prhex(m, S, R, loadbios, val, chars):
     _, outchars = loadbios('tmc68')
+
     m.call(S.prhex, R(a=val))
     assert chars == outchars.getvalue()
+    outchars.clearvalue()
+
+    m.deposit(0x8801, [0xEE, val, 0xEE])
+    m.call(S.prhexXp, R(a=0, x=0x8802))
+    assert (R(x=0x8802), chars) == (m.regs, outchars.getvalue())
+    outchars.clearvalue()
+
+    m.call(S.prhexXpp, R(a=0, x=0x8801))
+    assert (R(x=0x8802), chars) == (m.regs, outchars.getvalue())
+
 
 @param('val, chars', (
     (0x0000, b'0000'),

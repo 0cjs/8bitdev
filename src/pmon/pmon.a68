@@ -144,6 +144,13 @@ cmdtbl_rom
             dw  Cbanner
             db  CTP_END
 
+            db  'e'
+            dw  Cexamine
+            db  's',CTP_WORD    ; start addr
+            db  'l',CTP_BYTE    ; lines
+            db  'w',CTP_NYBBLE  ; width (bytes per line)
+            db  CTP_END
+
             db  'x'
             dw  Cexit
             db  CTP_END

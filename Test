@@ -120,8 +120,12 @@ $b8tool a2dsk exe/a2/charset.a65
 objdir="$BUILDDIR/obj"
 "$b8bin/cmtconv" -p jr200 -i obj \
     -f HELLO "$objdir/exe/jr200/hello.p" "$objdir/exe/jr200/hello.wav"
+"$b8bin/cmtconv" -p jr200 -i obj \
+    -f PMON "$objdir/exe/jr200/pmon.p" "$objdir/exe/jr200/pmon.wav"
 "$b8bin/cmtconv" -p mb6885 -i obj \
     -f HELLO.B "$objdir/exe/mb6885/hello.p" "$objdir/exe/mb6885/hello.wav"
+"$b8bin/cmtconv" -p mb6885 -i obj \
+    -f PMON.B "$objdir/exe/mb6885/pmon.p" "$objdir/exe/mb6885/pmon.wav"
 
 #   Unit Tests
 $b8tool pytest -- "$@"

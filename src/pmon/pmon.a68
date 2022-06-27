@@ -399,8 +399,10 @@ qparams     clr pricount        ; start of input is char we're about to read
             beq .cancel
             cmp A,#CR
             beq .rts            ; = carry cleared: execute command
-            bsr qparamval       ; process paramchar and further input,
-                                ;   also handiling/displaying any errors
+            cmp A,#LF           ; execute without overwrite?
+            beq .nlexec
+            bsr qparamval       ; process paramchar in A and any further input,
+                                ;   also handling/displaying any errors
 .nextpchar  jsr rdcharep0       ; start a new parameter read
             bra .checkchar
 
@@ -408,6 +410,10 @@ qparams     clr pricount        ; start of input is char we're about to read
             jsr prchar          ;   XXX but broken if command char was non-print
             sec                 ; cancel indicator
 .rts        rts
+
+.nlexec     jsr prnl            ; don't overwrite command
+            clc                 ;   but still execute it
+            rts
 
 ;   Parse character in A as a parameter, including any following value.
 ;   This assumes that the character has been echoed and handles backspacing

@@ -110,6 +110,11 @@ def test_setiostreams(mem):
     mem[4] = 0x81
     assert b'\x80\x81' == out4.getvalue()
 
+    #   clearvalue() function added to ostream by setiostreams
+    out4.clearvalue()
+    mem[4] = 0x82
+    assert b'\x82' == out4.getvalue()
+
     #   deletion of io functions
     mem.setio(4, None)
     assert 0xEA == mem[4]

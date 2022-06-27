@@ -2,6 +2,7 @@
 '''
 from    collections.abc  import Container, Sequence
 from    io  import BytesIO
+from    types  import MethodType
 
 class IOMem(bytearray):
     ''' This is a memory and I/O device simulator. Typically it would be
@@ -71,6 +72,21 @@ class IOMem(bytearray):
             ostream = output
         else:
             raise ValueError('output has no write() function')
+
+        #   It's convenient to have a simple way to clear previous output so we
+        #   can continue testing and match only new output. It's not clear that
+        #   this is the best way to add this method; it might fail on some odd
+        #   objects. (On the other hand, the user need not call it if she
+        #   supplies an odd object.)
+        def clearvalue(self):
+            ''' Clear this stream stream's buffered value.
+
+                This works on streams that implement the standard semantics of
+                `io.IOBase.seek()` and `io.IOBase.truncate()`, as `io.BytesIO`
+                does.
+            '''
+            self.seek(0); self.truncate()
+        ostream.clearvalue = MethodType(clearvalue, ostream)
 
         self.setio(addr, self.streamiof(istream, ostream))
         return istream, ostream

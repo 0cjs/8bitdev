@@ -433,10 +433,11 @@ def edges_to_samples(chunks, sample_dur, silence, low, high):
             lvl = True
         elif chunk[0] == AudioMarker.SOUND:
             edges = chunk[1]
-            for dur in chain(edges, (0.01,)):
+            for dur in edges:
                 sample_lvl = high if lvl else low
                 res.extend([sample_lvl] * int(dur/sample_dur))
                 lvl = not lvl
+            res.append(silence)
         else:
             raise Exception('Unknown audio marker')
     return res

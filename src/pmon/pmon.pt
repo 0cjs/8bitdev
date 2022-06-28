@@ -220,13 +220,13 @@ def test_cmdlookup_failure(m, S, R, cmdchar):
 
 def test_Cexamine(m, S, R, loadbios):
     _, ostream = loadbios('tmc68')
-    data = 0x6161; params = 0x6061
+    data = 0x7161; params = 0x7061
 
-    m.deposit(data, [0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef, 0x12])
+    m.deposit(data, range(0x30, 0x60, 3))
     expected = b'''\
-6161: 01 23 45 67 89
-6166: AB CD EF 12 00
-616B: 00 00 00 00 00
+7161: 30 33 36 39 3C
+7166: 3F 42 45 48 4B
+716B: 4E 51 54 57 5A
 '''
 
     m.depword(S.cmdpvals, params)

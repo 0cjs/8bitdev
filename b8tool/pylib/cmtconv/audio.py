@@ -23,30 +23,38 @@ from    cmtconv.logging  import *
 # - bytes -> file header, blocks
 
 
+# FIXME: use 'pulses' istead of 'edges'
+# FIXME: use H/M/L?
 # samples   : [ float ]
 # ->
-# edges         : ( ( float, bool, float ), )
-# FIXME: parameterise the cutoff
+# edges     : ( (float, bool, float) )
 def samples_to_timed_edges(samples, sample_dur):
-    edges = []
+    edges=[]
     if len(samples) > 0:
         sample_max = max(samples)
         sample_min = min(samples)
-        cutoff = sample_min + 0.6 * (sample_max - sample_min)
-        v3('Max: %d, min: %d, cutoff: %d' % (sample_max, sample_min, cutoff))
+        high_cutoff = sample_min + 0.6 * (sample_max - sample_min)
+        low_cutoff  = sample_min + 0.4 * (sample_max - sample_min)
+        v3('Max: %d, min: %d, high cutoff: %d, low cutoff: %d'
+            % (sample_max, sample_min, high_cutoff, low_cutoff))
+        classify = lambda x: -1 if x <= low_cutoff else (1 if x >= high_cutoff else 0)
+
         last_t = 0.0
-        last_level = samples[0] > cutoff
+        last_level = classify(samples[0])
         i = 0
         for s in samples:
-            l = s > cutoff
+            l = classify(s)
             if l != last_level:
+                if last_level == 0:
+                    l_ = True if l == 1 else False
+                else:
+                    l_ = last_level
                 t = sample_dur * i
-                edges.append((t, l, t - last_t))
+                edges.append((t, l_, t-last_t))
                 last_t = t
                 last_level = l
-            i = i + 1
+            i += 1
     return tuple(edges)
-
 
 # samples   : [ float ]
 # ->
@@ -211,8 +219,12 @@ class PulseDecoder:
     #
     # Biased towrards spaces - we accept a wider range of pulse widths
     def expect_spaces(self, edges, i_next, n):
-        for i in range(0, n):
+        for i in range(n):
             idx = i_next + i
+            if idx >= len(edges):
+                raise Exception('Out of edges at %d, on edge %d of expected'
+                    ' %d space edges'
+                    % (idx, i, n))
             dur = edges[idx][2]
             if dur < self.space_lower * .75 or dur > self.space_upper * 1.35:
                 raise Exception('Expected %d space pulses at %d (%f)'
@@ -437,7 +449,11 @@ def edges_to_samples(chunks, sample_dur, silence, low, high):
                 sample_lvl = high if lvl else low
                 res.extend([sample_lvl] * int(dur/sample_dur))
                 lvl = not lvl
+            # Below is a hack to force the end of an edge
+            # Calling code should be putting silence beween blocks of bytes
+            # and we need to model levels as H/M/L insteasd of H/L
             res.append(silence)
+            #res.append(high if lvl else low)
         else:
             raise Exception('Unknown audio marker')
     return res

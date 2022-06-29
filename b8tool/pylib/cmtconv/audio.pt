@@ -169,8 +169,8 @@ def test_roundtrip():
         l = 3000
         #bs = random.randbytes(l)
         bs = bytearray(random.randint(0,255) for _ in range(l))
-        edges = en.encode_bytes( bs )
-        chunks = (sound(edges),)
+        edges = en.encode_bytes(bs)
+        chunks = (sound(edges),silence(0.1))
         samples = edges_to_samples(chunks, sample_dur,
             mid, mid - amp, mid + amp)
         edges2 = samples_to_timed_edges(samples, sample_dur)

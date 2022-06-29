@@ -15,8 +15,8 @@
     See the module documentation for `setup` for more details.
 '''
 
-import  hashlib, requests, sys, zipfile
 from    os.path  import abspath, dirname
+import  zipfile
 
 from    b8tool.toolset.setup import *
 
@@ -24,6 +24,13 @@ class ASxxxx(Setup):
 
     def toolset_name(self):
         return 'asxxxx'
+
+    def __init__(self):
+        super().__init__()
+        self.source_archive = '5p31_exe_linux.zip'
+        self.source_url = 'http://shop-pdp.net/_ftp/asxxxx'
+        self.source_sha = \
+            '648a11d48daab3b67e97d82221315b074e874ea30b3f0ead2836baec211940c7'
 
     def check_installed(self):
         ''' *Silently* determine if the toolset is currently available or
@@ -38,26 +45,6 @@ class ASxxxx(Setup):
         #   the linker exits with 3 but the assemblers exit with 1.
         return  checkrun(['aslink'], 3, b'ASxxxx Linker') \
             and checkrun(['as6500'], 1, b'ASxxxx Assembler')
-
-    def fetch(self):
-        archive = '5p31_exe_linux.zip'
-        url = 'http://shop-pdp.net/_ftp/asxxxx'
-        sha = '648a11d48daab3b67e97d82221315b074e874ea30b3f0ead2836baec211940c7'
-
-        self.dlfile = self.downloaddir().joinpath(archive)
-        if not self.dlfile.exists():
-            self.printaction('Downloading {} from {}'.format(archive, url))
-            r = requests.get(url + '/' + archive)
-            with open(str(self.dlfile), 'wb') as fd:
-                for data in r.iter_content(chunk_size=65536):
-                    fd.write(data)
-
-        hash = hashlib.sha256()
-        hash.update(self.dlfile.read_bytes())
-        if hash.hexdigest() != sha:
-            raise RuntimeError(
-                'Bad {} hash for {}:\n expected: {}\n   actual: {}'.format(
-                    hash.name, archive, sha, hash.hexdigest()))
 
     def install(self):
         self.printaction('Installing from {}'.format(self.dlfile.name))

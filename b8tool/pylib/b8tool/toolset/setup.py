@@ -276,6 +276,7 @@ class Setup(metaclass=abc.ABCMeta):
         archive = self.source_archive
         url = self.source_url
         sha = self.source_sha
+        tar_strip = getattr(self, 'source_tar_strip', None)
 
         self.dlfile = self.downloaddir().joinpath(archive)
         if not self.dlfile.exists():
@@ -291,6 +292,14 @@ class Setup(metaclass=abc.ABCMeta):
             raise RuntimeError(
                 'Bad {} hash for {}:\n expected: {}\n   actual: {}'.format(
                     hash.name, archive, sha, hash.hexdigest()))
+
+        if tar_strip is not None:
+            srcdir = self.srcdir()
+            srcdir.mkdir(parents=True, exist_ok=True)
+            runcmd(['tar', '-x',
+                '--strip-components', str(tar_strip),
+                '-f', self.downloaddir().joinpath(self.source_archive),
+                ], cwd=srcdir)
 
     def fetch_git(self):
         ''' Clone the source if necessary.

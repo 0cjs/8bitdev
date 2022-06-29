@@ -38,7 +38,7 @@
 '''
 
 from    pathlib  import Path
-import  abc, os, pathlib, shutil, subprocess, sys, traceback
+import  abc, hashlib, os, pathlib, requests, shutil, subprocess, sys, traceback
 
 from    b8tool  import path
 
@@ -272,6 +272,26 @@ class Setup(metaclass=abc.ABCMeta):
     #   process, normally used by the core setup routines defined in
     #   sublcasses.
 
+    def fetch_archive(self):
+        archive = self.source_archive
+        url = self.source_url
+        sha = self.source_sha
+
+        self.dlfile = self.downloaddir().joinpath(archive)
+        if not self.dlfile.exists():
+            self.printaction('Downloading {} from {}'.format(archive, url))
+            r = requests.get(url + '/' + archive)
+            with open(str(self.dlfile), 'wb') as fd:
+                for data in r.iter_content(chunk_size=65536):
+                    fd.write(data)
+
+        hash = hashlib.sha256()
+        hash.update(self.dlfile.read_bytes())
+        if hash.hexdigest() != sha:
+            raise RuntimeError(
+                'Bad {} hash for {}:\n expected: {}\n   actual: {}'.format(
+                    hash.name, archive, sha, hash.hexdigest()))
+
     def fetch_git(self):
         ''' Clone the source if necessary.
 
@@ -347,6 +367,8 @@ class Setup(metaclass=abc.ABCMeta):
     def fetch(self):
         if getattr(self, 'source_repo', None):
             self.fetch_git()
+        elif getattr(self, 'source_archive', None):
+            self.fetch_archive()
 
     def configure(self):
         pass

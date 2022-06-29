@@ -16,6 +16,7 @@ build_toolsets() {
     $b8tool buildtoolset diskimg
     $b8tool buildtoolset dos33fs
     $b8tool buildtoolset linapple
+    $b8tool buildtoolset bm2
 }
 
 #   ASxxxx builds

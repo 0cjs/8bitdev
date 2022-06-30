@@ -1,7 +1,15 @@
 '''
     bm2 - Hitachi MB-6885 Basic Master Jr. Emulator
 
-    Homepage: <http://ver0.sakura.ne.jp/pc/#bm2>
+    - The bm2 homepage_ provides a high-level overview of what the emulator
+      is and does, and many screenshots.
+    - ``$B8_PROJDIR/.build/tool/src/bm2/readme.txt`` contains the original
+      documentation, which is reasonably useful.
+    - retroabandon/hitachi-mb688x_ has another copy of the source code and
+      further notes from reverse-engineering it.
+
+    .. _homepage: http://ver0.sakura.ne.jp/pc/#bm2
+    .. _retroabandon/hitachi-mb688x: https://gitlab.com/retroabandon/hitachi-mb688x
 '''
 
 from    b8tool.toolset.setup  import *

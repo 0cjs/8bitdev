@@ -1,0 +1,47 @@
+#!/usr/bin/env python3
+'''
+    mb6885 - load an AS .p file into the bm2 simulator and run it
+
+    The ``.p`` extension is added if missing, and if given a file name with
+    no path (no slashes) it asssumes the file resides under
+    ``.build/obj/exe/mb6885/``.
+'''
+
+from    os.path  import abspath, dirname, join
+from    site  import addsitedir
+from    sys  import argv, stdin, stdout, stderr
+
+B8_HOME = dirname(dirname(abspath(__file__)))
+addsitedir(join(B8_HOME, 'pylib'))
+
+from    b8tool  import path
+from    b8tool.run  import tool
+
+def binname(fname):
+    #   XXX similar to the bin/tmc6800 one; these need to be merged
+    #   and pulled up
+    if '.' not in fname: fname += '.p'
+    if '/' not in fname: fname = path.obj('exe', 'mb6885', fname)
+    return fname
+
+def gen_srec(p_file):
+    srec_file = p_file.with_suffix('.srec')
+    tool('p2hex', p_file, srec_file, '-quiet')
+    return srec_file
+
+def usage():
+    print('Usage: mb6885 <file.p>', file=stderr)
+    exit(2)
+
+if __name__ == '__main__':
+    if len(argv) != 2: usage()
+    p_file = binname(argv[1])
+    srec_file = gen_srec(p_file)
+    print(path.pretty(srec_file))
+
+    #   XXX there should be an option to use this or not
+    #   However, there's not much point in going ROMless unless we're
+    #   also taking advantage of passing in the entry point, which we need
+    #   to extract from the .p or the .s file.
+    rom_dir = '-rom_dir=' + str(path.tool('src', 'osimg', 'mb6885'))
+    tool('bm2', rom_dir, srec_file)

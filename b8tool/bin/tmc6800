@@ -19,7 +19,7 @@ from    testmc.tool.asl  import parse_obj_fromfile
 
 def binname(fname):
     if '.' not in fname: fname += '.p'
-    if '/' not in fname: fname = path.obj('src', fname)
+    if '/' not in fname: fname = path.obj('exe', 'tmc68', fname)
     return fname
 
 def getchar():

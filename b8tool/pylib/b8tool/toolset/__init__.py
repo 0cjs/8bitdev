@@ -11,7 +11,7 @@
 '''
 
 TOOLSETS = {}
-TOOLSET_NAMES = ['asl', 'asxxxx', 'bm2', 'diskimg', 'dos33fs', 'linapple']
+TOOLSET_NAMES = ['asl', 'asxxxx', 'bm2', 'osimg', 'dos33fs', 'linapple']
 
 from importlib import import_module
 for t in TOOLSET_NAMES:        # deliberately not lazy loading

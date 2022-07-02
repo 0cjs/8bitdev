@@ -81,10 +81,10 @@ __Assemblers__:
   below), though little used.
 
 __Development Tools__:
+- [retroabandon/osimg] supplies ROM BIOS images for emulators and DOS disk
+  images used as a base for building test images.
 - Vince Weaver's [dos33fsprogs] provides tools for handling Apple II DOS
   3.3 disk images and files.
-- [retroabandon/diskimg] supplies disk images used as a base for building
-  test images.
 
 __Simulators and Emulators__:
 - The [py65] 6502 microprocessor simulator ([source][py65-src]) is used to
@@ -218,7 +218,7 @@ Execution:
 [dos33fsprogs]: https://github.com/deater/dos33fsprogs
 [py65]: http://py65.readthedocs.org/
 [pytest]: https://github.com/0cjs/sedoc/blob/master/lang/python/test/pytest.md
-[retroabandon/diskimg]: https://gitlab.com/retroabandon/diskimg.git
+[retroabandon/osimg]: https://gitlab.com/retroabandon/osimg.git
 
 [`README.md`]: README.md
 [`Test`]: Test

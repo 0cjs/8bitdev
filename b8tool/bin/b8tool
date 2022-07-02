@@ -457,11 +457,11 @@ def a2dsk1(srcfile):
         XXX We should work out an option to do this automatically.
 
         This requires dos33, mkdos33fs and tokenize_asoft from dos33fsprogs_,
-        a base image from the retroabandon diskimg_ repo, and the p2a2bin
+        a base image from the retroabandon osimg_ repo, and the p2a2bin
         program.
 
         .. _dos33fsprogs: https://github.com/deater/dos33fsprogs.git
-        .. _diskimg: https://gitlab.com/retroabandon/diskimg.git
+        .. _osimg: https://gitlab.com/retroabandon/osimg.git
     '''
     #   XXX and TODO:
     #   • b8tool should be handling the fetching and building of all
@@ -489,7 +489,7 @@ def a2dsk1(srcfile):
     runtool('tokenize_asoft', input=bootprog, stdout_path=binfile('.HELLO'))
 
     #   Build a disk image with the above and a HELLO that willl run it.
-    baseimg = path.tool('src/diskimg/a2/EMPTY-DOS33-48K-V254.dsk')
+    baseimg = path.tool('src/osimg/a2/EMPTY-DOS33-48K-V254.dsk')
     img     = binfile('.dsk')
     shutil.copyfile(str(baseimg), str(img))
     def dos33(*command):

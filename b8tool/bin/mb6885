@@ -29,19 +29,29 @@ def gen_srec(p_file):
     tool('p2hex', p_file, srec_file, '-quiet')
     return srec_file
 
-def usage():
-    print('Usage: mb6885 <file.p>', file=stderr)
-    exit(2)
-
-if __name__ == '__main__':
-    if len(argv) != 2: usage()
-    p_file = binname(argv[1])
-    srec_file = gen_srec(p_file)
-    print(path.pretty(srec_file))
-
+def runbm2(srec_file = None):
     #   XXX there should be an option to use this or not
     #   However, there's not much point in going ROMless unless we're
     #   also taking advantage of passing in the entry point, which we need
     #   to extract from the .p or the .s file.
     rom_dir = '-rom_dir=' + str(path.tool('src', 'osimg', 'mb6885'))
-    tool('bm2', rom_dir, srec_file)
+
+    args = [rom_dir]
+    if srec_file is not None:
+        args.append(str(srec_file))
+    tool('bm2', *args)
+
+def usage():
+    print('Usage: mb6885 <file.p>', file=stderr)
+    exit(2)
+
+if __name__ == '__main__':
+    if len(argv) > 2:
+        usage()
+    elif len(argv) == 1:
+        runbm2()
+    else:
+        p_file = binname(argv[1])
+        srec_file = gen_srec(p_file)
+        print(path.pretty(srec_file))
+        runbm2(srec_file)

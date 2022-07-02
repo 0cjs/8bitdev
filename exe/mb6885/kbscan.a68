@@ -1,0 +1,30 @@
+;   MB-6885 keyboard scanning experiments
+
+            cpu 6800
+            include "src/mc68/std.a68"
+            include "src/mb6885/bios.a68"
+
+cursor_col  equ  $000F            ; _chrout column: 0-31
+cursor_row  equ  $0010
+
+;    Keyboard: read/write
+;      RD bits 7-4: kana-symbols, kana, romaji-symbols, romaji
+;      WR bits 7-4: ??? break key enable/disable?
+;      WR bits 3-0: row (col?) output (strobe?)
+IO_keyboard equ  $EEC0
+
+            org $3000       ; 4K below the end of RAM
+kbscan      lda B,#0
+
+.loop       lda A,IO_keyboard
+            jsr prhex
+            sta B,cursor_col
+            bra .loop
+
+            rts
+
+            include "src/mc68/pr.a68"
+_a          ds 2
+_x          ds 2
+
+            end kbscan

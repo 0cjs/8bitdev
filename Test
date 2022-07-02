@@ -100,7 +100,8 @@ manual_build=(
     exe/cbm/ted-keymatrix.a65
     src/fm7.a69
     exe/jr200/hello.a68 exe/jr200/pmon.a68 exe/jr200/samples.a68
-    exe/mb6885/hello.a68 exe/mb6885/pmon.a68 exe/mb6885/writenum.a68
+    exe/mb6885/hello.a68 exe/mb6885/pmon.a68
+        exe/mb6885/kbscan.a68 exe/mb6885/writenum.a68
     exe/tmc68/hello.a68 exe/tmc68/pmon.a68
 )
 $b8tool asl "${manual_build[@]}"

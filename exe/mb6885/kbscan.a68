@@ -4,17 +4,78 @@
             include "src/mc68/std.a68"
             include "src/mb6885/bios.a68"
 
-cursor_col  equ  $000F            ; _chrout column: 0-31
-cursor_row  equ  $0010
+;   For the moment we use the monitor's setting for break key processing.
+brkkey_enabled  EQU  $0013            ; BREAK key processing: $00=ignored
+                                      ;   $F0=call BREAKV (default after reset)
 
 ;    Keyboard: read/write
-;      RD bits 7-4: kana-symbols, kana, romaji-symbols, romaji
+;      RD bits 7-4: kana-symbols, kana,    romaji-symbols, romaji
+;        (equiv to: AltGR,        R-Shift, Ctrl,   L-Shift
 ;      WR bits 7-4: ??? break key enable/disable?
 ;      WR bits 3-0: row (col?) output (strobe?)
 IO_keyboard equ  $EEC0
 
+scrp        equ _x          ; screen position at which we're writing
+
             org $3000       ; 4K below the end of RAM
-kbscan      lda B,#0
+kbscan      bsr setup
+
+scan        lda B,#$FF              ; $00 - 1
+            ldx #(screen_base+64)+2 ; 4th row - 1, 3rd column
+            stx scrp
+row         inc B           ; next keyboard column
+            cmp B,#$10      ; have we done all columns?
+            beq scan        ;   yes: restart from first column
+            ;   increment screen position to next line
+            lda A,scrp+1
+            add A,#32
+            sta A,scrp+1
+            bcc +
+            inc scrp
++           ldx scrp
+            ;   set column select and read modkeys/rows
+            lda A,brkkey_enabled
+            and A,#$F0      ; ensure we have clear column select
+            aba             ; set our column select
+            sta A,IO_keyboard
+            lda A,IO_keyboard
+            ;   display modkeys/rows in binary
+            psh b
+            ldb #8
+.nextbit    asl A
+            psh A
+            lda A,#'1'
+            bcs +
+            dec A           ; make it '0'
++           sta A,,X
+            inx
+            pul A
+            dec B
+            bne .nextbit
+            pul b
+            bra row
+
+            rts
+
+;   Clear screen and set up form within which we print.
+setup       jsr CLRTV
+            ldx #header
+            jsr MESOUT
+            lda B,#$FF
+.nextline   inc B
+            tba
+            bsr prnyb
+            lda #$0D        ; CR, generates newline on MB-6885
+            jsr prchar
+            cmp B,#$0F
+            bne .nextline
+            rts
+
+header      db 'Keyboard Scan\r'
+            db $84,'Column Out\r'
+            db $86,' Mod/Row Read\r'
+            db $4
+
 
 .loop       lda A,IO_keyboard
             jsr prhex

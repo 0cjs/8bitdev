@@ -1,20 +1,66 @@
 ;   Hitachi MB-6885 (Basic Master Jr.) BIOS definitions
 ;
-;   For more information, see the MB-6885 manual.
+;   Upper-case symbols are directly from the manual:
+;     MB-6885 ﾍﾞｰｼｯｸﾏｽﾀｰJr   pp.160-161 PP.166-167
+;     https://archive.org/details/Hitachi_MB-6885_Basic_Master_Jr/
+;   Lower-case symbols are conventions from this repo or taken from the
+;   disassembly:
+;     https://gitlab.com/retroabandon/hitachi-mb688x.git
 ;
 ;   NOTE: This must be symbol definitions only, and not include code!
 
-;   This is not quite equivalant to the "standard" rdchar because it
-;   uses the value in A to determine the character blinked for the cursor.
-;   We leave it undefined because most users will want to define their
-;   down that uses whatever cursor they find appropriate.
-;rdchar     equ     ASCIN
-ASCIN       equ     $0028       ; default: JMP to CHRGET
-CHRGET      equ     $F012       ; ♠A ♡BX blocking read of char from input
+; ----------------------------------------------------------------------
+;   RAM API hooks. These are initialised as copies of the ROM jump table
+;   below; the copied names are given in parens. See the ROM definitions
+;   for API documentation.
 
-prchar      equ     ASCOUT
-ASCOUT      equ     $002B       ; default: JMP to CHROUT
-CHROUT      equ     $F015       ; ♡ABX send char in A to output
+ASCIN       equ $28         ; (CHRGET)
+ASCOUT      equ $2B         ; (CHROUT)
+prchar      equ ASCOUT
+BYTIN       equ $2E
+BYTOUT      equ $31
+;           equ $34
+;           equ $37
 
-errbeep     equ     bell
-bell        equ     $F248       ; ♣A ♡BX sound the console bell
+; ----------------------------------------------------------------------
+;   ROM API. These are documented in the manual (see above) or obviously
+;   intended to be APIs because they are in this jump table. Commented-out
+;   values are undocumented and have not yet had their purpose determined
+;   from the disassembly.
+
+monitor     equ $F000       ; Enter the monitor.
+ADDIXB      equ $F003       ; IX ← IX + ACCB
+;           equ $F006
+MOVBLK      equ $F009       ; Move memory.
+                            ;   Params: $3B MSTTOP, $3D MSTEND, $3F CPYTOP
+;           equ $F00C
+KBIN        equ $F00F       ; Scan keyboard.
+;   The following are copied to $28-$39 (ASCIN etc.) at startup
+CHRGET      equ $F012       ; ♠A♡BX Blocking char read from input.
+                            ;   A contains char to blink as cursor.
+CHROUT      equ $F015       ; ♠A♡BX Write character to output,
+                            ;   executing $00-$0F as output control characters.
+LOAD        equ $F018       ; CMT load.
+SAVE        equ $F01B       ; CMT save.
+;           equ $F01E
+;           equ $F021
+
+;           equ $FFE3
+NMISET      equ $FFE6       ; Disable interrupt from BREAK key.
+NMICLR      equ $FFE9       ; Enable initerrupt from BREAK key.
+OUTIX       equ $FFEC       ; Display X register in hex at cursor position.
+CLRTV       equ $FFEF       ; Clear screen, cursor to home position.
+MESOUT      equ $FFF2       ; Print message at X terminated by $04.
+CURPOS      equ $FFF5       ; ♠X ♡AB Return address of cursor in screen memory.
+
+; ----------------------------------------------------------------------
+;   Undocumented ROM addresses and subroutines
+;   These have not been checked on the older ROM (w/o 1200 baud CMT support).
+
+cursor_col  equ $0F         ; CHROUT column: 0-31
+cursor_row  equ $10         ; CHROUT    row: 0-23
+
+screen_base equ $0100       ; Start of character screen buffer.
+
+bell        equ $F248       ; ♣A ♡BX sound the console bell
+errbeep     equ bell

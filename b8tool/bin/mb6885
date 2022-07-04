@@ -29,29 +29,53 @@ def gen_srec(p_file):
     tool('p2hex', p_file, srec_file, '-quiet')
     return srec_file
 
-def runbm2(srec_file = None):
-    #   XXX there should be an option to use this or not
-    #   However, there's not much point in going ROMless unless we're
-    #   also taking advantage of passing in the entry point, which we need
-    #   to extract from the .p or the .s file.
-    rom_dir = '-rom_dir=' + str(path.tool('src', 'osimg', 'mb6885'))
+def runbm2(rom_dir=None, srec_file=None, entrypoint=None):
+    ''' Run the bm2 emulator.
 
-    args = [rom_dir]
+        `rom_dir` specifies the directory with ``{bas,prt,mon}.rom``.
+        If `None`, no ROMs will be loaded (the built-in ROM emulation
+        will be used).
+
+        `srec_file`, if not `None`, is a path to a Motorola S-record
+        file to be loaded into memory before the system resets.
+
+        If `rom_dir` is `None`, `entrypoint` may be specified as the
+        address to be placed in the reset vector before reset. (This
+        is ignored if `rom_dir` is specified.)
+    '''
+    args = []
+    if rom_dir is not None:
+        args.append('-rom_dir=' + rom_dir)
     if srec_file is not None:
         args.append(str(srec_file))
+        if entrypoint is not None:
+            args.append(str(entrypoint))
     tool('bm2', *args)
 
+def parseargs(args):
+    rom_dir = str(path.tool('src', 'osimg', 'mb6885'))
+    if len(args) > 0 and args[0] == '-n':     # no ROM
+        rom_dir = None
+        args.pop(0)
+
+    srec_file = None
+    if len(args) > 0:
+        p_file = binname(args[0])
+        srec_file = gen_srec(p_file)
+        print(path.pretty(srec_file))
+        args.pop(0)
+
+    if len(args) > 0:
+        usage()
+
+    #   XXX HACK: we should be extracting this from srec_file.
+    entrypoint = 0x3000
+
+    return rom_dir, srec_file, entrypoint
+
 def usage():
-    print('Usage: mb6885 <file.p>', file=stderr)
+    print('Usage: mb6885 [-n] <file.p>', file=stderr)
     exit(2)
 
 if __name__ == '__main__':
-    if len(argv) > 2:
-        usage()
-    elif len(argv) == 1:
-        runbm2()
-    else:
-        p_file = binname(argv[1])
-        srec_file = gen_srec(p_file)
-        print(path.pretty(srec_file))
-        runbm2(srec_file)
+    runbm2(*parseargs(argv[1:]))

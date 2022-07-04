@@ -5,15 +5,25 @@
 ;   opcode which should abort in a simulator; if it doesn't abort (as it
 ;   wouldn't on real hardware) the program returns to whatever called it.
 
-hello       jsr prnl
+CR          equ $0D
+
+hello       lda B,#2                ; number of CRs needed for exit
+hellomsg    jsr prnl
             ldx #message
             bsr prstr
-.nextchar   jsr rdchar
-            cmp A,#$03              ; Ctrl-C exits
+            jsr rdchar
+            cmp A,#CR               ; CR may exit, if repeated
+            bne .nextchar           ; if start of line is not Enter
+            dec B                   ; enough CRs seen to exit?
+            bne hellomsg            ;    no: new prompt
+            bra .exit               ;   yes: exit
+
+.nextchar   cmp A,#$03              ; Ctrl-C exits immediately
             beq .exit
-            cmp A,#$0D              ; CR prints hello again
+            cmp A,#CR               ; CR prints hello again (resetting CR count)
             beq hello
             jsr prchar              ; echo char
+            jsr rdchar
             bra .nextchar
 
 .exit       jsr prnl                ; simulator output starts on new line

@@ -13,10 +13,22 @@ def test_hello(m, loadbios, S, R):
     m.stepto(stopon=[0x02])
 
     expected = (
+        b'\nHello: '    b'a0'
+        b'\nHello: '    b'b1'
+        b'\n'
+        )
+    assert expected == ostream.getvalue()
+
+def test_hello_2x_enter_exit(m, loadbios, S, R):
+    istream, ostream = loadbios('tmc68', b'\rXX\r\r\r')
+    m.setregs(R(pc=S.hello))
+    m.stepto(stopon=[0x02])
+
+    expected = (
         b'\nHello: '
-        b'a0'
+        b'\nHello: '    b'XX'
         b'\nHello: '
-        b'b1'
+        b'\nHello: '
         b'\n'
         )
     assert expected == ostream.getvalue()

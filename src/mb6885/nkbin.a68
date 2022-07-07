@@ -43,7 +43,7 @@ nkbin       psh B
             and A,#$0F      ; mask column to scan
             sta A,IO_kbd    ;   (disables BREAK NMI too; dealt with later)
             lda A,IO_kbd    ; get modifier and rows currently down
-    sta A,4,X
+   ;sta A,4,X               ; XXX DEBUG
             asl A           ; shift rows to high nybble
             asl A
             asl A

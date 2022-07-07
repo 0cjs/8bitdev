@@ -10,6 +10,7 @@ test_rig = '''
 
 nkbin_len       equ 4
 nkbin_actv      ds  nkbin_len
+debug_area      ds  nkbin_len   ; write here for debug display on test failure
 
                 org $1000
 
@@ -20,13 +21,11 @@ nkbin_actv      ds  nkbin_len
 
 @pytest.mark.parametrize('actv, kboutputs, kbinputs, newactv', [
     (b'\x00\x00\x00\x00',   # no active keys; reads/changes nothing
-        b'',                b'',                    b'\x00\x00\x00\x00'),
-
+        b'',                 b'',                   b'\x00\x00\x00\x00'),
     (b'\x11\x00\x22\x8C',   # no active non-mod keys pressed; clears all
-        b'\x01\x02\x0C',    b'\x00\xF0\x10',        b'\x00\x00\x00\x00'),
-
-#   (b'\x00\x01\x02\x04',
-#       b'\xFF\xEE\xDD\xCC', b'\xFF\xEE\xDD\xCC',   b'\x00\x00\x00\x00'),
+        b'\x01\x02\x0C',     b'\x00\xF0\x10',       b'\x00\x00\x00\x00'),
+    (b'\x8A\x2A\x1A\x1B',   # 3/4 active non-mod keys pressed
+        b'\x0A\x0A\x0A\x0B', b'\x09\xF9\xA9\xB3',     b'\x8A\x00\x1A\x1B'),
 ])
 def test_clear_released(m, S, actv, kboutputs, kbinputs, newactv):
     #   $EE area can be used for debugging with `sta A,4,X`

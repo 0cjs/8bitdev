@@ -35,13 +35,17 @@ nkbin       psh B
 .clear_released
             ldb #nkbin_len
             ldx #nkbin_actv
-.clrrelnxt  ;   Check [X] and leave it set or clear it to $00.
+.cr.check   ;   Check [X] and leave it set or clear it to $00.
+            lda A,,X
+            beq .cr.next
+
             ;XXX
+
             ;   Next byte in array.
-            dec B
+.cr.next    dec B
             beq .rts        ; return if done
             inx
-            bra .clrrelnxt
+            bra .cr.check
 
 .rts        rts
 

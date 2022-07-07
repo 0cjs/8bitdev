@@ -18,14 +18,23 @@ nkbin_actv      ds  nkbin_len
                 include src/mb6885/nkbin.a68
 '''
 
-@pytest.mark.parametrize('actv, kbinputs, newactv', [
-    #   No active keys; reads/changes nothing
-    (b'\x00\x00\x00\x00',   b'',                b'\x00\x00\x00\x00'),
-    #   None of the active keys are pressed; clears all.
-    #   XXX should fail on 3rd read until we add that byte
-    (b'\x00\x01\x02\x04', b'\x00\x00',          b'\x00\x00\x00\x00'),
+@pytest.mark.parametrize('actv, kboutputs, kbinputs, newactv', [
+    (b'\x00\x00\x00\x00',   # no active keys; reads/changes nothing
+        b'',                 b'',                   b'\x00\x00\x00\x00'),
+
+    (b'\x00\x11\x22\x8F',   # no active non-mod keys pressed; clears all
+        b'\x01\x02\x0F',    b'\x00\xF0\x10',        b'\x00\x00\x00\x00'),
+
+#   (b'\x00\x01\x02\x04',
+#       b'\xFF\xEE\xDD\xCC', b'\xFF\xEE\xDD\xCC',   b'\x00\x00\x00\x00'),
 ])
-def test_clear_released(m, S, actv, kbinputs, newactv):
+def test_clear_released(m, S, actv, kboutputs, kbinputs, newactv):
     m.deposit(S.nkbin_actv, actv)
+    print(m.hexdump(S.nkbin_actv, 4))
+    inp, outp = m.setiostreams(S.IO_keyboard, kbinputs)
+
     m.call(S['nkbin.clear_released'])
-    assert newactv == m.bytes(S.nkbin_actv, 4)
+
+    print(m.hexdump(S.nkbin_actv, 4))
+    assert (kboutputs, newactv) == (outp.getvalue(), m.bytes(S.nkbin_actv, 4))
+    assert inp.getvalue() == b''

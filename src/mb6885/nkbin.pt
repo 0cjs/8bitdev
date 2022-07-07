@@ -8,7 +8,10 @@ test_rig = '''
                 cpu 6800
                 org $800
 
-nkbin_actv      ds  4
+nkbin_len       equ 4
+nkbin_actv      ds  nkbin_len
+
+                org $1000
 
                ;include src/mc68/std.a68
                ;include src/tmc68/bios.a68

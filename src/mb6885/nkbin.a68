@@ -21,7 +21,7 @@ nkbin       psh B
 
             ldb #3          ; nkbin_actv length
             ldx #nkbin_actv
-            jsr .clear_released
+            bsr .clear_released
 
    ;lda #'@'                ; XXX debug
    ;jsr prchar
@@ -33,15 +33,15 @@ nkbin       psh B
 ;   X points to an array of bytes indicating which keys were pressed when
 ;   we last exited. B is the number of bytes in that array.
 .clear_released
-            psh B
-            ;   Check [X] and leave it set or clear it to $00.
+            ldb #nkbin_len
+            ldx #nkbin_actv
+.clrrelnxt  ;   Check [X] and leave it set or clear it to $00.
             ;XXX
             ;   Next byte in array.
-            pul B
             dec B
             beq .rts        ; return if done
             inx
-            bra .clear_released
+            bra .clrrelnxt
 
 .rts        rts
 
@@ -51,6 +51,7 @@ nkbin       psh B
 ;   one bit from the row bits returned on a read of `IO_keyboard` bits 3-0.
 ;   $00 indicates "no key pressed" in that slot.
     .ifndef nkbin_actv
+nkbin_len   equ 3           ; length of nkbin_actv array
 nkbin_actv  db 0
             db 0
             db 0

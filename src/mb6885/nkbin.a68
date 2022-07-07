@@ -89,19 +89,18 @@ nkbin       psh B
             psh A
             and A,#$F0      ; do we have a keypress?
             pul A
-            beq .notnew     ;   no: Z=1 for return
-            ;
-            lda B,#nkbin_len+1
+            beq .cnk.done   ;   no: return with Z=1
+
+            lda B,#nkbin_len
             ldx #nkbin_actv-1
 -           dec B           ; checked all slots?
-            beq .notfound   ;   yes: return not found (XXX use BMI)
+            bmi .cnk.done   ;   yes: return with Z=0
             inx
             cmp A,,X        ; in this slot?
-            beq .notnew     ; yes; Z=1 for return
+            beq .cnk.done   ;   yes: return with Z=1
             bra -
 
-.notfound   lda B,#1        ; clear Z flag
-.notnew     pul B           ; assumes Z flag already set correctly
+.cnk.done   pul B           ; assumes Z flag already set correctly
             rts
 
 ;   XXX SKETCH

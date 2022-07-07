@@ -3,8 +3,8 @@
 ; ----------------------------------------------------------------------
 
 ;   For the moment we use the monitor's setting for break key processing.
-brkkey_enabled  EQU  $0013            ; BREAK key processing: $00=ignored
-                                      ;   $F0=call BREAKV (default after reset)
+brkkey_ena  equ  $13        ; BREAK key processing: $00=ignored
+                            ;   $F0=call BREAKV (default after reset)
 
 ;    Keyboard: read/write
 ;      RD bits 7-4: kana-symbols, kana,    romaji-symbols, romaji
@@ -22,12 +22,15 @@ nkbin       psh B
             ldb #3          ; nkbin_actv length
             ldx #nkbin_actv
             bsr .clear_released
+            bsr .nextkey
 
    ;lda #'@'                ; XXX debug
    ;jsr prchar
             sec             ; nothing read
+
+            lda B,brkkey_ena; restore BREAK key on/off state
+            sta B,IO_kbd    ; (we don't care about the column number)
             pul B
-            ;   XXX restore BEAK key on/off state?
             rts
 
 ;   Clear any keys that were marked as pressed in `nkbin_actv` but have
@@ -61,10 +64,34 @@ nkbin       psh B
 
 .rts        rts
 
+;   ♣ABX Return in X the first free (empty) slot in nkbin_actv.
+;   Returns in flag N: 0=success, 1=no slots free
+.freeslot   lda B,#nkbin_len-1
+            ldx #nkbin_actv
+-           lda A,,X
+            beq .rts        ; 0 = free slot = not negative
+            inx
+            dec B
+            bmi .rts        ; negative so returns no slots free
+            bra -
+
+;   Find the "next" keypress, i.e., the first in a scan of the entire
+;   keyboard that is not in `nkbin_actv`.
+.nextkey    lda A,#$0C      ; highest column number
+.nk.loop    psh A           ; save current column
+            sta A,IO_kbd    ; set column (disables BREAK NMI; dealt with later)
+            lda A,IO_kbd    ; read modifier keys (b7-4) and rows (b3-0)
+            ; XXX ...
+            pul A           ; restore current column
+            dec A           ; next column
+            bpl .nk.loop    ; ≥0 → continue
+            ; XXX create row/col and save key in first empty nkbin_actv slot
+            rts
+
 ;   Array of bytes indicating which keys (excluding modifier keys) that
 ;   were still pressed when we last exited `nkbin`. The low nybble is the
-;   column number as written to `IO_keyboard` bits 3-0; the high nybble is
-;   one bit from the row bits returned on a read of `IO_keyboard` bits 3-0.
+;   column number as written to `IO_kbd` bits 3-0; the high nybble is
+;   one bit from the row bits returned on a read of `IO_kbd` bits 3-0.
 ;   $00 indicates "no key pressed" in that slot.
     .ifndef nkbin_actv
 nkbin_len   equ 3           ; length of nkbin_actv array

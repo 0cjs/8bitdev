@@ -19,7 +19,15 @@ debug_area      ds  nkbin_len   ; write here for debug display on test failure
                 include src/mb6885/nkbin.a68
 '''
 
-@pytest.mark.parametrize('actv, kboutputs, kbinputs, newactv', [
+param = pytest.mark.parametrize
+
+def setactv(m, actv):
+    #   $EE area helps detect overrun and can store test-only debug data:
+    #   `sta A,4,X` and later `print(m.hexdump(S.nkbin_actv, 8))`
+    m.deposit(m.symtab.nkbin_actv, actv + b'\xEE\xEE\xEE\xEE')
+    print(m.hexdump(m.symtab.nkbin_actv, 4))    # for debugging on test failure
+
+@param('actv, kboutputs, kbinputs, newactv', [
     (b'\x00\x00\x00\x00',   # no active keys; reads/changes nothing
         b'',                 b'',                   b'\x00\x00\x00\x00'),
     (b'\x11\x00\x22\x8C',   # no active non-mod keys pressed; clears all
@@ -28,14 +36,22 @@ debug_area      ds  nkbin_len   ; write here for debug display on test failure
         b'\x0A\x0A\x0A\x0B', b'\x09\xF9\xA9\xB3',     b'\x8A\x00\x1A\x1B'),
 ])
 def test_clear_released(m, S, actv, kboutputs, kbinputs, newactv):
-    #   $EE area can be used for debugging with `sta A,4,X`
-    m.deposit(S.nkbin_actv, actv + b'\xEE\xEE\xEE\xEE')
-    print(m.hexdump(S.nkbin_actv, 4))
+    setactv(m, actv)
     istream, ostream = m.setiostreams(S.IO_kbd, kbinputs)
-
     m.call(S['nkbin.clear_released'])
 
     print(m.hexdump(S.nkbin_actv, 8))
     assert (kboutputs,          newactv) \
         == (ostream.getvalue(), m.bytes(S.nkbin_actv, 4))
     assert b'' == istream.read()
+
+@param('actv, slot, nflag', [
+    (b'\x00\xff\xff\xff', 0, False),
+    (b'\x10\x20\x8F\x00', 3, False),
+    (b'\x10\x20\x8F\x40', 4, True),
+])
+def test_freeslot(m, S, actv, slot, nflag):
+    setactv(m, actv)
+    m.call(S['nkbin.freeslot'], R(x=0, N=not nflag))
+    print('actv={} slot={} x={}'.format(S.nkbin_actv, slot, m.x))
+    assert (nflag, S.nkbin_actv + slot) == (m.N, m.x)

@@ -5,19 +5,30 @@
 ;   and machine-language (.B) files:
 ;
 ;       POKE $08,$2F,$FF : NEW : LOAD
+;       CALL $3000
 ;
 ;   This uses the default stack configuration.
 ;
 ;   Using the standard BIOS input routines this program cannot be exited
-;   with Ctrl-C because there's no way to enter that (no Ctrl key).
-;   However, the BREAK key will generate an NMI that will enter the monitor.
+;   with Ctrl-C because there's no way to enter that (no Ctrl key), so
+;   you must use Enter twice. The BREAK key will also return to BASIC if
+;   the program was called from BASIC.
+;
+;   When called from the monitor (`MON`) with the `G` command, the BREAK
+;   key works only because we specifically enable it with `NMICLR`.
+;   However, for some reason the first press is ignored and the second
+;   press breaks back to the monitor. This is not KBIN specifically; it
+;   even happens from a tight infinite loop. (This does not happen when
+;   called from BASIC, probably because it uses its own NMI handler.)
+;
 
             cpu 6800
             include "src/mc68/std.a68"
             include "src/mb6885/bios.a68"
 
             org $3000       ; 4K below the end of RAM
+setup       jsr NMICLR      ; enable BREAK key
             include "src/mc68/hello.a68"
             include "src/mb6885/common.a68"
 
-            end hello       ; entry point
+            end setup

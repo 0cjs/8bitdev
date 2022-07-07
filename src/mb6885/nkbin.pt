@@ -55,3 +55,22 @@ def test_freeslot(m, S, actv, slot, nflag):
     m.call(S['nkbin.freeslot'], R(x=0, N=not nflag))
     print('actv={} slot={} x={}'.format(S.nkbin_actv, slot, m.x))
     assert (nflag, S.nkbin_actv + slot) == (m.N, m.x)
+
+@param('actv, scan, isnewkey', [
+    #   `scan` is active row as one of b7-4 and column as b3-0
+    (b'\x00\x00\x00\x00', 0x00, False),     # no row pressed
+    (b'\x0F\x0F\x0F\x0F', 0x0F, False),
+    (b'\x00\x00\x00\x00', 0x10, True ),     # row not in nkbin_actv
+    (b'\x11\x20\x43\x84', 0x2C, True ),
+    (b'\x11\x20\x43\x84', 0x11, False),     # row in nkbin_actv
+    (b'\x00\x00\x00\x84', 0x84, False),
+])
+def test_chknewkey(m, S, actv, scan, isnewkey):
+    print('scan={:02X}, expected isnewkey={}'.format(scan, isnewkey))
+    setactv(m, actv)
+    expected_Z = not isnewkey
+    m.call(S['nkbin.chknewkey'], R(a=scan, b=0xFF, x=0, Z=not expected_Z))
+    assert expected_Z == m.Z
+
+#   TODO:
+#   • Rename nkbin_actv to nkbin_down

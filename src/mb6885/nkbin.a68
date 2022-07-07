@@ -75,18 +75,82 @@ nkbin       psh B
             bmi .rts        ; negative so returns no slots free
             bra -
 
+;   ♡AB♣X   Determine if we have a new keypress in A. Bits 3-0 are the column
+;           that was scanned and one of bits 7-4 may be set to indicate which
+;           key in that column is pressed.
+;   Return flag Z:
+;     0: A row bit is set and the row/col is not found in nkbin_actv.
+;     1: Row bits = %0000 (no keypress) or keypress found in nkbin_actv
+;        (i.e., no new key pressed).
+;
+;   The 2×PSH here to preserve B saves 4 bytes in the callers.
+;
+.chknewkey  psh B           ; save to avoid destruction
+            psh A
+            and A,#$F0      ; do we have a keypress?
+            pul A
+            beq .notnew     ;   no: Z=1 for return
+            ;
+            lda B,#nkbin_len+1
+            ldx #nkbin_actv-1
+-           dec B           ; checked all slots?
+            beq .notfound   ;   yes: return not found (XXX use BMI)
+            inx
+            cmp A,,X        ; in this slot?
+            beq .notnew     ; yes; Z=1 for return
+            bra -
+
+.notfound   lda B,#1        ; clear Z flag
+.notnew     pul B           ; assumes Z flag already set correctly
+            rts
+
+;   XXX SKETCH
 ;   Find the "next" keypress, i.e., the first in a scan of the entire
 ;   keyboard that is not in `nkbin_actv`.
-.nextkey    lda A,#$0C      ; highest column number
-.nk.loop    psh A           ; save current column
-            sta A,IO_kbd    ; set column (disables BREAK NMI; dealt with later)
+.nextkey    lda B,#$0C      ; highest column number
+
+.nk.loop    psh B           ; save current column
+            sta B,IO_kbd    ; set column (disables BREAK NMI; dealt with later)
             lda A,IO_kbd    ; read modifier keys (b7-4) and rows (b3-0)
-            ; XXX ...
-            pul A           ; restore current column
-            dec A           ; next column
+            ; XXX save modifier key bits here? Or once at start?
+            asl A           ; move rows (b3-0) to high nybble (b7-4)
+            asl A
+            asl A
+            asl A
+            aba             ; copy column to low nybble (b3-0)
+            tab             ; save all rows
+            and A,#$F0      ; are any rows active?
+            beq .nk.nxtcol  ;   no: continue scan
+
+            ;   Check each row to see if it's active and not already pressed
+            tba             ; restore all rows
+            and A,#$1F      ; remove all rows but 0, keeping column
+            bsr .chknewkey  ; is it a keypress that was not not already pressed?
+            bne .savekey    ;   no: we have our new keypress
+            ;
+            tba             ; repeat above for
+            and A,#$2F      ;   row 1
+            bsr .chknewkey
+            bne .savekey
+            ;
+            tba             ; repeat above for
+            and A,#$4F      ;   row 2
+            bsr .chknewkey
+            bne .savekey
+            ;
+            tba             ; repeat above for
+            and A,#$8F      ;   row 3
+            bsr .chknewkey
+            bne .savekey
+
+.nk.nxtcol  ;   No new keypress in this column; move on to the next
+            pul B           ; restore current column
+            dec B           ; next column
             bpl .nk.loop    ; ≥0 → continue
-            ; XXX create row/col and save key in first empty nkbin_actv slot
+            ; XXX no new keys pressed; we're done
             rts
+
+.savekey    rts
 
 ;   Array of bytes indicating which keys (excluding modifier keys) that
 ;   were still pressed when we last exited `nkbin`. The low nybble is the
@@ -94,7 +158,7 @@ nkbin       psh B
 ;   one bit from the row bits returned on a read of `IO_kbd` bits 3-0.
 ;   $00 indicates "no key pressed" in that slot.
     .ifndef nkbin_actv
-nkbin_len   equ 3           ; length of nkbin_actv array
+nkbin_len   equ 3           ; length of nkbin_actv array; must be <$80!
 nkbin_actv  db 0
             db 0
             db 0

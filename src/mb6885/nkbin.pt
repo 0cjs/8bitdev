@@ -1,0 +1,20 @@
+from    testmc  import *
+from    testmc.mc6800  import *
+import  pytest
+
+R = Machine.Registers
+
+test_rig = '''
+                cpu 6800
+                org $800
+
+nkbin_actv      ds  4
+
+               ;include src/mc68/std.a68
+               ;include src/tmc68/bios.a68
+                include src/mb6885/nkbin.a68
+'''
+
+def test_clear_released(m, S):
+    m.deposit(S.nkbin_actv, [0, 0, 0, 0])
+    assert 0

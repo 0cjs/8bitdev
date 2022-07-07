@@ -1,0 +1,57 @@
+;   nkbin - "New" MB-6885 keyboard read with 2-key rollover
+
+; ----------------------------------------------------------------------
+
+;   For the moment we use the monitor's setting for break key processing.
+brkkey_enabled  EQU  $0013            ; BREAK key processing: $00=ignored
+                                      ;   $F0=call BREAKV (default after reset)
+
+;    Keyboard: read/write
+;      RD bits 7-4: kana-symbols, kana,    romaji-symbols, romaji
+;        (equiv to: AltGR,        R-Shift, Ctrl,   L-Shift
+;      WR bits 7-4: ??? break key enable/disable?
+;      WR bits 3-0: row (col?) output (strobe?)
+IO_keyboard equ  $EEC0
+
+; ----------------------------------------------------------------------
+
+;   ♡B Non-blocking read of keyboard state; same API as ROM `KBIN`.
+;   C=1: nothing pressed. C=0: char/graphic code returned in A.
+nkbin       psh B
+
+            ldb #3          ; nkbin_actv length
+            ldx #nkbin_actv
+            jsr .clear_released
+
+   ;lda #'@'                ; XXX debug
+   ;jsr prchar
+            sec             ; nothing read
+            pul B
+            rts
+
+;   Clear any keys that were marked as pressed but have since been released.
+;   X points to an array of bytes indicating which keys were pressed when
+;   we last exited. B is the number of bytes in that array.
+.clear_released
+            psh B
+            ;   Check [X] and leave it set or clear it to $00.
+            ;XXX
+            ;   Next byte in array.
+            pul B
+            dec B
+            beq .rts        ; return if done
+            inx
+            bra .clear_released
+
+.rts        rts
+
+;   Array of bytes indicating which keys (excluding modifier keys) that
+;   were still pressed when we last exited `nkbin`. The low nybble is the
+;   column number as written to `IO_keyboard` bits 3-0; the high nybble is
+;   one bit from the row bits returned on a read of `IO_keyboard` bits 3-0.
+;   $00 indicates "no key pressed" in that slot.
+    .ifndef nkbin_actv
+nkbin_actv  db 0
+            db 0
+            db 0
+    .endif ; nkbin_actv

@@ -1,0 +1,28 @@
+;   MB-6885 "Hello" using new 2-key rollover keyboard scanner
+;
+;   See exe/mb6885/hello.a68 for further documentation on running this.
+;
+
+            cpu 6800
+            include "src/mc68/std.a68"
+            include "src/mb6885/bios.a68"
+
+            org $3000       ; 4K below the end of RAM
+setup       jsr NMICLR      ; enable BREAK key
+            include "src/mc68/hello.a68"
+
+;   ♡ABX print platform-appropriate newline
+;   Copied from src/mb6885/common.a68 because we don't want to bring it all in.
+prnl        psh A
+            lda A,#$0D      ; CR does newline on MB-6885
+            jsr prchar
+            pul A
+            rts
+
+rdchar      jsr nkbin
+            bcs rdchar
+            rts
+
+            include "src/mb6885/nkbin.a68"
+
+            end setup

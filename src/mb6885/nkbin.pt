@@ -20,21 +20,23 @@ nkbin_actv      ds  nkbin_len
 
 @pytest.mark.parametrize('actv, kboutputs, kbinputs, newactv', [
     (b'\x00\x00\x00\x00',   # no active keys; reads/changes nothing
-        b'',                 b'',                   b'\x00\x00\x00\x00'),
+        b'',                b'',                    b'\x00\x00\x00\x00'),
 
-    (b'\x00\x11\x22\x8F',   # no active non-mod keys pressed; clears all
-        b'\x01\x02\x0F',    b'\x00\xF0\x10',        b'\x00\x00\x00\x00'),
+    (b'\x11\x00\x22\x8C',   # no active non-mod keys pressed; clears all
+        b'\x01\x02\x0C',    b'\x00\xF0\x10',        b'\x00\x00\x00\x00'),
 
 #   (b'\x00\x01\x02\x04',
 #       b'\xFF\xEE\xDD\xCC', b'\xFF\xEE\xDD\xCC',   b'\x00\x00\x00\x00'),
 ])
 def test_clear_released(m, S, actv, kboutputs, kbinputs, newactv):
-    m.deposit(S.nkbin_actv, actv)
+    #   $EE area can be used for debugging with `sta A,4,X`
+    m.deposit(S.nkbin_actv, actv + b'\xEE\xEE\xEE\xEE')
     print(m.hexdump(S.nkbin_actv, 4))
-    inp, outp = m.setiostreams(S.IO_keyboard, kbinputs)
+    istream, ostream = m.setiostreams(S.IO_kbd, kbinputs)
 
     m.call(S['nkbin.clear_released'])
 
-    print(m.hexdump(S.nkbin_actv, 4))
-    assert (kboutputs, newactv) == (outp.getvalue(), m.bytes(S.nkbin_actv, 4))
-    assert inp.getvalue() == b''
+    print(m.hexdump(S.nkbin_actv, 8))
+    assert (kboutputs,          newactv) \
+        == (ostream.getvalue(), m.bytes(S.nkbin_actv, 4))
+    assert b'' == istream.read()

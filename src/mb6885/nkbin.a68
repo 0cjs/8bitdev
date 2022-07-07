@@ -11,7 +11,7 @@ brkkey_enabled  EQU  $0013            ; BREAK key processing: $00=ignored
 ;        (equiv to: AltGR,        R-Shift, Ctrl,   L-Shift
 ;      WR bits 7-4: ??? break key enable/disable?
 ;      WR bits 3-0: row (col?) output (strobe?)
-IO_keyboard equ  $EEC0
+IO_kbd      equ  $EEC0
 
 ; ----------------------------------------------------------------------
 
@@ -27,22 +27,34 @@ nkbin       psh B
    ;jsr prchar
             sec             ; nothing read
             pul B
+            ;   XXX restore BEAK key on/off state?
             rts
 
-;   Clear any keys that were marked as pressed but have since been released.
-;   X points to an array of bytes indicating which keys were pressed when
-;   we last exited. B is the number of bytes in that array.
+;   Clear any keys that were marked as pressed in `nkbin_actv` but have
+;   since been released.
 .clear_released
             ldb #nkbin_len
             ldx #nkbin_actv
-.cr.check   ;   Check [X] and leave it set or clear it to $00.
-            lda A,,X
-            beq .cr.next
-
-            ;XXX
-
+.cr.check   psh B
+            ;   Check [X] and leave it set or clear it to $00.
+            lda A,,X        ; load row bits (7-4), column (3-0)
+            beq .cr.next    ; $00 = no active key in this slot
+            tab             ; copy row bits, column
+            and A,#$0F      ; mask column to scan
+            sta A,IO_kbd    ;   (disables BREAK NMI too; dealt with later)
+            lda A,IO_kbd    ; get modifier and rows currently down
+    sta A,4,X
+            asl A           ; shift rows to high nybble
+            asl A
+            asl A
+            asl A
+            and A,,X        ; is row from nkbin_actv set in what we read?
+            bne .cr.next    ;   yes: move on to next nkbin_actv
+            lda #0          ; clear this active key
+            sta A,,X
             ;   Next byte in array.
-.cr.next    dec B
+.cr.next    pul B
+            dec B
             beq .rts        ; return if done
             inx
             bra .cr.check

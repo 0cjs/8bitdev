@@ -18,6 +18,14 @@ nkbin_actv      ds  nkbin_len
                 include src/mb6885/nkbin.a68
 '''
 
-def test_clear_released(m, S):
-    m.deposit(S.nkbin_actv, [0, 0, 0, 0])
-    assert 0
+@pytest.mark.parametrize('actv, kbinputs, newactv', [
+    #   No active keys; reads/changes nothing
+    (b'\x00\x00\x00\x00',   b'',                b'\x00\x00\x00\x00'),
+    #   None of the active keys are pressed; clears all.
+    #   XXX should fail on 3rd read until we add that byte
+    (b'\x00\x01\x02\x04', b'\x00\x00',          b'\x00\x00\x00\x00'),
+])
+def test_clear_released(m, S, actv, kbinputs, newactv):
+    m.deposit(S.nkbin_actv, actv)
+    m.call(S['nkbin.clear_released'])
+    assert newactv == m.bytes(S.nkbin_actv, 4)

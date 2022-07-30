@@ -9,7 +9,7 @@ test_rig = '''
                 org $800
 
 kbscan_len      equ 4
-kbscan_actv     ds  kbscan_len
+kbscan_down     ds  kbscan_len
 debug_area      ds  kbscan_len   ; write here for debug display on test failure
 
                 org $1000
@@ -23,9 +23,9 @@ param = pytest.mark.parametrize
 
 def setactv(m, actv):
     #   $EE area helps detect overrun and can store test-only debug data:
-    #   `sta A,4,X` and later `print(m.hexdump(S.kbscan_actv, 8))`
-    m.deposit(m.symtab.kbscan_actv, actv + b'\xEE\xEE\xEE\xEE')
-    print(m.hexdump(m.symtab.kbscan_actv, 4))    # for debugging on test failure
+    #   `sta A,4,X` and later `print(m.hexdump(S.kbscan_down, 8))`
+    m.deposit(m.symtab.kbscan_down, actv + b'\xEE\xEE\xEE\xEE')
+    print(m.hexdump(m.symtab.kbscan_down, 4))    # for debugging on test failure
 
 @param('actv, kboutputs, kbinputs, newactv', [
     (b'\x00\x00\x00\x00',   # no active keys; reads/changes nothing
@@ -40,9 +40,9 @@ def test_clear_released(m, S, actv, kboutputs, kbinputs, newactv):
     istream, ostream = m.setiostreams(S.IO_kbd, kbinputs)
     m.call(S['kbscan.cr.start'], stopat=[S['kbscan.cr.end']])
 
-    print(m.hexdump(S.kbscan_actv, 8))
+    print(m.hexdump(S.kbscan_down, 8))
     assert (kboutputs,          newactv) \
-        == (ostream.getvalue(), m.bytes(S.kbscan_actv, 4))
+        == (ostream.getvalue(), m.bytes(S.kbscan_down, 4))
     assert b'' == istream.read()
 
 @param('actv, slot, nflag', [
@@ -53,16 +53,16 @@ def test_clear_released(m, S, actv, kboutputs, kbinputs, newactv):
 def test_freeslot(m, S, actv, slot, nflag):
     setactv(m, actv)
     m.call(S['kbscan.freeslot'], R(x=0, N=not nflag))
-    print('actv={} slot={} x={}'.format(S.kbscan_actv, slot, m.x))
-    assert (nflag, S.kbscan_actv + slot) == (m.N, m.x)
+    print('actv={} slot={} x={}'.format(S.kbscan_down, slot, m.x))
+    assert (nflag, S.kbscan_down + slot) == (m.N, m.x)
 
 @param('actv, scan, isnewkey', [
     #   `scan` is active row as one of b7-4 and column as b3-0
     (b'\x00\x00\x00\x00', 0x00, False),     # no row pressed
     (b'\x0F\x0F\x0F\x0F', 0x0F, False),
-    (b'\x00\x00\x00\x00', 0x10, True ),     # row not in kbscan_actv
+    (b'\x00\x00\x00\x00', 0x10, True ),     # row not in kbscan_down
     (b'\x11\x20\x43\x84', 0x2C, True ),
-    (b'\x11\x20\x43\x84', 0x11, False),     # row in kbscan_actv
+    (b'\x11\x20\x43\x84', 0x11, False),     # row in kbscan_down
     (b'\x00\x00\x00\x84', 0x84, False),
 ])
 def test_chknewkey(m, S, actv, scan, isnewkey):
@@ -99,6 +99,3 @@ def test_nextkey_pressed(m, S):
 
     m.call(S['kbscan.nk.start'], R(C=False), stopat=[S['kbscan.savekey']])
     assert R(a=newkey) == m.regs
-
-#   TODO:
-#   • Rename kbscan_actv to kbscan_down

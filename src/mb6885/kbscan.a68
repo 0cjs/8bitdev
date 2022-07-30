@@ -19,17 +19,17 @@ IO_kbd      equ  $EEC0
 ;   C=1: nothing pressed. C=0: char/graphic code returned in A.
 ;   Note that this is a different API from the ROM `KBIN`!
 ;
-;   kbscan_actv points to kbscan_len bytes that store the currently pressed
+;   kbscan_down points to kbscan_len bytes that store the currently pressed
 ;   key codes. On entry, any keys in this set that are currently pressed
 ;   will be ignored; any keys currently pressed will be removed. If the
 ;   storage is full, all keypresses will be ignored until one of the keys
 ;   in the set is released.
 ;
 kbscan      psh B
-            ;   Clear any keys that were marked as pressed in `kbscan_actv`
+            ;   Clear any keys that were marked as pressed in `kbscan_down`
             ;   but have since been released.
 .cr.start   lda B,#kbscan_len
-            ldx #kbscan_actv
+            ldx #kbscan_down
 .cr.check   psh B
             ;   Check [X] and leave it set or clear it to $00.
             lda A,,X        ; load row bits (7-4), column (3-0)
@@ -43,8 +43,8 @@ kbscan      psh B
             asl A
             asl A
             asl A
-            and A,,X        ; is row from kbscan_actv set in what we read?
-            bne .cr.next    ;   yes: move on to next kbscan_actv
+            and A,,X        ; is row from kbscan_down set in what we read?
+            bne .cr.next    ;   yes: move on to next kbscan_down
             lda #0          ; clear this active key
             sta A,,X
             ;   Next byte in array.
@@ -57,7 +57,7 @@ kbscan      psh B
 
             ;   XXX SKETCH
             ;   Find the "next" keypress, i.e., the first in a scan of the
-            ;   entire keyboard that is not in `kbscan_actv`.
+            ;   entire keyboard that is not in `kbscan_down`.
 .nk.start   lda B,#$0C      ; highest column number
 
 .nk.loop    psh B           ; save current column
@@ -114,10 +114,10 @@ kbscan      psh B
             pul B
             rts
 
-;   ♣ABX Return in X the first free (empty) slot in kbscan_actv.
+;   ♣ABX Return in X the first free (empty) slot in kbscan_down.
 ;   Returns in flag N: 0=success, 1=no slots free
 .freeslot   lda B,#kbscan_len-1
-            ldx #kbscan_actv
+            ldx #kbscan_down
 -           lda A,,X
             beq .rts        ; 0 = free slot = not negative
             inx
@@ -131,8 +131,8 @@ kbscan      psh B
 ;           that was scanned and one of bits 7-4 may be set to indicate which
 ;           key in that column is pressed.
 ;   Return flag Z:
-;     0: A row bit is set and the row/col is not found in kbscan_actv.
-;     1: Row bits = %0000 (no keypress) or keypress found in kbscan_actv
+;     0: A row bit is set and the row/col is not found in kbscan_down.
+;     1: Row bits = %0000 (no keypress) or keypress found in kbscan_down
 ;        (i.e., no new key pressed).
 ;
 ;   The 2×PSH here to preserve B saves 4 bytes in the callers.
@@ -144,7 +144,7 @@ kbscan      psh B
             beq .cnk.done   ;   no: return with Z=1
 
             lda B,#kbscan_len
-            ldx #kbscan_actv-1
+            ldx #kbscan_down-1
 -           dec B           ; checked all slots?
             bmi .cnk.done   ;   yes: return with Z=0
             inx
@@ -156,14 +156,18 @@ kbscan      psh B
             rts
 
 
-;   Array of bytes indicating which keys (excluding modifier keys) that
-;   were still pressed when we last exited `kbscan`. The low nybble is the
-;   column number as written to `IO_kbd` bits 3-0; the high nybble is
-;   one bit from the row bits returned on a read of `IO_kbd` bits 3-0.
-;   $00 indicates "no key pressed" in that slot.
-    .ifndef kbscan_actv
-kbscan_len  equ 3           ; length of kbscan_actv array; must be <$80!
-kbscan_actv db 0
+;   Array of bytes indicating which keys (excluding modifier keys) were
+;   (still) pressed when we last exited `kbscan`. The low nybble is the
+;   column number as written to `IO_kbd` bits 3-0; the high nybble is one
+;   bit from the row bits returned on a read of `IO_kbd` bits 3-0. $00
+;   indicates "no key pressed" in that slot.
+;
+;   The default is 3-key rollover (kbscan_len=3); clients may redefine this
+;   as they wish. The default definition assumes that this code is in RAM.
+;
+    .ifndef kbscan_down
+kbscan_len  equ 3           ; length of kbscan_down array; must be <$80!
+kbscan_down db 0
             db 0
             db 0
-    .endif ; kbscan_actv
+    .endif ; kbscan_down

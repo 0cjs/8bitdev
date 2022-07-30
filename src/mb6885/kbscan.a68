@@ -19,11 +19,11 @@ IO_kbd      equ  $EEC0
 ;   C=1: nothing pressed. C=0: char/graphic code returned in A.
 ;   Note that this is a different API from the ROM `KBIN`!
 ;
-;   kbscan_actv points to an array of bytes of length kbscan_len; this is used
-;   to store the list of currently pressed key codes. On entry, any keys in
-;   this list that are currently pressed will be ignored; any keys in the
-;   list not currently pressed will be removed. If the list is full, all
-;   keypresses will be ignored until one of the keys in the list is released.
+;   kbscan_actv points to kbscan_len bytes that store the currently pressed
+;   key codes. On entry, any keys in this set that are currently pressed
+;   will be ignored; any keys currently pressed will be removed. If the
+;   storage is full, all keypresses will be ignored until one of the keys
+;   in the set is released.
 ;
 kbscan      psh B
 

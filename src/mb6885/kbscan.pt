@@ -38,7 +38,7 @@ def setactv(m, actv):
 def test_clear_released(m, S, actv, kboutputs, kbinputs, newactv):
     setactv(m, actv)
     istream, ostream = m.setiostreams(S.IO_kbd, kbinputs)
-    m.call(S['kbscan.clear_released'])
+    m.call(S['kbscan.cr.start'], stopat=[S['kbscan.cr.end']])
 
     print(m.hexdump(S.kbscan_actv, 8))
     assert (kboutputs,          newactv) \

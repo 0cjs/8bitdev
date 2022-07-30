@@ -26,25 +26,9 @@ IO_kbd      equ  $EEC0
 ;   in the set is released.
 ;
 kbscan      psh B
-
-            ldb #3          ; kbscan_actv length
-            ldx #kbscan_actv
-            bsr .clear_released
-            bsr .nextkey
-
-   ;lda #'@'                ; XXX debug
-   ;jsr prchar
-            sec             ; nothing read
-
-            lda B,brkkey_ena; restore BREAK key on/off state
-            sta B,IO_kbd    ; (we don't care about the column number)
-            pul B
-            rts
-
-;   Clear any keys that were marked as pressed in `kbscan_actv` but have
-;   since been released.
-.clear_released
-            ldb #kbscan_len
+            ;   Clear any keys that were marked as pressed in `kbscan_actv`
+            ;   but have since been released.
+.cr.start   lda B,#kbscan_len
             ldx #kbscan_actv
 .cr.check   psh B
             ;   Check [X] and leave it set or clear it to $00.
@@ -65,12 +49,22 @@ kbscan      psh B
             sta A,,X
             ;   Next byte in array.
 .cr.next    pul B
-            dec B
-            beq .rts        ; return if done
+            dec B           ; remaining byte count == 0?
+            beq .cr.end     ;   yes: done
             inx
             bra .cr.check
+.cr.end
 
-.rts        rts
+            bsr .nextkey
+
+   ;lda #'@'                ; XXX debug
+   ;jsr prchar
+            sec             ; nothing read
+
+            lda B,brkkey_ena; restore BREAK key on/off state
+            sta B,IO_kbd    ; (we don't care about the column number)
+            pul B
+            rts
 
 ;   ♣ABX Return in X the first free (empty) slot in kbscan_actv.
 ;   Returns in flag N: 0=success, 1=no slots free
@@ -82,6 +76,8 @@ kbscan      psh B
             dec B
             bmi .rts        ; negative so returns no slots free
             bra -
+
+.rts        rts
 
 ;   ♡AB♣X   Determine if we have a new keypress in A. Bits 3-0 are the column
 ;           that was scanned and one of bits 7-4 may be set to indicate which

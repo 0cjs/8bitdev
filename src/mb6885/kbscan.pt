@@ -95,7 +95,14 @@ def test_nextkey_notpressed(m, S, actv, kbinputs):
 def test_nextkey_pressed(m, S):
     setactv(m, b'\x00\x4A\x2B\x00')
     istream, ostream = m.setiostreams(S.IO_kbd, b'\x00\x00\x00\x08')
-    newkey =                                                  0x89
-
     m.call(S['kbscan.nk.start'], R(C=False), stopat=[S['kbscan.savekey']])
-    assert R(a=newkey) == m.regs
+    assert R(a=0x89) == m.regs
+
+def test_savekey_nospace(m, S):
+    setactv(m, b'\x11\x22\x44\x88')
+    #m.call(S['kbscan.savekey'])
+    #assert 0
+
+def test_savekey_saved(m, S):
+    pass
+    #assert 0

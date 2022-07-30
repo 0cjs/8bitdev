@@ -21,6 +21,10 @@ debug_area      ds  kbscan_len   ; write here for debug display on test failure
 
 param = pytest.mark.parametrize
 
+def k(S,name):
+    ' Return local symbol `name` under ``kbscan``. '
+    return S['kbscan.' + name]
+
 def setactv(m, actv):
     #   $EE area helps detect overrun and can store test-only debug data:
     #   `sta A,4,X` and later `print(m.hexdump(S.kbscan_down, 8))`
@@ -38,7 +42,7 @@ def setactv(m, actv):
 def test_clear_released(m, S, actv, kboutputs, kbinputs, newactv):
     setactv(m, actv)
     istream, ostream = m.setiostreams(S.IO_kbd, kbinputs)
-    m.call(S['kbscan.cr.start'], stopat=[S['kbscan.cr.end']])
+    m.call(k(S,'cr.start'), stopat=[k(S,'cr.end')])
 
     print(m.hexdump(S.kbscan_down, 8))
     assert (kboutputs,          newactv) \
@@ -52,7 +56,7 @@ def test_clear_released(m, S, actv, kboutputs, kbinputs, newactv):
 ])
 def test_freeslot(m, S, actv, slot, nflag):
     setactv(m, actv)
-    m.call(S['kbscan.freeslot'], R(x=0, N=not nflag))
+    m.call(k(S,'freeslot'), R(x=0, N=not nflag))
     print('actv={} slot={} x={}'.format(S.kbscan_down, slot, m.x))
     assert (nflag, S.kbscan_down + slot) == (m.N, m.x)
 
@@ -69,7 +73,7 @@ def test_chknewkey(m, S, actv, scan, isnewkey):
     print('scan={:02X}, expected isnewkey={}'.format(scan, isnewkey))
     setactv(m, actv)
     expected_Z = not isnewkey
-    m.call(S['kbscan.chknewkey'], R(a=scan, b=0xFF, x=0, Z=not expected_Z))
+    m.call(k(S,'chknewkey'), R(a=scan, b=0xFF, x=0, Z=not expected_Z))
     assert expected_Z == m.Z
 
 @param('actv, kbinputs', [
@@ -85,22 +89,22 @@ def test_nextkey_notpressed(m, S, actv, kbinputs):
     setactv(m, actv)
     istream, ostream = m.setiostreams(S.IO_kbd, kbinputs)
 
-    print(hex(S['kbscan.nk.end']))
-    m.call(S['kbscan.nk.start'], R(C=False),
-        stopat=[S['kbscan.nk.end'], S['kbscan.savekey']])
-    assert (R(C=True, pc=S['kbscan.nk.end']), expected_outputs) \
+    print(hex(k(S,'nk.end')))
+    m.call(k(S,'nk.start'), R(C=False),
+        stopat=[k(S,'nk.end'), k(S,'savekey')])
+    assert (R(C=True, pc=k(S,'nk.end')), expected_outputs) \
         == (m.regs,    ostream.getvalue())
     assert b'' == istream.read()
 
 def test_nextkey_pressed(m, S):
     setactv(m, b'\x00\x4A\x2B\x00')
     istream, ostream = m.setiostreams(S.IO_kbd, b'\x00\x00\x00\x08')
-    m.call(S['kbscan.nk.start'], R(C=False), stopat=[S['kbscan.savekey']])
+    m.call(k(S,'nk.start'), R(C=False), stopat=[k(S,'savekey')])
     assert R(a=0x89) == m.regs
 
 def test_savekey_nospace(m, S):
     setactv(m, b'\x11\x22\x44\x88')
-    #m.call(S['kbscan.savekey'])
+    #m.call(k(S,'savekey'))
     #assert 0
 
 def test_savekey_saved(m, S):

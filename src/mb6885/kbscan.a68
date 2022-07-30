@@ -99,7 +99,7 @@ kbscan      psh B
             dec B           ; next column
             bpl .nk.loop    ; ≥0 → continue
             sec             ; indicate no new keys pressed
-            bra .exit
+.nk.end     bra .exit
 
 .savekey    ;   XXX write me
             clc             ; indicate key code returned in A

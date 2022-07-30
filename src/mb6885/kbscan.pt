@@ -72,5 +72,26 @@ def test_chknewkey(m, S, actv, scan, isnewkey):
     m.call(S['kbscan.chknewkey'], R(a=scan, b=0xFF, x=0, Z=not expected_Z))
     assert expected_Z == m.Z
 
+@param('actv, kbinputs', [
+    (b'\x00\x00\x00\x00',
+        b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'),
+    (b'\x41\x00\x00\x00',
+        b'\x00\x04\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'),
+    # XXX should fail
+#   (b'\x00\x00\x00\x00',
+#       b'\x00\x04\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'),
+])
+def test_nextkey_nothing_pressed(m, S, actv, kbinputs):
+    expected_outputs = bytes(range(0x0C, -1, -1))
+    setactv(m, actv)
+    istream, ostream = m.setiostreams(S.IO_kbd, kbinputs)
+
+    print(hex(S['kbscan.nk.end']))
+    m.call(S['kbscan.nk.start'], R(C=False),
+        stopat=[S['kbscan.nk.end'], S['kbscan.savekey']])
+    assert (R(C=True, pc=S['kbscan.nk.end']), expected_outputs) \
+        == (m.regs,    ostream.getvalue())
+    assert b'' == istream.read()
+
 #   TODO:
 #   • Rename kbscan_actv to kbscan_down

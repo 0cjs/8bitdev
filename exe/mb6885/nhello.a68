@@ -19,10 +19,10 @@ prnl        psh A
             pul A
             rts
 
-rdchar      jsr nkbin
+rdchar      jsr kbscan
             bcs rdchar
             rts
 
-            include "src/mb6885/nkbin.a68"
+            include "src/mb6885/kbscan.a68"
 
             end setup

@@ -8,24 +8,24 @@ test_rig = '''
                 cpu 6800
                 org $800
 
-nkbin_len       equ 4
-nkbin_actv      ds  nkbin_len
-debug_area      ds  nkbin_len   ; write here for debug display on test failure
+kbscan_len      equ 4
+kbscan_actv     ds  kbscan_len
+debug_area      ds  kbscan_len   ; write here for debug display on test failure
 
                 org $1000
 
                ;include src/mc68/std.a68
                ;include src/tmc68/bios.a68
-                include src/mb6885/nkbin.a68
+                include src/mb6885/kbscan.a68
 '''
 
 param = pytest.mark.parametrize
 
 def setactv(m, actv):
     #   $EE area helps detect overrun and can store test-only debug data:
-    #   `sta A,4,X` and later `print(m.hexdump(S.nkbin_actv, 8))`
-    m.deposit(m.symtab.nkbin_actv, actv + b'\xEE\xEE\xEE\xEE')
-    print(m.hexdump(m.symtab.nkbin_actv, 4))    # for debugging on test failure
+    #   `sta A,4,X` and later `print(m.hexdump(S.kbscan_actv, 8))`
+    m.deposit(m.symtab.kbscan_actv, actv + b'\xEE\xEE\xEE\xEE')
+    print(m.hexdump(m.symtab.kbscan_actv, 4))    # for debugging on test failure
 
 @param('actv, kboutputs, kbinputs, newactv', [
     (b'\x00\x00\x00\x00',   # no active keys; reads/changes nothing
@@ -38,11 +38,11 @@ def setactv(m, actv):
 def test_clear_released(m, S, actv, kboutputs, kbinputs, newactv):
     setactv(m, actv)
     istream, ostream = m.setiostreams(S.IO_kbd, kbinputs)
-    m.call(S['nkbin.clear_released'])
+    m.call(S['kbscan.clear_released'])
 
-    print(m.hexdump(S.nkbin_actv, 8))
+    print(m.hexdump(S.kbscan_actv, 8))
     assert (kboutputs,          newactv) \
-        == (ostream.getvalue(), m.bytes(S.nkbin_actv, 4))
+        == (ostream.getvalue(), m.bytes(S.kbscan_actv, 4))
     assert b'' == istream.read()
 
 @param('actv, slot, nflag', [
@@ -52,25 +52,25 @@ def test_clear_released(m, S, actv, kboutputs, kbinputs, newactv):
 ])
 def test_freeslot(m, S, actv, slot, nflag):
     setactv(m, actv)
-    m.call(S['nkbin.freeslot'], R(x=0, N=not nflag))
-    print('actv={} slot={} x={}'.format(S.nkbin_actv, slot, m.x))
-    assert (nflag, S.nkbin_actv + slot) == (m.N, m.x)
+    m.call(S['kbscan.freeslot'], R(x=0, N=not nflag))
+    print('actv={} slot={} x={}'.format(S.kbscan_actv, slot, m.x))
+    assert (nflag, S.kbscan_actv + slot) == (m.N, m.x)
 
 @param('actv, scan, isnewkey', [
     #   `scan` is active row as one of b7-4 and column as b3-0
     (b'\x00\x00\x00\x00', 0x00, False),     # no row pressed
     (b'\x0F\x0F\x0F\x0F', 0x0F, False),
-    (b'\x00\x00\x00\x00', 0x10, True ),     # row not in nkbin_actv
+    (b'\x00\x00\x00\x00', 0x10, True ),     # row not in kbscan_actv
     (b'\x11\x20\x43\x84', 0x2C, True ),
-    (b'\x11\x20\x43\x84', 0x11, False),     # row in nkbin_actv
+    (b'\x11\x20\x43\x84', 0x11, False),     # row in kbscan_actv
     (b'\x00\x00\x00\x84', 0x84, False),
 ])
 def test_chknewkey(m, S, actv, scan, isnewkey):
     print('scan={:02X}, expected isnewkey={}'.format(scan, isnewkey))
     setactv(m, actv)
     expected_Z = not isnewkey
-    m.call(S['nkbin.chknewkey'], R(a=scan, b=0xFF, x=0, Z=not expected_Z))
+    m.call(S['kbscan.chknewkey'], R(a=scan, b=0xFF, x=0, Z=not expected_Z))
     assert expected_Z == m.Z
 
 #   TODO:
-#   • Rename nkbin_actv to nkbin_down
+#   • Rename kbscan_actv to kbscan_down

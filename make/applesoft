@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+#
+#   Build a disk image that auto-boots an Applesoft BASIC program.
+#   We need to sort out how to do this nicely in the build system.
+#
+set -eu -o pipefail
+
+. "$(dirname "$0")/../activate"
+cd "$B8_PROJDIR"
+
+bobj="$B8_PROJDIR/.build/obj/exe/a2"
+mkdir -p "$bobj"
+
+#   Much of this is copied from b8tool/bin/b8tool a2dsk1().
+#   That function is not yet generic enough to do what this does.
+tokenize_asoft exe/a2/color.baa >$bobj/color
+cp .build/tool/src/osimg/a2/EMPTY-DOS33-48K-V254.dsk $bobj/color.dsk
+dos33 -y $bobj/color.dsk SAVE 'A' $bobj/color COLOR
+dos33 -y $bobj/color.dsk HELLO COLOR
+linapple --conf "$B8_PROJDIR/b8tool/share/linapple.conf" \
+    --d1 $bobj/color.dsk

@@ -1,0 +1,26 @@
+#   activate - enter a b8tool environment
+#
+#   This is currently a hack that depends on this script being in
+#   $B8_PROJDIR, so it works for 8bitdev but maybe not other b8tool
+#   users. We we like to figure out a way to genericise this, but it
+#   somehow needs to know B8_PROJDIR and that doesn't seem possible to
+#   find out automatically if this is part of b8tool, since the b8tool/
+#   subdir need not be directly under the project dir, nor need the build
+#   dir be $B8_PROJDIR/.build. Perhaps we should move to some sort of
+#   config file in the project dir that b8tool stuff could find?
+#
+
+(return 0 2>/dev/null) || { echo 1>&2 "source (.) this file."; exit 9; }
+export B8_PROJDIR=$(cd "$(dirname "$BASH_SOURCE")" && pwd -P)
+
+VIRTUAL_ENV_DISABLE_PROMPT=1    # we handle our own prompt later
+. $B8_PROJDIR/b8tool/pactivate -B "$B8_PROJDIR" -q
+
+_OLD_VIRTUAL_PS1="${PS1-}"      # deactivate() will reset to this
+PS1="b8 ${PS1-}"                # virtualenv indicator is just `b8` prefix
+
+#   Paths for b8tool and anything it's built.
+[[ $PATH =~ $B8_PROJDIR/.build/tool/bin ]] \
+    || PATH="$B8_PROJDIR/.build/tool/bin:$PATH"
+[[ $PATH =~ $B8_PROJDIR/b8tool/bin ]] \
+    || PATH="$B8_PROJDIR/b8tool/bin:$PATH"

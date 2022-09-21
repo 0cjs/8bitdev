@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 set -eu -o pipefail
 
-#   Simple "visual" dump of a character ROM file. This is for emulator
-#   ROM dumps, which are not in the format of the actual ROM. See:
-#   https://github.com/0cjs/sedoc/blob/master/8bit/apple1/charrom.md
+#   Simple "visual" dump of an Apple 1 (Signetics 2513 or similar)
+#   character ROM file. This is for emulator ROM dumps, which are not in
+#   the format of the actual ROM. See:
+#       https://github.com/0cjs/sedoc/blob/master/8bit/a1/charrom.md
 
 #   xxd:
 #     -c 1    print only one byte per line

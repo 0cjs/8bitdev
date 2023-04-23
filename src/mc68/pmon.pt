@@ -82,6 +82,22 @@ def test_prhex(m, S, R, val, chars):
     m.call(S.prhex, R(a=val))
     assert chars == outchars.getvalue()
 
+@pytest.mark.parametrize('n', [
+    32768,
+    #0, 1, 9, 10, 11, 99, 100, 101, 9999,
+    #16384, 32767, 32768, 65535,
+])
+def test_prdec(m, S, R, n):
+    inputloc = 0x5123
+    m.depword(inputloc, n)
+
+    _, outchars = loadbios(m)
+    m.call(S.prdec, R(x=inputloc))
+
+    ascii = str(n).encode("ASCII")
+    print(repr(ascii))
+    assert ascii == outchars.getvalue()
+
 @pytest.mark.parametrize('char, output', [
     (0x20, ' '), (0x5A, 'Z'), (0x7E, '~'),  # printable range
     (0xA0, ' '), (0xDA, 'Z'), (0xFE, '~'),  # high bit set

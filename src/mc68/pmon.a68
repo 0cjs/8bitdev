@@ -526,19 +526,22 @@ Cdeposit    ldx #Mdepcur
 ;   hex, decimal (XXX not yet implemented), ASCII, etc.
 ;
 Cquery      jsr inline
-            lda A,Mpending
+            lda A,Mpending      ; print as hex
             jsr prhex
             lda A,Mpending+1
-            tab                 ; saves a reload later
             jsr prhex
             jsr prspace
-            lda A,Mpending
-            jsr prvischar
-            tba                 ; saved Mpending+1
-            jsr prvischar
-            ;   Space instead of CR at end of output works better when
-            ;   we have multiple commands per line.
+
+            ldx #Mpending       ; print as decimal
+            jsr prdec
             jsr prspace
+
+            lda A,Mpending      ; print as ASCII using only printable chars
+            jsr prvischar
+            lda A,Mpending+1
+            jsr prvischar
+            jsr prspace
+
             rts
 
 ;   Examine memory.
@@ -863,6 +866,29 @@ prnyb       and A,#$0F
 ;   ♣A Print a space.
 prspace     lda A,#SPACE
             jsr prchar
+            rts
+
+;   ♠X ♣AB,tmp2 Print ASCII decimal of 16-bit uint at (X)
+;   X points to 16-bit unsigned binary integer.
+;   • tmp1:  count of generated digits
+;   • tmp2:  current value and result of tmp2 div 10
+;   • tmp2a: remainder after tmp2 mod 10
+;
+;   use up to 5 bytes stack
+;
+;   • Lev 174 (a) binary to decimal ASCII
+;
+prdec       clr tmp1        ; count of generated digits
+            ldx 0,X
+            stx tmp2        ; current value → value div 10
+            clr tmp2a       ; remainder (value mod 10)
+            clr tmp2a+1
+.divloop    ldb #16
+
+            lda A,tmp2      ; XXX print in hex
+            jsr prhex
+            lda A,tmp2+1
+            jsr prhex
             rts
 
 ;   ♣A Print any (8-bit) value "visibly" as one character.

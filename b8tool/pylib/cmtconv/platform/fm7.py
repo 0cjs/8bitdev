@@ -88,19 +88,27 @@ class Block(object):
 class HeaderBlock(Block):
     HEADERLEN = 20
 
-    def __init__(self, headerbytes):
-        self.headerbytes = headerbytes
-        self._check_magic(headerbytes)
-        if headerbytes[2] != Block.BlockType.HEADER:
-            raise ValueError('Bad type for header block ${:02X}'.format(
-                headerbytes[2]))
-        if headerbytes[3] != 20:
-            raise ValueError('Bad length for header block: ${:02X}'.format(
-                headerbytes[3]))
+    @classmethod
+    def make_block(cls, file_name, file_type, binary ):
+        # FIXME: check stuff, pad file_name
+        return cls(file_name, file_type, binary)
+
+    def __init__(self, file_name=None, file_type=None, binary=None):
+        'For internal use only.'
+        self._file_name = file_name
+        self._file_type = file_type
+        self._binary = binary
 
     @classmethod
     def from_header(cls, headerbytes):
-        return (HeaderBlock(headerbytes), cls.HEADERLEN)
+        cls._check_magic(headerbytes)
+        if headerbytes[2] != Block.BlockType.HEADER:
+            raise ValueError('Bad type for header block ${:02X}'.format(
+                headerbytes[2]))
+        if headerbytes[3] != cls.HEADERLEN:
+            raise ValueError('Bad length for header block: ${:02X}'.format(
+                headerbytes[3]))
+        return (cls(), cls.HEADERLEN)
 
     def setdata(self, data, checksum=None):
         # Header checksum seems to include the length byte,
@@ -119,7 +127,6 @@ class HeaderBlock(Block):
         if self._binary not in list(self.Binary):
             raise self.ChecksumError(
                 'Unrecognised binary flag: {:02X}'.format(self._file_type))
-        #self.data = data
 
     @property
     def filename(self):
@@ -152,16 +159,18 @@ class HeaderBlock(Block):
         return b    
 
 class DataBlock(Block):
-    def __init__(self, headerbytes):
-        self.headerbytes = headerbytes
-        self._check_magic(headerbytes)
-        if headerbytes[2] != Block.BlockType.DATA:
-            raise ValueError('Bad type for data block ${:02X}'.format(
-                headerbytes[2]))
+
+    @classmethod
+    def make_block(cls):
+        return cls()
 
     @classmethod
     def from_header(cls, headerbytes):
-        return (DataBlock(headerbytes), headerbytes[3])
+        cls._check_magic(headerbytes)
+        if headerbytes[2] != Block.BlockType.DATA:
+            raise ValueError('Bad type for data block ${:02X}'.format(
+                headerbytes[2]))
+        return (cls(), headerbytes[3])
 
     def setdata(self, data, checksum=None):
         expected_checksum = (self._calc_checksum(data) + len(data) + 1) % 0x100
@@ -173,7 +182,7 @@ class DataBlock(Block):
 
     @property
     def checksum(self):
-        return ( self._calc_checksum(self.data) + len(self.data) + 1) % 0x100
+        return (self._calc_checksum(self.data) + len(self.data) + 1) % 0x100
 
     @property
     def filedata(self):
@@ -189,17 +198,17 @@ class DataBlock(Block):
 
 class EndBlock(Block):
 
-    def __init__(self, headerbytes):
-        self.headerbytes = headerbytes
-        self._check_magic(headerbytes)
-        if headerbytes[2] != Block.BlockType.END:
-            raise ValueError('Bad type for data block ${:02X}'.format(
-                headerbytes[2]))
-        self.data = bytes()
+    @classmethod
+    def make_block(cls):
+        return cls()
 
     @classmethod
     def from_header(cls, headerbytes):
-        return (EndBlock(headerbytes), 0)
+        cls._check_magic(headerbytes)
+        if headerbytes[2] != Block.BlockType.END:
+            raise ValueError('Bad type for data block ${:02X}'.format(
+                headerbytes[2]))
+        return (cls(), 0)
 
     @property
     def is_eof(self):
@@ -220,62 +229,60 @@ class FileReader(object):
     'Read FM-7 data from audio'
 
     def __init__(self):
-        # self.pd = PulseDecoder(1100, 2, 2200, 2, False, True, (0,), (1,1,),
-        #     (0.25, 0.3), (0.25, 1.3))
         self.pd = PulseDecoder(1100, 2, 2200, 2, False, True, (0,), (1,1,),
-            (0.25, 0.3), (0.25, 0.5))
+            (0.2, 0.2), (0.25, 0.5))
 
 
     def read_leader(self, edges, i_next):
         '''Detect the next leader, read, confirm then return next edge'''
 
-        # Find first possible start bit
+        # Note: recordings often seem to have a rising amplitude
+        # envelope that covers at least some of the first byte,
+        # often several bytes. This reduces accuracy of mark/space detection.
+        #
+        # So, we skip over a few first potential matches.
+        # Note that the leader bytes are FF, so the
+        # pattern is s [mmmm mmmmm] mm
+
+        # Find some possible 1 bits
+
+        # FIXME: want to be able to detect multiple marks, as per multiple
+        # spaces
+        # as this will be very common, push down to audio module as a helper
+        # function "probe_leader_start"
         leader_start = i_next
         (leader_start,_) = self.pd.next_mark(edges, leader_start)
-        v3('Leader cycles mark detected at %d - %fs' %
+        v3('Leader mark detected at %d - %fs' %
             (leader_start, edges[leader_start][0]))
-        (leader_start,_) = self.pd.next_mark(edges, leader_start+1)
-        v3('Leader cycles mark detected at %d - %fs' %
-            (leader_start, edges[leader_start][0]))
-        leader_start = self.pd.next_space(edges, leader_start, 2)
-        v3('Leader cycles space detected at %d - %fs' %
-            (leader_start, edges[leader_start][0]))
-        # (leader_start,_) = self.pd.next_mark(edges, leader_start)
-        # v3('Leader cycles mark detected at %d - %fs' %
+        # (leader_start,_) = self.pd.next_mark(edges, leader_start+1)
+        # v3('Leader mark detected at %d - %fs' %
         #     (leader_start, edges[leader_start][0]))
-
-        (leader_start,_) = self.pd.next_mark(edges, leader_start+1)
-        v3('Leader cycles mark detected at %d - %fs' %
-            (leader_start, edges[leader_start][0]))
-        (leader_start,_) = self.pd.next_mark(edges, leader_start+1)
-        v3('Leader cycles mark detected at %d - %fs' %
-            (leader_start, edges[leader_start][0]))
+        # Find possible start bit of next byte
         leader_start = self.pd.next_space(edges, leader_start, 2)
-        v3('Leader cycles space detected at %d - %fs' %
+        v3('Leader space detected at %d - %fs' %
             (leader_start, edges[leader_start][0]))
 
+        (leader_start,_) = self.pd.next_mark(edges, leader_start+1)
+        v3('Leader mark detected at %d - %fs' %
+            (leader_start, edges[leader_start][0]))
 
-        # return leader_start
+        # Rewind back to start bit
+        leader_start = leader_start-2
 
         # Try to read a byte
         (i_next, b) = self.pd.read_byte(edges, leader_start)
         n_bs = 1
 
-        # # Read until something other than 0xff
-        # while b == 0xff:
-        #     (i, b) = self.pd.read_byte(edges, i_next)
-        #     if b == 0xff:
-        #         i_next = i
-
         # Read until 0x01
-        # FIXME log anything other than ff
         while b != 0x01:
             (i, b) = self.pd.read_byte(edges, i_next)
             if b != 0x01:
+                if b != 0xff:
+                    v3('Ignoring non 0xff byte in leader: {}', b)
                 i_next = i
                 n_bs += 1
 
-        v3('Leader bytes read before $01: {}', n_bs)
+        v3('Number of leader bytes read before $01: {}', n_bs)
 
         return i_next
 
@@ -353,21 +360,18 @@ def read_block_bytestream(stream):
             bs = stream.read(datalen)
             chksum = stream.read(1)
             blk.setdata(bs, chksum[0])
-            blocks.append(blk)
         elif bh[2] == Block.BlockType.DATA:
             v3('Data block')
             (blk, datalen) = DataBlock.from_header(bh)
             bs = stream.read(datalen)
             chksum = stream.read(1)
             blk.setdata(bs, chksum[0])
-            blocks.append(blk)
         elif bh[2] == Block.BlockType.END:
             v3('End block')
             (blk, datalen) = EndBlock.from_header(bh)
-            blocks.append(blk)
         else:
             raise ValueError('Unrecognised block type: {:02X}'.format(bh[2]))
-
+        blocks.append(blk)
     return tuple(blocks)
 
 def blocks_from_bin(stream, loadaddr=0x0000, filename=None):
@@ -408,67 +412,31 @@ class FileEncoder(object):
     def __init__(self):
         self.encoder = Encoder(1100, 2, 2200, 2, False, True, (0,), (1,1))
 
+        # long lead in for header and first data block
+        self.long_lead_in = self.encoder.encode_bytes( (0xff,) * 255 )
+
         # Lead-in
-        self.lead_in = self.encoder.encode_bytes( (0xff,) * 255 )
-        #self.lead_in = self.encoder.encode_bytes( (0xff,) * 253 )
-        #self.lead_in = self.encoder.encode_bytes( (0xff,) * 231 )
-        #self.lead_in = self.encoder.encode_bytes( (0xff,) * 230 )
-        #self.lead_in = self.encoder.encode_bytes( (0xff,) * 200 )
-        #self.lead_in = self.encoder.encode_bytes( (0xff,) * 220 )
-        #self.lead_in = self.encoder.encode_bytes( (0xff,) * 240 )
-        #self.lead_in = self.encoder.encode_bytes( (0xff,) * 120 )
-        #self.lead_in = self.encoder.encode_bytes( (0xff,) * 64 )
+        self.lead_in = self.encoder.encode_bytes( (0xff,) * 10 )
 
         # Lead-out
-        # self.lead_out = self.encoder.encode_bytes( (0xff,) * 3 )
         self.lead_out = self.encoder.encode_bytes( (0xff,) * 4 )
-        #self.lead_out = self.encoder.encode_bytes( (0xff,) * 5 )
-        #self.lead_out = self.encoder.encode_bytes( (0xff,) * 8 )
-        #self.lead_out = []
 
-        # self.lead_out = self.encoder.encode_bytes( (0xff,) * 3 )
-        # self.lead_out.extend( [0.5/2400] * 2 )
-        # self.lead_out.extend( [0.5/1200] * 19 )
-        # self.lead_out.append( 0.5/150 )
-
-    def encode_block(self, blk):
+    def encode_block(self, blk, long_leader = False):
         res = []
-        res.extend(self.lead_in)
+        if long_leader:
+            res.extend(self.long_lead_in)
+        else:
+            res.extend(self.lead_in)
         res.extend(self.encoder.encode_bytes(blk.to_bytes()))
         res.extend(self.lead_out)
-        #return (silence(.005), sound(res), silence(.005))
-        #return (sound(res),)
-        #return (silence(.001), sound(res), silence(.001))
-        #return (silence(.01), sound(res), silence(.01))
-        #return (silence(.002), sound(res), silence(.002))
-        #return (sound(res), silence(.001))
         return (sound(res), silence(.01))
-        #return (sound(res), silence(.1))
-        #return (sound(res), silence(.15))
-        #return (sound(res), silence(.2))
 
     def encode_blocks(self, blocks):
         res = (silence(2.0),)
-        for b in blocks[:-1]:
-            res += self.encode_block(b)
-        # End block has a short leader
-        snd = []
-        #snd.extend(self.encoder.encode_bytes( (0xff,) * 10))
-        snd.extend(self.encoder.encode_bytes( (0xff,) * 11))
-        #snd.extend(self.encoder.encode_bytes( (0xff,) * 16))
-        #snd.extend(self.encoder.encode_bytes( (0xff,) * 128))
-        snd.extend(self.encoder.encode_bytes(blocks[-1].to_bytes()))
-        #snd.extend(self.lead_out)
-        snd.extend( self.encoder.encode_bytes( (0xff,) * 4 ) )
-        #snd.extend( self.encoder.encode_bytes( (0xff,) * 5 ) )
-        #snd.extend( self.encoder.encode_bytes( (0xff,) * 8 ) )
-        #res += (silence(.01), sound(snd), silence(.01))
-        #res += (silence(.002), sound(snd), silence(.002))
-        #res += ( sound(snd), )
-        #res += ( sound(snd), silence(0.01) )
-        res += ( sound(snd), silence(0.2) )
-        # for b in blocks:
-        #     res += self.encode_block(b)
+
+        for (n, b) in enumerate(blocks):
+            res += self.encode_block(b, n < 2)
+
         return res
 
     def encode_file(self, blocks):

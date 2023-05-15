@@ -55,10 +55,13 @@ def parse_args():
     elif args.output is not None:       args.output = open(args.output, 'bw')
 
     # FIXME: proper handling of start/stop bits
+    # FIXME: tolerance
+    tol =  args.tolerance
     args.pulse_decoder = au.PulseDecoder(args.mark_baud, args.mark_pulses,
         args.space_baud, args.space_pulses,
         args.invert_bits, args.reverse_bits,
-        (1,), (0,0))
+        (1,), (0,0),
+        (tol, tol), (tol, tol))
 
     args.pulse_encoder = au.Encoder(
         args.mark_baud, args.mark_pulses,
@@ -122,13 +125,13 @@ def dump_bitstream(args, edges):
         e = edges[idx]
         c = pd.classify_edge(edges[idx]) 
         if c == au.PULSE_MARK:
-            print('{:012.6f}, 1'.format(e[0]))
+            print('{:012.6f}, 1, {:09.3f}, {}'.format(e[0], 1e6 * e[2], e[1]))
             idx += args.mark_pulses
         elif c == au.PULSE_SPACE:
-            print('{:012.6f}, 0'.format(e[0]))
+            print('{:012.6f}, 0, {:09.3f}, {}'.format(e[0], 1e6 * e[2], e[1]))
             idx += args.space_pulses
         else:
-            print('{:012.6f}, X'.format(e[0]))
+            print('{:012.6f}, X, {:09.3f}, {}'.format(e[0], 1e6 * e[2], e[1]))
             # FIXME: keep track of gaps
             idx += 1
 
@@ -229,6 +232,7 @@ def main(args):
         samples = w.readframes(n_samples)
         sample_dur = 1.0 / rate
         edges = au.samples_to_timed_edges(samples, sample_dur)
+        edges = au.filter_clicks(edges, sample_dur)
         if args.to_pulses:
             save_pulses(args, edges, sample_dur)
     if args.report_bauds:

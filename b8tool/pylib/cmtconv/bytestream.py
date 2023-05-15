@@ -16,7 +16,7 @@ from    itertools  import chain
 from    io  import BytesIO
 import  wave
 
-from    cmtconv.audio  import samples_to_timed_edges, edges_to_samples
+from    cmtconv.audio  import samples_to_timed_edges, edges_to_samples, filter_clicks
 from    cmtconv.logging  import *
 from    testmc.tool  import asl
 
@@ -103,6 +103,7 @@ def blocks_from_audio(platform, stream):
     v2('Samples min: %d' % min(samples))
     v2('Samples max: %d' % max(samples))
     edges = samples_to_timed_edges(samples, sample_dur)
+    edges = filter_clicks(edges, sample_dur)
     v2('Number of edges: %d ' % len(edges))
     cycle_lengths = [dur for (_,_,dur) in edges]
     v2('Min pulse: %f' % min(cycle_lengths))

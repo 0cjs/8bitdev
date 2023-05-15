@@ -1,4 +1,4 @@
-''' Library to read/write National JR-200 tape format.
+''' Library to read/write Kansas City format tape uadio
 '''
 
 from    enum  import Enum
@@ -16,18 +16,44 @@ from    cmtconv.logging  import *
 # - not the most efficient
 #
 # Layers are as follows:
-# - waveform -> timed rising/falling edges
-# - edges -> mark/space cycles
+# - waveform -> timed pulses
+# - pulses -> mark/space
 # - mark/space patterns -> bits
 # - bits -> bytes
 # - bytes -> file header, blocks
+
+def merge_mids(edges, sample_dur):
+    edges2 = []
+    i = 0
+    # FIXME: Would be better to do this in terms of integer indices
+    for (t, l, dur) in edges:
+        # Merge short periods of mid level with previous pulse
+        if l == 0 and dur < 8 * sample_dur:
+            #edges2.append( (t, l, dur) )
+            pass
+        else:
+            edges2.append( (t, l, dur) )
+    return edges2
+
+
+def filter_clicks(edges, sample_dur, tol = 4):
+    edges2 = []
+    i = 0
+    # FIXME: Would be better to do this in terms of integer indices
+    for (t, l, dur) in edges:
+        if dur < tol * sample_dur:
+            # FIXME: should maybe modify previous/next pulse
+            pass
+        else:
+            edges2.append( (t, l, dur) )
+    return edges2
 
 
 # FIXME: use 'pulses' istead of 'edges'
 # FIXME: use H/M/L?
 # samples   : [ float ]
 # ->
-# edges     : ( (float, bool, float) )
+# edges     : ( (float, int, float) )
 def samples_to_timed_edges(samples, sample_dur):
     edges=[]
     if len(samples) > 0:
@@ -44,9 +70,10 @@ def samples_to_timed_edges(samples, sample_dur):
         i = 0
         for s in samples:
             l = classify(s)
+            # FIXME: hangover from True/False rising edges
             if l != last_level:
                 if last_level == 0:
-                    l_ = True if l == 1 else False
+                    l_ = 1 if l == 1 else -1
                 else:
                     l_ = last_level
                 t = sample_dur * i
@@ -76,7 +103,7 @@ def samples_to_levels(samples):
 #
 # The edges returned are a triple of:
 # - time
-# - rising/falling - rising = True, falling = False
+# - level
 # - pulse length - length of the pulse up to this point
 def levels_to_timed_edges(levels, sample_dur):
     edges = []
@@ -206,6 +233,10 @@ class PulseDecoder:
     def expect_marks(self, edges, i_next, n):
         for i in range(0, n):
             idx = i_next + i
+            if idx >= len(edges):
+                raise Exception('Out of edges at %d, on edge %d of expected'
+                    ' %d mark edges'
+                    % (idx, i, n))
             dur = edges[idx][2]
             if dur < self.mark_lower * .75 or dur > self.mark_upper * 1.5:
                 raise Exception('Expected %d mark pulses at %d (%f)'
@@ -243,17 +274,19 @@ class PulseDecoder:
     # ->
     # ( i_next, bit )   : ( int, int )
     def read_bit(self, edges, idx):
-        e = edges[idx]
+        i_next = idx
+        e = edges[i_next]
         p = self.classify_edge(e)
+        #v4( 'classify: {}, {}, {}, {}'.format(str(p), i_next, e[0], e[2]))
         #v4('read_bit, first: %s' % p)  # XXX very slow
         if p == PULSE_MARK:
-            return (self.expect_marks(edges, idx, self.mark_pulses), 1)
+            return (self.expect_marks(edges, i_next, self.mark_pulses), 1)
         elif p == PULSE_SPACE:
-            return (self.expect_spaces(edges, idx, self.space_pulses), 0)
+            return (self.expect_spaces(edges, i_next, self.space_pulses), 0)
         else:
             raise Exception('Unexpected pulse width at: %f, '
                 'with pulse width: %f'
-                % (edges[idx][0], edges[idx][2]))
+                % (edges[i_next][0], edges[i_next][2]))
 
     # edges     : ( ( float, bool, float ), )
     # idx       : int

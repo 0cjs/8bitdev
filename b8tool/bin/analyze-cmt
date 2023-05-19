@@ -135,11 +135,6 @@ def dump_pulses(args, pulses):
 
 def dump_bitstream(args, pulses):
     pd = args.pulse_decoder
-    # # FIXME: Convert start/stop bits to tuples
-    # pd = au.PulseDecoder(args.mark_baud, args.mark_pulses,
-    #     args.space_baud, args.space_pulses,
-    #     False, False,
-    #     (1,), (0,0))
     # read until mark/space
     idx = None
     i = 0
@@ -167,10 +162,6 @@ def dump_bitstream(args, pulses):
 
 
 def dump_bytes(args, pulses):
-    # pd = au.PulseDecoder(args.mark_baud, args.mark_pulses,
-    #     args.space_baud, args.space_pulses,
-    #     False, False,
-    #     (1,), (0,0))
     pd = args.pulse_decoder
     # FIXME add mark/space only leader
     # Find start bit patterm

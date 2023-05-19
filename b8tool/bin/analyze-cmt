@@ -202,7 +202,9 @@ def dump_bytes(args, pulses):
 def save_pulses(args, pulses, sample_dur):
     tau = 1.0 / 44100.0
     for e in pulses:
-        lvl = 0x01 if e[1] else 0x00
+        lvl = 0x00
+        if e[1] > 0: lvl = 0x01
+        elif e[1] < 0: lvl = 0xff
         q = int(e[2] / tau)
         q0 = (q // 256 // 256) % 256
         q1 = (q // 256) % 256
@@ -218,7 +220,9 @@ def load_pulses(args):
     while bs is None or len(bs) != 0:
         bs = args.input.read(4)
         if len(bs) == 0: break
-        lvl = bs[0] == 1
+        lvl = 0
+        if bs[0] == 0xff: lvl = -1
+        elif bs[1] == 0x01: lvl = 1
         q = 256 * 256 * bs[1]
         q += 256 * bs[2]
         q += bs[3]

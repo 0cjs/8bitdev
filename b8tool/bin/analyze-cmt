@@ -54,20 +54,28 @@ def parse_args():
     if args.output == '-':              args.output = sys.stdout.buffer
     elif args.output is not None:       args.output = open(args.output, 'bw')
 
-    # FIXME: proper handling of start/stop bits
+    def to_mark_space(s):
+        res = tuple()
+        for c in s:
+            if c == 'm': res += (1,)
+            elif c == 's': res += (0,)
+            else: raise ValueError('Start/stop bit musy be \'m\' or \'s\'')
+        return res
+
     # FIXME: tolerance
     tol =  args.tolerance
     args.pulse_decoder = au.PulseDecoder(args.mark_baud, args.mark_pulses,
         args.space_baud, args.space_pulses,
         args.invert_bits, args.reverse_bits,
-        (1,), (0,0),
+        to_mark_space(args.start), to_mark_space(args.stop),
         (tol, tol), (tol, tol))
 
     args.pulse_encoder = au.Encoder(
         args.mark_baud, args.mark_pulses,
         args.space_baud, args.space_pulses,
         args.invert_bits, args.reverse_bits,
-        (1,), (0,0))
+        to_mark_space(args.start), to_mark_space(args.stop),
+        )
 
     return args
 

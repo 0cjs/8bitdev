@@ -27,6 +27,7 @@ def parse_args():
     a = p.add_argument
     a('-r', '--report-bauds', action='store_true' ) # count cycles per well-known baud rates
     a('-e', '--extended-baud-rates', action='store_true')
+    a('-d', '--dump-pulses', action='store_true')
     a('-t', '--tolerance',type=float, default=0.25)
     a('-b', '--bitstream', action='store_true')
     a('-B', '--bytes', action='store_true')
@@ -109,6 +110,27 @@ def report_bauds(args, pulses):
 # FIXME: add leader detection that works
 # for formats that use repeating mark or space instead of
 # an actual pattern of bytes
+
+def dump_pulses(args, pulses):
+    pd = args.pulse_decoder
+    idx = None
+    i = 0
+    for e in pulses:
+        if pd.classify_pulse(e) in [au.PULSE_MARK, au.PULSE_SPACE]:
+            idx = i
+            break
+        i += 1
+    if idx is None:
+        return
+    # start dumping them
+    while idx < len(pulses):
+        e = pulses[idx]
+        c = pd.classify_pulse(pulses[idx])
+        p = 'X'
+        if c == au.PULSE_MARK: p = 'M'
+        elif c == au.PULSE_SPACE: p ='S'
+        print('{:012.6f}, {}, {:09.3f}, {}'.format(e[0], p, 1e6 * e[2], e[1]))
+        idx += 1
 
 
 def dump_bitstream(args, pulses):
@@ -245,6 +267,8 @@ def main(args):
             save_pulses(args, pulses, sample_dur)
     if args.report_bauds:
         report_bauds(args, pulses)
+    if args.dump_pulses:
+        dump_pulses(args, pulses)
     if args.bitstream:
         dump_bitstream(args, pulses)
     if args.bytes:

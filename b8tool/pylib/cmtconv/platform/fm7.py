@@ -233,8 +233,8 @@ class FileReader(object):
             (0.2, 0.2), (0.25, 0.5))
 
 
-    def read_leader(self, edges, i_next):
-        '''Detect the next leader, read, confirm then return next edge'''
+    def read_leader(self, pulses, i_next):
+        '''Detect the next leader, read, confirm then return next pulse'''
 
         # Note: recordings often seem to have a rising amplitude
         # envelope that covers at least some of the first byte,
@@ -251,31 +251,31 @@ class FileReader(object):
         # as this will be very common, push down to audio module as a helper
         # function "probe_leader_start"
         leader_start = i_next
-        (leader_start,_) = self.pd.next_mark(edges, leader_start)
+        (leader_start,_) = self.pd.next_mark(pulses, leader_start)
         v3('Leader mark detected at %d - %fs' %
-            (leader_start, edges[leader_start][0]))
-        # (leader_start,_) = self.pd.next_mark(edges, leader_start+1)
+            (leader_start, pulses[leader_start][0]))
+        # (leader_start,_) = self.pd.next_mark(pulses, leader_start+1)
         # v3('Leader mark detected at %d - %fs' %
-        #     (leader_start, edges[leader_start][0]))
+        #     (leader_start, pulses[leader_start][0]))
         # Find possible start bit of next byte
-        leader_start = self.pd.next_space(edges, leader_start, 2)
+        leader_start = self.pd.next_space(pulses, leader_start, 2)
         v3('Leader space detected at %d - %fs' %
-            (leader_start, edges[leader_start][0]))
+            (leader_start, pulses[leader_start][0]))
 
-        (leader_start,_) = self.pd.next_mark(edges, leader_start+1)
+        (leader_start,_) = self.pd.next_mark(pulses, leader_start+1)
         v3('Leader mark detected at %d - %fs' %
-            (leader_start, edges[leader_start][0]))
+            (leader_start, pulses[leader_start][0]))
 
         # Rewind back to start bit
         leader_start = leader_start-2
 
         # Try to read a byte
-        (i_next, b) = self.pd.read_byte(edges, leader_start)
+        (i_next, b) = self.pd.read_byte(pulses, leader_start)
         n_bs = 1
 
         # Read until 0x01
         while b != 0x01:
-            (i, b) = self.pd.read_byte(edges, i_next)
+            (i, b) = self.pd.read_byte(pulses, i_next)
             if b != 0x01:
                 if b != 0xff:
                     v3('Ignoring non 0xff byte in leader: {}', b)
@@ -286,13 +286,13 @@ class FileReader(object):
 
         return i_next
 
-    def read_leader2(self, edges, i_next):
+    def read_leader2(self, pulses, i_next):
         # Try to read a byte
-        (i_next, b) = self.pd.read_byte(edges, i_next)
+        (i_next, b) = self.pd.read_byte(pulses, i_next)
 
         # Read until something other than 0xff
         while b == 0xff:
-            (i, b) = self.pd.read_byte(edges, i_next)
+            (i, b) = self.pd.read_byte(pulses, i_next)
             if b == 0xff:
                 i_next = i
 
@@ -300,11 +300,11 @@ class FileReader(object):
 
 
     # returns ( int, ( block, ) )
-    def read_block(self, edges, i_next):
+    def read_block(self, pulses, i_next):
         # leader
-        i_next = self.read_leader(edges, i_next)
+        i_next = self.read_leader(pulses, i_next)
         # header
-        (i_next, bs) = self.pd.read_bytes(edges, i_next, Block.BLOCK_HEADER_LEN)
+        (i_next, bs) = self.pd.read_bytes(pulses, i_next, Block.BLOCK_HEADER_LEN)
         v3('headerbytes={}'.format(bs))
         if (bs[2] == Block.BlockType.HEADER):
             (block, datalen) = HeaderBlock.from_header(bs)
@@ -317,33 +317,33 @@ class FileReader(object):
         v3('Block length: %d' % datalen)
         # consume data
         if datalen > 0:
-            (i_next, bs) = self.pd.read_bytes(edges, i_next, datalen)
-            (i_next, checksum) = self.pd.read_byte(edges, i_next)
+            (i_next, bs) = self.pd.read_bytes(pulses, i_next, datalen)
+            (i_next, checksum) = self.pd.read_byte(pulses, i_next)
             v3('data={}, checksum={:02X}', bs, checksum)
             block.setdata(bs, checksum)
         return (i_next, block)
 
     # returns ( int, ( block, ) )
-    def read_blocks(self, edges, i_next):
-        #i_next = self.read_leader(edges, i_next)
+    def read_blocks(self, pulses, i_next):
+        #i_next = self.read_leader(pulses, i_next)
         blocks = []
         block = None
         while block is None or not block.is_eof:
-            (i_next, block) = self.read_block(edges, i_next)
+            (i_next, block) = self.read_block(pulses, i_next)
             blocks.append(block)
             # search for gap
-            while i_next < len(edges) and edges[i_next][2] < (1.3/2200.0):
+            while i_next < len(pulses) and pulses[i_next][2] < (1.3/2200.0):
                 i_next += 1
-            if i_next < len(edges) - 1:
+            if i_next < len(pulses) - 1:
                 i_next += 1
                 v3('post-footer gap at {} - {}s',
-                    i_next, edges[i_next][0])
+                    i_next, pulses[i_next][0])
         return (i_next, blocks)
 
     # read a file
     # returns ( int, ( block, ) )
-    def read_file(self, edges, i_next):
-        return self.read_blocks(edges, i_next)
+    def read_file(self, pulses, i_next):
+        return self.read_blocks(pulses, i_next)
 
 
 def read_block_bytestream(stream):

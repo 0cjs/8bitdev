@@ -1,4 +1,4 @@
-''' Library to read/write Kansas City format tape uadio
+''' Library to read/write Kansas City format tape audio
 '''
 
 from    enum  import Enum
@@ -22,40 +22,37 @@ from    cmtconv.logging  import *
 # - bits -> bytes
 # - bytes -> file header, blocks
 
-def merge_mids(edges, sample_dur):
-    edges2 = []
+def merge_mids(pulses, sample_dur):
+    res = []
     i = 0
     # FIXME: Would be better to do this in terms of integer indices
-    for (t, l, dur) in edges:
+    for (t, l, dur) in pulses:
         # Merge short periods of mid level with previous pulse
         if l == 0 and dur < 8 * sample_dur:
-            #edges2.append( (t, l, dur) )
             pass
         else:
-            edges2.append( (t, l, dur) )
-    return edges2
+            res.append( (t, l, dur) )
+    return res
 
 
-def filter_clicks(edges, sample_dur, tol = 4):
-    edges2 = []
+def filter_clicks(pulses, sample_dur, tol = 4):
+    res = []
     i = 0
     # FIXME: Would be better to do this in terms of integer indices
-    for (t, l, dur) in edges:
+    for (t, l, dur) in pulses:
         if dur < tol * sample_dur:
             # FIXME: should maybe modify previous/next pulse
             pass
         else:
-            edges2.append( (t, l, dur) )
-    return edges2
+            res.append( (t, l, dur) )
+    return res
 
 
-# FIXME: use 'pulses' istead of 'edges'
-# FIXME: use H/M/L?
 # samples   : [ float ]
 # ->
-# edges     : ( (float, int, float) )
-def samples_to_timed_edges(samples, sample_dur):
-    edges=[]
+# pulses     : ( (float, int, float) )
+def samples_to_pulses(samples, sample_dur):
+    pulses=[]
     if len(samples) > 0:
         sample_max = max(samples)
         sample_min = min(samples)
@@ -77,12 +74,13 @@ def samples_to_timed_edges(samples, sample_dur):
                 else:
                     l_ = last_level
                 t = sample_dur * i
-                edges.append((t, l_, t-last_t))
+                pulses.append((t, l_, t-last_t))
                 last_t = t
                 last_level = l
             i += 1
-    return tuple(edges)
+    return tuple(pulses)
 
+# FIXME: remove
 # samples   : [ float ]
 # ->
 # levels    : ( bool, )
@@ -96,29 +94,30 @@ def samples_to_levels(samples):
     else:
         return ()
 
+# FIXME: remove
 # levels        : ( bool, )
 # sample_dur    : float
 # ->
-# edges         : ( ( float, bool, float ), )
+# pulses        : ( ( float, bool, float ), )
 #
-# The edges returned are a triple of:
+# The pulses returned are a triple of:
 # - time
 # - level
 # - pulse length - length of the pulse up to this point
-def levels_to_timed_edges(levels, sample_dur):
-    edges = []
+def levels_to_pulses(levels, sample_dur):
+    pulses = []
     if len(levels) > 0:
         last_t = 0.0
         last_level = levels[0]
         for (i, l) in enumerate(levels):
             if l != last_level:
                 t = sample_dur * i
-                edges.append((t, l, t - last_t))
+                pulses.append((t, l, t - last_t))
                 last_t = t
                 last_level = l
-    return tuple(edges)
+    return tuple(pulses)
 
-# Classify edges into mark/space/other pulses
+# Classify pulses into mark/space/other pulses
 
 PulseOther = namedtuple('PulseOther', 'width')
 PulseOther.__docs__ = \
@@ -131,7 +130,7 @@ PULSE_MARK  = Pulse.PULSE_MARK
 
 # Rename: MarkSpace decoder, or just fold in with decoder?
 # 2 levels of decoder
-# base maps edges to mark/space pulses and knows baud rates of mark and space
+# base maps pulses to mark/space and knows baud rates of mark and space
 # also knows how many pulses represent mark and space, and maps these to 0/1
 # upper level knows about start/stop bits
 # Can then model JR-200 flipping of mark/space at this lower level, instead
@@ -181,12 +180,12 @@ class PulseDecoder:
 
 
 
-    # edge      : ( float, bool, float )
+    # pulse     : ( float, int, float )
     # ->
     # result    : PULSE_MARK, PULSE_SPACE or PulseOther( width )
     #
-    def classify_edge(self, edge):
-        dur = edge[2]
+    def classify_pulse(self, pulse):
+        dur = pulse[2]
         if dur >= self.mark_lower and dur <= self.mark_upper:
             return PULSE_MARK
         elif dur >= self.space_lower and dur <= self.space_upper:
@@ -194,34 +193,35 @@ class PulseDecoder:
         else:
             return PulseOther(dur)
 
-    # edges         : ( ( float, bool, float ), )
+    # pulses        : ( ( float, int, float ), )
     # i_next        : int
-    # edges_needed  : int
+    # needed        : int
     # ->
     # i_next        : int
-    def next_space(self, edges, i_next, edges_needed):
+    def next_space(self, pulses, i_next, needed):
         consecutive = 0
         i = i_next
-        while i < len(edges):
-            dur = edges[i][2]
+        while i < len(pulses):
+            dur = pulses[i][2]
             if dur >= self.space_lower and dur <= self.space_upper:
                 consecutive += 1
-                if consecutive >= edges_needed:
+                if consecutive >= needed:
                     return i - (consecutive - 1)
             else:
                 consecutive = 0
             i += 1
-        raise Exception('unable to find %d consecutive edges of space'
-                        % edges_needed)
+        raise Exception('unable to find %d consecutive pulses of space'
+                        % needed)
 
-
-    # edges         : ( ( float, bool, float ), )
+    # FIXME: add needed pulses as per next_space
+    #
+    # pulses        : ( ( float, int, float ), )
     # i_next        : int
     # ->
     # i_next        : ( int, int )
-    def next_mark(self, edges, i_next):
+    def next_mark(self, pulses, i_next):
         i = i_next
-        while self.classify_edge(edges[i]) != PULSE_MARK:
+        while self.classify_pulse(pulses[i]) != PULSE_MARK:
             i += 1
         return (i, i - i_next)
 
@@ -230,83 +230,83 @@ class PulseDecoder:
     # Expect marks
     #
     # Biased towrards marks - we accept a wider range of pulse widths
-    def expect_marks(self, edges, i_next, n):
+    def expect_marks(self, pulses, i_next, n):
         for i in range(0, n):
             idx = i_next + i
-            if idx >= len(edges):
-                raise Exception('Out of edges at %d, on edge %d of expected'
-                    ' %d mark edges'
+            if idx >= len(pulses):
+                raise Exception('Out of pulses at %d, on pulse %d of expected'
+                    ' %d mark pulses'
                     % (idx, i, n))
-            dur = edges[idx][2]
+            dur = pulses[idx][2]
             if dur < self.mark_lower * .75 or dur > self.mark_upper * 1.5:
                 raise Exception('Expected %d mark pulses at %d (%f)'
                     ', failed on pulse %d with pulse width %f'
-                    ', edges = %s'
-                        % (n, i_next, edges[i_next][0], i, dur,
-                            repr(edges[i_next:i_next + n])))
+                    ', pulses = %s'
+                        % (n, i_next, pulses[i_next][0], i, dur,
+                            repr(pulses[i_next:i_next + n])))
         return i_next + n
     #
     # Expect spaces
     #
     # Biased towrards spaces - we accept a wider range of pulse widths
-    def expect_spaces(self, edges, i_next, n):
+    def expect_spaces(self, pulses, i_next, n):
         for i in range(n):
             idx = i_next + i
-            if idx >= len(edges):
-                raise Exception('Out of edges at %d, on edge %d of expected'
-                    ' %d space edges'
+            if idx >= len(pulses):
+                raise Exception('Out of pulses at %d, on pulse %d of expected'
+                    ' %d space pulses'
                     % (idx, i, n))
-            dur = edges[idx][2]
+            dur = pulses[idx][2]
             if dur < self.space_lower * .75 or dur > self.space_upper * 1.35:
                 raise Exception('Expected %d space pulses at %d (%f)'
                     ', failed on pulse %d with pulse width %f'
-                    ', edges = %s'
-                        % (n, i_next, edges[i_next][0], i, dur,
-                            repr(edges[i_next:i_next + n])))
+                    ', pulses = %s'
+                        % (n, i_next, pulses[i_next][0], i, dur,
+                            repr(pulses[i_next:i_next + n])))
         return i_next + n
 
     # read one bit represented by a mark/space symbol
     #
     # throws if sequence of pulses is not a mark or space symbol
     #
-    # edges     : ( ( float, bool, float ), )
+    # pulses    : ( ( float, pulse, float ), )
     # idx       : int
     # ->
     # ( i_next, bit )   : ( int, int )
-    def read_bit(self, edges, idx):
+    def read_bit(self, pulses, idx):
         i_next = idx
-        e = edges[i_next]
-        p = self.classify_edge(e)
+        e = pulses[i_next]
+        p = self.classify_pulse(e)
         #v4( 'classify: {}, {}, {}, {}'.format(str(p), i_next, e[0], e[2]))
         #v4('read_bit, first: %s' % p)  # XXX very slow
         if p == PULSE_MARK:
-            return (self.expect_marks(edges, i_next, self.mark_pulses), 1)
+            return (self.expect_marks(pulses, i_next, self.mark_pulses), 1)
         elif p == PULSE_SPACE:
-            return (self.expect_spaces(edges, i_next, self.space_pulses), 0)
+            return (self.expect_spaces(pulses, i_next, self.space_pulses), 0)
         else:
             raise Exception('Unexpected pulse width at: %f, '
                 'with pulse width: %f'
-                % (edges[i_next][0], edges[i_next][2]))
+                % (pulses[i_next][0], pulses[i_next][2]))
 
-    # edges     : ( ( float, bool, float ), )
+    # pulses    : ( ( float, int, float ), )
     # idx       : int
     # n         : int
     # ->
     # ( i_next, bits )   : ( int, ( int, ) )
-    def read_bits(self, edges, idx, n):
+    def read_bits(self, pulses, idx, n):
         bits = []
         i_next = idx
         for _ in range(n):
-            (i_next, bit) = self.read_bit(edges, i_next)
+            (i_next, bit) = self.read_bit(pulses, i_next)
             bits.append(bit)
         return (i_next, tuple(bits))
 
-    # edges     : ( ( float, bool, float ), )
+    # pulses    : ( ( float, int, float ), )
     # i_next    : int
     # ->
     # i_next    : int
-    def expect_start_bits(self, edges, i_next):
-        (i_next, bits) = self.read_bits(edges, i_next, len(self.start_bits))
+    def expect_start_bits(self, pulses, i_next):
+        (i_next, bits) = self.read_bits(pulses, i_next, len(self.start_bits))
         #v4('expect_start_bits:', bits) # XXX very slow
         if bits == self.start_bits:
             return i_next
@@ -314,12 +314,12 @@ class PulseDecoder:
             raise Exception('Expected start bits: %s, got: %s ' %
                             (str(self.start_bits), str(bits)))
 
-    # edges     : ( ( float, bool, float ), )
+    # pulses    : ( ( float, int, float ), )
     # i_next    : int
     # ->
     # i_next    : int
-    def expect_stop_bits(self, edges, i_next):
-        (i_next, bits) = self.read_bits(edges, i_next, len(self.stop_bits))
+    def expect_stop_bits(self, pulses, i_next):
+        (i_next, bits) = self.read_bits(pulses, i_next, len(self.stop_bits))
         #v4('expect_stop_bits:', bits)  # XXX very slow
         if bits == self.stop_bits:
             return i_next
@@ -327,12 +327,12 @@ class PulseDecoder:
             raise Exception('Expected stop bits: %s, got: %s ' %
                             (str(self.stop_bits), str(bits)))
 
-    # edges     : ( ( float, bool, float ), )
+    # pulses    : ( ( float, int, float ), )
     # i_next    : int
     # ->
     # ( i_next, res ) : ( int, int )
-    def read_raw_byte(self, edges, i_next):
-        (i_next, bits) = self.read_bits(edges, i_next, 8)
+    def read_raw_byte(self, pulses, i_next):
+        (i_next, bits) = self.read_bits(pulses, i_next, 8)
         #v4('read_raw_byte:', bits) # XXX very slow
         res = 0
         if self.invert_sense:
@@ -343,56 +343,56 @@ class PulseDecoder:
                 res |= self.mask_sequence[i] if bits[i] else 0
         return (i_next, res)
 
-    # edges     : ( ( float, bool, float ), )
+    # pulses    : ( ( float, int, float ), )
     # i_next    : int
     # n         : int
     # ->
     # ( i_next, res ) : ( int, int )
-    def read_byte(self, edges, i_next):
-        i_next = self.expect_start_bits(edges, i_next)
-        (i_next, res) = self.read_raw_byte(edges, i_next)
-        i_next = self.expect_stop_bits(edges, i_next)
+    def read_byte(self, pulses, i_next):
+        i_next = self.expect_start_bits(pulses, i_next)
+        (i_next, res) = self.read_raw_byte(pulses, i_next)
+        i_next = self.expect_stop_bits(pulses, i_next)
         return (i_next, res)
 
-    # edges     : ( ( float, bool, float ), )
+    # pulses    : ( ( float, int, float ), )
     # i_next    : int
     # n         : int
     # ->
     # ( i_next, res ) : ( int, bytearray )
-    def read_bytes(self, edges, i_next, n):
+    def read_bytes(self, pulses, i_next, n):
         res = bytearray()
         for _ in range(n):
-            i_next = self.expect_start_bits(edges, i_next)
-            (i_next, x) = self.read_raw_byte(edges, i_next)
-            i_next = self.expect_stop_bits(edges, i_next)
+            i_next = self.expect_start_bits(pulses, i_next)
+            (i_next, x) = self.read_raw_byte(pulses, i_next)
+            i_next = self.expect_stop_bits(pulses, i_next)
             res.append(x)
         return (i_next, res)
 
 # Encoder class
 class Encoder(object):
     # mark_baud     : int   -- mark baud rate
-    # mark_edges    : int   -- number of edges for a mark or '1'
+    # mark_pulses   : int   -- number of pulses for a mark or '1'
     # space_baud    : int   -- space baud rate
-    # space_edges   : int   -- number of edges for a space or '0'
+    # space_pulses  : int   -- number of pulses for a space or '0'
     # invert_sense  : bool  -- False -  1 = mark, 0 = space
     #                       -- True  -  0 = mark, 1 = space
     # lsb_first     : bool  -- stream bits LSB first (True) or last (False)
     # start_bits    : (int,)    -- start bits pattern
     # stop_bits     : (int,)    -- stop bit pattern
-    def __init__(self, mark_baud, mark_edges, space_baud, space_edges,
+    def __init__(self, mark_baud, mark_pulses, space_baud, space_pulses,
         invert_sense, lsb_first, start_bits, stop_bits):
         self.mark_baud      = mark_baud
-        self.mark_edges     = mark_edges
+        self.mark_pulses    = mark_pulses
         self.space_baud     = space_baud
-        self.space_edges    = space_edges
+        self.space_pulses   = space_pulses
         self.invert_sense   = invert_sense
         self.lsb_first      = lsb_first
         self.start_bits     = start_bits
         self.stop_bits      = stop_bits
 
         # pre-compute mark/space patterns
-        self.mark_pattern   = (0.5 / self.mark_baud,) * mark_edges
-        self.space_pattern  = (0.5 / self.space_baud,) * space_edges
+        self.mark_pattern   = (0.5 / self.mark_baud,) * mark_pulses
+        self.space_pattern  = (0.5 / self.space_baud,) * space_pulses
 
         # bit 0/1 -> mark/space patterns
         if invert_sense:
@@ -455,20 +455,20 @@ class AudioMarker(Enum):
 def silence(dur):
     return (AudioMarker.SILENCE, dur)
 
-def sound(edges):
-    return (AudioMarker.SOUND, edges)
+def sound(pulses):
+    return (AudioMarker.SOUND, pulses)
 
 
-# Convert edges to samples
+# Convert pulses to samples
 #
-# chunks     : tuple of (SILENCE, duration) or (SOUND, edges)
+# chunks     : tuple of (SILENCE, duration) or (SOUND, pulse_widths)
 # sample_dur : float
 # silence    : int
 # low        : int
 # high       : int
 # ->
 # samples   : [ int ]
-def edges_to_samples(chunks, sample_dur, silence, low, high):
+def pulses_to_samples(chunks, sample_dur, silence, low, high):
     res = []
     lvl = True
     for chunk in chunks:
@@ -477,16 +477,15 @@ def edges_to_samples(chunks, sample_dur, silence, low, high):
             res.extend([silence] * int(dur/sample_dur))
             lvl = True
         elif chunk[0] == AudioMarker.SOUND:
-            edges = chunk[1]
-            for dur in edges:
+            pulses = chunk[1]
+            for dur in pulses:
                 sample_lvl = high if lvl else low
                 res.extend([sample_lvl] * int(dur/sample_dur))
                 lvl = not lvl
-            # Below is a hack to force the end of an edge
+            # Below is a hack to force the end of a pulse
             # Calling code should be putting silence beween blocks of bytes
             # and we need to model levels as H/M/L insteasd of H/L
             res.append(silence)
-            #res.append(high if lvl else low)
         else:
             raise Exception('Unknown audio marker')
     return res

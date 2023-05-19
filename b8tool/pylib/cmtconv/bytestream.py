@@ -16,7 +16,7 @@ from    itertools  import chain
 from    io  import BytesIO
 import  wave
 
-from    cmtconv.audio  import samples_to_timed_edges, edges_to_samples, filter_clicks
+from    cmtconv.audio  import samples_to_pulses, pulses_to_samples, filter_clicks
 from    cmtconv.logging  import *
 from    testmc.tool  import asl
 
@@ -102,14 +102,14 @@ def blocks_from_audio(platform, stream):
     v3('Samples: %d' % n_samples)
     v2('Samples min: %d' % min(samples))
     v2('Samples max: %d' % max(samples))
-    edges = samples_to_timed_edges(samples, sample_dur)
-    edges = filter_clicks(edges, sample_dur)
-    v2('Number of edges: %d ' % len(edges))
-    cycle_lengths = [dur for (_,_,dur) in edges]
-    v2('Min pulse: %f' % min(cycle_lengths))
-    v2('Max pulse: %f' % max(cycle_lengths))
+    pulses = samples_to_pulses(samples, sample_dur)
+    pulses = filter_clicks(pulses, sample_dur)
+    v2('Number of pulses: %d ' % len(pulses))
+    pulse_widths = [dur for (_,_,dur) in pulses]
+    v2('Min pulse: %f' % min(pulse_widths))
+    v2('Max pulse: %f' % max(pulse_widths))
     fr = bm.FileReader()
-    (_,blocks) = fr.read_file(edges, 0)
+    (_,blocks) = fr.read_file(pulses, 0)
     return blocks
 
 ####################################################################
@@ -146,15 +146,15 @@ def get_file_bytestream(blocks):
 def blocks_to_audio(platform, blocks, stream):
     '''Write out the blocks as audio'''
     bm = get_block_module(platform)
-    # Convert File to edges
-    edges = bm.FileEncoder().encode_file(blocks)
+    # Convert File to pulses
+    pulses = bm.FileEncoder().encode_file(blocks)
 
-    # Convert edges to samples
+    # Convert pulses to samples
     rate        = 44100
     sample_dur  = 1.0 / rate
     amp         = 127
     mid         = 128
-    samples     = edges_to_samples(edges, sample_dur, mid, mid-amp, mid+amp)
+    samples     = pulses_to_samples(pulses, sample_dur, mid, mid-amp, mid+amp)
 
     # Write out WAV file
     w = wave.open(stream,'wb')

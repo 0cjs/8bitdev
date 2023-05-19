@@ -395,37 +395,37 @@ class FileReader(object):
         self.baud2400_decoder = PulseDecoder(2400, 2, 1200, 1,
             True, True, start_bits, stop_bits)
 
-    # Read a number of space edges up to the mark for the start-bit of the
+    # Read a number of space pulse up to the mark for the start-bit of the
     # first byte
-    def read_leader(self, edges, i_next):
-        i_next = self.baud600_decoder.next_space(edges, i_next, 100)
-        #i_next = next_space(edges, i_next, 100)
-        v3('Leader cycles detected at %d - %fs (%s)' %
-              (i_next, edges[i_next][0], str(edges[i_next][1])))
+    def read_leader(self, pulses, i_next):
+        i_next = self.baud600_decoder.next_space(pulses, i_next, 100)
+        #i_next = next_space(pulses, i_next, 100)
+        v3('Leader pulses detected at %d - %fs (%s)' %
+              (i_next, pulses[i_next][0], str(pulses[i_next][1])))
 
         # Read up to the start bit of the first byte
-        #(i_next, _) = eat_until_mark(edges, i_next)
-        (i_next, _) = self.baud600_decoder.next_mark(edges, i_next)
+        #(i_next, _) = eat_until_mark(pulses, i_next)
+        (i_next, _) = self.baud600_decoder.next_mark(pulses, i_next)
         v3('Start of data at %d - %fs (%s)' %
-              (i_next, edges[i_next][0], edges[i_next][1]))
+              (i_next, pulses[i_next][0], pulses[i_next][1]))
 
         return i_next
 
-    def read_file_header(self, edges, i_next):
-        i_next = self.read_leader(edges, i_next)
+    def read_file_header(self, pulses, i_next):
+        i_next = self.read_leader(pulses, i_next)
 
         (i_next, header_bytes) = self.baud600_decoder.read_bytes(
-            edges, i_next, FileHeader.blocklen)
+            pulses, i_next, FileHeader.blocklen)
         v4('read_file_header:', header_bytes)
         hdr = FileHeader.from_bytes(header_bytes)
         v3('read_file_header', hdr)
 
-        v3('i_next: %d( %f )' % (i_next, edges[i_next][0]))
+        v3('i_next: %d( %f )' % (i_next, pulses[i_next][0]))
         return (i_next, hdr)
 
-    def read_block(self, bit_decoder, edges, i_next):
-        i_next = self.read_leader(edges, i_next)
-        (i_next, header) = bit_decoder.read_bytes(edges, i_next, Block.headerlen)
+    def read_block(self, bit_decoder, pulses, i_next):
+        i_next = self.read_leader(pulses, i_next)
+        (i_next, header) = bit_decoder.read_bytes(pulses, i_next, Block.headerlen)
         #   XXX bit_decoder.eat_bytes is no longer returning a `bytes`!
         #   instead it's a tuple of ints.
         header = bytes(header)
@@ -437,10 +437,10 @@ class FileReader(object):
         if block.is_eof:
             #   XXX bit_decoder.eat_bytes is no longer returning a `bytes`!
             #   instead it's a tuple of ints.
-            (i_next, body) = bit_decoder.read_bytes(edges, i_next, datalen)
+            (i_next, body) = bit_decoder.read_bytes(pulses, i_next, datalen)
             block.setdata(bytes(body))
         else:
-            (i_next, body) = bit_decoder.read_bytes(edges, i_next, datalen+1)
+            (i_next, body) = bit_decoder.read_bytes(pulses, i_next, datalen+1)
             #   XXX bit_decoder.eat_bytes is no longer returning a `bytes`!
             #   instead it's a tuple of ints.
             body = bytes(body)
@@ -448,15 +448,15 @@ class FileReader(object):
         v4('read_block:', block)
         if not block.is_eof:
             #   The read for a tail block gives IndexError below.
-            v3('i_next: %d( %f )' % (i_next, edges[i_next][0]))
+            v3('i_next: %d( %f )' % (i_next, pulses[i_next][0]))
         return (i_next, block)
 
     # read blocks
     # returns ( int, ( block, ) )
-    def read_blocks(self, bit_decoder, edges, i_next):
+    def read_blocks(self, bit_decoder, pulses, i_next):
         blocks = []
         while True:
-            (i_next, blk) = self.read_block(bit_decoder, edges, i_next)
+            (i_next, blk) = self.read_block(bit_decoder, pulses, i_next)
             blocks.append(blk)
             v3('read_blocks:', blk)
             if blk.is_eof:
@@ -465,13 +465,13 @@ class FileReader(object):
 
     # read a file header and all blocks
     # returns ( int, ( block, ) )
-    def read_file(self, edges, i_next):
-        (i_next, file_hdr) = self.read_file_header(edges, i_next)
+    def read_file(self, pulses, i_next):
+        (i_next, file_hdr) = self.read_file_header(pulses, i_next)
         if file_hdr.baudrate == file_hdr.B_2400:
             bit_decoder = self.baud2400_decoder
         else:
             bit_decoder = self.baud600_decoder
-        (i_next, blocks) = self.read_blocks(bit_decoder, edges, i_next)
+        (i_next, blocks) = self.read_blocks(bit_decoder, pulses, i_next)
         return (i_next, (file_hdr,) + blocks)
 
     # FIXME: read_files - return ( File, )
@@ -494,26 +494,26 @@ class FileEncoder(object):
 
     def header(self, file_hdr):
         # silence, leader, header
-        #leader_edges = self.leader(3200) # According to web docs
-        #leader_edges = self.leader(2400) # Measured from actual recording
-        leader_edges = self.leader(1600) # Shorter leader works OK
+        #leader_pulses = self.leader(3200) # According to web docs
+        #leader_pulses = self.leader(2400) # Measured from actual recording
+        leader_pulses = self.leader(1600) # Shorter leader works OK
         v3(' '.join(hex(x) for x in file_hdr.to_bytes()))
-        header_edges = self.baud600_encoder.encode_bytes(file_hdr.to_bytes())
-        return (silence(1.0), sound(leader_edges + header_edges))
+        header_pulses = self.baud600_encoder.encode_bytes(file_hdr.to_bytes())
+        return (silence(1.0), sound(leader_pulses + header_pulses))
 
     def block(self, encoder, blk):
         # silence, leader, header, data
-        leader_edges = self.leader(200) # measured from actual recording
+        leader_pulses = self.leader(200) # measured from actual recording
         data = blk.to_bytes()
         v3('len={}: {}', len(data), ' '.join(hex(x) for x in data))
-        data_edges = encoder.encode_bytes(data)
-        return (sound(leader_edges + data_edges),)
+        data_pulses = encoder.encode_bytes(data)
+        return (sound(leader_pulses + data_pulses),)
 
     def blocks(self, encoder, blocks):
-        edges = ()
+        pulses = ()
         for blk in blocks:
-            edges += self.block(encoder, blk)
-        return edges
+            pulses += self.block(encoder, blk)
+        return pulses
 
     def encode_file(self, file_blocks):
         fh = file_blocks[0]     # FileHeader block

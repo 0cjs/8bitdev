@@ -71,7 +71,7 @@ def parse_args():
 
     return args
 
-def report_bauds(args, edges):
+def report_bauds(args, pulses):
     if args.extended_baud_rates:
         bauds = [ 9600, 7200, 4800, 3600, 2400, 1800, 1200, 900, 600, 450, 300, 150, 110 ]
     else:
@@ -82,7 +82,7 @@ def report_bauds(args, edges):
     hist[ 'low' ] = 0
     hist[ 'high' ] = 0
     hist[ 'unknown' ] = 0
-    for (_,_, dur) in edges:
+    for (_,_, dur) in pulses:
         if dur < durs[0][1]:
             hist['low'] += 1
         elif dur > durs[-1][2]:
@@ -100,10 +100,10 @@ def report_bauds(args, edges):
 
 # FIXME: add leader detection that works
 # for formats that use repeating mark or space instead of
-# an acutal pattern of bytes
+# an actual pattern of bytes
 
 
-def dump_bitstream(args, edges):
+def dump_bitstream(args, pulses):
     pd = args.pulse_decoder
     # # FIXME: Convert start/stop bits to tuples
     # pd = au.PulseDecoder(args.mark_baud, args.mark_pulses,
@@ -113,17 +113,17 @@ def dump_bitstream(args, edges):
     # read until mark/space
     idx = None
     i = 0
-    for e in edges:
-        if pd.classify_edge(e) in [au.PULSE_MARK, au.PULSE_SPACE]:
+    for e in pulses:
+        if pd.classify_pulse(e) in [au.PULSE_MARK, au.PULSE_SPACE]:
             idx = i
             break
         i += 1
     if idx is None:
         return
     # start dumping them
-    while idx < len(edges):
-        e = edges[idx]
-        c = pd.classify_edge(edges[idx]) 
+    while idx < len(pulses):
+        e = pulses[idx]
+        c = pd.classify_pulse(pulses[idx]) 
         if c == au.PULSE_MARK:
             print('{:012.6f}, 1, {:09.3f}, {}'.format(e[0], 1e6 * e[2], e[1]))
             idx += args.mark_pulses
@@ -136,7 +136,7 @@ def dump_bitstream(args, edges):
             idx += 1
 
 
-def dump_bytes(args, edges):
+def dump_bytes(args, pulses):
     # pd = au.PulseDecoder(args.mark_baud, args.mark_pulses,
     #     args.space_baud, args.space_pulses,
     #     False, False,
@@ -144,43 +144,43 @@ def dump_bytes(args, edges):
     pd = args.pulse_decoder
     # FIXME add mark/space only leader
     # Find start bit patterm
-    (idx, _) = pd.next_mark(edges, 0)
-    #lg.v3('Mark at {}', edges[idx][0])
-    print('Mark at {}'.format(edges[idx][0]))
+    (idx, _) = pd.next_mark(pulses, 0)
+    #lg.v3('Mark at {}', pulses[idx][0])
+    print('Mark at {}'.format(pulses[idx][0]))
 
     # Attempt to read a byte and keep trying until we get a byte
     byte_read = False
-    while not byte_read and idx < len(edges):
+    while not byte_read and idx < len(pulses):
         try:
             i = idx
-            (idx, b) = pd.read_byte(edges, idx)
+            (idx, b) = pd.read_byte(pulses, idx)
             byte_read = True
-            print('Byte read at {}'.format(edges[i][0]))
+            print('Byte read at {}'.format(pulses[i][0]))
         except Exception as ex:
             idx += 1
     
     # Keep reading bytes until we can't
     err = False
-    while idx < len(edges):
+    while idx < len(pulses):
         try:
-            (idx, b) = pd.read_byte(edges, idx)
+            (idx, b) = pd.read_byte(pulses, idx)
             c = '.' if b<32 or b>127 else chr(b)
-            print('{:012.6f}, {:02x}, {}'.format(edges[idx][0], b, c))
+            print('{:012.6f}, {:02x}, {}'.format(pulses[idx][0], b, c))
             err = False
         except Exception as ex:
-            print('{:012.6f}, failed to read'.format( edges[idx][0]))
+            print('{:012.6f}, failed to read'.format(pulses[idx][0]))
             err = True
             idx += 1
     return None
 
-# def convert_to_pulses(args, edges):
+# def convert_to_pulses(args, pulses):
 
 # def convert_from_pulses():
 
 # save pulses
-def save_pulses(args, edges, sample_dur):
+def save_pulses(args, pulses, sample_dur):
     tau = 1.0 / 44100.0
-    for e in edges:
+    for e in pulses:
         lvl = 0x01 if e[1] else 0x00
         q = int(e[2] / tau)
         q0 = (q // 256 // 256) % 256
@@ -192,7 +192,7 @@ def save_pulses(args, edges, sample_dur):
 def load_pulses(args):
     tau = 1.0 / 44100.0
     i = 0
-    edges = []
+    pulses = []
     bs = None
     while bs is None or len(bs) != 0:
         bs = args.input.read(4)
@@ -201,16 +201,16 @@ def load_pulses(args):
         q = 256 * 256 * bs[1]
         q += 256 * bs[2]
         q += bs[3]
-        edges.append( (i * tau, lvl, q * tau ) )
+        pulses.append( (i * tau, lvl, q * tau ) )
         i =+ q
-    return edges
+    return pulses
 
 # save wav from pulses
-def save_wav(args, edges, sample_dur):
-    pulse_widths = [ e[2] for e in edges ]
+def save_wav(args, pulses, sample_dur):
+    pulse_widths = [ e[2] for e in pulses ]
     amp = 64
     mid = 128
-    samples = au.edges_to_samples( (au.sound(pulse_widths),) , sample_dur,
+    samples = au.pulses_to_samples( (au.sound(pulse_widths),) , sample_dur,
         mid, mid-amp, mid+amp)
     w = wave.open(args.output,'wb')
     w.setnchannels(1)
@@ -221,7 +221,7 @@ def save_wav(args, edges, sample_dur):
 def main(args):
     print(args)
     if args.from_pulses:
-        edges = load_pulses(args)
+        pulses = load_pulses(args)
         sample_dur = 1.0 / 44100.0
     else:
         w = wave.open(args.input, 'rb')
@@ -231,18 +231,18 @@ def main(args):
         n_samples = w.getnframes()
         samples = w.readframes(n_samples)
         sample_dur = 1.0 / rate
-        edges = au.samples_to_timed_edges(samples, sample_dur)
-        edges = au.filter_clicks(edges, sample_dur)
+        pulses = au.samples_to_pulses(samples, sample_dur)
+        pulses = au.filter_clicks(pulses, sample_dur)
         if args.to_pulses:
-            save_pulses(args, edges, sample_dur)
+            save_pulses(args, pulses, sample_dur)
     if args.report_bauds:
-        report_bauds(args, edges)
+        report_bauds(args, pulses)
     if args.bitstream:
-        dump_bitstream(args, edges)
+        dump_bitstream(args, pulses)
     if args.bytes:
-        dump_bytes(args, edges)
+        dump_bytes(args, pulses)
     if args.save_wav:
-        save_wav(args, edges, sample_dur)
+        save_wav(args, pulses, sample_dur)
 
 if __name__ == '__main__':
     addsitedir(join(B8_HOME, 'pylib'))

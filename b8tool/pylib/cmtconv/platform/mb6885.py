@@ -229,16 +229,16 @@ class PulseDecoder(cmtconv.audio.PulseDecoder):
     def __init__(self, *args) :
         super().__init__(*args)
 
-    def expect_stop_bits(self, edges, i_next):
-        (i_next, bit) = self.read_bit(edges, i_next)
+    def expect_stop_bits(self, pulses, i_next):
+        (i_next, bit) = self.read_bit(pulses, i_next)
         if bit != 1:
             raise ValueError('Expected 1 for stop bit')
         # The last stop bit is often a malformed pulse
         for i in range(0, 15):
-            e = edges[i_next + i]
-            if self.classify_edge(e) != PULSE_MARK:
+            e = pulses[i_next + i]
+            if self.classify_pulse(e) != PULSE_MARK:
                 raise ValueError('Expected stop bit, non MARK pulse at %d - %fs' %
-                        (i_next, edges[i_next][0]))
+                        (i_next, pulses[i_next][0]))
         # last pulse is often malformed, skip
         return i_next + 16
 
@@ -249,28 +249,30 @@ class FileReader(object):
     def __init__(self):
         self.pd = PulseDecoder(2400, 16, 1200, 8, False, True, (0,), (1,1,))
 
-    # This is horribly messy, as we are geting incorrect starting edges
+    # This is horribly messy, as we are geting incorrect starting pulses
     # as we only have H/L, not H,M,L
     #
     # Depending on whether the first edge is rising or falling
-    # and the cutoff for H/L, the first edge can be merged with silence
+    # and the cutoff for H/L, the first pulse can be merged with silence
     # before it
     # The workaround is to check for 7 or 8 space cycles, then
+    #
+    # FIXME: below is better solution
     #
     # This could be replaced by loosening it: search for 8 consecutive spaces
     # then read bytes until we get something other than 0xff
 
     # read_first_bit
-    def read_first_bit(self, edges, i_next):
+    def read_first_bit(self, pulses, i_next):
         '''Read the first start bit, which can have 7 or 8 space pulses'''
-        v3('read_first_bit: %d - %s' % (i_next,str(edges[i_next:i_next+12])))
-        i_next = self.pd.expect_spaces(edges, i_next, 7)
-        if self.pd.classify_edge(edges[i_next]) == PULSE_SPACE:
+        v3('read_first_bit: %d - %s' % (i_next,str(pulses[i_next:i_next+12])))
+        i_next = self.pd.expect_spaces(pulses, i_next, 7)
+        if self.pd.classify_pulse(pulses[i_next]) == PULSE_SPACE:
             i_next += 1
             # Yes, 9... if we miss the first 8 cycles and catch the second,
             # the "long mark" on the last stop bit can get detected as the
             # start of 8 spaces for the stop...
-            if self.pd.classify_edge(edges[i_next]) == PULSE_SPACE:
+            if self.pd.classify_pulse(pulses[i_next]) == PULSE_SPACE:
                 v3('read_first_bit: got 9 spaces')
                 i_next += 1
             else:
@@ -280,28 +282,28 @@ class FileReader(object):
         return (i_next, 0)
 
     # read_first_byte
-    def read_first_byte(self, edges, i_next):
-        (i_next, bit) = self.read_first_bit(edges, i_next)
-        (i_next, b) = self.pd.read_raw_byte(edges, i_next)
-        i_next = self.pd.expect_stop_bits(edges, i_next)
+    def read_first_byte(self, pulses, i_next):
+        (i_next, bit) = self.read_first_bit(pulses, i_next)
+        (i_next, b) = self.pd.read_raw_byte(pulses, i_next)
+        i_next = self.pd.expect_stop_bits(pulses, i_next)
         return (i_next, b)
 
-    def read_leader(self, edges, i_next):
-        '''Detect the next leader, read, confirm then return next edge'''
-        leader_start = self.pd.next_space(edges, i_next, 7)
-        v3('Leader cycles detected at %d - %fs' %
-            (leader_start, edges[leader_start][0]))
-        (i_next, b) = self.read_first_byte(edges, leader_start)
+    def read_leader(self, pulses, i_next):
+        '''Detect the next leader, read, confirm then return next pulse'''
+        leader_start = self.pd.next_space(pulses, i_next, 7)
+        v3('Leader pulses detected at %d - %fs' %
+            (leader_start, pulses[leader_start][0]))
+        (i_next, b) = self.read_first_byte(pulses, leader_start)
         # We can miss the first byte due to analogue effects limiting the
         # amplitude of waves, ruining detection.
         # Could attempt to fix this with a moving average.
         # Instead, just accept we might miss some FF bytes in the leader
-        (i_next, bs) = self.pd.read_bytes(edges, i_next, 32)
+        (i_next, bs) = self.pd.read_bytes(pulses, i_next, 32)
         bs = bytearray( (b,) ) + bs
         indices = []
         while True:
             indices.append(i_next)
-            (i_next, b) = self.pd.read_byte(edges, i_next)
+            (i_next, b) = self.pd.read_byte(pulses, i_next)
             if b == 0xFF:
                 bs = bs + bytearray( (b,) )
             elif b == 0x01:
@@ -316,38 +318,38 @@ class FileReader(object):
         return i_next
 
     # returns ( int, ( block, ) )
-    def read_block(self, edges, i_next):
+    def read_block(self, pulses, i_next):
         # leader
-        i_next = self.read_leader(edges, i_next)
+        i_next = self.read_leader(pulses, i_next)
         # header
-        (i_next, bs) = self.pd.read_bytes(edges, i_next, 17)
+        (i_next, bs) = self.pd.read_bytes(pulses, i_next, 17)
         (block, datalen) = Block.from_header(bs)
         v3('Block length: %d' % datalen)
         # consume data
-        (i_next, bs) = self.pd.read_bytes(edges, i_next, datalen)
-        (i_next, checksum) = self.pd.read_byte(edges, i_next)
-        (i_next, end_magic) = self.pd.read_byte(edges, i_next)
+        (i_next, bs) = self.pd.read_bytes(pulses, i_next, datalen)
+        (i_next, checksum) = self.pd.read_byte(pulses, i_next)
+        (i_next, end_magic) = self.pd.read_byte(pulses, i_next)
         block.setdata(bs, checksum, end_magic)
         # verify end of block
         return (i_next, block)
 
     # returns ( int, ( block, ) )
-    def read_blocks(self, edges, i_next):
+    def read_blocks(self, pulses, i_next):
         blocks = []
         block = None
         while block is None or not block.is_eof:
-            #i_next = self.pd.next_space(edges, i_next, 8)
+            #i_next = self.pd.next_space(pulses, i_next, 8)
             ## i_next = i_next - 8
             ## i_next = i_next - 1
-            v4('Spaces detected at %d - %fs' % (i_next, edges[i_next][0]))
-            (i_next, block) = self.read_block(edges, i_next)
+            v4('Spaces detected at %d - %fs' % (i_next, pulses[i_next][0]))
+            (i_next, block) = self.read_block(pulses, i_next)
             blocks.append(block)
         return (i_next, blocks)
 
     # read a file
     # returns ( int, ( block, ) )
-    def read_file(self, edges, i_next):
-        return self.read_blocks(edges, i_next)
+    def read_file(self, pulses, i_next):
+        return self.read_blocks(pulses, i_next)
 
 def read_block_bytestream(stream):
     ''' Read bytes from `stream`, parse them as MB-6885 blocks

@@ -60,7 +60,7 @@ def parse_args():
         for c in s:
             if c == 'm': res += (1,)
             elif c == 's': res += (0,)
-            else: raise ValueError('Start/stop bit musy be \'m\' or \'s\'')
+            else: raise ValueError('Start/stop bit must be \'m\' or \'s\'')
         return res
 
     # FIXME: tolerance

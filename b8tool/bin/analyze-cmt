@@ -11,7 +11,10 @@ import  wave
 from    os.path  import abspath, dirname, join
 from    site  import addsitedir
 from    argparse import ArgumentParser
+from    itertools import chain
 from    functools import partial
+import  math
+import  statistics
 import  sys, os
 
 #   Configure and use b8tool's Python library path
@@ -86,26 +89,56 @@ def report_bauds(args, pulses):
     else:
         bauds = [ 9600, 4800, 2400, 1200, 600, 300, 150, 110 ]
     tol = args.tolerance
-    durs = [ (b, 0.5/((1.0+tol)*b) , 0.5/((1.0-tol)*b)) for b in bauds ]
-    hist = dict( (b, 0) for b in bauds )
-    hist[ 'low' ] = 0
-    hist[ 'high' ] = 0
-    hist[ 'unknown' ] = 0
+    durs = [ (  b,
+                (1.0 + math.log(1.0 - tol)) * 0.5/b,
+                (1.0 + math.log(1.0 + tol)) * 0.5/b
+            ) for b in bauds ]
+    buckets = dict( (b, []) for b in bauds )
+    buckets['low'] = []
+    buckets['high'] = []
+    buckets['unknown'] = []
+
+    # classify each pulse width and add to relevant bucket
     for (_,_, dur) in pulses:
         if dur < durs[0][1]:
-            hist['low'] += 1
+            buckets['low'].append(dur)
         elif dur > durs[-1][2]:
-            hist['high'] += 1
+            buckets['high'].append(dur)
         else:
             found = False
             for (b,l,h) in durs:
                 if dur >= l and dur <= h:
-                    hist[b] += 1
+                    buckets[b].append(dur)
                     found = True
                     break
             if not found:
-                hist['unknown'] += 1
-    print(hist)
+                buckets['unknown'].append(dur)
+    # calc stats
+    def calc_stats(ws):
+        c = len(ws)
+        if c > 1:
+            return (c, statistics.mean(ws), statistics.stdev(ws))
+        elif c > 0:
+            return (c, statistics.mean(ws), None)
+        else:
+            return (c, None, None)
+
+    stats = { k : calc_stats(ws) for k, ws in buckets.items() }
+
+    # Report
+    print("{:>8}, {:>8}, {:>13}, {:>13}".format("Baud", "Count", "Mean", "Stdev"))
+    for k in chain([ 'low' ], reversed(bauds), ['high', 'unknown']):
+        (c, m, s) = stats[k]
+        if m is None:
+            m_ = ""
+        else:
+            m_ = "{:>3.9f}".format(m)
+        if s is None:
+            s_ = ""
+        else:
+            s_ = "{:>3.9f}".format(s)
+        print("{:>8}, {:>8}, {:>13}, {:>13}".format(k, c, m_, s_))
+
 
 # FIXME: add leader detection that works
 # for formats that use repeating mark or space instead of

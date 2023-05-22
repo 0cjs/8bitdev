@@ -29,7 +29,7 @@ def parse_args():
         ''')
     a = p.add_argument
     a('-r', '--report-bauds', action='store_true' ) # count cycles per well-known baud rates
-    a('-e', '--extended-baud-rates', action='store_true')
+    a(      '--baud', type=float, default=1200)
     a('-d', '--dump-pulses', action='store_true')
     a('-t', '--tolerance',type=float, default=0.25)
     a('-b', '--bitstream', action='store_true')
@@ -84,10 +84,8 @@ def parse_args():
     return args
 
 def report_bauds(args, pulses):
-    if args.extended_baud_rates:
-        bauds = [ 9600, 7200, 4800, 3600, 2400, 1800, 1200, 900, 600, 450, 300, 150, 110 ]
-    else:
-        bauds = [ 9600, 4800, 2400, 1200, 600, 300, 150, 110 ]
+    bauds = list(reversed(sorted(
+        baud_rates(args.baud) + baud_rates(args.baud * 1.5))))
     tol = args.tolerance
     durs = [ (  b,
                 (1.0 + math.log(1.0 - tol)) * 0.5/b,
@@ -309,5 +307,6 @@ def main(args):
 
 if __name__ == '__main__':
     addsitedir(join(B8_HOME, 'pylib'))
-    import cmtconv.audio as au, cmtconv.logging as lg
+    import  cmtconv.audio as au, cmtconv.logging as lg
+    from    cmtconv.analyze import *
     main(parse_args())

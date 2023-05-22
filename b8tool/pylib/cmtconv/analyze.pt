@@ -1,0 +1,15 @@
+from 	cmtconv.analyze import *
+import pytest
+
+@pytest.mark.parametrize('b, expected', [
+    (1200, [150, 300, 600, 1200, 2400, 4800, 9600]),
+    (2400, [150, 300, 600, 1200, 2400, 4800, 9600]),
+    (1100, [137, 275, 550, 1100, 2200, 4400, 8800]),
+])
+def test_baud_rates_single(b, expected):
+    assert expected == baud_rates(b)
+
+def test_baud_rates_halves():
+    b  = [150, 300, 600, 1200, 2400, 4800, 9600]
+    bp = [225, 450, 900, 1800, 3600, 7200]
+    assert sorted(b + bp) == sorted(baud_rates(1200) + baud_rates(1800))

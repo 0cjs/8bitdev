@@ -125,19 +125,22 @@ def report_bauds(args, pulses):
 
     stats = { k : calc_stats(ws) for k, ws in buckets.items() }
 
+    def width(baud):
+        try:
+            return "{:4.2f}us".format(1e6 * (0.5 / float(baud)))
+        except:
+            return "-"
+
     # Report
-    print("{:>8}, {:>8}, {:>13}, {:>13}".format("Baud", "Count", "Mean", "Stdev"))
-    for k in chain([ 'low' ], reversed(bauds), ['high', 'unknown']):
-        (c, m, s) = stats[k]
-        if m is None:
-            m_ = ""
-        else:
-            m_ = "{:>3.9f}".format(m)
-        if s is None:
-            s_ = ""
-        else:
-            s_ = "{:>3.9f}".format(s)
-        print("{:>8}, {:>8}, {:>13}, {:>13}".format(k, c, m_, s_))
+    print("{:>16} {:>8} {:>13} {:>13}".format("Width us / Baud", "Count", "Mean us", "Stdev us"))
+    for baud in chain([ 'low' ], reversed(bauds), ['high', 'unknown']):
+        (c, m, s) = stats[baud]
+        if m is None:   m_ = ""
+        else:           m_ = "{:>6.3f}".format(1e6 * m)
+        if s is None:   s_ = ""
+        else:           s_ = "{:>6.3f}".format(1e6 * s)
+        baud_ = "{} /{:>5}".format(width(baud), baud)
+        print("{:>16} {:>8} {:>13} {:>13}".format(baud_, c, m_, s_))
 
 
 # FIXME: add leader detection that works

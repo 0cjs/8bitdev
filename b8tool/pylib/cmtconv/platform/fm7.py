@@ -446,3 +446,6 @@ class FileEncoder(object):
 def write_file_bytestream(blocks, stream):
     bs = bytes(chain(*( b.filedata for b in blocks)))
     stream.write(bs)
+
+def parameters():
+    return dict()

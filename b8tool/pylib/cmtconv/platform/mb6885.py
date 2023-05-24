@@ -421,3 +421,8 @@ class FileEncoder(object):
 def write_file_bytestream(blocks, stream):
     bs = bytes(chain(*( b.filedata for b in blocks[:-1])))
     stream.write(bs)
+
+def parameters():
+    return {
+        'edge_gradient_factor' : 0.65
+    }

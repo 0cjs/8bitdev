@@ -48,6 +48,91 @@ def filter_clicks(pulses, sample_dur, tol = 4):
     return res
 
 
+#
+# statistics.mean and statistics.stdev{p} are accureate but slow
+# so we do a simple two-pass population stdev calc and combine with mean
+#
+def stats(samples):
+    n=len(samples)
+    if n == 0:
+        return (None, None)
+    elif n == 1:
+        return (samples[0], None)
+    else:
+        mean = sum(samples)/n
+        ss = sum( (x - mean) ** 2 for x in samples )
+        return (mean, math.sqrt(ss / n))
+
+
+# samples   : [ float ]
+# ->
+# pulses    : ( (float, int, float) )
+#
+def samples_to_pulses_via_edge_detection(samples, sample_dur, grad_factor=0.5):
+    res=[]
+    n = len(samples)
+    if n > 1:
+        v2("edge detection, starting stats calc...")
+
+        #sample_mean = statistics.mean(samples)
+        #sample_stdev = statistics.stdev(samples)
+        (sample_mean, sample_stdev) = stats(samples)
+        v2("edge detection: mean = {:5.3f}, stdev = {:5.3f}"
+           .format(sample_mean, sample_stdev))
+
+        # Note, working absolute values are as follows:
+        # 10 for FM-7, JR-200, PC-8001
+        # 32 for MB-6885
+        grad=grad_factor * sample_stdev
+
+        i=1
+        prev=0
+        lvl=0
+        v2("edge detection: required gradient={:5.3f} ...".format(grad))
+        while i<n:
+            d = samples[i] - samples[i-1]
+            if abs(d) < grad:
+                i += 1
+            else:
+                i0=i
+                # roll forward
+                while abs(d) >= grad and i<n:
+                    i += 1
+                    d = samples[i] - samples[i-1]
+                # mark mid point
+                idx = int((i+i0)/2)
+                t0=sample_dur*prev
+                t1=sample_dur*idx
+                # Use mid-point of pulse to get level
+                mid = int((prev+idx)/2)
+                if samples[mid] > sample_mean + 0.5 * sample_stdev:
+                    lvl=1
+                elif samples[mid] < sample_mean - 0.5 * sample_stdev:
+                    lvl=-1
+                else:
+                    lvl=0
+                res.append((t1,lvl,t1-t0))
+                prev=idx
+        # deal with final pulse
+        mid = int((i+prev)/2)
+        if samples[mid] > sample_mean + 0.5 * sample_stdev:
+            lvl=1
+        elif samples[mid] < sample_mean - 0.5 * sample_stdev:
+            lvl=-1
+        else:
+            lvl=0
+        t0=sample_dur*prev
+        t1=sample_dur*n
+        res.append((t1,lvl,t1-t0))
+        v2("edge detection: done, found {} edges".format(len(res)))
+        v2( "first pulses: {}" .format(list(res[:10])))
+        v2( "last pulses: {}" .format(list(res[-10:])))
+        return tuple(res)
+    else:
+        return tuple()
+
+
+
 # samples   : [ float ]
 # ->
 # pulses     : ( (float, int, float) )
@@ -469,6 +554,7 @@ def sound(pulses):
 # ->
 # samples   : [ int ]
 def pulses_to_samples(chunks, sample_dur, silence, low, high):
+    # FIXME: Use HML levels, get rid of AudioMarker
     res = []
     lvl = True
     for chunk in chunks:

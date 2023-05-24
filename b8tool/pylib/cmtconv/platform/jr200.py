@@ -521,3 +521,6 @@ class FileEncoder(object):
         elif  fh.baudrate == fh.B_600:   encoder = self.baud600_encoder
         else: raise RuntimeError('Unknown baudrate: {!r}'.format(fh.baudrate))
         return self.header(fh) + self.blocks(encoder, file_blocks[1:])
+
+def parameters():
+    return dict()

@@ -30,6 +30,7 @@ def parse_args():
     a = p.add_argument
     a('-r', '--report-bauds', action='store_true' ) # count cycles per well-known baud rates
     a(      '--baud', type=float, default=1200)
+    a('-g', '--gradient-factor',type=float, default=0.5)
     a('-d', '--dump-pulses', action='store_true')
     a('-t', '--tolerance',type=float, default=0.25)
     a('-b', '--bitstream', action='store_true')
@@ -290,7 +291,9 @@ def main(args):
         n_samples = w.getnframes()
         samples = w.readframes(n_samples)
         sample_dur = 1.0 / rate
-        pulses = au.samples_to_pulses(samples, sample_dur)
+        #pulses = au.samples_to_pulses(samples, sample_dur)
+        pulses = au.samples_to_pulses_via_edge_detection(
+            samples, sample_dur, args.gradient_factor)
         pulses = au.filter_clicks(pulses, sample_dur)
         if args.to_pulses:
             save_pulses(args, pulses, sample_dur)

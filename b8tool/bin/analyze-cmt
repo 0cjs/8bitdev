@@ -267,11 +267,12 @@ def load_pulses(args):
 
 # save wav from pulses
 def save_wav(args, pulses, sample_dur):
-    pulse_widths = [ e[2] for e in pulses ]
+    #pulse_widths = [ e[2] for e in pulses ]
+    pulses_ = [ (e[2], e[1]) for e in pulses ]
     amp = 64
     mid = 128
-    samples = au.pulses_to_samples( (au.sound(pulse_widths),) , sample_dur,
-        mid, mid-amp, mid+amp)
+    samples = au.pulses_to_samples2( (au.sound(pulses_),) , sample_dur,
+        mid-amp, mid, mid+amp)
     w = wave.open(args.output,'wb')
     w.setnchannels(1)
     w.setsampwidth(1)

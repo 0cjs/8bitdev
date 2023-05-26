@@ -96,9 +96,10 @@ def samples_to_pulses_via_edge_detection(samples, sample_dur, grad_factor=0.5):
             else:
                 i0=i
                 # roll forward
-                while abs(d) >= grad and i<n:
-                    d = samples[i] - samples[i-1]
+                d0=d
+                while abs(d) >= grad and math.copysign(d,d0) == d and i<n-1:
                     i += 1
+                    d = samples[i] - samples[i-1]
                 # mark mid point
                 idx = int((i+i0)/2)
                 t0=sample_dur*prev
@@ -572,6 +573,41 @@ def pulses_to_samples(chunks, sample_dur, silence, low, high):
             # Calling code should be putting silence beween blocks of bytes
             # and we need to model levels as H/M/L insteasd of H/L
             res.append(silence)
+        else:
+            raise Exception('Unknown audio marker')
+    return res
+
+
+def pulses_to_samples2(chunks, sample_dur, low, mid, high):
+    res = []
+    lvl = 0
+    for chunk in chunks:
+        if chunk[0] == AudioMarker.SILENCE:
+            dur = chunk[1]
+            res.extend([mid] * int(0.5 + dur/sample_dur))
+            lvl = 0
+        elif chunk[0] == AudioMarker.SOUND:
+            pulses = chunk[1]
+            for d in pulses:
+                if type(d) is tuple:
+                    # tuple is width, level
+                    w = d[0]
+                    lvl_ = d[1]
+                    lvl = lvl_
+                    #v3('tuple: ({},{},{})'.format(w, lvl, lvl_))
+                else:
+                    w = d
+                    lvl_ = 1 if lvl == 0 else -lvl
+                    #v3('other: ({},{},{})'.format(w, lvl, lvl_))
+                if lvl_==-1:
+                    sample_lvl=low
+                elif lvl_==1:
+                    sample_lvl=high
+                else:
+                    sample_lvl=mid
+                res.extend([sample_lvl] * int(0.5 + w/sample_dur))
+                lvl=lvl_
+            res.append(mid)
         else:
             raise Exception('Unknown audio marker')
     return res

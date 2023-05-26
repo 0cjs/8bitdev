@@ -177,3 +177,26 @@ def test_roundtrip():
         (i_next, bs2) = de.read_bytes(pulses2, 0, l)
         bs3 = bytearray(bs2)
         assert bs == bs3
+
+
+@pytest.mark.parametrize('en, de', [
+    (baud600_encoder, baud600_decoder),
+    (baud2400_encoder, baud2400_decoder),
+])
+def test_roundtrip2(en, de):
+    rate        = 11025
+    sample_dur  = 1.0 / rate
+    amp         = 127
+    mid         = 128
+
+    l = 3000
+    #bs = random.randbytes(l)
+    bs = bytearray(random.randint(0,255) for _ in range(l))
+    pulses = en.encode_bytes(bs)
+    chunks = (sound(pulses),silence(0.1))
+    samples = pulses_to_samples2(chunks, sample_dur,
+        mid - amp, mid, mid + amp)
+    pulses2 = samples_to_pulses_via_edge_detection(samples, sample_dur)
+    (i_next, bs2) = de.read_bytes(pulses2, 0, l)
+    bs3 = bytearray(bs2)
+    assert bs == bs3

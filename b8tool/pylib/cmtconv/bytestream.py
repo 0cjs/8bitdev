@@ -17,7 +17,8 @@ from    io  import BytesIO
 import  wave
 
 from    cmtconv.audio  import samples_to_pulses, pulses_to_samples, \
-    filter_clicks, samples_to_pulses_via_edge_detection
+    filter_clicks, samples_to_pulses_via_edge_detection, \
+    pulses_to_samples2
 from    cmtconv.logging  import *
 from    testmc.tool  import asl
 
@@ -158,7 +159,8 @@ def blocks_to_audio(platform, blocks, stream):
     sample_dur  = 1.0 / rate
     amp         = 127
     mid         = 128
-    samples     = pulses_to_samples(pulses, sample_dur, mid, mid-amp, mid+amp)
+    #samples     = pulses_to_samples(pulses, sample_dur, mid, mid-amp, mid+amp)
+    samples     = pulses_to_samples2(pulses, sample_dur, mid-amp, mid, mid+amp)
 
     # Write out WAV file
     w = wave.open(stream,'wb')

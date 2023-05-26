@@ -97,8 +97,8 @@ def samples_to_pulses_via_edge_detection(samples, sample_dur, grad_factor=0.5):
                 i0=i
                 # roll forward
                 while abs(d) >= grad and i<n:
-                    i += 1
                     d = samples[i] - samples[i-1]
+                    i += 1
                 # mark mid point
                 idx = int((i+i0)/2)
                 t0=sample_dur*prev

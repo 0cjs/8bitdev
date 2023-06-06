@@ -253,10 +253,14 @@ class PulseDecoder:
         mark_width = 0.5 / mark_baud
         self.mark_lower = (1.0 + math.log(1.0 - mark_tol[0])) * mark_width
         self.mark_upper = (1.0 + math.log(1.0 + mark_tol[1])) * mark_width
+        v3("mark tolerance lower: {}".format(self.mark_lower))
+        v3("mark tolerance upper: {}".format(self.mark_upper))
 
         space_width = 0.5 / space_baud
         self.space_lower = (1.0 + math.log(1.0 - space_tol[0])) * space_width
         self.space_upper = (1.0 + math.log(1.0 + space_tol[1])) * space_width
+        v3("space tolerance lower: {}".format(self.space_lower))
+        v3("space tolerance upper: {}".format(self.space_upper))
 
         # mask sequence
         if lsb_first:
@@ -392,13 +396,16 @@ class PulseDecoder:
     # ->
     # i_next    : int
     def expect_start_bits(self, pulses, i_next):
+        start = i_next
         (i_next, bits) = self.read_bits(pulses, i_next, len(self.start_bits))
         #v4('expect_start_bits:', bits) # XXX very slow
         if bits == self.start_bits:
             return i_next
         else:
-            raise Exception('Expected start bits: %s, got: %s ' %
-                            (str(self.start_bits), str(bits)))
+            raise Exception(
+                'Expected start bits: {}, got: {} at {} ({:6.9f})'.format(
+                    str(self.start_bits), str(bits), start, pulses[start][0])
+                )
 
     # pulses    : ( ( float, int, float ), )
     # i_next    : int

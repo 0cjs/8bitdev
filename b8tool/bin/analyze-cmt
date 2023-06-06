@@ -33,7 +33,7 @@ def parse_args():
     a('-g', '--gradient-factor',type=float, default=0.5)
     a('-d', '--dump-pulses', action='store_true')
     a('-t', '--tolerance',type=float, default=0.25)
-    a('-b', '--bitstream', action='store_true')
+    a('-b', '--bitstream',type=str)
     a('-B', '--bytes', action='store_true')
     a('-m', '--mark-baud', type=int, default=2400)
     a('--mark-pulses', type=int, default=2)
@@ -169,6 +169,9 @@ def dump_pulses(args, pulses):
 
 
 def dump_bitstream(args, pulses):
+    valid = ('line', 'char')
+    if args.bitstream not in valid:
+        raise ValueError("bitstream must be in {}".format(valid))
     pd = args.pulse_decoder
     # read until mark/space
     idx = None
@@ -183,18 +186,22 @@ def dump_bitstream(args, pulses):
     # start dumping them
     while idx < len(pulses):
         e = pulses[idx]
-        c = pd.classify_pulse(pulses[idx]) 
-        if c == au.PULSE_MARK:
-            print('{:012.6f}, 1, {:09.3f}, {}'.format(e[0], 1e6 * e[2], e[1]))
-            idx += args.mark_pulses
-        elif c == au.PULSE_SPACE:
-            print('{:012.6f}, 0, {:09.3f}, {}'.format(e[0], 1e6 * e[2], e[1]))
-            idx += args.space_pulses
+        c = pd.classify_pulse(pulses[idx])
+        if args.bitstream == 'char':
+            if c == au.PULSE_MARK:      print('1', end='')
+            elif c == au.PULSE_SPACE:   print('0',end='')
+            else:                       print('x',end='')
         else:
-            print('{:012.6f}, X, {:09.3f}, {}'.format(e[0], 1e6 * e[2], e[1]))
-            # FIXME: keep track of gaps
-            idx += 1
-
+            if c == au.PULSE_MARK:
+                print('{:012.6f}, 1, {:09.3f}, {}'.format(e[0], 1e6 * e[2], e[1]))
+            elif c == au.PULSE_SPACE:
+                print('{:012.6f}, 0, {:09.3f}, {}'.format(e[0], 1e6 * e[2], e[1]))
+            else:
+                print('{:012.6f}, X, {:09.3f}, {}'.format(e[0], 1e6 * e[2], e[1]))
+        if c == au.PULSE_MARK:          idx += args.mark_pulses
+        elif c == au.PULSE_SPACE:       idx += args.space_pulses
+        else:                           idx += 1
+    print()
 
 def dump_bytes(args, pulses):
     pd = args.pulse_decoder

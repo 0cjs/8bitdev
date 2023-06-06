@@ -1,10 +1,7 @@
 ''' cmtconv.platform.fm7
 '''
-from email.header import Header
 from    enum  import IntEnum
 from    itertools  import chain
-from re import ASCII
-from sqlite3 import DatabaseError
 from    cmtconv.logging  import *
 from    cmtconv.audio  import PulseDecoder, PULSE_MARK, PULSE_SPACE, \
         Encoder, silence, sound

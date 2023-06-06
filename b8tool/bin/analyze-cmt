@@ -223,16 +223,17 @@ def dump_bytes(args, pulses):
             idx += 1
     
     # Keep reading bytes until we can't
-    err = False
+    err = 0
     while idx < len(pulses):
         try:
             (idx, b) = pd.read_byte(pulses, idx)
+            if err > 0:
+                print('{:012.6f}, failed to read byte for previous {} pulses'.format(pulses[idx][0], err))
+                err=0
             c = '.' if b<32 or b>127 else chr(b)
             print('{:012.6f}, {:02x}, {}'.format(pulses[idx][0], b, c))
-            err = False
         except Exception as ex:
-            print('{:012.6f}, failed to read'.format(pulses[idx][0]))
-            err = True
+            err += 1
             idx += 1
     return None
 

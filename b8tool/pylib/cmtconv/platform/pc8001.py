@@ -28,9 +28,12 @@ class Block(object):
 
     platform = "NEC PC-8001"
 
+    MIN_FIRST_BLOCK_LEN = 10
+
     class BlockType(IntEnum):
-        HEADER  = 0x00
-        DATA    = 0x01
+        BASICHEADER  = 0x00
+        BASICTEXT    = 0x01
+        BINARYDATA   = 0x02
 
     def __repr__(self):
         return '{}.{}( data={})'.format(
@@ -38,10 +41,13 @@ class Block(object):
                 self.__class__.__name__,
                 self._data)
 
-class HeaderBlock(Block):
+class BASICHeaderBlock(Block):
+
+    MAGIC               = b'\xd3' * 10
+    FILE_NAME_LENGTH    = 6
 
     @classmethod
-    def make_block(cls, file_name ):
+    def make_block(cls, file_name):
         return cls(file_name)
 
     def __init__(self, file_name=None):
@@ -49,33 +55,18 @@ class HeaderBlock(Block):
         self._file_name = file_name
 
     @classmethod
+    def _check_magic(cls, bs):
+        if bytes(bs[0:len(cls.MAGIC)]) != cls.MAGIC:
+            raise ValueError('Bad magic,'
+                ' expected={} actual={}'.format(repr(cls.MAGIC), repr(bs)))
+
+    @classmethod
     def from_header(cls, headerbytes):
         cls._check_magic(headerbytes)
-        if headerbytes[2] != Block.BlockType.HEADER:
-            raise ValueError('Bad type for header block ${:02X}'.format(
-                headerbytes[2]))
-        if headerbytes[3] != cls.HEADERLEN:
-            raise ValueError('Bad length for header block: ${:02X}'.format(
-                headerbytes[3]))
-        return (cls(), cls.HEADERLEN)
+        return (cls(), 6)
 
     def setdata(self, data, checksum=None):
-        # Header checksum seems to include the length byte,
-        # which is always 20 (0x14)
-        expected_checksum = self._calc_checksum(
-            bytearray((self.HEADERLEN,)) + data)
-        if checksum is not None and expected_checksum != checksum:
-            raise self.ChecksumError('expected=${:02X}, actual=${:02X}'.format(
-                expected_checksum, checksum))
-        self._file_name = data[0:8].decode()
-        self._file_type = data[8]
-        if self._file_type not in list(self.FileType):
-            raise self.ChecksumError(
-                'Unrecognised file type: {:02X}'.format(self._file_type))
-        self._binary = data[9]
-        if self._binary not in list(self.Binary):
-            raise self.ChecksumError(
-                'Unrecognised binary flag: {:02X}'.format(self._file_type))
+        self._file_name = data.decode().rstrip('\0')
 
     @property
     def filename(self):
@@ -83,31 +74,32 @@ class HeaderBlock(Block):
 
     @property
     def checksum(self):
-        data = bytearray((self.HEADERLEN,))
-        data.extend(self._data())
-        return self._calc_checksum(data)
+        return None
 
     @property
     def filedata(self):
         return bytearray()
 
-    def _data(self):
-        b = bytearray(self._file_name, encoding='ascii') # FIXME: pad
-        b.append(self._file_type)
-        b.append(self._binary)
-        b.append(self._binary) # Note: seems to be replicated
-        b.extend((0,0,0,0,0,0,0,0,0))
-        return b
+    def to_bytes(self):
+        bs = self.MAGIC + self._file_name.encode('iso-8859-1') + bytes(6)
+        return bs[0:len(self.MAGIC)+self.FILE_NAME_LENGTH]
+
+
+class BASICTextBlock(Block):
+
+    def setdata(self, data):
+        self._data = data
+
+    @property
+    def filedata(self):
+        return self._data
 
     def to_bytes(self):
-        b = bytearray(self.MAGIC)
-        b.append(self.BlockType.HEADER)
-        b.append(self.HEADERLEN)
-        b.extend(self._data())
-        b.append(self.checksum)
-        return b    
+        return self._data
 
-class DataBlock(Block):
+
+
+class BinaryDataBlock(Block):
 
     @classmethod
     def make_block(cls):
@@ -178,7 +170,7 @@ class FileReader(object):
         # leader
         i_next = self.read_leader(pulses, i_next)
         # header
-        (i_next, bs) = self.pd.read_bytes(pulses, i_next, Block.BLOCK_HEADER_LEN)
+        (i_next, bs) = self.pd.read_bytes(pulses, i_next, BASICHeaderBlock.MIN_FIRST_BLOCK_LEN)
         v3('headerbytes={}'.format(bs))
         if (bs[2] == Block.BlockType.HEADER):
             (block, datalen) = HeaderBlock.from_header(bs)
@@ -219,27 +211,36 @@ class FileReader(object):
     def read_file(self, pulses, i_next):
         i_next = self.read_leader(pulses, i_next)
 
+        # Try to read BASIC header
+        n = Block.MIN_FIRST_BLOCK_LEN
+        (i_next, bs) = self.pd.read_bytes(pulses, i_next, n)
         try:
-            # Try to read BASIC header
-            (i_next, bs) = self.pd.read_bytes(pulses, i_next, 10)
-            assert bs == 10 * b'\xD3'
-            filename = bytearray()
-            (i_next, b) = self.pd.read_byte(pulses, i_next)
-            while b != 0:
-                filename.append(b)
-                (i_next, b) = self.pd.read_byte(pulses, i_next)
-            v3('filename: {}'.format(filename))
+            (hdrblk, l) = BASICHeaderBlock.from_header(bs)
+            (i_next, bs) = self.pd.read_bytes(pulses, i_next, l)
+            hdrblk.setdata(bs)
+
             # Intra-block 2400Hz pulses
             i_next = self.pd.expect_marks(pulses, i_next, int(2.5 * 8))
             # Start bit for next block
             i_next = self.pd.next_space(pulses, i_next, 2)
-            b = self.pd.read_byte(pulses, i_next)
 
-        except AssertionError:
-            raise RuntimeError('XXX')
+            data = bytearray()
+            (i_next, b) = self.pd.read_byte(pulses, i_next)
+            data.append(b)
+            eof = False
+            while not eof:
+                try:
+                    (i_next, b) = self.pd.read_byte(pulses, i_next)
+                    data.append(b)
+                except:
+                    eof = True
+            textblk = BASICTextBlock()
+            textblk.setdata(data)
+            return (i_next, (hdrblk, textblk))
 
+        except ValueError:
+            raise RuntimeError('XXX: WriteMe for BinaryDataBlock')
 
-        #return self.read_blocks(pulses, i_next)
 
 
 def read_block_bytestream(stream):

@@ -4,7 +4,7 @@ from    enum  import IntEnum
 from    itertools  import chain
 from    cmtconv.logging  import *
 from    cmtconv.audio  import PulseDecoder, PULSE_MARK, PULSE_SPACE, \
-        Encoder, silence, sound
+        Encoder, silence, sound, ReadError
 import  cmtconv.audio
 
 ####################################################################
@@ -69,6 +69,10 @@ class BASICHeaderBlock(Block):
         self._file_name = data.decode().rstrip('\0')
 
     @property
+    def isoef(self):
+        return False
+
+    @property
     def filename(self):
         return self._file_name
 
@@ -87,6 +91,10 @@ class BASICHeaderBlock(Block):
 
 class BASICTextBlock(Block):
 
+    @property
+    def isoef(self):
+        return True
+
     def setdata(self, data):
         self._data = data
 
@@ -100,7 +108,8 @@ class BASICTextBlock(Block):
 
 
 class BinaryDataBlock(Block):
-
+    '''
+    '''
     @classmethod
     def make_block(cls):
         return cls()
@@ -120,6 +129,10 @@ class BinaryDataBlock(Block):
             raise self.ChecksumError('expected={:02X}, actual={:02X}'.format(
                 expected_checksum, checksum))
         self.data = data
+
+    @property
+    def isoef(self):
+        return True
 
     @property
     def checksum(self):
@@ -232,43 +245,34 @@ class FileReader(object):
                 try:
                     (i_next, b) = self.pd.read_byte(pulses, i_next)
                     data.append(b)
-                except:
+                except ReadError as e:
+                    v3('Error on presumed last byte:\n{}'.format(e))
                     eof = True
             textblk = BASICTextBlock()
             textblk.setdata(data)
             return (i_next, (hdrblk, textblk))
 
-        except ValueError:
+        except ReadError:
+            # Read Binary data
             raise RuntimeError('XXX: WriteMe for BinaryDataBlock')
 
 
 
 def read_block_bytestream(stream):
-    ''' Read bytes from `stream`, parse them as FM-7 blocks
-        and return a sequence of the block objects.
-    '''
     blocks = []
     blk = None
-    while blk is None or not blk.is_eof:
-        bh = stream.read(Block.BLOCK_HEADER_LEN)
-        if bh[2] == Block.BlockType.HEADER:
-            v3('Header block')
-            (blk, datalen) = HeaderBlock.from_header(bh)
-            bs = stream.read(datalen)
-            chksum = stream.read(1)
-            blk.setdata(bs, chksum[0])
-        elif bh[2] == Block.BlockType.DATA:
-            v3('Data block')
-            (blk, datalen) = DataBlock.from_header(bh)
-            bs = stream.read(datalen)
-            chksum = stream.read(1)
-            blk.setdata(bs, chksum[0])
-        elif bh[2] == Block.BlockType.END:
-            v3('End block')
-            (blk, datalen) = EndBlock.from_header(bh)
-        else:
-            raise ValueError('Unrecognised block type: {:02X}'.format(bh[2]))
+    bs = stream.read()
+    magiclen = len(BASICHeaderBlock.MAGIC)
+    if bs[0:magiclen] == BASICHeaderBlock.MAGIC:
+        v3('Header block')
+        (blk, datalen) = BASICHeaderBlock.from_header(bs[0:magiclen])
+        blk.setdata(bs[magiclen:magiclen+datalen])
         blocks.append(blk)
+        blk = BASICTextBlock()
+        blk.setdata(bs[magiclen+datalen:])
+        blocks.append(blk)
+    else:
+        raise ValueError('FIXME: BinaryDataBlock not yet supported')
     return tuple(blocks)
 
 def blocks_from_bin(stream, loadaddr=0x0000, filename=None):
@@ -307,34 +311,33 @@ def blocks_from_bin(stream, loadaddr=0x0000, filename=None):
 
 class FileEncoder(object):
     def __init__(self):
-        self.encoder = Encoder(1100, 2, 2200, 2, False, True, (0,), (1,1))
+        self.encoder = Encoder(2400, 8, 1200, 4, False, True, (0,), (1,1))
 
-        # long lead in for header and first data block
-        self.long_lead_in = self.encoder.encode_bytes( (0xff,) * 255 )
+        self.file_leader = self.encoder.encode_bit(0) * 256
+        self.block_leader = self.encoder.encode_bit(1) * 128
 
-        # Lead-in
-        self.lead_in = self.encoder.encode_bytes( (0xff,) * 10 )
 
-        # Lead-out
-        self.lead_out = self.encoder.encode_bytes( (0xff,) * 4 )
+    #
+    # block     : Block
+    # ->
+    # audio     : [AudioMarker]
+    def encode_block(self, blk):
+        widths = []
+        widths.extend(self.block_leader)
+        widths.extend(self.encoder.encode_bytes(blk.to_bytes()))
+        widths.extend(self.block_leader)
+        return [sound(widths)]
 
-    def encode_block(self, blk, long_leader = False):
-        res = []
-        if long_leader:
-            res.extend(self.long_lead_in)
-        else:
-            res.extend(self.lead_in)
-        res.extend(self.encoder.encode_bytes(blk.to_bytes()))
-        res.extend(self.lead_out)
-        return (sound(res), silence(.01))
-
+    #
+    # blocks    : Block
+    # ->
+    # audio     : (AudioMarker,)
+    #
     def encode_blocks(self, blocks):
-        res = (silence(2.0),)
-
-        for (n, b) in enumerate(blocks):
-            res += self.encode_block(b, n < 2)
-
-        return res
+        audio = [sound(self.file_leader)]
+        for b in blocks:
+            audio.extend(self.encode_block(b))
+        return tuple(audio)
 
     def encode_file(self, blocks):
         return self.encode_blocks(blocks)

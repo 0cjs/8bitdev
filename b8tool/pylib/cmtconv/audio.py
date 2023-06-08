@@ -10,6 +10,10 @@ import  math
 from    testmc.memimage  import MemImage
 from    cmtconv.logging  import *
 
+class ReadError(Exception):
+    pass
+
+
 # General approach is to use layered abstractions in
 # a simple top-down parser.
 # - came out of investigative approach, supports easy debugging
@@ -300,7 +304,7 @@ class PulseDecoder:
             else:
                 consecutive = 0
             i += 1
-        raise Exception('unable to find %d consecutive pulses of space'
+        raise ReadError('unable to find %d consecutive pulses of space'
                         % needed)
 
     # FIXME: add needed pulses as per next_space
@@ -324,12 +328,12 @@ class PulseDecoder:
         for i in range(0, n):
             idx = i_next + i
             if idx >= len(pulses):
-                raise Exception('Out of pulses at %d, on pulse %d of expected'
+                raise ReadError('Out of pulses at %d, on pulse %d of expected'
                     ' %d mark pulses'
                     % (idx, i, n))
             dur = pulses[idx][2]
             if dur < self.mark_lower * .75 or dur > self.mark_upper * 1.5:
-                raise Exception('Expected %d mark pulses at %d (%f)'
+                raise ReadError('Expected %d mark pulses at %d (%f)'
                     ', failed on pulse %d with pulse width %f'
                     ', pulses = %s'
                         % (n, i_next, pulses[i_next][0], i, dur,
@@ -343,12 +347,12 @@ class PulseDecoder:
         for i in range(n):
             idx = i_next + i
             if idx >= len(pulses):
-                raise Exception('Out of pulses at %d, on pulse %d of expected'
+                raise ReadError('Out of pulses at %d, on pulse %d of expected'
                     ' %d space pulses'
                     % (idx, i, n))
             dur = pulses[idx][2]
             if dur < self.space_lower * .75 or dur > self.space_upper * 1.35:
-                raise Exception('Expected %d space pulses at %d (%f)'
+                raise ReadError('Expected %d space pulses at %d (%f)'
                     ', failed on pulse %d with pulse width %f'
                     ', pulses = %s'
                         % (n, i_next, pulses[i_next][0], i, dur,
@@ -374,7 +378,7 @@ class PulseDecoder:
         elif p == PULSE_SPACE:
             return (self.expect_spaces(pulses, i_next, self.space_pulses), 0)
         else:
-            raise Exception('Unexpected pulse width at: %f, '
+            raise ReadError('Unexpected pulse width at: %f, '
                 'with pulse width: %f'
                 % (pulses[i_next][0], pulses[i_next][2]))
 
@@ -402,7 +406,7 @@ class PulseDecoder:
         if bits == self.start_bits:
             return i_next
         else:
-            raise Exception(
+            raise ReadError(
                 'Expected start bits: {}, got: {} at {} ({:6.9f})'.format(
                     str(self.start_bits), str(bits), start, pulses[start][0])
                 )
@@ -417,7 +421,7 @@ class PulseDecoder:
         if bits == self.stop_bits:
             return i_next
         else:
-            raise Exception('Expected stop bits: %s, got: %s ' %
+            raise ReadError('Expected stop bits: %s, got: %s ' %
                             (str(self.stop_bits), str(bits)))
 
     # pulses    : ( ( float, int, float ), )

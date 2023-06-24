@@ -30,7 +30,8 @@ class ASL(Setup):
 
     def __init__(self):
         super().__init__()
-        self.source_repo = 'https://github.com/KubaO/asl.git'
+        self.source_repo \
+            = 'https://github.com/Macroassembler-AS/asl-releases.git'
         self.source_ref  = 'dev/cjs/current'
        #self.source_ref  = 'dev/cjs/testing'
 

@@ -1,4 +1,4 @@
-#   pactivate v0.2  https://github.com/0cjs/pactivate
+#   pactivate v0.3.3    https://github.com/0cjs/pactivate
 
 [ -n "$BASH_VERSION" ] || { echo 1>&2 "source (.) this with Bash."; exit 9; }
 #   https://stackoverflow.com/a/28776166/107294
@@ -34,13 +34,15 @@ __pa_python=python3     # XXX should default to `py` for Windows
     __pa_cleanup; return 3
 }
 #   $__pa_pyver is empty for "modern" versions of Python (i.e., those that
-#   can use the current get-pip.py, 3.6 and above) and otherwise is the
+#   can use the current get-pip.py, 3.7 and above) and otherwise is the
 #   major.minor revision number, suitable for use in the URL to download
 #   an alternate version of get-pip.py.
 __pa_pyver=$("$__pa_python" -c '
-from platform import *;
-if (python_version() < "3.6"):
-    print("{}.{}".format(*python_version_tuple()))
+#   Reminder: this script must be compatible with Python 2 syntax.
+import sys
+M, m = sys.version_info[0], sys.version_info[1]     # Major, minor
+if (M < 3 or (M == 3 and m < 7)):
+    print("{}.{}".format(M, m))
 ')
 
 __pa_requirements="$__pa_basedir/requirements.txt"
@@ -52,16 +54,30 @@ mkdir -p "$__pa_bootdir"    # also ensures that $__pa_builddir exists
 
 [[ -x $__pa_bootdir/bin/pip ]] || {
     echo "----- Installing bootstrap pip (ver=${__pa_pyver:-latest})"
+    #   Debian-based systems do not incude distutils in the standard
+    #   python3 package; check that it's available and, if not, print a
+    #   more informative message than the ModuleNotFoundError.
+    "$__pa_python" -c 'import distutils.cmd' || {
+        echo 1>&2 \
+            "Cannot import 'distuils.cmd'; apt-get install python3-distutils?"
+        return 3
+    }
+    #   get-pip.py produces spurious upgrade notices on older Python versions
+    #   such as 3.6 or 2.7; --disable-pip-version-check suppresses these.
     curl ${__pa_quiet:+--silent} \
         "https://bootstrap.pypa.io/pip/$__pa_pyver/get-pip.py" \
-        | "$__pa_python" - $__pa_quiet -t "$__pa_bootdir"
+        | "$__pa_python" - \
+            $__pa_quiet -t "$__pa_bootdir" --disable-pip-version-check \
+        || return $?
     PYTHONPATH="$__pa_bootdir" "$__pa_bootdir/bin/pip" --version
 }
 
 [[ -d $__pa_bootdir/virtualenv/ ]] || {
     echo '----- Installing bootstrap virtualenv'
+    #   This install produces spurious "bootstrap/.../bin already exists"
+    #   messages; --upgrade suppresses these.
     PYTHONPATH="$__pa_bootdir" "$__pa_bootdir/bin/pip" \
-        $__pa_quiet install -t "$__pa_bootdir" virtualenv
+        $__pa_quiet install --upgrade -t "$__pa_bootdir" virtualenv
 }
 
 [[ -d $__pa_builddir/virtualenv/ ]] || {
@@ -90,9 +106,11 @@ mkdir -p "$__pa_bootdir"    # also ensures that $__pa_builddir exists
 }
 
 cmp -s $(type -p "$__pa_python") "$__pa_builddir/virtualenv/bin/python" || (
-    ve=$("$__pa_builddir"/virtualenv/bin/python --version 2>&1)
-    pa=$("$__pa_python" --version 2>&1)
-    echo 1>&2 "WARNING: virtualenv/bin/python ($ve) is not $__pa_python ($pa)"
+    echo 1>&2 "WARNING:" \
+        virtualenv/bin/python \
+        "($("$__pa_builddir"/virtualenv/bin/python --version 2>&1))" \
+        "is not $__pa_python" \
+        "($("$__pa_python" --version 2>&1))" \
     )
 
 . "$__pa_builddir"/virtualenv/*/activate

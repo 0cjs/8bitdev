@@ -91,6 +91,10 @@ class BASICHeaderBlock(Block):
 
 class BASICTextBlock(Block):
 
+    @classmethod
+    def make_block(cls):
+        return cls()
+
     @property
     def isoef(self):
         return True
@@ -103,7 +107,7 @@ class BASICTextBlock(Block):
         return self._data
 
     def to_bytes(self):
-        return self._data
+        return self._data + bytes( (0x00, ) * 10 )
 
 
 
@@ -278,34 +282,17 @@ def read_block_bytestream(stream):
 def blocks_from_bin(stream, loadaddr=0x0000, filename=None):
     ''' Read file content bytes from `stream` and create a sequence of tape
         block objects representing that file as data to be loaded
-        as it would be saved on an FM-7. `loadaddr` is the load
-        address for the file.
+        as it would be saved on a PC-8001.
 
         If `filename` is `None`, a default (perhaps empty) filename
         will be generated. Otherwise `filename` will be processed with
         `native_filename()`.
     '''
     # FIXME: Need a flag to indicate file type - binary/basic
-    blocks = []
-    basic_blk = 0
-    blk_num = 1
-    addr = loadaddr
-    while True:
-        filedata = stream.read(0x100)
-        if len(filedata) > 0:
-            blocks.append(Block.make_block(Block.BINARY, basic_blk, filename,
-                blk_num, addr, filedata))
-            if len(filedata) == 0x100:
-                blk_num += 1
-                addr += len(filedata)
-            else:
-                break
-        else:
-            break
+    blk = BASICTextBlock()
+    blk.setdata(stream.read())
+    return [ BASICHeaderBlock.make_block(filename), blk ]
 
-    blocks.append(Block.make_block(Block.AUX, basic_blk, filename,
-        blk_num, loadaddr, bytearray( (0x7e,) )))
-    return blocks
 
 ####################################################################
 

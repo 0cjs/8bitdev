@@ -221,7 +221,8 @@ def dump_bytes(args, pulses):
             print('Byte read at {}'.format(pulses[i][0]))
         except Exception as ex:
             idx += 1
-    
+    c = '.' if b<32 or b>127 else chr(b)
+    print('{:012.6f}, {:02x}, {}'.format(pulses[idx][0], b, c))
     # Keep reading bytes until we can't
     err = 0
     while idx < len(pulses):

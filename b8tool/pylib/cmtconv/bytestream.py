@@ -59,8 +59,7 @@ def native_filename(filename):
     try:                    return bytes(filename, encoding='ASCII')
     except TypeError:       return bytes(filename)
 
-# FIXME: take args as a dict
-def blocks_from_bin(platform, stream, loadaddr=0x8020, filename='TEST'):
+def blocks_from_bin(platform, stream, **args):
     ''' Read file content bytes from `stream` and create a sequence of tape
         block objects representing that file as a machine-langauge program
         as it would be saved on `platform`. `loadaddr` is the default load
@@ -72,7 +71,7 @@ def blocks_from_bin(platform, stream, loadaddr=0x8020, filename='TEST'):
         `native_filename()`.
     '''
     bm = get_block_module(platform)
-    return bm.blocks_from_bin(stream, loadaddr, filename)
+    return bm.blocks_from_bin(stream, **args)
 
 def blocks_from_obj(platform, stream, filename=None):
     '''Read an as object and create the corresponding blocks.'''

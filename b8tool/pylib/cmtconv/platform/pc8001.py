@@ -19,11 +19,49 @@ class Block(object):
         of 2400 Hz. The data follows, and the lead-out is a long stream of
         1200 Hz.
 
-        Binary saves (monitor ``W`` command) are just the raw binary data.
+        Mark is     2400Hz for 8 pulses
+        Space is    1200Hz for 4 pulses
+        Bits are    "reversed" (LSB first)
+        Start is    (space,)
+        Stop is     (mark, mark)
 
-        BASIC saves are a simple header containing 9× $D3 bytes, the
-        filename, a $00 byte, a short period (~650 pulses) of 2400 Hz, and
-        the BASIC data.
+        A suitable analyze-cmt command line is:
+            analyze-cmt -m 2400 --mark-pulses 8 -s 1200 --space-pulses 4 \
+                  -B --reverse-bits --start s --stop mm ${input} ${outpu}
+
+
+        BASIC saves are a simple header block containing 10× $D3 bytes,
+        6 bytes for the filename, padded with $00, then  a short period
+        (~650 pulses) of 2400 Hz, followed by the BASIC text block.
+        The BASIC text block is just the tokenized MS-BASIC with no header,
+        length, checksum or field delimiters. The BASIC program is followed
+        by 10 bytes of 0x00.
+
+        FIXME: data blocks can be > 256 bytes...but only one 'block'
+            - multiple 'sub-blocks' encoded via field delims?
+
+        For binary saves (monitor ``W`` command) ':' (0x3A) is used as
+        a field delimiter. They have the following structure:
+            ':' (0x3A)
+            (0x00, 0x01) - load address (HI, LO))
+            (checksum,)
+            ':' (0x3A)
+            (length,)
+            (data, ... )
+            (checksum, )
+                - checksum = 0x0100 - ((length + sum(data)) & 0xff)
+
+            [
+                ':' (0x3A)
+                (length,)
+                (data, ...)
+                (checksum,)
+            ]*
+
+            ':' (0x3A)
+            00
+            00
+
     '''
 
     platform = "NEC PC-8001"
@@ -34,6 +72,8 @@ class Block(object):
         BASICHEADER  = 0x00
         BASICTEXT    = 0x01
         BINARYDATA   = 0x02
+
+    class ChecksumError(ValueError) : pass
 
     def __repr__(self):
         return '{}.{}( data={})'.format(
@@ -57,7 +97,7 @@ class BASICHeaderBlock(Block):
     @classmethod
     def _check_magic(cls, bs):
         if bytes(bs[0:len(cls.MAGIC)]) != cls.MAGIC:
-            raise ValueError('Bad magic,'
+            raise ReadError('Bad magic,'
                 ' expected={} actual={}'.format(repr(cls.MAGIC), repr(bs)))
 
     @classmethod
@@ -114,21 +154,46 @@ class BASICTextBlock(Block):
 class BinaryDataBlock(Block):
     '''
     '''
-    @classmethod
-    def make_block(cls):
-        return cls()
 
     @classmethod
-    def from_header(cls, headerbytes):
-        cls._check_magic(headerbytes)
-        if headerbytes[2] != Block.BlockType.DATA:
-            raise ValueError('Bad type for data block ${:02X}'.format(
-                headerbytes[2]))
-        return (cls(), headerbytes[3])
+    def _calc_checksum(cls, data):
+        return (0x100 - (sum(data) % 0x100)) % 0x100
+
+    @classmethod
+    def make_block(cls, addr = None):
+        return cls(addr)
+
+    def __init__(self, addr = None):
+        'For internal use only.'
+        self.addr = addr
+
+    @classmethod
+    def from_header(cls, headerbytes, first = False):
+        # First block has load address
+        if first:
+            if headerbytes[0] != 0x3A:
+                raise ReadError('First byte must be 0x3A: {}\n'
+                                .format(repr(headerbytes)))
+            else:
+                addr = 256 * headerbytes[1] + headerbytes[2]
+                blk = cls(addr)
+            bs = headerbytes[4:]
+        else:
+            blk = cls()
+            bs = headerbytes
+
+        if bs[0] != 0x3A:
+            raise ReadError('Expected 0x3A at start of block, got {:02X}'
+                            .format(bs[0]))
+        length = bs[1]
+        return (blk, length)
+
 
     def setdata(self, data, checksum=None):
-        expected_checksum = (self._calc_checksum(data) + len(data) + 1) % 0x100
-        v3('Checksum = {:02X}, Expected = {:02X}', checksum, expected_checksum)
+        expected_checksum = self._calc_checksum([len(data)] + list(data))
+        if checksum is not None:
+            v3('Checksum = {:02X}, Expected = {:02X}', checksum,
+                expected_checksum)
         if checksum is not None and expected_checksum != checksum:
             raise self.ChecksumError('expected={:02X}, actual={:02X}'.format(
                 expected_checksum, checksum))
@@ -136,19 +201,24 @@ class BinaryDataBlock(Block):
 
     @property
     def isoef(self):
-        return True
+        return len(self.data) == 0
 
     @property
     def checksum(self):
-        return (self._calc_checksum(self.data) + len(self.data) + 1) % 0x100
+        return self._calc_checksum([len(self.data)] + list(self.data))
 
     @property
     def filedata(self):
         return self.data
 
     def to_bytes(self):
-        b = bytearray(self.MAGIC)
-        b.append(self.BlockType.DATA)
+        b = bytearray()
+        if self.addr is not None:
+            b.extend(b':')
+            b.append((self.addr >> 8) & 0xff)
+            b.append(self.addr & 0xff)
+            b.append(self._calc_checksum(b[1:]))
+        b.extend(b':')
         b.append(len(self.data))
         b.extend(self.data)
         b.append(self.checksum)
@@ -156,11 +226,11 @@ class BinaryDataBlock(Block):
 
 
 class FileReader(object):
-    'Read FM-7 data from audio'
+    'Read PC-8001 data from audio'
 
     def __init__(self):
         self.pd = PulseDecoder(2400, 8, 1200, 4, False, True, (0,), (1,1,),
-                               (0.25,0.5))
+                                (0.25,0.5))
 
 
     def read_leader(self, pulses, i_next):
@@ -176,57 +246,19 @@ class FileReader(object):
             (i_next, pulses[i_next][0]))
         # read N pulses
 
-        i_next = self.pd.next_space(pulses, i_next, 2)
+        i_next = self.pd.next_space(pulses, i_next, 4)
 
         v3('End of leader at %d - %fs' % (i_next, pulses[i_next][0]))
         return i_next
 
 
-    # returns ( int, ( block, ) )
-    def read_block(self, pulses, i_next):
-        # leader
-        i_next = self.read_leader(pulses, i_next)
-        # header
-        (i_next, bs) = self.pd.read_bytes(pulses, i_next, BASICHeaderBlock.MIN_FIRST_BLOCK_LEN)
-        v3('headerbytes={}'.format(bs))
-        if (bs[2] == Block.BlockType.HEADER):
-            (block, datalen) = HeaderBlock.from_header(bs)
-        elif (bs[2] == Block.BlockType.DATA):
-            (block, datalen) = DataBlock.from_header(bs)
-        elif (bs[2] == Block.BlockType.END):
-            (block, datalen) = EndBlock.from_header(bs)
-        else:
-            raise ValueError('Unrecognised block type: {:02X}'.format(bs[2]))
-        v3('Block length: %d' % datalen)
-        # consume data
-        if datalen > 0:
-            (i_next, bs) = self.pd.read_bytes(pulses, i_next, datalen)
-            (i_next, checksum) = self.pd.read_byte(pulses, i_next)
-            v3('data={}, checksum={:02X}', bs, checksum)
-            block.setdata(bs, checksum)
-        return (i_next, block)
-
-    # returns ( int, ( block, ) )
-    def read_blocks(self, pulses, i_next):
-        #i_next = self.read_leader(pulses, i_next)
-        blocks = []
-        block = None
-        while block is None or not block.is_eof:
-            (i_next, block) = self.read_block(pulses, i_next)
-            blocks.append(block)
-            # search for gap
-            while i_next < len(pulses) and pulses[i_next][2] < (1.3/2200.0):
-                i_next += 1
-            if i_next < len(pulses) - 1:
-                i_next += 1
-                v3('post-footer gap at {} - {}s',
-                    i_next, pulses[i_next][0])
-        return (i_next, blocks)
-
     # read a file
     # returns ( int, ( block, ) )
     def read_file(self, pulses, i_next):
         i_next = self.read_leader(pulses, i_next)
+
+        i_start = i_next
+        # FIRST byte = 0xD3 for BASIC header, 0x3A for binary
 
         # Try to read BASIC header
         n = Block.MIN_FIRST_BLOCK_LEN
@@ -258,7 +290,36 @@ class FileReader(object):
 
         except ReadError:
             # Read Binary data
-            raise RuntimeError('XXX: WriteMe for BinaryDataBlock')
+            try:
+                blocks = []
+                i_next = i_start
+                n = 6 # FIXME: put in class
+                (i_next, bs) = self.pd.read_bytes(pulses, i_next, n)
+                (blk, l) = BinaryDataBlock.from_header(bs, first = True)
+                v4('Block length: {:02X}'.format(l))
+
+                (i_next, bs) = self.pd.read_bytes(pulses, i_next, l)
+                v4('bytes read: {}', repr(bs))
+                (i_next, checksum) = self.pd.read_byte(pulses, i_next)
+                blk.setdata(bs, checksum)
+
+                blocks = [blk]
+                eof = False
+                while not eof:
+                    (i_next, bs) = self.pd.read_bytes(pulses, i_next, 2)
+                    (blk,l) = BinaryDataBlock.from_header(bs)
+                    (i_next, bs) = self.pd.read_bytes(pulses, i_next, l)
+                    v4('bytes read: {}', repr(bs))
+                    (i_next, checksum) = self.pd.read_byte(pulses, i_next)
+                    blk.setdata(bs, checksum)
+                    blocks.append(blk)
+                    if l == 0:
+                        eof = True
+
+                return (i_next, tuple(blocks))
+
+            except ReadError:
+                raise ReadError('Unable to read BASIC or BINARY block')
 
 
 
@@ -279,7 +340,7 @@ def read_block_bytestream(stream):
         raise ValueError('FIXME: BinaryDataBlock not yet supported')
     return tuple(blocks)
 
-def blocks_from_bin(stream, loadaddr=0x0000, filename=None):
+def blocks_from_bin(stream, loadaddr=0x8020, filename=None, filetype=None):
     ''' Read file content bytes from `stream` and create a sequence of tape
         block objects representing that file as data to be loaded
         as it would be saved on a PC-8001.
@@ -288,10 +349,32 @@ def blocks_from_bin(stream, loadaddr=0x0000, filename=None):
         will be generated. Otherwise `filename` will be processed with
         `native_filename()`.
     '''
-    # FIXME: Need a flag to indicate file type - binary/basic
-    blk = BASICTextBlock()
-    blk.setdata(stream.read())
-    return [ BASICHeaderBlock.make_block(filename), blk ]
+    if filetype is None or filetype == 'BASIC':
+        loadaddr = 0x8020
+        blk = BASICTextBlock()
+        blk.setdata(stream.read())
+        return [ BASICHeaderBlock.make_block(filename), blk ]
+    elif filetype == 'BINARY':
+        bs = stream.read()
+        blk = BinaryDataBlock.make_block(loadaddr)
+        n = min(0xFF, len(bs))
+        blk.setdata(bs[0:n])
+        blocks = [blk]
+        bs = bs[n:]
+        n = min(0xFF, len(bs))
+        while n > 0:
+            blk = BinaryDataBlock.make_block()
+            blk.setdata(bs[0:n])
+            blocks.append(blk)
+            bs = bs[n:]
+            n = min(0xFF, len(bs))
+        blk  = BinaryDataBlock.make_block()
+        blk.setdata(bytearray())
+        blocks.append(blk)
+        return blocks
+    else:
+        raise RuntimeError('Unsupported filetype: {}', filetype)
+
 
 
 ####################################################################
@@ -321,10 +404,19 @@ class FileEncoder(object):
     # audio     : (AudioMarker,)
     #
     def encode_blocks(self, blocks):
-        audio = [sound(self.file_leader)]
-        for b in blocks:
-            audio.extend(self.encode_block(b))
-        return tuple(audio)
+        if isinstance(blocks[0], BASICHeaderBlock):
+            audio = [sound(self.file_leader)]
+            for b in blocks:
+                audio.extend(self.encode_block(b))
+            return tuple(audio)
+        else:
+            audio = list(self.file_leader)
+            audio.extend(self.block_leader)
+            for b in blocks:
+                audio.extend(self.encoder.encode_bytes(b.to_bytes()))
+            audio.extend(self.block_leader)
+            return (sound(audio),)
+
 
     def encode_file(self, blocks):
         return self.encode_blocks(blocks)

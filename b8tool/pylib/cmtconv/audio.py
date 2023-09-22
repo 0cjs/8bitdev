@@ -101,6 +101,8 @@ def samples_to_pulses_via_edge_detection(samples, sample_dur, grad_factor=0.5):
                 i0=i
                 # roll forward
                 d0=d
+                # i += 1
+                # d = samples[i] - samples[i-1]
                 while abs(d) >= grad and math.copysign(d,d0) == d and i<n-1:
                     i += 1
                     d = samples[i] - samples[i-1]
@@ -118,6 +120,7 @@ def samples_to_pulses_via_edge_detection(samples, sample_dur, grad_factor=0.5):
                     lvl=0
                 res.append((t1,lvl,t1-t0))
                 prev=idx
+                if i == n-1: break
         # deal with final pulse
         mid = int((i+prev)/2)
         if samples[mid] > sample_mean + 0.5 * sample_stdev:

@@ -27,6 +27,8 @@ def parse_args():
     a('-f', '--filename', metavar='FN', help='filename to store in tape data')
     a('-l', '--loadaddr', metavar='ADDR', type=parseint,
         help='load address to store in tape data')
+    a('-t', '--filetype', metavar='TYPE', default=None,
+        help='file type: BASIC or BINARY')
     a('-v', '--verbose', action='count', default=0)
 
     a('input', help="input file ('-' for stdin)")
@@ -38,7 +40,7 @@ def parse_args():
     #   Collect up optional parameters passed on to input and routines from
     #   formats module.
     args.reader_optargs = {}
-    for argname in ('filename', 'loadaddr'):
+    for argname in ('filename', 'loadaddr', 'filetype'):
         val = getattr(args, argname)
         if val is not None: args.reader_optargs[argname] = val
 

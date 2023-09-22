@@ -39,10 +39,10 @@ def parse_args():
 
     #   Collect up optional parameters passed on to input and routines from
     #   formats module.
-    args.reader_optargs = {}
+    args.reader_kwargs = {}
     for argname in ('filename', 'loadaddr', 'filetype'):
         val = getattr(args, argname)
-        if val is not None: args.reader_optargs[argname] = val
+        if val is not None: args.reader_kwargs[argname] = val
 
     args.input_format  = fm.guess_format(args.input_format, args.input)
     args.output_format = fm.guess_format(args.output_format, args.output)
@@ -58,7 +58,7 @@ def parse_args():
 
 def main(args):
     reader = fm.FORMATS[args.input_format][0]
-    blocks = reader(args.platform, args.input, **args.reader_optargs)
+    blocks = reader(args.platform, args.input, **args.reader_kwargs)
 
     if args.output is not None:
         writer = fm.FORMATS[args.output_format][1]

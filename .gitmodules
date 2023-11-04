@@ -1,0 +1,3 @@
+[submodule "t8dev"]
+	path = t8dev
+	url = https://github.com/mc68-net/t8dev.git

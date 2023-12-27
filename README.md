@@ -144,21 +144,7 @@ Additional Tool Information
 
 ### Playing CMT (Cassette Tape) Images
 
-`b8tool/bin/cmtconv` is used to generate `.wav` files that can be played
-into microcomputers. It can be handy to play these directly from your
-development host, and even more handy to add an separate audio interface
-(usually USB) to dedicate to this. On Linux systems, `pactl list short
-sinks` will show a list of all sink (output) numbers, names and other
-information. A name from this list can be passed to `paplay -d NAME
-.build/obj/exe/…/….wav` to load the image on your microcomputer.
-
-Recording should be done not with `parec` (which always writes the output
-in raw format) but `parecord` (use SIGINT to stop recording):
-
-    parecord --file-format=wav --format=u8 --channels=1 -d SRCNAME FILE.wav
-
-The `pavucontrol` window can be used to view levels during recording and
-playback.
+See [`r8format:doc/cmtconv.md`][cmtdoc].
 
 ### The py65 Monitor
 
@@ -232,6 +218,7 @@ Execution:
 [`tool/`]: tool/
 
 [VICE]: https://vice-emu.sourceforge.io/
+[cmtdoc]: https://github.com/mc68-net/r8format/blob/main/doc/cmtconv.md
 [py65-cmds]: https://py65.readthedocs.io/en/latest/index.html#command-reference
 [py65-src]: https://github.com/mnaberez/py65
 [vice-mon]: http://vice-emu.sourceforge.net/vice_12.html

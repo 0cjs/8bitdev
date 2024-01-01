@@ -1,0 +1,90 @@
+;   Various ideas about code to scan through MS-BASIC TXTTAB
+
+            relaxed on              ; accept $nn hex number syntax
+            cpu 8080
+            z80syntax exclusive
+
+; ----------------------------------------------------------------------
+;   Standard BASIC variables
+
+TXTTAB      equ  $8001
+
+; ----------------------------------------------------------------------
+;   MS-BASIC 5.x `FNDLIN`
+
+    section msbasic5
+
+;   FNDLIN (BINTRP.MAC)
+;   Parameters: ♡DE=line number to find
+;   Exits with one of the following:
+;   • Z,C   Line found. BC=link field of found line, HL=link field of next line
+;   • NZ,NC Line not found. BC=next line in program, HL=line after that
+;   • Z,NC  Line not found. BC=$0000 after program text, HL=BC
+
+fndlin1     ex   (sp),hl        ; entry point from ONGOTO
+            push hl             ; stack return addr again
+            ; fallthrough
+
+fndlin      ld   hl,TXTTAB      ; start at beginning of program
+.loop       ld   b,h            ; save next line pointer
+            ld   c,l
+            ld   a,(hl)         ; test next line pointer
+            inc  hl
+            or   (hl)           ; is it $0000? (resets carry flag)
+            dec  hl
+            ret  z              ;   yes: we've reached end of text
+            ;
+            inc  hl             ; advance to line#
+            inc  hl
+            ld   a,(hl)         ; line# LSB
+            inc  hl
+            ld   h,(hl)         ; line# MSB
+            ld   l,a
+            call dcompr         ; HL-DE: matched or gone too far?
+            ld   h,b            ; HL ← next line after current
+            ld   l,c
+            ld   a,(hl)         ; HL ← next line after that
+            inc  hl
+            ld   h,(hl)
+            ld   l,a
+            ccf                 ; complement carry from DCOMPR (for return)
+            ret  z              ; if line found, we're done
+            ccf                 ; return carry to original DCOMPR result
+            ret  nc             ; no match, we went behind where line should be
+            jp   .loop
+
+;   DCOMPR (BIMISC.MAC)
+;   ♠F ♣A 16-bit compare HL-DE: Z ← HL=DE, C ← HL≥DE, SPA affected
+;
+dcompr      ld   a,h
+            sub  d
+            ret  nz
+            ld   a,l
+            sub  e
+            ret
+
+    endsection
+
+; ----------------------------------------------------------------------
+;   Sketch of suggestion from flatfingertuning727 for using line length
+;   byte instead of next line pointer. Code from comment at:
+;   https://www.youtube.com/watch?v=6j8kel86F60&lc=UgyaftqsAGvaRaMg8yx4AaABAg.9ybiPocZq2l9z-OTc5H_1o
+
+    section fft
+
+;   Enter at `search`
+;   TXTTAB format: len 1B, line# 2B, text, $00
+;   params: HL=curline len byte
+
+loop        add  hl,bc
+search      ld   c,(hl)         ; copy length
+            inc  hl             ; advance to line# MSB, or $00 = end
+                                ; XXX line# LSB? and end is 0 length instead?
+            cp   (hl)           ; zero byte line# MSB indicates end? XXX
+            jp   c,loop
+            jp   nz,notfound
+            halt
+
+notfound    halt
+
+    endsection

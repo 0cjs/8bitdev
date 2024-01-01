@@ -1,7 +1,20 @@
 8bitdev
 =======
 
-Contents:
+This repo is used by cjs for development of programs in 8-bit assembly
+languages (for a variety of platforms) and tools to aid this development.
+
+If you wish to discuss any of the code here, the best way to reach me
+is to contact `0cjs` on Discord, or `cjs_cynic` on Telegram. You can
+also use the e-mail address in the commit messages, but that's more
+likely to get lost in the noise of all my e-mail and will always take
+longer to get a response.
+
+### Contents
+
+- (Top Section)
+  - Contents
+  - Introduction
 - File and Directory Organization
   - ASL (The Macroassembler AS) Notes
   - ASxxxx Notes
@@ -15,10 +28,9 @@ Contents:
   - Playing CMT (Cassette Tape) Images
   - The py65 Monitor
 
+### Introduction
 
-This repo is used by cjs for development of programs in 8-bit assembly
-languages (for a variety of platforms) and tools to aid this development.
-It includes:
+This repo includes:
 
 - A Python framework (under `lib/`) for running unit tests on 6502 machine
   code in the [py65] 6502 simulator. Unit tests use [pytest] and are in

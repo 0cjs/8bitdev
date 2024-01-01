@@ -53,6 +53,8 @@ fndlin      ld   hl,TXTTAB      ; start at beginning of program
             ret  nc             ; no match, we went behind where line should be
             jp   .loop
 
+    endsection
+
 ;   DCOMPR (BIMISC.MAC)
 ;   ♠F ♣A 16-bit compare HL-DE: Z ← HL=DE, C ← HL≥DE, SPA affected
 ;
@@ -62,8 +64,6 @@ dcompr      ld   a,h
             ld   a,l
             sub  e
             ret
-
-    endsection
 
 ; ----------------------------------------------------------------------
 ;   Sketch of suggestion from flatfingertuning727 for using line length
@@ -86,5 +86,54 @@ search      ld   c,(hl)         ; copy length
             halt
 
 notfound    halt
+
+    endsection
+
+;----------------------------------------------------------------------
+;   My attempt to do a FNDLIN with data where lines are preceeded by length
+;   bytes instead of next line pointers.
+;
+;   Comments ADDED and SAVED followed by subscript cycle timings show
+;   differences from MS-BASIC's link pointer version.
+;   • Total SAVED: 34 cycles
+;   • Total ADDED: 36 cycles
+;
+;   Other differences from MS-BASIC:
+;   • Zero-length lines are no longer possible. (Maybe not a problem?)
+
+    section length_byte
+
+fndlin      ld   hl,TXTTAB
+.loop       ld   b,h            ; save current line pointer
+            ld   c,l
+            ld   a,(hl)         ; load length
+                                ; SAVED  ₅ inc hl
+            or   a              ; zero length line? (resets carry flag)
+                                ; SAVED  ₅ dec hl
+            ret  z              ;   yes: we've reached end of text
+
+            ld   (savedlen),a   ; ADDED ₁₃ save line length
+                                ;   (can't use PUSH here: POP later destroys F)
+            inc  hl             ; advance to line#
+            ld   a,(hl)         ; line# LSB
+            inc  hl
+            ld   h,(hl)         ; line# MSB
+            ld   l,a
+            call dcompr
+            ld   a,(savedlen)   ; ADDED ₁₃ restore line length
+            ld   h,0            ; length of this line
+            ld   l,a
+            add  hl,bc          ; ADDED ₁₀ addr of next line
+                                ; SAVED  ₇ ld a,(hl)
+                                ; SAVED  ₅ inc hl
+                                ; SAVED  ₇ ld h,(hl)
+                                ; SAVED  ₅ ld l,a
+            ccf
+            ret  z
+            ccf
+            ret  nc
+            jp   .loop
+
+savedlen    ds   1
 
     endsection

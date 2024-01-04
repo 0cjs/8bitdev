@@ -7,6 +7,17 @@ die() {
     exit $exitcode
 }
 
+warn() { echo 1>&2 "WARNNG:" "$@"; }
+
+#   From: https://github.com/0cjs/sedoc, git/submodule.md
+check_submodules() {
+    count=$(git submodule status --recursive | sed -n -e '/^[^ ]/p' | wc -l)
+    [ $count -eq 0 ] || {
+        warn "$count Git submodules are not up to date"
+        warn 'Run `git submodule update --init`?'
+    }
+}
+
 ####################################################################
 #   Build functions
 
@@ -56,6 +67,8 @@ build_asxxxx() {
 export B8_PROJDIR=$(cd "$(dirname "$0")" && pwd -P)
 export BUILDDIR="$B8_PROJDIR/.build"
 all_tools="$B8_PROJDIR/.all-tools"
+
+(cd "$B8_PROJDIR" && check_submodules)
 
 #   Creating this file is useful to slightly speed the edit/build/test
 #   cycle when working on "regular" ASL code; the toolsets and asxxx builds

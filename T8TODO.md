@@ -3,7 +3,6 @@ t8dev Conversion To-do
 
 This is a temporary file until we get t8dev/ into shape to be used here.
 
-- Update `t8dev/pactivate` to latest version
 - Make sure we're Python system finding unit tests not just under `pylib/`
   but also under `*/pylib` (and `**/pylib`?)
 - Work out how and when to do functional tests for submodules (esp.

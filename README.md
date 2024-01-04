@@ -86,6 +86,10 @@ built by the scripts under the `tool/` directory. Tools already available
 in the path will be used instead; see the `check_installed()` functions in
 the setup scripts for details.
 
+Beyond the packages checked above, you will need basic build tools as well.
+On Debian, `apt-get install build-essential pkgconf`. (You can also use the
+original Freedeskop.org `pkg-config` if you prefer.)
+
 __Assemblers__:
 - [The Macroassembler AS][asl] is the primary assembler, and supports a
   wide variety of CPUs and microcontrollers.

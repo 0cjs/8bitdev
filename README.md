@@ -107,6 +107,19 @@ __Simulators and Emulators__:
   run unit tests.
 - The [LinApple] Apple II emulator can be used to run Apple II programs.
 
+#### py65 Notes
+
+The [PypI `py65`][py65pypi] has not been updated since July 2018 and is
+stuck at 1.1.0. That version produces warnings in modern versions of
+Python. One workaround until [this is fixed][py65i71] is to use a version
+from GitHub:
+
+    .build/virtualenv/bin/pip install -U \
+        py65@git+https://github.com/mnaberez/py65.git
+
+This will pull the head of the main branch; to use a release branch
+append `@<branch-name>` to the URL.
+
 #### ASL (The Macroassembler AS) Notes
 
 Versions 1.42 builds 205 through at least 218 are broken for 8bitdev due to
@@ -219,6 +232,8 @@ Execution:
 [asl]: http://john.ccac.rwth-aachen.de:8000/as/
 [dos33fsprogs]: https://github.com/deater/dos33fsprogs
 [py65]: http://py65.readthedocs.org/
+[py65i71]: https://github.com/mnaberez/py65/issues/71
+[py65pypi]: https://pypi.org/project/py65/#history
 [pytest]: https://github.com/0cjs/sedoc/blob/master/lang/python/test/pytest.md
 [retroabandon/osimg]: https://gitlab.com/retroabandon/osimg.git
 

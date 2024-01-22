@@ -41,5 +41,8 @@ To-do List
   install omni8bit`) front end for emulator startup/run here?
 - Look into [Omnivore](https://github.com/robmcmullen/omnivore) (`pip
   install omnivore`), a visual tool providing tools and front-ends for
-  toher tools: various emulators w/debuggers; binary editor;
+  other tools: various emulators w/debuggers; binary editor;
   disassemblers; ATasm 6502 cross-assembler; graphics and map editors.
+- [CLK] emulator, which covers a dozen different systems we use.
+
+[CLK]: https://github.com/TomHarte/CLK

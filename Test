@@ -80,7 +80,6 @@ fast_hack="$T8_PROJDIR/.fast-hack"
 
 t8bin="$T8_PROJDIR/t8dev/bin"
 t8dev="$t8bin/t8dev"
-t8_plib="$T8_PROJDIR/t8dev/pylib"      # used locally; not part of t8dev
 
 #   Leading command line args (these must be at the start):
 #   • -C: clean rebuild of everything, including toolchains

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -eu -o pipefail
 
-B8_PROJDIR=$(cd "$(dirname "$0")/.." && pwd -P)
-dldir="$B8_PROJDIR/.download"
+T8_PROJDIR=$(cd "$(dirname "$0")/.." && pwd -P)
+dldir="$T8_PROJDIR/.download"
 
 url='http://www.callapple.org/soft/ap1/emul/'
 archive='Apple1_bios.zip'   # Contains:

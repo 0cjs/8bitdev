@@ -64,11 +64,11 @@ build_asxxxx() {
 ####################################################################
 #   Main
 
-export B8_PROJDIR=$(cd "$(dirname "$0")" && pwd -P)
-export BUILDDIR="$B8_PROJDIR/.build"
-all_tools="$B8_PROJDIR/.all-tools"
+export T8_PROJDIR=$(cd "$(dirname "$0")" && pwd -P)
+export BUILDDIR="$T8_PROJDIR/.build"
+all_tools="$T8_PROJDIR/.all-tools"
 
-(cd "$B8_PROJDIR" && check_submodules)
+(cd "$T8_PROJDIR" && check_submodules)
 
 #   Creating this file is useful to slightly speed the edit/build/test
 #   cycle when working on "regular" ASL code; the toolsets and asxxx builds
@@ -76,11 +76,11 @@ all_tools="$B8_PROJDIR/.all-tools"
 #   This file is never ignored or committed so `git status` will make it
 #   clear you're not building everything that might be changed.
 #   XXX This can go when we move more stuff into a single t8dev invocation.
-fast_hack="$B8_PROJDIR/.fast-hack"
+fast_hack="$T8_PROJDIR/.fast-hack"
 
-t8bin="$B8_PROJDIR/t8dev/bin"
+t8bin="$T8_PROJDIR/t8dev/bin"
 t8dev="$t8bin/t8dev"
-t8_plib="$B8_PROJDIR/t8dev/pylib"      # used locally; not part of t8dev
+t8_plib="$T8_PROJDIR/t8dev/pylib"      # used locally; not part of t8dev
 
 #   Leading command line args (these must be at the start):
 #   • -C: clean rebuild of everything, including toolchains
@@ -94,11 +94,11 @@ while [[ ${#@} -gt 0 ]]; do case "$1" in
     *)      break;;
 esac; done
 
-. $B8_PROJDIR/t8dev/pactivate -B "$B8_PROJDIR" -q
+. $T8_PROJDIR/t8dev/pactivate -B "$T8_PROJDIR" -q
 
 [[ -f $fast_hack ]] || build_toolsets
-[[ $PATH =~ ^$B8_PROJDIR/bin:|:$B8_PROJDIR/bin:|:$B8_PROJDIR/bin$ ]] \
-    || export PATH="$B8_PROJDIR/bin:$PATH"
+[[ $PATH =~ ^$T8_PROJDIR/bin:|:$T8_PROJDIR/bin:|:$T8_PROJDIR/bin$ ]] \
+    || export PATH="$T8_PROJDIR/bin:$PATH"
 
 #   Builds of asxxxx sources are a completely separate thing right now
 #   so that we can more easily skip the (re-)builds if $fast_hack is set.

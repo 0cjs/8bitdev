@@ -1,5 +1,5 @@
 from    testmc.mos65  import *
-from    b8tool  import path
+from    t8dev  import path
 from    os.path import exists
 import  pytest
 

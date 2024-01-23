@@ -59,7 +59,7 @@ Files:
 - [`README.md`]: This file.
 - [`Test`]: Installs third-party tools where necessary, builds the code and
   runs the unit tests. (Bash.)
-- [`b8tool/pactivate`]: When sourced in Bash (`. ./pactivate`) activates the
+- [`t8dev/pactivate`]: When sourced in Bash (`. ./pactivate`) activates the
   Python virtual environment, building a new one (and installing the packages
   listed in [`requirements.txt`], such as py65 and pytest) if necessary. You
   can also directly run programs in the virtual environment without
@@ -124,7 +124,7 @@ append `@<branch-name>` to the URL.
 
 Versions 1.42 builds 205 through at least 218 are broken for 8bitdev due to
 the "Symbols in Segment NOTHING" section disappearing from the map file.
-See [`b8tool.toolset.asl`](b8tool/pylib/b8tool/toolset/asl.py) for more
+See [`t8dev.toolset.asl`](t8dev/pylib/t8dev/toolset/asl.py) for more
 details.
 
 #### ASxxxx Notes

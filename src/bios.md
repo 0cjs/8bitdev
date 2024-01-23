@@ -68,7 +68,7 @@ usual.
 The code implementing the BIOS is in `<machine>/bioscode.aXX` and is loaded
 separately from the code under test or program to be run by the simulator;
 this is done by the unit test framework (`testmc.conftest.loadbios()`) or
-by the simulator command-line program (e.g. `b8tool/bin/tmc6800`). The unit
+by the simulator command-line program (e.g. `t8dev/bin/tmc6800`). The unit
 test framework sets up input for the test run and collects any output; the
 command-line simulator takes input from stdin and sends output to stdout.
 

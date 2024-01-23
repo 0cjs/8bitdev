@@ -1,6 +1,6 @@
 from    testmc  import sym_tid
 from    testmc.mos65 import  Machine
-from    b8tool  import path
+from    t8dev  import path
 import  pytest
 
 test_rig = '''

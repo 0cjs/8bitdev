@@ -68,8 +68,6 @@ export T8_PROJDIR=$(cd "$(dirname "$0")" && pwd -P)
 export BUILDDIR="$T8_PROJDIR/.build"
 all_tools="$T8_PROJDIR/.all-tools"
 
-(cd "$T8_PROJDIR" && check_submodules)
-
 #   Creating this file is useful to slightly speed the edit/build/test
 #   cycle when working on "regular" ASL code; the toolsets and asxxx builds
 #   are the majority of the wall clock time when running only a few tests.
@@ -93,6 +91,7 @@ while [[ ${#@} -gt 0 ]]; do case "$1" in
     *)      break;;
 esac; done
 
+(cd "$T8_PROJDIR" && check_submodules)
 . $T8_PROJDIR/t8dev/pactivate -B "$T8_PROJDIR" -q
 
 [[ -f $fast_hack ]] || build_toolsets

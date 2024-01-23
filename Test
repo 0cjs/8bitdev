@@ -1,23 +1,6 @@
 #!/usr/bin/env bash
 set -eu -o pipefail
 
-die() {
-    local exitcode="$1"; shift
-    [[ -z $1 ]] || echo 1>&2 "$@"
-    exit $exitcode
-}
-
-warn() { echo 1>&2 "WARNNG:" "$@"; }
-
-#   From: https://github.com/0cjs/sedoc, git/submodule.md
-check_submodules() {
-    count=$(git submodule status --recursive | sed -n -e '/^[^ ]/p' | wc -l)
-    [ $count -eq 0 ] || {
-        warn "$count Git submodules are not up to date"
-        warn 'Run `git submodule update --init`?'
-    }
-}
-
 ####################################################################
 #   Build functions
 
@@ -62,10 +45,12 @@ build_asxxxx() {
 }
 
 ####################################################################
-#   Main
+#   t8dev and project setup
 
 export T8_PROJDIR=$(cd "$(dirname "$0")" && pwd -P)
-export BUILDDIR="$T8_PROJDIR/.build"
+
+#   Build even the tools we don't use much, slowing things down
+#   (and requiring extra pre-install work on some systems).
 all_tools="$T8_PROJDIR/.all-tools"
 
 #   Creating this file is useful to slightly speed the edit/build/test
@@ -76,27 +61,32 @@ all_tools="$T8_PROJDIR/.all-tools"
 #   XXX This can go when we move more stuff into a single t8dev invocation.
 fast_hack="$T8_PROJDIR/.fast-hack"
 
+#   Extra things to clean with -C and -c.
+T8_CLEAN_C="$fast_hack"
+#T8_CLEAN_c=""
+
+. "$T8_PROJDIR"/t8dev/project-setup.bash
+
+####################################################################
+#   Project-specific setup
+
 t8bin="$T8_PROJDIR/t8dev/bin"
 t8dev="$t8bin/t8dev"
 
-#   Leading command line args (these must be at the start):
-#   • -C: clean rebuild of everything, including toolchains
-#   • -c: clean rebuild of only this repo's source (test/toolchain output)
+#   Extra argument processing for this project. These must be after the
+#   project-setup.bash arguments, but before anything to be passed on to
+#   pytest/test scripts/etc.
 #   • -A: build and use all tools
-#   All args after these are passed on to pytest.
 while [[ ${#@} -gt 0 ]]; do case "$1" in
-    -C)     shift; rm -rf "$BUILDDIR" $fast_hack;;
-    -c)     shift; rm -rf "$BUILDDIR"/{obj,ptobj,pytest,virtualenv};;
+    --)     shift; break;;
     -A)     shift; touch "$all_tools";;
     *)      break;;
 esac; done
 
-(cd "$T8_PROJDIR" && check_submodules)
-. $T8_PROJDIR/t8dev/pactivate -B "$T8_PROJDIR" -q
+####################################################################
+#   Project-specific setup
 
 [[ -f $fast_hack ]] || build_toolsets
-[[ $PATH =~ ^$T8_PROJDIR/bin:|:$T8_PROJDIR/bin:|:$T8_PROJDIR/bin$ ]] \
-    || export PATH="$T8_PROJDIR/bin:$PATH"
 
 #   Builds of asxxxx sources are a completely separate thing right now
 #   so that we can more easily skip the (re-)builds if $fast_hack is set.

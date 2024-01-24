@@ -66,7 +66,7 @@ fast_hack="$T8_PROJDIR/.fast-hack"
 T8_CLEAN_C="$fast_hack"
 #T8_CLEAN_c=""
 
-. "$T8_PROJDIR"/$t8_dir/project-setup.bash
+. "$T8_PROJDIR"/$t8_dir/t8setup.bash
 
 ####################################################################
 #   Project-specific setup

@@ -48,7 +48,9 @@ build_asxxxx() {
 #   t8dev and project setup
 
 export T8_PROJDIR=$(cd "$(dirname "$0")" && pwd -P)
-t8_dir=tool/t8dev
+t8dir=tool/t8dev
+[[ -r $T8_PROJDIR/$t8dir/t8setup.bash ]] \
+    || git submodule update --init "$T8_PROJDIR/$t8dir"
 
 #   Build even the tools we don't use much, slowing things down
 #   (and requiring extra pre-install work on some systems).
@@ -66,12 +68,12 @@ fast_hack="$T8_PROJDIR/.fast-hack"
 T8_CLEAN_C="$fast_hack"
 #T8_CLEAN_c=""
 
-. "$T8_PROJDIR"/$t8_dir/t8setup.bash
+. "$T8_PROJDIR"/$t8dir/t8setup.bash
 
 ####################################################################
 #   Project-specific setup
 
-t8bin="$T8_PROJDIR/$t8_dir/bin"
+t8bin="$T8_PROJDIR/$t8dir/bin"
 t8dev="$t8bin/t8dev"
 
 #   Extra argument processing for this project. These must be after the

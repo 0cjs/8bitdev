@@ -122,9 +122,9 @@ $t8dev a2dsk exe/a2/charset.a65
 #   Not yet figured out how this should be integrated into t8dev.
 
 objdir="$BUILDDIR/obj"
-"$t8bin/cmtconv" -p jr200 -i obj \
+cmtconv -p jr200 -i obj \
     -f HELLO "$objdir/exe/jr200/hello.p" "$objdir/exe/jr200/hello.wav"
-"$t8bin/cmtconv" -p mb6885 -i obj \
+cmtconv -p mb6885 -i obj \
     -f HELLO.B "$objdir/exe/mb6885/hello.p" "$objdir/exe/mb6885/hello.wav"
 
 #   Unit Tests

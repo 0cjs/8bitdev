@@ -5,12 +5,12 @@ set -eu -o pipefail
 #   Build functions
 
 build_toolsets() {
-    [[ -f $all_tools ]] && $t8dev buildtoolset asxxxx
-    $t8dev buildtoolset asl
-    $t8dev buildtoolset osimg
-    $t8dev buildtoolset dos33fs
-    $t8dev buildtoolset linapple
-    $t8dev buildtoolset bm2
+    [[ -f $all_tools ]] && t8dev buildtoolset asxxxx
+    t8dev buildtoolset asl
+    t8dev buildtoolset osimg
+    t8dev buildtoolset dos33fs
+    t8dev buildtoolset linapple
+    t8dev buildtoolset bm2
 }
 
 #   ASxxxx builds
@@ -36,12 +36,12 @@ build_asxxxx() {
     #   Though we don't need to explicitly specify `simple` as an input
     #   file for the link (aslink would get it from the output file) we
     #   do so anyway to test that t8dev handles it correctly.
-    $t8dev asx     src/asxxxx/simple.a65
-    $t8dev asxlink src/asxxxx/simple simple
-    $t8dev asx     src/asxxxx/reloctest.a65
-    $t8dev asxlink src/asxxxx/reloctest -- -b '_code=0x400'
-    $t8dev asx     src/asxxxx/zptest.a65
-    $t8dev asxlink src/asxxxx/zptest -- -b '_code=0x0300'
+    t8dev asx     src/asxxxx/simple.a65
+    t8dev asxlink src/asxxxx/simple simple
+    t8dev asx     src/asxxxx/reloctest.a65
+    t8dev asxlink src/asxxxx/reloctest -- -b '_code=0x400'
+    t8dev asx     src/asxxxx/zptest.a65
+    t8dev asxlink src/asxxxx/zptest -- -b '_code=0x0300'
 }
 
 ####################################################################
@@ -95,7 +95,7 @@ esac; done
 #   so that we can more easily skip the (re-)builds if $fast_hack is set.
 build_asxxxx
 
-$t8dev aslauto exe/ src/ --exclude=src/asxxxx/
+t8dev aslauto exe/ src/ --exclude=src/asxxxx/
 manual_build=(
     #   Top-level programs whose build is not triggered by automated tests.
     src/asl/nomacro.a65         # Test/demo for ASL macro expansion
@@ -109,14 +109,14 @@ manual_build=(
         exe/mb6885/kbscan.a68 exe/mb6885/writenum.a68
     exe/tmc68/hello.a68 exe/tmc68/pmon.a68
 )
-$t8dev asl "${manual_build[@]}"
+t8dev asl "${manual_build[@]}"
 
 #   This builds an Apple II disk image from an AS source file. Probably
 #   this should be in smaller steps so we can extend the idea to building
 #   output for other microcomputers where we may want, e.g., a raw file
 #   for an emulator, a tape image with that file, and a disk image with
 #   that file that autoboots, all from the same build.
-$t8dev a2dsk exe/a2/charset.a65
+t8dev a2dsk exe/a2/charset.a65
 
 #   Various other builds of things from .p files.
 #   Not yet figured out how this should be integrated into t8dev.
@@ -128,7 +128,7 @@ cmtconv -p mb6885 -i obj \
     -f HELLO.B "$objdir/exe/mb6885/hello.p" "$objdir/exe/mb6885/hello.wav"
 
 #   Unit Tests
-$t8dev pytest -- "$@"
+t8dev pytest -- "$@"
 
 ####################################################################
 

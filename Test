@@ -1,22 +1,16 @@
 #!/usr/bin/env bash
 set -eu -o pipefail
 
-die() {
-    local exitcode="$1"; shift
-    [[ -z $1 ]] || echo 1>&2 "$@"
-    exit $exitcode
-}
-
 ####################################################################
 #   Build functions
 
 build_toolsets() {
-    [[ -f $all_tools ]] && $b8tool buildtoolset asxxxx
-    $b8tool buildtoolset asl
-    $b8tool buildtoolset osimg
-    $b8tool buildtoolset dos33fs
-    $b8tool buildtoolset linapple
-    $b8tool buildtoolset bm2
+    [[ -f $all_tools ]] && $t8dev buildtoolset asxxxx
+    $t8dev buildtoolset asl
+    $t8dev buildtoolset osimg
+    $t8dev buildtoolset dos33fs
+    $t8dev buildtoolset linapple
+    $t8dev buildtoolset bm2
 }
 
 #   ASxxxx builds
@@ -41,57 +35,67 @@ build_asxxxx() {
 
     #   Though we don't need to explicitly specify `simple` as an input
     #   file for the link (aslink would get it from the output file) we
-    #   do so anyway to test that b8tool handles it correctly.
-    $b8tool asx     src/asxxxx/simple.a65
-    $b8tool asxlink src/asxxxx/simple simple
-    $b8tool asx     src/asxxxx/reloctest.a65
-    $b8tool asxlink src/asxxxx/reloctest -- -b '_code=0x400'
-    $b8tool asx     src/asxxxx/zptest.a65
-    $b8tool asxlink src/asxxxx/zptest -- -b '_code=0x0300'
+    #   do so anyway to test that t8dev handles it correctly.
+    $t8dev asx     src/asxxxx/simple.a65
+    $t8dev asxlink src/asxxxx/simple simple
+    $t8dev asx     src/asxxxx/reloctest.a65
+    $t8dev asxlink src/asxxxx/reloctest -- -b '_code=0x400'
+    $t8dev asx     src/asxxxx/zptest.a65
+    $t8dev asxlink src/asxxxx/zptest -- -b '_code=0x0300'
 }
 
 ####################################################################
-#   Main
+#   t8dev and project setup
 
-export B8_PROJDIR=$(cd "$(dirname "$0")" && pwd -P)
-export BUILDDIR="$B8_PROJDIR/.build"
-all_tools="$B8_PROJDIR/.all-tools"
+export T8_PROJDIR=$(cd "$(dirname "$0")" && pwd -P)
+t8dir=tool/t8dev
+[[ -r $T8_PROJDIR/$t8dir/t8setup.bash ]] \
+    || git submodule update --init "$T8_PROJDIR/$t8dir"
+
+#   Build even the tools we don't use much, slowing things down
+#   (and requiring extra pre-install work on some systems).
+all_tools="$T8_PROJDIR/.all-tools"
 
 #   Creating this file is useful to slightly speed the edit/build/test
 #   cycle when working on "regular" ASL code; the toolsets and asxxx builds
 #   are the majority of the wall clock time when running only a few tests.
 #   This file is never ignored or committed so `git status` will make it
 #   clear you're not building everything that might be changed.
-#   XXX This can go when we move more stuff into a single b8tool invocation.
-fast_hack="$B8_PROJDIR/.fast-hack"
+#   XXX This can go when we move more stuff into a single t8dev invocation.
+fast_hack="$T8_PROJDIR/.fast-hack"
 
-b8bin="$B8_PROJDIR/b8tool/bin"
-b8tool="$b8bin/b8tool"
-b8_plib="$B8_PROJDIR/b8tool/pylib"      # used locally; not part of b8tool
+#   Extra things to clean with -C and -c.
+T8_CLEAN_C="$fast_hack"
+#T8_CLEAN_c=""
 
-#   Leading command line args (these must be at the start):
-#   • -C: clean rebuild of everything, including toolchains
-#   • -c: clean rebuild of only this repo's source (test/toolchain output)
+. "$T8_PROJDIR"/$t8dir/t8setup.bash
+
+####################################################################
+#   Project-specific setup
+
+t8bin="$T8_PROJDIR/$t8dir/bin"
+t8dev="$t8bin/t8dev"
+
+#   Extra argument processing for this project. These must be after the
+#   project-setup.bash arguments, but before anything to be passed on to
+#   pytest/test scripts/etc.
 #   • -A: build and use all tools
-#   All args after these are passed on to pytest.
 while [[ ${#@} -gt 0 ]]; do case "$1" in
-    -C)     shift; rm -rf "$BUILDDIR" $fast_hack;;
-    -c)     shift; rm -rf "$BUILDDIR"/{obj,ptobj,pytest,virtualenv};;
+    --)     shift; break;;
     -A)     shift; touch "$all_tools";;
     *)      break;;
 esac; done
 
-. $B8_PROJDIR/b8tool/pactivate -B "$B8_PROJDIR" -q
+####################################################################
+#   Project-specific setup
 
 [[ -f $fast_hack ]] || build_toolsets
-[[ $PATH =~ ^$B8_PROJDIR/bin:|:$B8_PROJDIR/bin:|:$B8_PROJDIR/bin$ ]] \
-    || export PATH="$B8_PROJDIR/bin:$PATH"
 
 #   Builds of asxxxx sources are a completely separate thing right now
 #   so that we can more easily skip the (re-)builds if $fast_hack is set.
 build_asxxxx
 
-$b8tool aslauto exe/ src/ --exclude=src/asxxxx/
+$t8dev aslauto exe/ src/ --exclude=src/asxxxx/
 manual_build=(
     #   Top-level programs whose build is not triggered by automated tests.
     src/asl/nomacro.a65         # Test/demo for ASL macro expansion
@@ -105,26 +109,37 @@ manual_build=(
         exe/mb6885/kbscan.a68 exe/mb6885/writenum.a68
     exe/tmc68/hello.a68 exe/tmc68/pmon.a68
 )
-$b8tool asl "${manual_build[@]}"
+$t8dev asl "${manual_build[@]}"
 
 #   This builds an Apple II disk image from an AS source file. Probably
 #   this should be in smaller steps so we can extend the idea to building
 #   output for other microcomputers where we may want, e.g., a raw file
 #   for an emulator, a tape image with that file, and a disk image with
 #   that file that autoboots, all from the same build.
-$b8tool a2dsk exe/a2/charset.a65
+$t8dev a2dsk exe/a2/charset.a65
 
 #   Various other builds of things from .p files.
-#   Not yet figured out how this should be integrated into b8tool.
+#   Not yet figured out how this should be integrated into t8dev.
 
 objdir="$BUILDDIR/obj"
-"$b8bin/cmtconv" -p jr200 -i obj \
+cmtconv -p jr200 -i obj \
     -f HELLO "$objdir/exe/jr200/hello.p" "$objdir/exe/jr200/hello.wav"
-"$b8bin/cmtconv" -p mb6885 -i obj \
+cmtconv -p mb6885 -i obj \
     -f HELLO.B "$objdir/exe/mb6885/hello.p" "$objdir/exe/mb6885/hello.wav"
 
 #   Unit Tests
-$b8tool pytest -- "$@"
+$t8dev pytest -- "$@"
+
+####################################################################
+
+#   XXX We no longer run the cmtconv functional tests from here because
+#   there are path issues when we use tool/t8dev instead of t8dev.
+#   And we really want to be running the r8format ones anyway, and
+#   need to figure out how exactly to do that without re-running
+#   all the unit tests. (Or maybe we should just be running the
+#   submodule tests using their own completely separate top-level
+#   ./Test script, in our virtual env or theirs?)
+exit 0
 
 #   Functional tests are run only if we ran all unit tests. (This is not
 #   the best way to avoid running them when unwanted, but it's a convenient
@@ -132,6 +147,6 @@ $b8tool pytest -- "$@"
 [[ ${#@} = 0 ]] && {
     #   We run them in quiet mode here, but if they fail you want
     #   to do this manually without the -q.
-    ./b8tool/pylib/cmtconv/Test -q \
+    ./t8dev/pylib/cmtconv/Test -q \
         || die $? "FAILED: cmtconv/Test (exitcode=$?)"
 } || true

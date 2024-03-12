@@ -1,6 +1,12 @@
 8bitdev Development Notes
 =========================
 
+Packages needed for old Python builds of third party software:
+
+    sudo apt install build-essential \
+      libsdl2-dev libcurl4-openssl-dev libsdl-image1.2-dev libsdl1.2-dev \
+      libzip-dev liblz4-dev imagemagick
+
 To-do List
 ----------
 

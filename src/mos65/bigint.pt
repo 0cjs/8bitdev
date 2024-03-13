@@ -191,7 +191,7 @@ def test_bi_read_decdigits(m, R, S, sign, input, buf):
     assert b'\xFB' == m.bytes(TSCR_ADDR+osize, 1)
     assert R(x=xpreserved) == m.regs
 
-@pytest.mark.skip(msg='These tests can take up to 10 seconds each to run')
+@pytest.mark.skip('These tests can take up to 10 seconds each to run')
 @pytest.mark.parametrize('sign', [
     0x00,   # 3,531,433 cyles, about 3.5 seconds on 1 MHz 6502
     0xFF,   # 3,791,023 cyles, almost 4 seconds on 1 MHz 6502
@@ -215,7 +215,7 @@ def test_bi_read_decdigits_max(m, S, sign):
     m.depword(S.buf0ptr, TOUT_ADDR-1)
     m.depword(S.bufSptr, TSCR_ADDR-1)
 
-    m.call(S.bi_read_decdigits)
+    m.call(S.bi_read_decdigits, maxsteps=1e6)
     assert [155] + expected + [166] == list(m.bytes(TOUT_ADDR-1, osize+2))
 
     #   Uncommit to show number of cycles taken.

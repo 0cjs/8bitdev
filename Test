@@ -95,6 +95,13 @@ esac; done
 #   so that we can more easily skip the (re-)builds if $fast_hack is set.
 build_asxxxx
 
+####################################################################
+#   Builds and tests
+
+#   Because we use relative paths in the lists of things to build/exclude
+#   below, we must be using the proper CWD to which the paths are relative.
+cd -P "$T8_PROJDIR"
+
 t8dev aslauto exe/ src/ --exclude=src/asxxxx/
 manual_build=(
     #   Top-level programs whose build is not triggered by automated tests.
@@ -126,6 +133,11 @@ cmtconv -p jr200 -i obj \
     -f HELLO "$objdir/exe/jr200/hello.p" "$objdir/exe/jr200/hello.wav"
 cmtconv -p mb6885 -i obj \
     -f HELLO.B "$objdir/exe/mb6885/hello.p" "$objdir/exe/mb6885/hello.wav"
+
+#   Change back to original CWD so we can use relative paths to that as
+#   command line parameters to this Test script. (This makes command-line
+#   completion easier.)
+cd -
 
 #   Unit Tests
 t8dev pytest -- "$@"

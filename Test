@@ -130,6 +130,10 @@ t8dev a2dsk exe/a2/charset.a65
 #   Not yet figured out how this should be integrated into t8dev.
 
 exeobj="$BUILDDIR/obj/exe"
+for i in "$exeobj"/cpm/*.p; do
+    #   This assumes that your assembly output starts at $0100.
+    p2bin -q "$i" "$(dirname "$i")/$(basename "$i" .p).com"
+done
 cmtconv -p jr200 -i obj \
     -f HELLO "$exeobj/jr200/hello.p" "$exeobj/jr200/hello.wav"
 cmtconv -p mb6885 -i obj \

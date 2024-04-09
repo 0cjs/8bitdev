@@ -1,0 +1,14 @@
+            relaxed on
+            cpu 8080
+            z80syntax exclusive
+
+            org  $0100
+
+BDOS        equ  $0005
+
+            ld   c,9
+            ld   de,hello
+            call BDOS
+            jp   0
+
+hello   db    'Hellorld.',$0D,$0A,'$'

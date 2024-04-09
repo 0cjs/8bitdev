@@ -109,6 +109,7 @@ manual_build=(
     exe/a1/charset.a65
     src/a2/misc.a65
     exe/cbm/ted-keymatrix.a65
+    exe/cpm/*.i80
     src/fm7.a69
     src/i8080/*.i80    # until we add 8080 simulator
     exe/jr200/hello.a68 exe/jr200/pmon.a68 exe/jr200/samples.a68

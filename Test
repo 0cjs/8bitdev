@@ -100,7 +100,7 @@ build_asxxxx
 
 #   Because we use relative paths in the lists of things to build/exclude
 #   below, we must be using the proper CWD to which the paths are relative.
-cd -P "$T8_PROJDIR"
+command cd -P "$T8_PROJDIR"
 
 t8dev aslauto exe/ src/ --exclude=src/asxxxx/
 manual_build=(
@@ -142,7 +142,7 @@ cmtconv -p mb6885 -i obj \
 #   Change back to original CWD so we can use relative paths to that as
 #   command line parameters to this Test script. (This makes command-line
 #   completion easier.)
-cd -
+command cd - >/dev/null
 
 #   Unit Tests
 t8dev pytest -- "$@"

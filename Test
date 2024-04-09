@@ -10,6 +10,7 @@ build_toolsets() {
     t8dev buildtoolset osimg
     t8dev buildtoolset dos33fs
     t8dev buildtoolset linapple
+    t8dev buildtoolset RunCPM
     t8dev buildtoolset bm2
 }
 

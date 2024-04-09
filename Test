@@ -129,11 +129,11 @@ t8dev a2dsk exe/a2/charset.a65
 #   Various other builds of things from .p files.
 #   Not yet figured out how this should be integrated into t8dev.
 
-objdir="$BUILDDIR/obj"
+exeobj="$BUILDDIR/obj/exe"
 cmtconv -p jr200 -i obj \
-    -f HELLO "$objdir/exe/jr200/hello.p" "$objdir/exe/jr200/hello.wav"
+    -f HELLO "$exeobj/jr200/hello.p" "$exeobj/jr200/hello.wav"
 cmtconv -p mb6885 -i obj \
-    -f HELLO.B "$objdir/exe/mb6885/hello.p" "$objdir/exe/mb6885/hello.wav"
+    -f HELLO.B "$exeobj/mb6885/hello.p" "$exeobj/mb6885/hello.wav"
 
 #   Change back to original CWD so we can use relative paths to that as
 #   command line parameters to this Test script. (This makes command-line

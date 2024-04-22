@@ -4,7 +4,8 @@
             z80syntax exclusive
             relaxed on
 
-segments    equ  $83F8      ; leftmost 7-segment display (TK-80, TK-85)
+segments    equ  $83F8          ; Address of leftmost 7-segment display
+                                ;   (of 8) on TK-80, TK-85
 
             org  $8200          ; suitable for TK-80
 
@@ -17,4 +18,4 @@ eachseg:    ld   hl,segments
             inc  hl             ; next digit
             or   a              ; clear carry; are we finished?
             jp   nz,.disp       ;    no: display next segment in next digit
-            halt                ; pause with unchanging display
+            halt                ; pause so user can see display

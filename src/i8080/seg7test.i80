@@ -1,0 +1,19 @@
+;   seg7test: Various routines to test 7-segment displays
+
+            cpu 8080
+            z80syntax exclusive
+            relaxed on
+
+segments    equ  $83F8      ; leftmost 7-segment display (TK-80, TK-85)
+
+            org  $8200          ; suitable for TK-80
+
+;   Display each segment alone in each digit.
+eachseg:    ld   hl,segments
+            ld   a,1
+.disp       ld   (hl),a         ; display segment
+            inc  hl             ; next digit
+            rlca                ; next segment
+            or   a              ; finished?
+            jp   nz,.disp       ;    no: display next segment in next digit
+            halt                ; pause with unchanging display

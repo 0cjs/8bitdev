@@ -1,0 +1,4 @@
+object_files = 'src/i8080/flagtest.i80'
+
+def test_nothing():
+    pass

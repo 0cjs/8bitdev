@@ -1,0 +1,17 @@
+;   flagtest.i80: various tests to see flags affected by instructions
+
+            cpu 8080
+            z80syntax exclusive
+            relaxed on
+
+            org  $8200          ; suitable for TK-80
+
+clearF      ld   de,$0000       ; "clear all flags" stack value
+            push de
+            pop  af
+
+inxF        ld   bc,$FFFE       ; check undoc V flag for INX
+            inc  bc
+            halt
+            inc  bc
+            halt

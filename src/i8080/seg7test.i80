@@ -10,10 +10,11 @@ segments    equ  $83F8      ; leftmost 7-segment display (TK-80, TK-85)
 
 ;   Display each segment alone in each digit.
 eachseg:    ld   hl,segments
-            ld   a,1
-.disp       ld   (hl),a         ; display segment
+            ld   a,0
+            scf                 ; preload carry with 1 or initial bit to display
+.disp       rla                 ; shift display bit left, carry to b0
+            ld   (hl),a         ; display segment
             inc  hl             ; next digit
-            rlca                ; next segment
-            or   a              ; finished?
+            or   a              ; clear carry; are we finished?
             jp   nz,.disp       ;    no: display next segment in next digit
             halt                ; pause with unchanging display

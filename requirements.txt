@@ -1,3 +1,8 @@
-py65@git+https://github.com/mnaberez/py65.git
+#   The PyPI upload of py65 wasn't updated at all from 2018 until recently.
+#   It now seems to be updated again, but the GitHub link can still
+#   be used if PyPI falls back or if a test version is needed.
+py65
+#py65@git+https://github.com/mnaberez/py65.git
+
 pytest
 requests

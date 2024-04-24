@@ -4,14 +4,48 @@
             z80syntax exclusive
             relaxed on
 
-            org  $8200          ; suitable for TK-80
+;   8085 Flags:
+;   • $80   S sign
+;   • $40   Z zero
+;   • $20   - (undef)
+;   • $10   H half-carry
+;   • $08   - (undef)
+;   • $04   P parity
+;   • $02   - (undef)
+;   • $01   C carry
 
-clearF      ld   de,$0000       ; "clear all flags" stack value
+; ----------------------------------------------------------------------
+;   TK-85 ROM entry points
+
+nmi         equ  $01D3          ; call to return to monitor,
+                                ;   preserving regs and ability to continue
+sstep       equ  $0219          ; single step interrupt entry point
+
+; ----------------------------------------------------------------------
+;   16-bit increment
+
+inxV        org  $8200          ; suitable for TK-80
+
+.clearF     ld   de,$0000       ; "clear all flags" stack value
             push de
             pop  af
 
-inxF        ld   bc,$FFFE       ; check undoc V flag for INX
+.inxF       ld   bc,$FFFE       ; check undoc V flag for INX
             inc  bc
             halt
             inc  bc
             halt
+
+; ----------------------------------------------------------------------
+;   8-bit decrement
+
+decr        org  $8210
+
+.clearF     ld   de,$0000       ; "clear all flags" stack value
+            push de
+            pop  af
+
+            ld   a,$81
+.dec        call sstep
+            dec  a
+            jp   .dec

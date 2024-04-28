@@ -10,6 +10,23 @@ test_rig = '''
 qhex_out    equ $21     ; WORD output of qhex*
 '''
 
+@pytest.mark.parametrize('c, tracetype', [
+    ('g',   False),
+    ('g',   0),
+    ('F',   'stdout'),
+    ('g',   'stderr'),
+    ('g',   'file:/home/cjs/z.8bd.trace'),  # absolute path
+    ('g',   'file:8bd.trace'),              # relative to curdir filename
+    ('g',   'ptobj'),       # .build/ptobj/.../<module>/<testname>.trace
+])
+def test_qdigit_trace(m, R, S, c, tracetype):
+    ''' This is our driver for `Machine.teardown` testing that we'll
+        be using to implement trace to file, etc.
+    '''
+    m.call(S.qhexdigit, R(a=ord(c)), trace=tracetype)
+    assert R(a=16) == m.regs
+
+
 ####################################################################
 #   qdigit
 

@@ -15,9 +15,10 @@ qhex_out    equ $21     ; WORD output of qhex*
     ('g',   0),
     ('F',   'stdout'),
     ('g',   'stderr'),
-    ('g',   'file:/home/cjs/z.8bd.trace'),  # absolute path
-    ('g',   'file:8bd.trace'),              # relative to curdir filename
-    ('g',   'ptobj'),       # .build/ptobj/.../<module>/<testname>.trace
+    ('F',   'file:/home/cjs/z.8bd.trace'),  # absolute path
+                                            # XXX put it in projdir/.build
+    ('F',   'file:z.8bd.trace'),            # relative to curdir filename
+    ('g',   'objdir'),       # .build/{pt,}obj/.../<module>/<testname>.trace
 ])
 def test_qdigit_trace(m, R, S, c, tracetype):
     ''' This is our driver for `Machine.teardown` testing that we'll

@@ -1,1 +1,1 @@
-from testmc.conftest import *
+from    testmc.pytest  import *

@@ -55,3 +55,29 @@ To-do List
 - [CLK] emulator, which covers a dozen different systems we use.
 
 [CLK]: https://github.com/TomHarte/CLK
+
+
+Other Notes
+-----------
+
+#### pytest-xdist performance
+
+8bitdev, t8dev and r8format together have some 2500 unit tests virtually
+all over which are extremely short. On cjs's Ryzen 7 7735HS (mini-desktop),
+workers (`-n#`) vs. performance is as follows. `0` indicates pytest-xdist
+not used (`-n0`), and the figures are wall clock and test run time averaged
+over three runs.
+
+        Workers     Wall        Test
+            4        4.3         2.0
+            8        4.5         2.3
+           16        4.8         2.6
+            2        4.8         2.6
+            0        6.1         3.9
+            1        6.7         4.5
+
+Thus in `pyproject.toml` we set `-n4` as the default. This adds about 0.2
+seconds overhead to pytest  to the shortest possible run of a single test
+using the 6502 simulator, but given that there's over 2s over overhead,
+this moves the shortest case from 2.2s → 2.4s, and with more tests being
+run very quickly the cost of starting workers starts to pay off.

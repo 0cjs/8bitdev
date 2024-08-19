@@ -1,4 +1,8 @@
-''' "BDD" or "Behaviour Driven Development" [#WP BDD]_ claims to use the
+''' > Projects promoting programming in "natural language"
+    > are intrinsically doomed to fail.
+    —Edsger Dijkstra, EWD498
+
+    "BDD" or "Behaviour Driven Development" [#WP BDD]_ claims to use the
     "domain language" to describe the behaviour of code. This tends towards
     using English-like sentences to describe things, which seems to make it
     the COBOL of testing. (I.e., replacing the "overly mathematical"

@@ -1,0 +1,133 @@
+''' "BDD" or "Behaviour Driven Development" [#WP BDD]_ claims to use the
+    "domain language" to describe the behaviour of code. This tends towards
+    using English-like sentences to describe things, which seems to make it
+    the COBOL of testing. (I.e., replacing the "overly mathematical"
+    ``y = x + 1`` with ``ADD 1 TO x GIVING y``. I'm not convinced that
+    even "business" folks have difficulty with mathematical notatation;
+    after all, they seem perfectly fine with Excel which does not do such
+    things.
+
+    This example compares the `BDD 6502 example test case`_ with t8dev_
+    code; comments in the source display the code from that followed by
+    the equivalent code in a t8dev pytest file.
+
+    .. [#WP BDD]: https://en.wikipedia.org/wiki/Behavior-driven_development
+    .. _`BDD 6502 example test case`: https://github.com/martinpiper/BDD6502#example-test-case
+    .. _t8dev: https://github.com/mc68-net/t8dev
+
+'''
+
+####################################################################
+#   Here we interleave the BDD description with the t8dev code.
+#   (See below for a non-interleaved comparison that gives a better
+#   sense of which is more readable.)
+
+'   Given I have a simple 6502 system '
+from    testmc.mos65  import Machine
+
+''' And I create file "test.a" with
+        """
+        !sal
+        *=$400
+        start
+          lda #0
+          sta $400
+          ldx #$20
+        .l1
+          inc $400
+          dex
+          bne .l1
+          rts
+        """
+'''
+test_rig = '''
+            cpu 6502
+            org $400
+start       lda #0
+            sta $400
+            ldx #$20
+.l1         inc $400
+            dex
+            bne .l1
+            rts
+'''
+
+#   And I run the command line:
+#       ..\C64\acme.exe -o test.prg --labeldump test.lbl -f cbm test.a
+#   And I load prg "test.prg"
+#   And I load labels "test.lbl"
+def test_interleaved(m, S):
+    #   The following took me some time and trouble to figure out. The key
+    #   words are buried near the end of each eight-word sentence. "equal"
+    #   is obvious, though not quite gramatically correct English. (I don't
+    #   know if "equals" would work.) "Contain" and "exclude (again, not
+    #   quite gramatically correct) are bit set and clear tests.
+    ''' Then I expect to see $400 equal 0xa9
+        Then I expect to see $400 contain $81
+        Then I expect to see $400 exclude $40
+    '''
+    i400 = m.byte(0x400)                    # initial value at $400
+    assert 0xA9 == i400
+    assert 0x81 == i400 & 0x81              # bits 7 and 0 set
+    assert    0 == (i400 ^ i400) & 0x40     # bit 4 not set
+
+    '   # The above code is actually 100 instructions long when executing '
+    #   Not clear what this comment means.
+
+    ''' When I execute the procedure at start until return
+        # Note how the label "start" is used below and correctly resolves
+        # to be $400 when checking memory
+    '''
+    m.call(S.start)
+    #   This also supports things like, "When I execute the procedure
+    #   at start for no more than 2 instructions until PC = stopHere"
+
+    '   Then I assert the unitialised memory read flag is clear '
+    #   I've not added this facility to my test framework, though it could
+    #   be added and might be useful. But better would be tracing of all
+    #   accessed memory locations and their values over time.
+
+    ''' Then I expect to see start equal 32
+        And I expect to see $402 equal $8d
+        And I expect to see $400 equal 32
+    '''
+    assert (            32 ,         0x8D ,           32 ) \
+        == (m.byte(S.start), m.byte(0x402), m.byte(0x400))
+
+    #   The one thing that would be nice here is if I could use the
+    #   '$402' notation instead of '0x402' (and also if the output
+    #   could use that). Possibly `m.byte()` could take a string with
+    #   '$402' notation in it, and return a subclass of `int` that
+    #   renders itself (__str__() function) in '$402' format.
+
+
+####################################################################
+#   So let's look at the full BDD spec (minus program) and mine without
+#   interleaving, which gives a better idea of which is more concise.
+
+''' Given I have a simple 6502 system
+    ...
+    And I run the command line: ../C64/acme.exe -o test.prg --labeldump test.lbl -f cbm test.a
+    And I load prg "test.prg"
+    And I load labels "test.lbl"
+    Then I expect to see $400 equal 0xa9
+    Then I expect to see $400 contain $81
+    Then I expect to see $400 exclude $40
+    # The above code is actually 100 instructions long when executing
+    When I execute the procedure at start until return
+    Then I assert the unitialised memory read flag is clear
+    # Note how the label "start" is used below and correctly resolves to be $400 when checking memory
+    Then I expect to see start equal 32
+    And I expect to see $402 equal $8d
+    And I expect to see $400 equal 32
+'''
+
+def test_concise(m, S):
+    i400 = m.byte(0x400)                    # initial value at $400
+    assert 0xA9 == i400
+    assert 0x81 == i400 & 0x81              # bits 7 and 0 set
+    assert    0 == (i400 ^ i400) & 0x40     # bit 4 not set
+
+    m.call(S.start)
+    assert (            32 ,         0x8D ,           32 ) \
+        == (m.byte(S.start), m.byte(0x402), m.byte(0x400))

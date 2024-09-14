@@ -146,7 +146,16 @@ cmtconv -p mb6885 -i obj \
 command cd - >/dev/null
 
 #   Unit Tests
-t8dev pytest -- "$@"
+#   • If we are given no options, add `-nlogical` to run things more
+#     efficiently with pytest-xdist. (Using logical cores rather than
+#     physical cores is actually just marginally slower on old 2-core/
+#     4-thread machines, but it's not worth trying to encode this special
+#     case when most modern machines are faster using all logical cores.)
+#   • With args, the developer should specify an appropriate `-n` option
+#     based on the number of tests he's running.
+#
+[ -z "$@" ] && set -- -nlogical
+t8dev pytest -- --dist worksteal "$@"
 
 ####################################################################
 

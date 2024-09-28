@@ -1,4 +1,4 @@
-object_files = 'src/i8080/flagtest.i80'
+object_files = 'src/i8080/seg7test.i80'
 
 def test_nothing():
     pass

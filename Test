@@ -153,8 +153,10 @@ command cd - >/dev/null
 #     case when most modern machines are faster using all logical cores.)
 #   • With args, the developer should specify an appropriate `-n` option
 #     based on the number of tests he's running.
+#   • Really, we should be checking for a `-n` argument here, and only
+#     supplying our own if it's not supplied.
 #
-[ -z "$@" ] && set -- -nlogical
+[ $# -eq 0 ] && set -- -nlogical
 t8dev pytest -- --dist worksteal "$@"
 
 ####################################################################

@@ -1,0 +1,20 @@
+;   ♠A ♡all Convert ASCII character to binary number in bases up to 41.
+;   Returns C flag clear and binary digit in A, or C set on error.
+;
+;   The .letter portion of this can probably be made more efficient with
+;   some tricks from a better programmer than me.
+;
+;   This translates A-Z[\]^_ and a-z{|}~DEL as 10, 11...40. The caller
+;   must check the returned value if the intended base was less than 41.
+;
+qdigit      cp   '9'+1
+            jp   nc,.letter     ; >'9', convert letter
+            sub  '0'            ; convert digit; if <'0', C flag set for error
+            ret
+.letter     and  %11011111      ; clear bit 5 to convert to upper case
+            scf                 ; because AND reset the carry flag
+            jp   m,.exit        ; high bit set, error
+            sub  'A'-$0A        ; convert ASCII letter-'digit' to binary
+            jp   c,.exit        ; >'9' case
+            cp   $0A            ; set C if < $0A, so we catch '@' case
+.exit       ret

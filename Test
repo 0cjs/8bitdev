@@ -103,6 +103,7 @@ build_asxxxx
 #   below, we must be using the proper CWD to which the paths are relative.
 command cd -P "$T8_PROJDIR"
 
+t8dev aslt8dev
 t8dev aslauto exe/ src/ --exclude=src/asxxxx/
 manual_build=(
     #   Top-level programs whose build is not triggered by automated tests.

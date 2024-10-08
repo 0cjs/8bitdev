@@ -2,7 +2,7 @@
 
             cpu 6800
             include "src/mc68/std.a68"
-            include "src/tmc68/bios.a68"    ; bin/tmc6800 will load bioscode
+            include "testmc/mc6800/tmc/bios.a68"    ; `tmc` will load bioscode
 
 pmon_ramlo  equ $20     ; pmon_ramhi unset = immediately after pmon_memlo
 pmon_org    equ $F000   ; monitor in top 4 KB

@@ -3,12 +3,12 @@ from    testmc.mc6800  import  Machine
 test_rig = '''
             cpu 6800
             org $1000
-            include src/tmc68/bios.a68
+            include testmc/mc6800/tmc/bios.a68
             include src/mc68/hello.a68
 '''
 
 def test_hello(m, loadbios, S, R):
-    istream, ostream = loadbios('tmc68', b'a0\rb1\x03')
+    istream, ostream = loadbios('mc6800', b'a0\rb1\x03')
     m.setregs(R(pc=S.hello))
     m.stepto(stopon=[0x02])
 
@@ -20,7 +20,7 @@ def test_hello(m, loadbios, S, R):
     assert expected == ostream.getvalue()
 
 def test_hello_2x_enter_exit(m, loadbios, S, R):
-    istream, ostream = loadbios('tmc68', b'\rXX\r\r\r')
+    istream, ostream = loadbios('mc6800', b'\rXX\r\r\r')
     m.setregs(R(pc=S.hello))
     m.stepto(stopon=[0x02])
 

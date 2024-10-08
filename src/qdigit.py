@@ -24,7 +24,7 @@ def test_qdigit_good(m, REG, char, num):
     assert REG(num, True) == m.regs
 
 @pytest.mark.parametrize('char', [
-    '/',  ':', '@',                     # Chars either side of digits/letters
+    '.', '/',  ':', ';', '?', '@',      # Chars either side of digits/letters
     '\x80', '\x81',
     '\xAF', '\xB0', '\xB9', '\xBa',     # MSb set: '/', '0', '9', ':'
     '\xDA', '\xFa', '\xFF',             # MSb set: 'Z', 'z'

@@ -7,6 +7,11 @@ test_rig = '''
             include src/mos65/qhex.a65
 '''
 
+@pytest.fixture
+def REG():
+    ' N flag set on error, clear on ok. '
+    return lambda value, ok: Machine.Registers(a=value, N=not ok)
+
 pytest.register_assert_rewrite('src.qdigit')
 from src.qdigit import (
     test_qdigit_good                as test_qdigit_good_6502,

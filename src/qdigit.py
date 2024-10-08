@@ -1,3 +1,15 @@
+''' Generic tests for ``qdigit`` routine.
+
+    These functions are imported into the machine-specific test file after
+    setting up the test rig to load the ``qdigit`` function and a pytest
+    fixture `REG` that returns a function to create a `Registers` object.
+    The function takes two parameters: the value for the input/return
+    register (typically the accumulator) and True/False to indicate success
+    or failure (which sets the machine-specific flag to the indicated
+    value). Thus ``REG(13, True)`` should return an object such as
+    ``Registers(a=13, N=0)``.
+'''
+
 from    itertools import chain, count
 import  pytest
 
@@ -7,9 +19,9 @@ import  pytest
     ('G',16),  ('g',16),    ('Z',35),  ('z',35),
     ('_', 40), ('\x7F', 40)
 ])
-def test_qdigit_good(m, R, char, num):
-    m.call(m.symtab.qdigit, R(a=ord(char), N=1))
-    assert R(a=num, N=0) == m.regs
+def test_qdigit_good(m, REG, char, num):
+    m.call(m.symtab.qdigit, REG(ord(char), False))
+    assert REG(num, True) == m.regs
 
 @pytest.mark.parametrize('char', [
     '/',  ':', '@',                     # Chars either side of digits/letters
@@ -17,11 +29,11 @@ def test_qdigit_good(m, R, char, num):
     '\xAF', '\xB0', '\xB9', '\xBa',     # MSb set: '/', '0', '9', ':'
     '\xDA', '\xFa', '\xFF',             # MSb set: 'Z', 'z'
     ])
-def test_qdigit_error(m, R, char):
-    m.call(m.symtab.qdigit, R(a=ord(char), N=0))
-    assert R(N=1) == m.regs
+def test_qdigit_error(m, REG, char):
+    m.call(m.symtab.qdigit, REG(ord(char), True))
+    assert REG(None, False) == m.regs
 
-def test_qdigit_good_exhaustive(m, R):
+def test_qdigit_good_exhaustive(m, REG):
     ''' Exhaustive test of all good values.
 
         Not just because we're nervous types, but also because these are
@@ -36,20 +48,20 @@ def test_qdigit_good_exhaustive(m, R):
         return range(ord(a), ord(z)+1)
     def readasc(a):
         print('{:02X}'.format(char), end=' ')
-        m.call(m.symtab.qdigit, R(a=a, N=1))
+        m.call(m.symtab.qdigit, REG(a, False))
         return m.regs
 
     for num,char in zip(count(0), ordrange('0','9')):
-        assert R(a=num, N=0) == readasc(char), \
+        assert REG(num, True) == readasc(char), \
             'failed on input ${:02X} {}'.format(char, repr(chr(char)))
     for num,char in zip(count(10), ordrange('A', '_')):
-        assert R(a=num, N=0) == readasc(char), \
+        assert REG(num, True) == readasc(char), \
             'failed on input ${:02X} {}'.format(char, repr(chr(char)))
     for num,char in zip(count(10), ordrange('a', '\x7F')):
-        assert R(a=num, N=0) == readasc(char), \
+        assert REG(num, True) == readasc(char), \
             'failed on input ${:02X} {}'.format(char, repr(chr(char)))
 
-def test_qdigit_error_exhaustive(m, R):
+def test_qdigit_error_exhaustive(m, REG):
     ''' Exhaustive test of all bad values.
         See further comments on `test_qdigit_good_exhaustive`.
     '''
@@ -60,6 +72,6 @@ def test_qdigit_error_exhaustive(m, R):
         range(ord('\x7F')+1,  255 ),
         )
     for char in badchars:
-        m.call(m.symtab.qdigit, R(a=char, N=0))
-        assert R(N=1) == m.regs, \
+        m.call(m.symtab.qdigit, REG(char, True))
+        assert REG(None, False) == m.regs, \
             'input ${:02X} {} should be bad'.format(char, repr(chr(char)))

@@ -27,9 +27,7 @@ hellomsg    jsr prnl
             bra .nextchar
 
 .exit       jsr prnl                ; simulator output starts on new line
-            db  $02                 ; invalid opcode causes simulator exit
-                                    ;   but is NOP in real hardware
-            rts                     ; real 6800s fall through above and return
+            rts
 
 message     db  "Hello: \0"
 

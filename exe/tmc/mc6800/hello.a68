@@ -4,9 +4,14 @@
 
             cpu 6800
             include "src/mc68/std.a68"
+            include "testmc/mc6800/tmc/bios.a68"    ; `tmc` will load bioscode
 
             org $100
+start       jsr hello
+            lda A,#exitportcmd
+            sta A,exitport
 
-            include "testmc/mc6800/tmc/bios.a68"    ; `tmc` will load bioscode
+            org $120
             include "src/mc68/hello.a68"
-            end hello
+
+            end start

@@ -1,0 +1,43 @@
+from    testmc.i8080  import  Machine
+
+test_rig = '''
+            relaxed on
+            cpu 8080
+            z80syntax exclusive
+            org $C000
+            include testmc/i8080/tmc/bios.i80
+            include src/i8080/hello.i80
+'''
+
+def test_prstr(m, loadbios, S, R):
+    _, ostream = loadbios('i8080')
+    m.call(S.prstr, R(hl=S.message))
+    assert b'Hello: ' == ostream.getvalue()
+
+def test_hello_ctrlC_exit(m, loadbios, S, R):
+    istream, ostream = loadbios('i8080', b'a0\rb1\x03')
+    m.call(S.hello)
+
+    #   XXX remove this once we confirm that our XXX
+   #m.setregs(R(pc=S.hello))
+   #m.stepto(stopat=[S['hellomsg.exit']+3])
+
+    expected = (
+        b'\nHello: '    b'a0'
+        b'\nHello: '    b'b1'
+        b'\n'
+        )
+    assert expected == ostream.getvalue()
+
+def test_hello_2x_enter_exit(m, loadbios, S, R):
+    istream, ostream = loadbios('i8080', b'\rXX\r\r\r')
+    m.call(S.hello)
+
+    expected = (
+        b'\nHello: '
+        b'\nHello: '    b'XX'
+        b'\nHello: '
+        b'\nHello: '
+        b'\n'
+        )
+    assert expected == ostream.getvalue()

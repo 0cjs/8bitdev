@@ -9,8 +9,7 @@ test_rig = '''
 
 def test_hello(m, loadbios, S, R):
     istream, ostream = loadbios('mc6800', b'a0\rb1\x03')
-    m.setregs(R(pc=S.hello))
-    m.stepto(stopon=[0x02])
+    m.call(S.hello)
 
     expected = (
         b'\nHello: '    b'a0'
@@ -21,8 +20,7 @@ def test_hello(m, loadbios, S, R):
 
 def test_hello_2x_enter_exit(m, loadbios, S, R):
     istream, ostream = loadbios('mc6800', b'\rXX\r\r\r')
-    m.setregs(R(pc=S.hello))
-    m.stepto(stopon=[0x02])
+    m.call(S.hello)
 
     expected = (
         b'\nHello: '

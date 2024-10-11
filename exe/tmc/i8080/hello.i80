@@ -1,0 +1,17 @@
+;   "Hello, world" for `testmc.tmc i8080` simulator.
+
+            relaxed on
+            cpu 8080
+            z80syntax exclusive
+
+            include "testmc/i8080/tmc/bios.i80"    ; `tmc` will load bioscode
+
+            org  $100
+start       call hello
+            ld   a,$EF          ; request simulator exit by writing $EF
+            ld   ($FE),a        ;   to location $FE
+
+            org  $120
+            include "src/i8080/hello.i80"
+
+            end start

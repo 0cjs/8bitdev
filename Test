@@ -103,7 +103,7 @@ build_asxxxx
 #   below, we must be using the proper CWD to which the paths are relative.
 command cd -P "$T8_PROJDIR"
 
-t8dev aslt8dev
+t8dev -v aslt8dev
 t8dev aslauto exe/ src/ --exclude=src/asxxxx/
 manual_build=(
     #   Top-level programs whose build is not triggered by automated tests.
@@ -116,6 +116,7 @@ manual_build=(
     exe/jr200/hello.a68 exe/jr200/pmon.a68 exe/jr200/samples.a68
     exe/mb6885/hello.a68 exe/mb6885/pmon.a68
         exe/mb6885/kbscan.a68 exe/mb6885/writenum.a68
+    exe/tmc/i8080/hello.i80
     exe/tmc/mc6800/hello.a68 exe/tmc/mc6800/pmon.a68
 )
 t8dev asl "${manual_build[@]}"

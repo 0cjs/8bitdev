@@ -1,0 +1,47 @@
+;   MC6800 "Hello, world."
+;
+;   This also tests input, reading and echoing what you type and
+;   re-printing the greeting on every CR. ^C will "exit" to an invalid
+;   opcode which should abort in a simulator; if it doesn't abort (as it
+;   wouldn't on real hardware) the program returns to whatever called it.
+
+CR          equ $0D             ; Return key
+CAN         equ $03             ; Ctrl-C
+
+hello       ld   b,2            ; number of CRs needed for exit
+hellomsg    call prnl
+            ld   hl,message
+            call prstr
+            call rdchar
+            cp   CR             ; CR may exit, if repeated
+            jp   NZ,.nextchar   ; if start of line is not Enter
+            dec  b              ; enough CRs seen to exit?
+            jp   NZ,hellomsg    ;    no: new prompt
+            jp   .exit          ;   yes: exit
+
+.nextchar   cp   CAN            ; Ctrl-C exits immediately
+            jp   Z,.exit
+            cp   CR             ; CR prints hello again (resetting CR count)
+            jp   Z,hello
+            call prchar         ; echo char
+            call rdchar
+            jp   .nextchar
+
+.exit       call prnl            ; simulator output starts on new line
+            ;   XXX If using tmc, here we should cause the simulator to exit
+            ;   rather than execute the RTS to nowhere. But we have no unused
+            ;   opcodes on which to fail (because 8085 uses all the unused
+            ;   8080 opcodes), so we need to find other means.
+            ret
+
+message     db  "Hello: \0"
+
+    ;   Print the 0-terminated string pointed to by HL.
+    ;   XXX This should be a common routine in src/i8080/pr.i80
+prstr       ld   a,(hl)
+            or   a,a
+            jp   Z,.done
+            call prchar
+            inc  hl
+            jp   prstr
+.done       ret

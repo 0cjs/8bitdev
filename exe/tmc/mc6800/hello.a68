@@ -1,4 +1,4 @@
-;   "Hello, world" for `testmc.mc6800` simulator.
+;   "Hello, world" for `testmc.tmc mc6800` simulator.
 ;
 ;   This uses the default stack configuration.
 

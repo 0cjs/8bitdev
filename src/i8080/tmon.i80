@@ -10,6 +10,20 @@
 ;       until the next time it reaches `prompt`.)
 
 ; ----------------------------------------------------------------------
+
+;   This requires the system-dependent files define the following before
+;   including this file:
+;   • tmon_ram: the workspace area, which must be RAM. No code or data
+;     is generated here; it's all initialised at runtime.
+;   • tmon_rom: start of code and static data, and monitor entry point.
+
+;   Abort assembly with a clear message if an essential definition is missing.
+;   (Otherwise it says "error: expression must be evaluatable in first pass".)
+;   set ______,
+;   pushv , tmon_rom, tmon_ram
+;   popv  , ______,     ______
+
+; ----------------------------------------------------------------------
 ;   Character definitions
 
 BS          equ  $08            ; Ctrl-H, backspace
@@ -23,8 +37,35 @@ SPACE       equ  ' '
 BACKSLASH   equ  '\\'
 
 ; ----------------------------------------------------------------------
+;   RAM Work Area
+
+            org  tmon_ram
+optEs       ds   2              ; start addr for examine cmd
+optEl       ds   1              ; # of lines for examine cmd should print
+optEw       ds   1              ; # of bytes per line for examine cmd
+
+
+; ----------------------------------------------------------------------
 ;   Entry point and main program
 
+            org  tmon_rom
+
+init        ld   hl,0
+            ld   (optEs),hl     ; examine cmd start addr: $0000
+            ld   a,4
+            ld   (optEl),a      ; examine cmd # of lines
+            ld   a,8
+            ld   (optEw),a      ; examine cmd # of bytes/line (width)
+.end
+
+;   Print the prompt and read a command (but not its args).
+;
+;   Commands are expected to generate a newline (moving to the next line
+;   after the command) before producing output because that's generally
+;   more convenient for commands generating multi-line output. This also
+;   allows us to have commands known to be short generate output on the
+;   same line.
+;
 prompt      ld   a,'.'
             call prchar         ; prompt
 .read       call rdchar
@@ -34,10 +75,13 @@ prompt      ld   a,'.'
             jp   Z,.err
             call prchar         ; echo input
             and  %11011111      ; force to upper case
+            ;   Dispatch command if we match one.
+            ;   Commands must generate their own initial newline; see above.
             cp   'Q'
             jp   Z,cmd_Q        ; quit
             cp   'E'
             jp   Z,cmd_E        ; examine memory
+            ;   No command; generate error.
 .err        call errbeep
             ld   a,CR           ; back up over bad command and prompt
             call prchar
@@ -56,8 +100,7 @@ read_opts   call rdchar
             jp   Z,.cancel
             halt                ; Parse option
             ;
-.execute    call prnl
-            ret
+.execute    ret
             ;
 .cancel     pop  hl             ; remove cmd_* return addr from stack
             ld   a,BACKSLASH    ; indicate cancelled
@@ -74,14 +117,36 @@ read_opts   call rdchar
 ;   The caller must ensure that a `ret` will return to the right system
 ;   software, e.g., by pushing an appropriate return addr on the stack.
 
-cmd_Q       call read_opts
+cmd_Q       call read_opts      ; no options, but must confirm/cancel
+            call prnl
             ret
 
 ; ----------------------------------------------------------------------
 ;   Examine memory command
 
 cmd_E       call read_opts
-            ld   a,'E'
+            ld   hl,(optEs)     ; start
+            ld   a,(optEl)      ; lines
+            ld   c,a
+.nextline   call prnl
+            call prhexHL
+            ld   a,':'
             call prchar
+            ld   a,(optEw)      ; bytes/line
+            ld   b,a
+.nextbyte   call prspace
+            ld   a,(hl)
+            call prhexA
+            inc  hl
+            dec  b
+            jp   NZ,.nextbyte
+            dec  c
+            jp   NZ,.nextline
+            ;
             call prnl
 .done       jp   prompt.next
+
+; ----------------------------------------------------------------------
+;   Generic routines
+
+            include "src/i8080/pr.i80"       ; printing

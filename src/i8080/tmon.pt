@@ -7,7 +7,16 @@ test_rig = '''
             z80syntax exclusive
             org $8000
             include testmc/i8080/tmc/biosdef.i80
+
+tmon_ram    equ  $7000
+tmon_rom    equ  $8000
+
             include src/i8080/tmon.i80
+
+            ;   data for testing E command and similar
+            org  $12AB
+utest_data  db   $FF, $00, $12, $23, $34, $45, $56, $67
+            db   $78, $89, $9A, $AB, $BC, $CD, $DE, $EF
 '''
 
 @pytest.mark.parametrize('input, output, continued', [
@@ -39,8 +48,21 @@ def test_prompt(m, loadbios, S, R,  input, output, continued):
     assert (           b'',             output,           continued) \
         == (istream.read(), ostream.getvalue(),  pnext == m.regs.pc)
 
-def test_e(m, loadbios, S, R):
-    istream, ostream = loadbios(input=b'\n')
+def test_e_defaults(m, S, R, loadbios):
+    _, ostream = loadbios(input=b'\n')
+    m.call(S.init, stopat=[S['init.end']])           # testing default values
     m.call(S.cmd_E, stopat=[S['cmd_E.done']])
-    assert (           b'',           b'\nE\n') \
-        == (istream.read(), ostream.getvalue())
+    s = ostream.getvalue()
+    assert b'0000: 00' in s
+    assert b'0018: 00' in s
+    assert s.endswith(b'\n')
+
+def test_e_settings(m, loadbios, S, R):
+    _, ostream = loadbios(input=b'\n')
+    #   2 lines of 5 bytes of known non-zero data.
+    m.depword(S.optEs, S.utest_data)
+    m.deposit(S.optEl, 2)
+    m.deposit(S.optEw, 5)
+    m.call(S.cmd_E, stopat=[S['cmd_E.done']])
+    assert b'\n12AB: FF 00 12 23 34\n12B0: 45 56 67 78 89\n' \
+        == ostream.getvalue()

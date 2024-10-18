@@ -1,0 +1,17 @@
+;   tmon for `testmc.tmc i8080` simulator.
+
+            relaxed on
+            cpu 8080
+            z80syntax exclusive
+
+            include "testmc/i8080/tmc/bios.i80"    ; `tmc` will load bioscode
+
+            org  $1F0
+start       call prompt
+            ld   a,$EF          ; request simulator exit by writing $EF
+            ld   ($FE),a        ;   to location $FE
+
+            org  $200
+            include "src/i8080/tmon.i80"
+
+            end start

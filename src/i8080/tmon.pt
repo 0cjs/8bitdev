@@ -1,0 +1,46 @@
+from    testmc.i8080  import  Machine
+import  pytest
+
+test_rig = '''
+            relaxed on
+            cpu 8080
+            z80syntax exclusive
+            org $8000
+            include testmc/i8080/tmc/bios.i80
+            include src/i8080/tmon.i80
+'''
+
+@pytest.mark.parametrize('input, output, continued', [
+    #   All non-printable characters are "bad command" when waiting for command.
+    (b'\x00',   b'.\a\r',     True ),
+    (b'\n',     b'.\a\r',     True ),
+    (b'\r',     b'.\a\r',     True ),
+    (b'\x1F',   b'.\a\r',     True ),
+    (b'\x7F',   b'.\a\r',     True ),
+
+    #   Printable invalid commands are echoed and backspaced over to
+    #   leave the incorrect command visible.
+    (b' ',      b'. \a\r',  True),
+    (b'!',      b'.!\a\r',  True),
+    (b'~',      b'.~\a\r',  True),
+
+    #   Q command is the simplest to test
+    (b'q\n',    b'.q\n',    False),     # lower case command
+    (b'Q  \r',  b'.Q  \n',  False),     # upper case command, spaces ignored
+    (b'q\x15',  b'.q\\\n',  True ),     # cancel with Ctrl-U
+    (b'q\x18',  b'.q\\\n',  True ),     # cancel with Ctrl-X
+])
+def test_prompt(m, loadbios, S, R,  input, output, continued):
+    pnext = S['prompt.next']
+    istream, ostream = loadbios('i8080', input)
+    m.call(S.prompt, stopat=[pnext])
+
+    print(f'pnext=${pnext:04X}  {m.regs}')
+    assert (           b'',             output,           continued) \
+        == (istream.read(), ostream.getvalue(),  pnext == m.regs.pc)
+
+def test_e(m, loadbios, S, R):
+    istream, ostream = loadbios('i8080', b'\n')
+    m.call(S.cmd_E, stopat=[S['cmd_E.done']])
+    assert (           b'',           b'\nE\n') \
+        == (istream.read(), ostream.getvalue())

@@ -1,0 +1,87 @@
+;   tmon - "tiny" (relatively) 8080 monitor
+;
+;   See the README for the user documentation.
+
+;   XXX The commands currently continue not by calling `prompt` but by
+;       calling `prompt.next`, solely because that's how the tests
+;       determine that we are going on to parse the next command.
+;       (If they request a halt on `prompt`, it halts immediately on
+;       the call, and we'd have to find some way to continue execution
+;       until the next time it reaches `prompt`.)
+
+; ----------------------------------------------------------------------
+;   Character definitions
+
+BS          equ  $08            ; Ctrl-H, backspace
+LF          equ  $0A            ; Ctrl-J, linefeed
+CR          equ  $0D            ; Ctrl-M, carriage return
+NAK         equ  $15            ; Ctrl-U
+CAN         equ  $18            ; Ctrl-X
+DEL         equ  $7F
+
+SPACE       equ  ' '
+BACKSLASH   equ  '\\'
+
+; ----------------------------------------------------------------------
+;   Entry point and main program
+
+prompt      ld   a,'.'
+            call prchar         ; prompt
+.read       call rdchar
+            cp   ' '            ; printable?
+            jp   C,.err         ;    no: err without echoing it
+            cp   DEL
+            jp   Z,.err
+            call prchar         ; echo input
+            and  %11011111      ; force to upper case
+            cp   'Q'
+            jp   Z,cmd_Q        ; quit
+            cp   'E'
+            jp   Z,cmd_E        ; examine memory
+.err        call errbeep
+            ld   a,CR           ; back up over bad command and prompt
+            call prchar
+.next       jp   prompt
+
+read_opts   call rdchar
+            cp   SPACE          ; Ignore spaces.
+            jp   Z,.space
+            cp   CR             ; Execute command
+            jp   Z,.execute
+            cp   LF
+            jp   Z,.execute
+            cp   CAN            ; Cancel command
+            jp   Z,.cancel
+            cp   NAK
+            jp   Z,.cancel
+            halt                ; Parse option
+            ;
+.execute    call prnl
+            ret
+            ;
+.cancel     pop  hl             ; remove cmd_* return addr from stack
+            ld   a,BACKSLASH    ; indicate cancelled
+            call prchar
+            call prnl
+            jp   prompt.next
+            ;
+.space      call prchar
+            jp   read_opts
+
+; ----------------------------------------------------------------------
+;   Quit command
+;
+;   The caller must ensure that a `ret` will return to the right system
+;   software, e.g., by pushing an appropriate return addr on the stack.
+
+cmd_Q       call read_opts
+            ret
+
+; ----------------------------------------------------------------------
+;   Examine memory command
+
+cmd_E       call read_opts
+            ld   a,'E'
+            call prchar
+            call prnl
+.done       jp   prompt.next

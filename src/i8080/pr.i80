@@ -1,0 +1,75 @@
+;   pr - routines for formatting and printing output
+;
+;   This requires a BIOS with the following functions:
+;   • prchar
+
+; ----------------------------------------------------------------------
+
+;   ♠A ♡*   Print value in HL as 4 hex digits.
+;
+prhexHL     ld   a,h
+            call prhexA
+            ld   a,l
+            ; fallthrough
+
+;   ♠A ♡*   Print value in A as 2 hex digits.
+;
+prhexA      push af
+            rrca
+            rrca
+            rrca
+            rrca
+            call prnyb
+            pop  af
+            ; fallthrough
+
+;   ♠A ♡*   Print lower nybble of A as 1 hex digit.
+;
+prnyb       and  $0F
+            add  a,'0'
+            cp   '9'+1
+            jp   C,.digit
+            add  a,'A'-'9'-1
+.digit      jp   prchar         ; ret (TCO)
+
+;   ♣AF ♡*   Print a space.
+;
+prspace     ld   a,' '
+            jp   prchar         ; ret (TCO)
+
+; ----------------------------------------------------------------------
+;   ♡*   Print any (8-bit) value "visibly" as one character.
+;
+;   The output is always a character from the printable ASCII range. Bit 7
+;   is ignored, characters in the control sticks ($00-$1F) are shifted
+;   up into the upper-case ASCII sticks, and DEL is printed as `?` (i.e.,
+;   shifted down in the reverse direction from the control chars).
+;
+;   This is a generic routine; ideally systems that can print more than
+;   just ASCII, or have modes such as reverse video, should have a custom
+;   version of this routine that knows how to handle that.
+;
+;   Even as plain ASCII, this is a more informative alternative to printing
+;   just a `.` for any non-printing char. It is slightly more subject to
+;   confusion in that it can make non-ASCII look more like ASCII, but at
+;   least when doing hex dumps the viwer can use that to help distinguish
+;   between real ASCII chars and printvis substitutes for non-printing chars.
+;
+;   To provide a more convenient API, this preserves the original character
+;   in A, along with all other registers and flags.
+;
+prvischar   push af
+            and  $7F            ; clear bit 7
+            cp   $7F            ; DEL
+            jp   Z,.isctl
+            cp   ' '
+            jp   NC,.done
+.isctl      ;   Flipping bit 6 of a control character moves it up by $40
+            ;   into the upper-case sticks, except for DEL where it's
+            ;   moved down by 40 into the numeric/symbol stick.
+            xor  BIT6
+.done       call prchar
+            pop  af
+            ret
+
+BIT6        equ  1 << 6

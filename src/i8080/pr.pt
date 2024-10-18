@@ -1,0 +1,67 @@
+#   XXX heavy duplication of src/mc68/pr.pt
+
+from    testmc  import *
+from    testmc.i8080  import Machine
+import  pytest
+
+param = pytest.mark.parametrize
+
+test_rig = '''
+            relaxed on
+            cpu 8080
+            z80syntax exclusive
+            include testmc/i8080/tmc/biosdef.i80
+            include src/i8080/pr.i80
+'''
+
+####################################################################
+
+@param('val, char', (
+    (0x00, b'0'), (0x01, b'1'), (0x0E, b'E'), (0x0F, b'F'),
+    (0x10, b'0'), (0xFE, b'E'),
+), ids=tmc_tid)
+def test_prnyb(m, S, R, loadbios, val, char):
+    _, output = loadbios()
+    m.call(S.prnyb, R(a=val))
+    assert char == output.getvalue()
+
+@param('val, chars', (
+    (0x00, b'00'), (0x0F, b'0F'), (0xA0, b'A0'), (0xFF, b'FF'),
+), ids=tmc_tid)
+def test_prhexA(m, S, R, loadbios, val, chars):
+    _, outchars = loadbios()
+    m.call(S.prhexA, R(a=val))
+    assert chars == outchars.getvalue()
+
+@param('val, chars', (
+    (0x0000, b'0000'), (0x1234, b'1234'), (0xFEDC, b'FEDC'),
+), ids=tmc_tid)
+def test_prhexHL(m, S, R, loadbios, val, chars):
+    _, outchars = loadbios()
+    m.call(S.prhexHL, R(hl=val))
+    assert chars == outchars.getvalue()
+
+####################################################################
+
+def test_prspace(m, S, R, loadbios):
+    _, ostream = loadbios()
+    regs = R(bc=0x3456, de=0x789A, hl=0xBCDE)
+    m.call(S.prspace, regs)
+    assert (regs, b' ') == (m.regs, ostream.getvalue())
+
+####################################################################
+
+@param('char, output', [
+    (0x20, ' '), (0x5A, 'Z'), (0x7E, '~'),  # printable range
+    (0xA0, ' '), (0xDA, 'Z'), (0xFE, '~'),  # high bit set
+    (0x00, '@'), (0x1F, '_'),               # control chars
+    (0x80, '@'), (0x9F, '_'),               # hi-bit control chars
+    (0x7F, '?'), (0xFF, '?'),               # DEL is special
+])
+def test_prvischar(m, R, S, loadbios, char, output):
+    _, ostream = loadbios()
+    m.call(S.prvischar, R(a=char), trace=1)
+    outchar = str(ostream.getvalue(), encoding='ISO-8859-1')
+    assert ( output, R(a=char)) \
+        == (outchar,   m.regs )
+

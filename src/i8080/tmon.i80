@@ -1,0 +1,1010 @@
+;   tmon - "tiny" (relatively) 8080 monitor
+;
+;   See the README for the user documentation.
+
+; ----------------------------------------------------------------------
+;   Status:
+;   • Implemented:  J K I Q E W R V D . > ' /
+;   • Untested:     O P           # tests require addtional support from t8dev
+;   • To-do:        F C : S L T
+
+; ----------------------------------------------------------------------
+;   This requires the system-dependent files define the following before
+;   including this file:
+;   • tmon_ram: the workspace area, which must be RAM. No code or data
+;     is generated here; it's all initialised at runtime.
+;   • tmon_stksz: size of tmon's monitor stack (separate from user stack)
+;   • tmon_rom: start of code and static data, and monitor entry point.
+
+;   Abort assembly with a clear message if an essential definition is missing.
+;   (Otherwise it says "error: expression must be evaluatable in first pass".)
+    set ______,
+    pushv , tmon_rom, tmon_ram, tmon_stksz
+    popv  , ______,     ______,     ______
+
+; ----------------------------------------------------------------------
+;   Symbol naming:
+;   • pr*   print routines
+;   • q*    parsing routines
+;   • vXx*  memorised parameter values; X=command name; x=parameter name
+
+; ----------------------------------------------------------------------
+;   Character definitions
+
+BS          equ  $08            ; Ctrl-H, backspace
+LF          equ  $0A            ; Ctrl-J, linefeed
+CR          equ  $0D            ; Ctrl-M, carriage return
+NAK         equ  $15            ; Ctrl-U
+CAN         equ  $18            ; Ctrl-X
+DEL         equ  $7F
+
+SPACE       equ  ' '
+BACKSLASH   equ  '\\'
+
+UPCASE      equ  %11011111      ; (lower case ASCII) ∧ UPCASE → upper case
+
+; ----------------------------------------------------------------------
+;   Other definitions
+
+JP          equ  $C3            ; 8080 JMP instruction
+
+;   byte-valued parameter: char followed by addr at which to store byte value
+pb          macro char,addr
+            db    char
+            dw    addr
+            endm
+
+;   word-valued parameter: char followed by addr at which to store word value
+pw          macro char,addr
+            db    char|$80
+            dw    addr
+            endm
+
+; ----------------------------------------------------------------------
+;   RAM Work Area
+
+            org  tmon_ram
+
+stack_bot   ds   tmon_stksz
+monstack                        ; first push will deposit below this
+
+;   Registers
+ureg_AF
+ureg_F      ds   1
+ureg_A      ds   1
+ureg_BC
+ureg_C      ds   1
+ureg_B      ds   1
+ureg_DE
+ureg_E      ds   1
+ureg_D      ds   1
+ureg_HL
+ureg_L      ds   1
+ureg_H      ds   1
+ureg_SP     ds   2
+ureg_PC     ds   2
+
+;   Command parameter values
+v_start
+vJKs        ds   2      ; execute: start addr
+vEs         ds   2      ; examine: start addr
+vEf         ds   1      ; examine: display format flags:
+                        ;   b0=hex, b1=ASCII, b2=screen codes
+vEl         ds   1      ; examine: # of lines to print
+vEw         ds   1      ; examine: # of bytes per line ("width")
+vDs         ds   2      ; deposit: start addr
+vDa         ds   1      ; deposit: advance mode $00=off, $01=on
+vPp         ds   1      ; input port
+vOp         ds   1      ; output port
+vOd         ds   1      ; output port data
+vCVs        ds   2      ; copy/cksum: start addr
+vCVe        ds   2      ; copy/cksum: end addr (non-inclusive)
+vSLASHq     ds   2      ; calculate: ? param (left value)
+vSLASHs     ds   2      ; calculate: / param (right value)
+v_end
+v_cksum     ds   2      ; checksum to determine if we re-init
+
+;   Work area
+t0w                             ; temporary storage, word and byte
+t0b         ds   1
+t1b         ds   1
+t2w
+t2b         ds   1
+t3b         ds   1
+
+; ----------------------------------------------------------------------
+;   Entry point and main loop
+
+            org  tmon_rom
+
+;   Standard entry point for the monitor.
+;
+;   We don't have a PC to save here, so we just ignore it. If we came in
+;   via an NMI or similar that routine would have to save the PC before
+;   coming here.
+;
+entry       di                  ; ensure as best we can nothing will touch stack
+            ld   (ureg_A),a
+            ;   We must save the carry bit separately here because the DAD
+            ;   we use later will affect it. We set bits in A to indicate
+            ;   the value of the user carry (t0b) and whether we entered via
+            ;   an interrupt (b7). (`intentry` sets t0b to 1.)
+            ld   a,0
+            jp   NC,.savecarry
+            ld   a,1
+.savecarry  ld   (t0b),a        ; save carry and interrupt entry bits
+            ld   (ureg_HL),hl
+            ex   de,hl
+            ld   (ureg_DE),hl
+            ld   h,b
+            ld   l,c
+            ld   (ureg_BC),hl
+            ld   hl,$0000
+            add  hl,sp          ; SP → HL
+            ld   (ureg_SP),hl
+            ;   Now that we've saved the user stack pointer, we can switch
+            ;   to our own stack. (We must never use the user stack because
+            ;   it may be invalid, e.g. pointing into ROM.)
+            ld   sp,monstack
+            push af
+            ex   (sp),hl
+            pop  de             ; clean up stack
+            ld   a,l            ; get flags
+            and  a,$FE          ; clear carry
+            ld   l,a
+            ld   a,(t0b)        ; load original carry, int flag, etc.
+            and  $01            ;   and mask it
+            or   a,l            ; bring in all other flags
+            ld   (ureg_F),a
+            ;   If we entered via intentry, we copy the return address to the
+            ;   user PC so we can see where we came from.
+            ld   a,(t0b)
+            and  $80            ; entry via int flag set?
+            jp   Z,.done        ;    no: we're done
+            ld   hl,(ureg_SP)   ;   yes: copy return address from stack
+            ld   e,(hl)
+            inc  hl
+            ld   d,(hl)
+            ex   de,hl
+            ld   (ureg_PC),hl
+.done       ei                  ; interrupts can now use our stack
+.end
+
+;   XXX this should not wipe out our current parameters if they're valid;
+;   we init only on a "cold" start or if user code has stomped on our
+;   work area. Probably do this with a checksum check.
+;
+;   XXX Once this is large enough, we should probably have a default set of
+;   data we just copy to `tmon_ram`, rather than setting bytes individually.
+;   Also, this wants to vary per machine, e.g., for screen width.
+;
+init        call cksum_v
+            ex   de,hl              ; DE = current checksum
+            ld   hl,(v_cksum)       ; HL = previous checksum
+            call subHLDE            ; same?
+            jp   Z,.end             ;   yes; do not re-init
+.copy       ld   hl,v_initdata
+            ld   de,v_start
+            ld   b,v_end - v_start
+.loop       ld   a,(hl)
+            ld   (de),a
+            inc  hl
+            inc  de
+            dec  b
+            jp   NZ,.loop
+.end
+
+;   Print the prompt and read a command (but not its args).
+;
+;   Commands are expected to generate a newline (moving to the next line
+;   after the command) before producing output because that's generally
+;   more convenient for commands generating multi-line output. This also
+;   allows us to have commands known to be short generate output on the
+;   same line.
+;
+prompt      ld   sp,monstack
+            ld   a,'.'
+            call prchar         ; prompt
+.read       call rdchar
+            call prvischar      ; echo input visibly
+            call upcase         ; force to upper case if letter
+            ;   Dispatch command if we match one.
+            ;   • Commands are not called but are jumped to; they must
+            ;     themselves come back here via a jump to `prompt.
+            ;   • Commands must generate their own initial newline; see above.
+            ;   • Commands that execute immediately rather than waiting for
+            ;     parameters and/or confirmation are marked with a dagger (†).
+            cp   "'"            ; deposit ASCII
+            jp   Z,cmd_quote
+            cp   '.'            ; deposit bytes
+            jp   Z,cmd_dot
+            cp   '/'            ; calculate
+            jp   Z,cmd_slash
+            cp   '>'            ; deposit words
+            jp   Z,cmd_gt
+            cp   'D'
+            jp   Z,cmd_D        ; set deposit options
+            cp   'E'
+            jp   Z,cmd_E        ; examine memory
+            cp   'I'
+            jp   Z,cmd_I        ; jump to address
+            cp   'J'
+            jp   Z,cmd_J        ; jump to address
+            cp   'K'
+            jp   Z,cmd_K        ; call address
+            cp   'O'
+            jp   Z,cmd_O        ; output to port
+            cp   'P'
+            jp   Z,cmd_P        ; input from port
+            cp   'Q'
+            jp   Z,cmd_Q        ; quit
+            cp   'R'
+            jp   Z,cmd_R        ; register set/display
+            cp   'V'
+            jp   Z,cmd_V        ; checksum
+            cp   'W'
+            jp   Z,cmd_W        ; † walk forward memory examine
+            ;   No command; generate error.
+.err        call errbeep
+            ld   a,CR           ; back up over bad command and prompt
+            call prchar
+.end        jp   prompt
+
+;   This may be used (via `jp`) by a routine at any call depth to cancel
+;   the current command. It will print a backslash at the current cursor
+;   position to indicate that the command has been cancelled, print
+;   a newline, and then restart the prompt, which will reload the
+;   the stack pointer to be at the base of the monitor stack.
+cancel      call  pr4clear      ; clear any displayed value
+            ld   a,BACKSLASH    ; indicate cancelled
+            call prchar
+            call prnl
+.prompt     jp   prompt
+
+;   Interrupt entry point for the monitor.
+;   Interrupts on the 8080 push only the return address on the stack.
+;
+;   We want to use as much of `entry` as possible, but because at the start
+;   we can use no registers or flags until we save them we duplicate some
+;   code. The only difference is that we set, rather than clear, the "entry
+;   via interrupt" bit (b7) in A to indicate that we want to set the user
+;   PC to set the user PC to the return address on the user stack.
+;
+intentry    di
+            ld   (ureg_A),a
+            ld   a,$80          ; Carry (t0b) and entry via interrupt (b7) bits.
+            jp   NC,entry.savecarry
+            ld   a,$81
+            jp   entry.savecarry
+
+; ----------------------------------------------------------------------
+;   Command parameters and values
+
+v_initdata  dw   $8000          ; execute start
+            dw   $0000          ; examine start
+            db   $01            ; examine format: hex only
+            db   $04            ; examine #lines
+            db   $08            ; examine width #bytes
+            dw   $8000          ; deposit start
+            db   $00            ; deposit advance mode off
+            db   $00,$00,$00    ; input, output port, output data
+            dw   $0000          ; copy/cksum start
+            dw   $0000          ; copy/cksum end
+            dw   $0000          ; calculate left arg
+            dw   $0000          ; calculate right arg
+
+;   Checksum the command parameters, returning the checksum in HL.
+;   When stored in (v_cksum), this lets us tell if param vals have changed.
+cksum_v     ld   de,v_start
+            ld   c,v_end - v_start
+            call cksum_crc_16_ccitt
+            ret
+
+;   ♠HL ♣ABCHL,(t0w)   We've found a command; it's asking us to read and
+;   update parameters (specified in a table passed in HL) and execute or
+;   cancel it.
+;
+;   The parameters table is a sequence of 3-byte entries,
+;   terminated by a $00 byte:
+;   • byte0 [7:7]: param value size: 0=8-bit, 1=16-bit
+;   • byte0 [6:0]: param name, as upper-case ASCII letter
+;   • byte1,byte2 [15:0]: location in which to store param value
+;
+read_params ld   (t0w),hl        ; save params table
+.next       call rdchar
+            call qexec          ; execute command?
+            ret  Z              ;   yes: continue running command
+            call cqcancel       ; cancel command if requested
+            call prvischar
+            cp   SPACE          ; ignore spaces.
+            jp   Z,read_params
+            ;
+.parse_name ld   hl,(t0w)
+            call upcase         ; force to upper case if lettter
+            ld   b,a            ; table entry to match
+.tabnext    ld   a,(hl)         ; param name char from table
+            or   a,a            ; end of table?
+            jp   Z,.bad         ;   yes: char does not match a param name
+            and  a,$7F          ; clear table char high bit (param value size)
+            cp   a,b            ; this param matches?
+            jp   Z,.found       ;   yes: process param
+            inc  hl             ; no: next table entry
+            inc  hl
+            inc  hl
+            jp   .tabnext
+            ;
+.found      ld   a,(hl)         ; param name from table
+            and  $80            ; mask 16-bit (vs. 8-bit) flag
+            ld   c,a            ;   and set this parameter for qhex
+            inc  hl             ; go to param value location (no flags changed)
+            ld   b,(hl)         ; save location LSB
+            inc  hl
+            ld   h,(hl)         ; load location MSB
+            ld   l,b            ; load location LSB
+            call qhex           ; C=value size, HL=store location
+            ret  Z              ; input terminated w/execute; exec command
+            jp   .next
+            ;
+.bad        call prback         ; backspace over bad param name
+            call errbeep
+            jp   .next
+
+;   ♠CHL ♣ABDE ♡C   Read ASCII hex digits and update byte or word (HL).
+;
+;   This reads and stores an 8-bit (C=0) or 16-bit (C=*) value.
+;   The existing value (HL) is displayed and the cursor is backspaced
+;   to the start of the value.
+;
+;   At this point the user may type an initial character:
+;   • a space to preserve the curent value:
+;     returns Z=0 ("continue input") and HL moved past the value
+;   • a `qexec` character to preserve the current value:
+;     returns Z=1 ("execute") and HL is moved past the value
+;   • a `cqcancel` character to preserve the current value:
+;     jumps to `cancel` instead of returning; HL left at the value
+;   • a digit to start entering a new value
+;
+;   Once a digit has been typed, the user may terminate digit input with:
+;   • a space to store the new value in (HL):
+;     returns Z=0 ("continue input") and HL moved past the value
+;   • a `qexec` character to store the new value in (HL):
+;     returns Z=1 ("execute") and HL is moved past the value
+;   • a `cqcancel` character to preserve the current value:
+;     jumps to `cancel` instead of returning; HL left at the value
+;
+;   If more digits than needed are entered the least-significant
+;   (last-entered) digits are used.
+;
+qhex        call prhexval       ; load (DE=val B=#digits) and print curval
+            ld   a,BS           ; backspace to
+            call prBchars       ;   start of printed value
+            call rdchar         ; first char requires special processing:
+                                ;   space is preserve, but after it's store
+            cp   ' '            ; keep current value and continue params?
+            jp   Z,.keepval     ;   yes
+            call qexec          ; keep current value and execute?
+            jp   Z,.keepval     ;   yes
+            ld   de,0           ; set leading digits 0 for entering new value
+            jp   .startval
+
+.next       call rdchar
+.startval   call cqcancel       ; cancel command if requested
+            jp   Z,cancel       ;   yes
+            ;   At this point we've had input before the exec char, or
+            ;   we would have exec'd above. So we must store it.
++           call qexec          ; terminate input and execute command?
+            jp   Z,.storeDE     ;   yes (TCO)
+            ;   We're not aborting input, but we can't yet store at this
+            ;   point because we don't know if we might abort after future
+            ;   digit input. Ideally we'd be able to handle backspace here,
+            ;   but that requires not just undoing the last digit added to
+            ;   DE but also knowing how far back we can backspace, which
+            ;   is more code than we'd like to add here right now.
+            call prvischar
+            ld   b,0            ; set ASCII input to high bit clear
+            cp   "'"            ; ASCII char input?
+            jp   Z,.parsechar   ;   yes
+            cp   '"'            ; ASCII char input with high bit set?
+            jp   Z,.parsecharhi ;   yes
+            cp   ' '            ; terminate input and continue?
+            jp   NZ,.parsedigit ;    no
+            jp   .storeDE       ; ret (TCO)
+
+.keepval    push af
+            call prhexval       ; print value again
+            call prspace
+            pop  af
+            jp   .storeDE       ; increment HL, set Z, ret (TCO)
+                                ;   (extra store is no-op)
+
+.storeDE    push af             ; preserve input termination char
+            ld   (hl),e         ; store LSB
+            ld   a,0
+            or   a,c            ; 16-bit flag set?
+            jp   Z,.sdone       ;  no
+            inc  hl             ;   yes: store MSB
+            ld   (hl),d
+.sdone      inc  hl;            ; return next location
+            ;   It would acually be a bit nicer here to back up over all the
+            ;   entered chars and reprint the value, so that you see any
+            ;   leading 0 digits, but that seems more work than worthwhile.
+            call pr4clear       ; clear extra digits if entered # was shorter
+            pop  af             ; restore input termination char
+            call qexec          ; set Z flag if it was an execute char
+            ret
+
+            ;   Parse digit and add it to DE.
+.parsedigit call qdigit
+            jp   C,.baddigit
+            cp   $10            ; digit > 'F'?
+            jp   NC,.baddigit
+            ld   b,a            ; save new digit
+            ld   a,d
+            rlca                ; lower nybble of D to upper nybble,
+            rlca
+            rlca
+            rlca
+            and  $F0            ; clear lower nybble
+            ld   d,a            ; save upper byte's upper nybble
+            ld   a,e
+            rlca                ; swap upper/lower nybbles
+            rlca
+            rlca
+            rlca
+            push af             ; save a copy
+            and  a,$F0          ; clear lower nybble
+            ld   e,a            ; save lower byte
+            pop  af             ; restore copy
+            and  a,$0F          ; mask out lower (ex-upper) nybble
+            or   a,d            ; combine with upper byte's upper nybble
+            ld   d,a            ; and save it
+            ld   a,e
+            or   a,b            ; mask new digit into E lower nybble
+            ld   e,a
+            jp   .next
+
+.baddigit   call errbeep
+            call prback         ; always ok because we displayed with prvis
+            jp   .next
+
+.parsecharhi ld  b,$80          ; set ASCII input to high bit set
+.parsechar  call rdchar
+            or   a,b
+            call prvischar      ; to make sure we can backspace over it
+            ld   d,e
+            ld   e,a
+            call prback         ; overwrite...
+            call prback
+            ld   a,e            ;   with hex value of char
+            call prhexA
+            jp   .next
+
+; ----------------------------------------------------------------------
+;   Execution commands
+
+cmd_JK_params   pw   'S',vJKs   ; start address of execution
+                db   0
+
+cmd_I       ld   hl,no_params
+            or   a,$FF          ; NZ: no push ret addr, ret
+            jp   cmd_JKI
+
+cmd_J       or   a,$01          ; NZ: no push ret addr, jump
+            jp   cmd_JK
+
+cmd_K       or   a,$00          ;  Z: push ret addr, jump
+            ; fallthrough
+
+;   ♣(t0b,t1b,t2b)   Execute location
+;   The Z flag and A register indicates which variant execution mode we run:
+;   • A=00,Z   jump: jump directly to code, user stack is never touched
+;                    (thus works if user stack is invalid)
+;   • A=FF,NZ  call: push return to monitor addr on user stack
+;   • A=FE,NZ  ret:  RET to addr on user stack, e.g. from RST entry to monitor
+;
+cmd_JK      ld   hl,cmd_JK_params
+cmd_JKI     push af             ; save execution mode in A, Z flag
+            call read_params
+            call prnl
+.exec       call cksum_v
+            ld   (v_cksum),hl   ; do not re-init param values on re-entry
+            ;   Set up the trampoline so we can jump to the start address
+            ;   without using any registers
+            ld   a,JP
+            ld   hl,(vJKs)      ; start addr for execution
+            ld   (t0b),a
+            ld   (t1b),hl
+            ;   Switch to and set up set up user stack
+            pop  af             ; restore execution mode to A, Z flag
+            ld   hl,(ureg_SP)   ; (load user stack)
+            ld   sp,hl
+            jp   NZ,+           ; Z clear, skip...
+            ld   hl,entry       ;   ...push of entry on stack
+            push hl
++           ;   Restore all registers (except SP, already done above)
+            ld   hl,(ureg_AF)
+            push hl
+            ld   hl,(ureg_BC)
+            push hl
+            ld   hl,(ureg_DE)
+            push hl
+            ld   hl,(ureg_HL)
+            pop  de
+            pop  bc
+            inc  a              ; A incremented from $FF to $00?
+            jp   Z,+            ;   yes: interrupt return
+            pop  af             ;    no:
+            jp   t0b            ;        trampoline into user code
+            ;
++           pop  af
+            ret                 ; return from interrupt
+
+cmd_Q       ld   hl,no_params   ; no parameters,
+            call read_params    ;   but must confirm/cancel
+            call prnl
+            jp   exit           ; system-supplied routine
+
+; ----------------------------------------------------------------------
+;   Examine commands
+
+cmd_E_params    pw   'S',vEs    ; start: 16-bit value
+                pb   'F',vEf    ; formats bitfield (see above)
+                pb   'L',vEl    ; number of lines to print: 8-bit value
+                pb   'W',vEw    ; width (# of bytes to print): 8-bit value
+no_params       db   0          ; end of table
+
+;   Load E and W cmd params into registers.
+getparams_EW ld  hl,(vEs)       ; start address parameter
+            ld   (t0w),hl       ; t0w: current line start
+            ld   b,0
+            ld   a,(vEw)
+            ld   c,a            ; BC: bytes/line
+            ld   d,0
+            ld   a,(vEl)
+            ld   e,a            ; DE: number of lines to dump
+            ret
+
+cmd_W       call prcr           ; we will overwrite the command line
+            call getparams_EW   ; BC=bytes/line, DE=lines
+.addpage    add  hl,bc          ; add to start addr no. of bytes per line
+            dec  e              ;   as many times as lines to dump
+            jp   NZ,.addpage
+            ld   (vEs),hl       ; update start address
+            jp   cmd_E.noparams ; and do the dump
+
+cmd_E       ld   hl,cmd_E_params
+            call read_params
+            call prnl
+.noparams   call getparams_EW   ; BC=bytes/line DE=lines, HL=(t0w)=curline addr
+            ;
+.startline  push bc             ; save BC=bytes/line
+            push de             ; save DE=lines remaining
+            call praddrHL       ; entered with HL=curline start addr
+            ;
+            ld   a,$01          ; hex format bit
+            ld   hl,prsphexA
+            call prEdata
+            ld   a,$02          ; ASCII format bit
+            ld   hl,prvischar
+            call prEdata
+            ld   a,$04          ; screen code format bit
+            ld   hl,prscreenchar
+            call prEdata
+            ;
+.nextline   call prnl
+            pop  de             ; restore DE=lines remaining
+            pop  bc             ; restore BC=bytes/line
+            ld   hl,(t0w)       ; curline start addr
+            add  hl,bc          ; next line start addr
+            ld   (t0w),hl
+            dec  e
+            jp   NZ,.startline
+            ;
+.end        jp   prompt
+
+
+;   ♠AHL(t0w) ♣*(t2w)   prEdata: If the bit in A is set in (vEf), i.e., if
+;   the format is enabled, print a sequence of (vEw) locations starting
+;   at (t0w) using the routine in HL. If the bit is not set, just return.
+;
+prEdata     ld   (t2w),hl       ; save address of pr* routine
+            ld   hl,vEf         ; formats bitfield address
+            and  a,(hl)         ;   is our bit set?
+            ret  Z              ;      no: just return
+            ;
+            ;   This is a pretty horrible special case to compensate for the
+            ;   fact that prsphexA prints an initial space and the other
+            ;   routines don't.
+            dec  a              ; are we the first format?
+            jp   Z,+            ;   yes: no need for an initial space
+            call prspace
+            ;
++           ld   hl,(t0w)       ; current line start address
+            ld   a,(vEw)
+            ld   c,a            ; number of bytes to print (width)
+.nextbyte   ex   de,hl          ; save current byte address
+            ld   hl,.continue
+            push hl             ; continuation address whence pr* will return
+            ld   hl,(t2w)       ; pr* routine address
+            push hl
+            ex   de,hl          ; restore current byte address
+            ld   a,(hl)         ; load byte to print
+            ret                 ; call pr* with continuation
+.continue   inc  hl             ; next byte
+            dec  c              ; printed all bytes?
+            jp   NZ,.nextbyte   ;    no: carry on
+            ret
+
+cmd_R_params    pb   'F',ureg_F     ; flags
+                pb   'A',ureg_A
+                pb   'B',ureg_B
+                pb   'C',ureg_C
+                pb   'D',ureg_D
+                pb   'E',ureg_E
+                pb   'H',ureg_H
+                pb   'L',ureg_L
+                pw   'P',ureg_PC
+                pw   'S',ureg_SP
+                pw   'M',ureg_HL    ; mnemonic "Memory"
+                pw   'T',ureg_DE    ; mnemonic "Target"
+                pw   'I',ureg_BC    ; mnemonic "Index" (like a count)
+                db 0
+
+cmd_R       ld   hl,cmd_R_params
+            call read_params
+.exec       call prcr           ; overwrite line, since we display everything
+            ld   hl,(ureg_PC)
+            call prhexHL
+            ld   hl,(ureg_SP)
+            call .spprhexHL
+            ;   flags
+            call prspace
+            ld   a,(ureg_F)
+            call prflags
+            ;   A BC CD EF HL
+            call prspace
+            ld   a,(ureg_A)
+            call prhexA
+            ld   hl,(ureg_BC)
+            call .spprhexHL
+            ld   hl,(ureg_DE)
+            call .spprhexHL
+            ld   hl,(ureg_HL)
+            call .spprhexHL
+            call prnl
+.end        jp   prompt
+            ;
+.spprhexHL  call prspace
+            call prhexHL
+            ret
+
+prflags     ld   b,8            ; 8 bits in flags
+            ld   hl,flagchars   ; letters for flags, or 0 for no print
+.nextbit    rla                 ; next flag value into carry
+            push af             ; save remaining flags
+            ld   a,(hl)         ; flag print char - 1
+            inc  a              ; set flag char and ZSPA flags (C unaffected)
+            jp   Z,.noprint
+            jp   C,.print       ; if flag set, print flag char
+            ld   a,'-'          ; otherwise flag-no-set char
+.print      call prchar
+.noprint    pop  af             ; restore remaining flags
+            inc  hl             ; next flag char
+            dec  b              ; next bit?
+            jp   NZ,.nextbit    ;   yes: continue printing
+            ret
+
+;   We store the flag characters and $00 "ignore bit" bytes as one
+;   less than their actual values because this makes it easier to test
+;   the value, which we do by using INC. (We use INC instead of a logic
+;   operation because that preserves the carry flag, which contains the
+;   value of the flag we're printing.)
+flagchars   db   'S'-1, 'Z'-1, 0-1, 'H'-1, 0-1, 'P'-1, 0-1, 'C'-1
+
+
+; ----------------------------------------------------------------------
+;   Deposit Commands
+
+cmd_D_params    pw   'S',vDs    ; start: 16-bit value
+                pb   'A',vDa    ; advance mode
+                pb   'E',t2b    ; copy examine start address: temp store
+                                ;   (t0w/t0b,t1b is used by `read_params`)
+                db   0          ; end of table
+
+cmd_D       xor  a,a
+            ld   (t2b),a
+            ld   hl,cmd_D_params
+            call read_params
+            call prnl
+            ld   a,(t2b)         ; copy examine start address?
+            or   a,a
+            jp   Z,.end         ;   no
+            ld   hl,(vEs)
+            ld   (vDs),hl
+.end        jp   prompt
+
+cmd_gt      ld   c,1            ; qhex size flag: 16-bit stores (preserved)
+            jp   cmd_dot1
+cmd_dot     ld   c,0            ; qhex size flag: 8-bit stores (preserved)
+cmd_dot1    call prcr           ; use existing line for entry
+            ld  hl,(vDs)        ; start address
+            call praddrHL
+            call prspace
+.next       call qhex
+            jp   NZ,.next
+            call prnl
+            ld   a,(vDa)
+            or   a,a
+            jp   Z,.noadvance
+            ld   (vDs),hl
+.noadvance  jp   prompt
+
+depaddr     call prcr           ; use existing line for entry
+            ld  hl,(vDs)        ; start address
+            call praddrHL
+            call prspace
+            ret
+
+cmd_quote   call depaddr
+            ld   c,0            ; qhex size flag: 8-bit values in Ctrl-D mode
+            dec  hl
+.next       inc  hl
+            ld   a,(hl)         ; load/print current value
+            call prvischar
+            call prback
+            ;
+            call rdchar
+            call cqcancel       ; terminate command if cancel character
+            call qexec          ; "execute" char? (newline)
+            jp   Z,.end         ;   yes: input complete
+            ;
+            cp   a,$0E          ; Ctrl-N to skip over this location?
+            jp   NZ,+           ;    no: process input
+            ld   a,(hl)         ;   yes: reprint and move to next char
+            call prvischar
+            jp   .next
+            ;
++           cp   a,$04          ; Ctrl-D to switch to hex digit input?
+            jp   NZ,.char       ;    no: normal char input
+            call qhex
+            jp   Z,.end         ; we're done if qhex was exited w/"execute"
+            dec  hl
+            jp   .next
+            ;
+.char
+            ld   (hl),a         ; store char
+            call  prvischar     ; print input
+            jp   .next          ; and next loc
+            ;
+.end        call prnl
+            jp   prompt
+
+; ----------------------------------------------------------------------
+;   Checksum and Copy Commands
+
+cmd_CV_params   pw   'S',vCVs   ; start: 16-bit value
+                pw   'E',vCVe   ; end: 16-bit value
+                db   0
+
+;   Currently we support only the required CRC-16-CCITT algorithm,
+;   and thus do not bother with an `f##` parameter.
+cmd_V       ld   hl,cmd_CV_params
+            call read_params
+.exec       call prcr           ; overprint with "start.end =cksum"
+            ld   hl,(vCVs)
+            ld   d,h            ; start address
+            ld   e,l
+            ld   hl,(vCVe)      ; end address
+            ;   Print start and end addresses
+            ex   de,hl
+            call prhexHLDE
+            ex   de,hl
+            call subHLDE
+            call pr3sp
+            ld   a,'='
+            call prchar
+            ;
+            ld   b,h            ; length
+            ld   c,l
+            call lcksum_crc_16_ccitt
+            call prhexHL
+            call prnl
+.end        jp   prompt
+
+            ;   Included here because required for all monitors.
+            include src/i8080/checksum/crc_16_ccitt.i80
+
+; ----------------------------------------------------------------------
+;   Other Commands
+
+cmd_P_params    pw   'P',vPp
+                db   0
+
+cmd_P       ld   hl,cmd_P_params
+            call read_params
+            ld   a,(vPp)
+            ld   c,a                ; port number
+            ld   a,$DB              ; OUT instruction
+            jp   cmd_OP_cont
+
+cmd_O_params    pb  'P',vOp
+                pb  'D',vOd
+                db   0
+
+cmd_O       ld   hl,cmd_O_params
+            call read_params
+            ld   a,(vOp)
+            ld   c,a                ; port number
+            ld   a,(vOd)
+            ld   d,a                ; data to write
+            ld   a,$D3              ; OUT instruction
+            jp   cmd_OP_cont
+            ;    fallthrough
+
+cmd_OP_cont ;   Set up trampoline
+            ld   (t0b),a        ; IN/OUT instruction
+            ld   a,c
+            ld   (t1b),a        ; port to read/write
+            ld   a,$C9
+            ld   (t2b),a        ; RET instruction
+            call pr3sp          ; space out before printing read/write data
+            ld   a,d            ; data to write (ignored if read)
+            call t0b            ; call trampoline
+            call prhexA
+            call prnl
+            jp   prompt
+
+cmd_slash_params    pw  '?',vSLASHq     ; left value: 16 bits
+                    pw   '/',vSLASHs    ; right value: 16 bits
+                    db   0
+
+cmd_slash   ld   hl,cmd_slash_params
+            call read_params
+.exec       call prcr           ; output on same line, since we print inputs
+            ;   Left/right input values
+            ld   hl,(vSLASHs)
+            ex   hl,de
+            ld   hl,(vSLASHq)
+            call prhexHLDE
+            ;   Addition result
+            ld   hl,(vSLASHq)
+            add  hl,de
+            call .print
+            ;   Subtraction result
+            ld   hl,(vSLASHq)
+            call subHLDE
+            call .print
+            ;   Clear two spaces of any junk just to the right of the output.
+            ;   This takes us to col 31, so we don't scroll on 32-col displays.
+            call prspace
+            call prspace
+            call prnl
+            ;
+            jp   prompt
+            ;
+.print      call pr3sp
+            call prhexHL
+            call prspace
+            ld   a,l
+            call prvischar
+            call prscreenchar
+            ret
+
+;   ♣A  Print HL in hex, a period, then DE in hex.
+prhexHLDE   call prhexHL
+            ld   a,'.'
+            call prchar
+            ex   hl,de
+            call prhexHL
+            ex   hl,de
+            ret
+
+; ----------------------------------------------------------------------
+;   Parsing Routines `q*`
+
+;   ♠A Set Z flag if the char in A is an execute command character (CR or LF).
+qexec       cp   CR
+            ret  Z
+            cp   LF
+            ret
+
+;   ♠A ♡A   If the char in A is a cancel command character (^U or ^X)
+;           cancel the current command and go back to the prompt,
+;           otherwise just return.
+cqcancel    cp   CAN
+            jp   Z,cancel
+            cp   NAK
+            jp   Z,cancel
+            ret
+
+            include "src/i8080/qhex.i80"     ; hex parsing
+
+;   ♠A   If the char in A is not in the ctrl/numbers/punct area, upper-case it.
+;        BUGS: modifies punctuation above $40, DEL, and anything with bit 7 set.
+upcase      cp   '@'            ; in the letters area?
+            ret  C              ;    no: don't change the char
+            and  UPCASE
+            ret
+
+; ----------------------------------------------------------------------
+;   Printing Routines `pr*`
+
+;   ♣A ♡*   Backspace over the last printed character
+prback      ld   a,BS
+            jp   prchar         ; ret (TCO)
+
+;   ♣A ♡*   Print a carriage return to move to the start of the current line.
+prcr        ld   a,CR
+            jp   prchar         ; ret (TCO)
+
+;   ♣AB   Print three spaces or N spaces.
+pr3sp       ld   b,3
+prNsp       ld   a,' '
+            ;   FALLTHROUGH
+
+;   ♠AB ♣A ♡B*   Print char in A, B times. (Preserves B.)
+prBchars    push bc
+.next       call prchar
+            dec  b
+            jp   NZ,.next
+            pop  bc
+            ret
+
+;   ♣AB ♡CDE   Print 4 spaces, 4 backspaces to clear ahead of cursor.
+pr4clear    ld   b,4
+            call prNsp
+            ld   a,BS
+            jp   prBchars       ; ret (TCO)
+
+;   ♠HL ♣AHL   Print the zero-terminated string at HL.
+prstr       ld   a,(hl)
+            or   a,a
+            ret  Z
+            call prchar
+            inc  hl
+            jp   prstr
+
+prsphexA    push af
+            call prspace
+            pop  af
+            jp   prhexA         ; ret (TCO)
+
+;   ♠CHL,BDE ♣A ♡CHL   Print 2-byte (C=0) or 4-byte (C=*) value (HL).
+;                      Return value in DE and # of digits in B.
+;   C=0: print 2-digit byte; C=*: print 4-digit word.
+;   On return, B is set to the length printed, 2 or 4.
+prhexval    ld   b,2            ; default to 2-digit word
+            ld   d,$00          ;   with returned MSB zero just in case
+            ld   a,0
+            or   a,c            ; print 4-digit word?
+            jp   Z,.print2      ;    no
+            ld   b,4            ; update digit count
+            inc  hl             ; move up to MSB
+            ld   d,(hl)
+            ld   a,d
+            call prhexA
+            dec  hl             ; move down to LSB
+.print2     ld   e,(hl)
+            ld   a,e
+            jp   prhexA         ; ret (TCO)
+
+            include "src/i8080/pr.i80"       ; printing
+
+;   ♠HL ♣A ♡HL,*   Print HL as a hex addres, followed by a colon.
+praddrHL    call prhexHL
+            ld   a,':'
+            jp   prchar         ; ret (TCO)
+
+; ----------------------------------------------------------------------
+;   Misc. routines
+
+;   ♣A   HL ← HL - DE. Affected flags: Z.
+;   XXX This should be in a generic file somewhere?
+subHLDE     ld   a,l
+            sub  a,e
+            ld   l,a
+            ld   a,h
+            sbc  a,d
+            ld   h,a
+            or   a,l        ; Z flag set only if H and L are 0
+            ret

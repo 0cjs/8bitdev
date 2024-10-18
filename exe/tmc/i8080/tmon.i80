@@ -1,0 +1,41 @@
+;   tmon for `testmc.tmc i8080` simulator.
+
+            relaxed on
+            cpu 8080
+            z80syntax exclusive
+
+            include "testmc/i8080/tmc/biosdef.i80" ; `tmc` will load bioscode
+
+;   Our RAM workspace and code locations are chosen here just to be easy
+;   to remember, especially when wondering where things went wrong.
+tmon_ram    equ  $100
+tmon_stksz  equ  $100           ; data at $200
+tmon_rom    equ  $300           ; easy to remember and use
+
+;   We set up RST $08 as a "breakpoint" instruction that will re-enter
+;   the monitor when executed via `intentry`, so that `I` will continue
+;   the program after that instruction.
+rsti        equ  $08            ; RST for breakpoint
+
+            org  $2E0           ; just below the monitor code; above data
+
+tmc         ;   Set up "breakpoint" RST.
+            ld   a,$C3          ; JMP
+            ld   (rsti),a
+            ld   hl,intentry
+            ld   (rsti+1),hl
+            ;   Start monitor.
+            jp   entry
+
+exit        ld   a,$EF          ; request simulator exit by writing $EF
+            ld   ($FE),a        ;   to location $FE
+
+    if $ >= tmon_rom
+            error   'setup routine stomped on tmon code!'
+    endif
+
+            include "src/i8080/tmon.i80"    ; org tmon_rom
+            include src/i8080/prvischar/vt100.i80
+            include src/i8080/prscreenchar/ascii.i80
+
+            end tmc

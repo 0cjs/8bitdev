@@ -1,0 +1,525 @@
+from    testmc  import tmc_tid
+from    testmc.i8080  import  Machine
+from    binascii  import crc_hqx
+import  pytest
+
+test_rig = '''
+            relaxed on
+            cpu 8080
+            z80syntax exclusive
+            org $8000
+            include testmc/i8080/tmc/biosdef.i80
+
+tmon_ram    equ  $6F00      ; chose values for these that
+tmon_stksz  equ  $100       ;   put our data at $7000
+tmon_rom    equ  $8000
+
+rsti        equ $6 * $8     ; address of RST 6
+
+            org  rsti
+            jp  intentry
+
+            include src/i8080/tmon.i80
+            include src/i8080/prvischar/ascii.i80
+            include src/i8080/prscreenchar/ascii.i80
+
+;   We should never reach this; tests should stopat=[S.exit].
+exit        halt
+
+usercode    ret         ; for testing jump (J) and call (K)
+
+intentrytest rst rsti
+             halt
+
+            ;   data for testing E command and similar
+            org  $12AB
+utest_data  db   $FF, $00, $12, $23, $34, $45, $56, $67
+            db   $78, $89, $9A, $AB, $BC, $CD, $DE, $EF
+'''
+
+param = pytest.mark.parametrize
+
+NAK = b'\x15'   # Ctrl-U
+CAN = b'\x18'   # Ctrl-X
+
+####################################################################
+#   Generic routines
+
+@param('hl, de, result', [
+    (0x0000, 0x0000, 0x0000),
+    (0x1234, 0x1233, 0x0001),
+    (0x0001, 0x0002, 0xFFFF),       # uses carry
+], ids=tmc_tid)
+def test_subHLDE(m, S, R, hl, de, result):
+    m.call(S.subHLDE, R(hl=hl, de=de), trace=1)
+    Z = (result == 0)
+    C = hl >= de            # Would be nice to affect carry, but we don't
+                            # need it right now and might increase size.
+    assert R(hl=result, de=de, Z=Z) == m.regs
+
+####################################################################
+#   Support routines
+
+@param('input, expected', [
+    ('\n',    True), ('\r',    True),
+    ('\x09', False), ('\x0B', False),
+    ('\x0C', False), ('\x0E', False),
+    ('\x8A', False),
+])
+def test_qexec(m, S, R, input, expected):
+    m.call(S.qexec, R(a=ord(input), Z=not expected), trace=1)
+    assert R(Z=expected) == m.regs
+
+@param('char, cancelled', [
+    (  NAK,   True), (  CAN,   True),
+    ('\x14', False), ('\x16', False),
+    ('\x17', False), ('\x19', False),
+    ('\x85', False),
+])
+def test_cqcancel(m, S, R, char, cancelled):
+    m.call(S.cqcancel, R(a=ord(char)), stopat=[S.cancel])
+    if cancelled:
+        assert R(pc=S.cancel) == m.regs
+    else:
+        assert S.cancel != m.pc
+        assert R(a=ord(char)) == m.regs      # preserved A
+
+####################################################################
+#   Options parsing
+
+@param('char, val', [
+    ('/', None), (':', None), ('@', None), ('`', None), # outside digit range
+    ('0',    0), ('9',    9),                           # decimal range
+    ('A',  0xA), ('F',  0xF), ('f',  0xF), ('a',  0xA), # hex range
+    ('g', None), ('G', None),                           # digits above hex range
+])
+def test_qoptval_parsedigit(m, S, R, char, val):
+    next        = S['qhex.next']
+    parsedigit  = S['qhex.parsedigit']
+    baddigit    = S['qhex.baddigit']
+    m.call(parsedigit, R(a=ord(char), de=0x3456), stopat=[baddigit, next])
+    if val is None:
+        assert R(de=0x3456, pc=baddigit) == m.regs
+    else:
+        assert R(de=0x4560|val, pc=next) == m.regs
+
+@param('size, stored, input', [
+    #   We always check the word value; for byte values the MSB is $EE.
+    ( 8, 0xEEEE, b' '),       (16, 0xEEEE, b' '),   # keep curval, more params
+    ( 8, 0xEEEE, b'\n'),      (16, 0xEEEE, b'\r'),  # keep curval, execute
+    ( 8, 0xEEEE, NAK),        (16, 0xEEEE, CAN),    # keep curval, cancel
+    ( 8, 0xEE00, b'0 '),      (16, 0x0000, b'0 '),  # replace curval
+    ( 8, 0xEE01, b'1 '),      ( 8, 0xEE0F, b'F '),      ( 8, 0xEE0F, b'f '),
+    (16, 0x0001, b'1 '),      (16, 0x000F, b'F '),      (16, 0x000F, b'f '),
+    ( 8, 0xEE34, b'1234 '),   (16, 0x3456, b'123456 '),
+    ( 8, 0xEE00, b"'\x00 "),  (16, 0x0D7A, b"'\r'z "),
+    ( 8, 0xEE80, b'"\x00 '),  (16, 0xFFFE, b'"\x7F"~ '),
+    ( 8, 0xEE23, b'123\n'),   (16, 0x6789, b'123456789\n'),
+    ( 8, 0xEEEE, b'123'+CAN), (16, 0xEEEE, b'1234567'+NAK),
+], ids=tmc_tid)
+def test_qhex_and_store(m, S, R, loadbios, size, stored, input):
+    ' This covers all of qhex, so test_qoptval_parsedigit must be passing. '
+    if   size ==   8: c = 0x00; incr = 1  # 8 bits, saved
+    elif size ==  16: c = 0x80; incr = 2  # 16 bits, saved
+    else:             raise ValueError('bad size')
+    valp = 0xF002
+
+    loadbios(input=input)
+    m.depword(0xF002, 0xEEEE)
+    m.call(S.qhex, R(c=c, hl=0xF002), stopat=[S.cancel], trace=1)
+    print(m.hexdump(0xF000, 6))
+
+    term = input.endswith
+    if term(NAK) or term(CAN):
+        assert(S.cancel, stored, valp     ) == (  m.pc, m.word(valp), m.hl)
+    elif term(b'\r') or term(b'\n'):
+        assert(  R(Z=1), stored, valp+incr) == (m.regs, m.word(valp), m.hl)
+    elif term(b' '):
+        assert(  R(Z=0), stored, valp+incr) == (m.regs, m.word(valp), m.hl)
+    else:
+        raise ValueError(f'unterminated test data: {input!r}')
+
+def test_read_params_good(m, S, R, loadbios):
+    ostream = loadbios(input=b'  b')
+    optB = ord('B')|0x80
+    testtab = 0xA000; m.deposit(testtab,
+        b'A', b'\xAA\x01', optB, b'\xBB\x02', b'\x00')
+    print('testtab:', m.hexdump(testtab, 8))
+    m.call(S.read_params, R(hl=testtab), stopat=[S.qhex])
+    assert R(pc=S.qhex, hl=0x02BB) == m.regs
+
+####################################################################
+#   Command parameter value initialization
+
+def test_init(m, S, R):
+    len = S.v_end - S.v_start
+    print('initdata', m.hexdump(S.v_initdata, len + 2))
+
+    m.deposit(S.v_start, [0xFF] * (len + 2))
+    print('  before', m.hexdump(S.v_start, len + 2))
+
+    m.call(S.init, stopat=[S['init.end']])
+    print('  inited', m.hexdump(S.v_start, len + 2))
+    assert m.bytes(S.v_initdata, len) == m.bytes(S.v_start, len)
+
+    #   change param vals and checksum
+    m.depword(S.vJKs, 0x1234); m.depword(S.vCVe, 0x5678)
+    m.call(S.cksum_v); m.depword(S.v_cksum, m.hl)
+    newdata = m.bytes(S.v_start, len + 2)
+    print('cksummed', m.hexdump(S.v_start, len + 2))
+
+    #   ensure it's not overwritten w/original values
+    m.call(S.init, stopat=[S['init.end']])
+    print(' reinitt', m.hexdump(S.v_start, len + 2))
+    assert newdata == m.bytes(S.v_start, len + 2)
+
+####################################################################
+#   Commands: Examining Machine State
+
+def test_prEdata_fclear(m, S, R):
+    ' prEdata just returns if the format bit in A is not set in (vEf). '
+    m.deposit(S.vEf, 0b11111101)
+    m.call(S.prEdata, R(a=0b10, de=0000), stopat=[0000], trace=1)
+    assert 0000 != m.pc, "prEdata should not have called DE"
+
+def test_prEdata_fset(m, S, R, loadbios):
+    _, ostream = loadbios()
+    m.deposit(S.vEf, 1)                 # must have a format bit set
+    m.deposit(S.vEw, 6)                 # bytes/line
+    m.depword(S.t0w, S.utest_data)      # start addr of line
+
+    m.call(S.prEdata, R(a=0xFF, hl=S.prsphexA), trace=1)
+    s = ostream.getvalue();  print(s)
+    assert b' FF 00 12 23 34 45' == s   # prints just one line
+
+def test_E_defaults(m, S, R, loadbios):
+    _, ostream = loadbios(input=b'\n')
+    m.call(S.init, stopat=[S['init.end']])           # testing default values
+    m.call(S.cmd_E, stopat=[S['cmd_E.end']])
+    s = ostream.getvalue();  print(s.decode('ASCII'))
+    assert b'0000: 00' in s
+    assert b'0018: 00' in s
+    assert s.endswith(b'\n')
+
+def test_E_settings(m, S, R, loadbios):
+    _, ostream = loadbios(input=b'\n')
+    #   2 lines of 5 bytes of known non-zero data.
+    m.depword(S.vEs, S.utest_data)
+    m.deposit(S.vEf, 7)              # hex, ascii, screencodes
+    m.deposit(S.vEl, 2)
+    m.deposit(S.vEw, 5)
+    m.call(S.cmd_E, stopat=[S['cmd_E.end']])
+    s = ostream.getvalue()
+    print(s)
+    assert b'\n' \
+           b'12AB: FF 00 12 23 34 ?@R#4    #4\n'    \
+           b'12B0: 45 56 67 78 89 EVgxI EVgx \n'    \
+           == s
+
+def test_W_defaults(m, S, R, loadbios):
+    _, ostream = loadbios(input=b'\n')
+    m.call(S.init, stopat=[S['init.end']])           # testing default values
+    m.call(S.cmd_W, stopat=[S['cmd_E.end']])
+    s = ostream.getvalue()
+    print(f'vEs={m.word(S.vEs):04X} t0w={m.word(S.t0w):04X}',
+        s.decode('ASCII'))
+    assert b'0020: 00' in s
+    assert b'0028: 00' in s
+    assert s.endswith(b'\n')
+    assert 0x0020 == m.word(S.vEs)
+
+####################################################################
+#   Register command and support functions
+
+@param('input, output', [
+    (0x00,  b'-----'), (0xFF,  b'SZHPC'), (0x91,  b'S-H-C'),
+], ids=tmc_tid)
+def test_prflags(m, S, R, loadbios, input, output):
+    _, ostream = loadbios()
+    m.call(S.prflags, R(a=input))
+    assert output == ostream.getvalue()
+
+def test_R_print(m, S, R, loadbios):
+    _, ostream = loadbios()
+    m.deposit(S.ureg_AF, [0xD7, 0x12])
+    m.depword(S.ureg_BC, [0x2345, 0x6789, 0xABCD, 0xEFFE, 0xFEEF])
+    m.call(S['cmd_R.exec'], stopat=[S['cmd_R.end']])
+    assert b'\rFEEF EFFE SZHPC 12 2345 6789 ABCD\n' \
+        == ostream.getvalue()
+'''
+Various ideas for printing registers:
+────────────────────────────────────────
+         10        20        30!       !        !=32 and 40 cols
+────────────────────────────────────────
+PC=FFEF SP=EFFE szhpc A=12 BC=2345 DE=6789 HL=ABCD
+FFEF EFFE SZHPC 12 2345 6789 ABCD
+────────────────────────────────────────
+  PC   SP  A  B C  D E  H L  F                  2-row
+FEEF EFFE 12 2345 6789 ABCD SZ₀H₀P¹C
+FEEF EFFE 12 2345 6789 ABCD D7
+────────────────────────────────────────
+'''
+
+def test_R_setbytes(m, S, R, loadbios):
+    loadbios(input=b'a1234 f5678 b0B c0C d0D e0E h08 l07\n')
+    m.call(S.cmd_R, stopat=[S['cmd_R.exec']])
+    print(m.hexdump(S.ureg_AF, 12))
+    assert (0x34, 0x78, 0x0B, 0x0C, 0x0D, 0x0E, 0x08, 0x07) \
+        == tuple(map(m.byte, [S.ureg_A, S.ureg_F,
+            S.ureg_B, S.ureg_C, S.ureg_D, S.ureg_E, S.ureg_H, S.ureg_L, ]))
+    assert (0x3478, 0x0B0C, 0x0D0E, 0x0807) \
+        == tuple(map(m.word, [S.ureg_AF, S.ureg_BC, S.ureg_DE, S.ureg_HL, ]))
+
+def test_R_setwords(m, S, R, loadbios):
+    loadbios(input=b'p0102 s0304 i0506 t0708 m090A\n')
+    m.call(S.cmd_R, stopat=[S['cmd_R.exec']])
+    print(m.hexdump(S.ureg_AF, 12))
+    assert (0x0102, 0x0304, 0x0506, 0x0708, 0x090A) == tuple(map(m.word,
+        [S.ureg_PC, S.ureg_SP, S.ureg_BC, S.ureg_DE, S.ureg_HL, ]))
+
+@pytest.mark.xfail(strict=True)
+def test_OP():
+    #   XXX Need to implement IN and OUT in simulator for this.
+    assert 0
+
+####################################################################
+#   Initialisation
+
+def hexlist(xs):
+    return ' '.join([ f'{i:02X}' for i in xs ])
+
+@param('entrypoint, userpc', [
+    ('entry',       0xDEAD),
+    ('intentry',    0x8001),
+])
+#   Warnings filter: 'action:message:category:module:line'
+#   https://docs.python.org/3/library/warnings.html#warning-filter
+@pytest.mark.filterwarnings(
+    'ignore:.*simulator will not generate interrupts:UserWarning')
+def test_entry(m, S, R, entrypoint, userpc):
+    m.depword(S.ureg_PC, 0xDEAD)
+    m.depword(0xEF01, 0x8001)           # return address, if needed
+
+    #   S flag (bit 7) is clear to confirm that it's not set on int entry
+    regs = R(pc=S[entrypoint],
+             a=0xFE, bc=0x2345, de=0x6789, hl=0xABCD, sp=0xEF01,
+             S=0, Z=1, H=1, P=1, C=1)
+    m.setregs(regs)
+    m.stepto(stopat=[S['entry.end']])
+    actual = [ i for i in m.bytes(S.ureg_AF, 10) ]
+
+    flags = 0b01010111  # on 8080, unused b5,b3 are clear, unused b1 is set
+    expected = [ flags, 0xFE,
+        0x45, 0x23, 0x89, 0x67, 0xCD, 0xAB, 0x01, 0xEF ]
+    print('expected', hexlist(expected))
+    print('  actual', hexlist(actual))
+    assert expected == actual
+
+    #   Ensure user PC was set for ints, but not for "regular" entries.
+    print(f'userpc expected={userpc:04X} actual={m.word(S.ureg_PC):04X}')
+    assert userpc == m.word(S.ureg_PC)
+
+####################################################################
+#   Commands: Execution
+
+@param('entrysym, retsym', [ ('cmd_J', None), ('cmd_K', 'entry'),
+], ids=tmc_tid)
+def test_JK(m, S, R, loadbios, entrysym, retsym):
+    loadbios(input=b'\n')
+    userstack = 0xFF80
+    r = R( a=0x12, S=1, Z=1, H=0, P=1, C=0,
+           bc=0x3456, de=0x789A, hl=0xBCDE,
+           sp=userstack)
+
+    m.deposit(S.ureg_AF, [ r.f, r.a ])
+    m.depword(S.ureg_BC, [ r.bc, r.de, r.hl, userstack, 0x0000 ])  # sentinel PC
+    m.depword(S.vJKs, S.usercode)
+    print('   vJKs', m.hexdump(S.vJKs, 2))
+    print('ureg_AF', m.hexdump(S.ureg_AF, 10))
+
+    m.pc = S[entrysym]
+    m.stepto(stopat=[S.usercode])
+    print(' ustack', m.hexdump(userstack -4, 6))
+    assert S.usercode == m.pc
+    if retsym:  r = r.clone(sp=userstack - 2)   # return address on stack
+    assert r == m.regs
+
+    if retsym:
+        m.step()
+        assert S[retsym] == m.pc
+
+def test_K(m, S, R, loadbios):
+    ' Call a RET instruction in user code. '
+
+    _, outstream = loadbios(input=b'\n')
+    userstack = 0xFF80
+    r = R( a=0x12, S=1, Z=1, H=0, P=1, C=0,
+           bc=0x3456, de=0x789A, hl=0xBCDE,
+           sp=userstack - 2)
+
+    m.deposit(S.ureg_AF, [ r.f, r.a ])
+    m.depword(S.ureg_BC, [ r.bc, r.de, r.hl, userstack, 0x0000 ])  # sentinel PC
+    m.depword(S.vJKs, S.usercode)
+    print('   vJKs', m.hexdump(S.vJKs, 2))
+    print('ureg_AF', m.hexdump(S.ureg_AF, 10))
+
+    m.call(S.cmd_K, stopat=[S.usercode])
+    assert S.usercode == m.pc
+    assert r == m.regs
+    #   XXX test the `ret`
+
+@pytest.mark.filterwarnings(
+    'ignore:.*simulator will not generate interrupts:UserWarning')
+def test_I(m, S, R, loadbios):
+    _, outstream = loadbios(input=b'r\ni\n')
+    m.sp = 0xABCD
+    m.pc = S.intentrytest
+    m.stepto(stopat=[S.intentrytest+1])
+    print(outstream.getvalue())
+    assert (S.intentrytest+1, 0xABCD) == (m.pc, m.sp)
+
+####################################################################
+#   Commands: Deposit
+
+def test_d_startaddr(m, S, R, loadbios):
+    loadbios(input=b's1234 a1\n')
+    m.depword(S.vEs, 0xABCD)    # sentinel
+    m.call(S.cmd_D, stopat=[S['cmd_D.end']])
+    assert (      0x1234 ,         0x01 ,        0x00 ) \
+        == (m.word(S.vDs), m.byte(S.vDa), m.byte(S.t2b))
+
+def test_d_copyaddr(m, S, R, loadbios):
+    loadbios(input=b's5678 a0 e1\n')
+    m.depword(S.vEs, 0xABCD)
+    m.call(S.cmd_D, stopat=[S['cmd_D.end']])
+    assert (      0xABCD ,         0x00 ,        0x01 ) \
+        == (m.word(S.vDs), m.byte(S.vDa), m.byte(S.t2b))
+
+@param('input, mem, output', [
+    ('\n', 'abcdefgh', 'a\x08\n'),
+    ('X0\a~\n',           'X0\a~efgh',    'a\bX' 'b\b0' 'c\bG' 'd\b~' 'e\b\n'),
+    #   Spaces are entered as data, not interpreted as skip.
+    ('  \n',              '  cdefgh',     'a\b ' 'b\b ' 'c\b\n'),
+    #   Instead ^N is used for skip.
+    ('\x0E!\x0E\x0E\n',   'a!cdefgh',     'a\ba' 'b\b!' 'c\bc' 'd\bd' 'e\b\n'),
+    #   ^D goes into "digit" mode: one byte using the hex input routine.
+    ('X\x04a1b2c _\n',    'X,_defgh',
+            'a\bX' 'b\b62\b\ba1b2c     \b\b\b\b' 'c\b_' 'd\b\n'),
+    #   ^D hex input allows ascii input via ', etc.
+    ("\x04cc'D \n",    'Dbcdefgh', "a\b61\b\bcc'D\b\b44     \b\b\b\b" 'b\b\n'),
+    ("\x04cc'D\n",     'Dbcdefgh', "a\b61\b\bcc'D\b\b44    \b\b\b\b\n"),
+])
+def test_quote(m, S, R, loadbios, input, mem, output):
+    depaddr = 0x9000
+    m.depword(S.vDs, depaddr)
+    m.deposit(depaddr, b'abcdefgh')
+    instream, outstream = loadbios(input=input.encode('ASCII'))
+    m.call(S.cmd_quote, stopat=[S.prompt])
+    assert (mem.encode('ASCII'), b'\r9000: ' + output.encode('ASCII')) \
+        == (m.bytes(depaddr, 8),                 outstream.getvalue())
+    assert b'' == instream.read()
+
+
+    return
+    #    a b c  d        e    f g h
+    #   ^N p Q ^D 5 2 sp S ^M
+    instream, outstream = loadbios(input=b'\x0EpQ\x0452 S\r')
+    m.call(S.cmd_quote, stopat=[S.prompt])
+    assert (b'apQRSfgh', b'\r9000: a\bab\bpc\bQd\b64\b\b52 e\bSf\n') \
+        == (m.bytes(depaddr, 8), outstream.getvalue())
+    assert b'' == instream.read()
+
+####################################################################
+#   Commands: Checksum
+
+@param('len', [1, 0xFF, 0x100, 0x101, 0x321], ids=tmc_tid)
+def test_v(m, S, R, loadbios, len):
+    start = 0x4000;  data  = [0xEE] * len
+    m.deposit(start, data)
+    m.depword(S.vCVs, start)
+    m.depword(S.vCVe, start + len)
+
+    crc = crc_hqx(bytes(data), 0xFFFF)
+    _, ostream = loadbios()
+    m.call(S['cmd_V.exec'], stopat=[S['cmd_V.end']])
+    assert f'\r{start:04X}.{start+len:04X}   ={crc:04X}\n' \
+        == ostream.getvalue().decode('ASCII')
+
+####################################################################
+#   Commands: Other
+
+@param('q, s, output', [
+    (0x0000, 0x0000, b'\r0000.0000   0000 @    0000 @   \n'),
+    (0x0040, 0x0000, b'\r0040.0000   0040 @@   0040 @@  \n'),
+    (0x0000, 0x0040, b'\r0000.0040   0040 @@   FFC0 @   \n'),
+    (0x1274, 0x0202, b'\r1274.0202   1476 vv   1072 rr  \n'),
+    (0x6768, 0x7878, b'\r6768.7878   DFE0 `    EEF0 p   \n'),
+], ids=tmc_tid)
+def test_slash(m, S, R, loadbios, q, s, output):
+    _, ostream = loadbios()
+    m.depword(S.vSLASHq, q)
+    m.depword(S.vSLASHs, s)
+    m.call(S['cmd_slash.exec'], stopat=[S.prompt])
+    print('expected:', output)
+    print('  actual:', ostream.getvalue())
+    assert output == ostream.getvalue()
+
+####################################################################
+#   Command parsing
+
+@param('input, output, continued', [
+    #   All non-printable characters are "bad command" when waiting for command.
+    (b'\x00',   b'.@\a\r',  True),
+    (b'\n',     b'.J\a\r',  True),
+    (b'\r',     b'.M\a\r',  True),
+    (b'\x1F',   b'._\a\r',  True),
+    (b'\x7F',   b'.?\a\r',  True),
+
+    #   Printable invalid commands are echoed and backspaced over to
+    #   leave the incorrect command visible.
+    (b' ',      b'. \a\r',  True),
+    (b'!',      b'.!\a\r',  True),
+    (b'~',      b'.~\a\r',  True),
+
+    #   Q command is the simplest to test
+    (b'q\n',    b'.q\n',    False),     # lower case command
+    (b'Q  \r',  b'.Q  \n',  False),     # upper case command, spaces ignored
+])
+def test_prompt_q_nocancel(m, loadbios, S, R,  input, output, continued):
+    pdone = S['prompt.end']
+    istream, ostream = loadbios(input=input)
+    m.call(S.prompt, stopat=[pdone, S.exit])
+
+    print(f'pdone=${pdone:04X}  {m.regs}')
+    assert (           b'',             output,           continued) \
+        == (istream.read(), ostream.getvalue(),  pdone == m.regs.pc)
+
+@param('input, output', [
+    (b'q'+NAK,  b'.q    \b\b\b\b\\\n'),     # cancel with Ctrl-U
+    (b'q'+CAN,  b'.q    \b\b\b\b\\\n'),     # cancel with Ctrl-X
+])
+def test_prompt_cancel(m, loadbios, S, R,  input, output):
+    cancel_done = S['cancel.prompt']
+    istream, ostream = loadbios(input=input)
+    m.call(S.prompt, stopat=[cancel_done])
+    assert (b'', output) == (istream.read(), ostream.getvalue())
+    assert cancel_done == m.regs.pc
+
+def test_prompt_e(m, S, R, loadbios):
+    commands = b'e s12aB l2 w6\nq\nEND'
+    istream, ostream = loadbios(input=commands)
+    m.call(S.init, stopat=[S['init.end']])  # testing default values
+    m.call(S.prompt, stopat=[S.exit], maxsteps=10000)
+
+    bs2 = b'\b\b'; bs4 = b'\b\b\b\b'; clr = b'    ' + bs4
+    expected = b'.e s0000' + bs4 + b'12aB ' + clr \
+             + b'l04' + bs2 + b'2 ' + clr \
+             + b'w08' + bs2 + b'6' + clr + b'\n' \
+             + b'12AB: FF 00 12 23 34 45\n12B1: 56 67 78 89 9A AB\n' \
+             + b'.q\n'
+    actual = ostream.getvalue()
+
+    print(f'vEs={m.word(S.vEs):04X}, ' \
+        f'vEl={m.byte(S.vEl)} vEw={m.byte(S.vEw)}')
+    print(f'{expected!r}\n{actual!r}')
+    assert (b'END', expected) == (istream.read(),   actual)

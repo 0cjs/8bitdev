@@ -6,12 +6,16 @@
 
             include "testmc/i8080/tmc/bios.i80"    ; `tmc` will load bioscode
 
+;   Our RAM workspace and code locations are chosen here just to be easy
+;   to remember, especially when wondering where things went wrong.
+tmon_ram    equ  $100
+tmon_rom    equ  $200           ; easy to remember and use
+
             org  $1F0
 start       call prompt
             ld   a,$EF          ; request simulator exit by writing $EF
             ld   ($FE),a        ;   to location $FE
 
-            org  $200
-            include "src/i8080/tmon.i80"
+            include "src/i8080/tmon.i80"    ; org tmon_rom
 
             end start

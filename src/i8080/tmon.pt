@@ -5,8 +5,11 @@ test_rig = '''
             relaxed on
             cpu 8080
             z80syntax exclusive
-            org $8000
             include testmc/i8080/tmc/bios.i80
+
+tmon_ram    equ  $7000
+tmon_rom    equ  $8000
+
             include src/i8080/tmon.i80
 '''
 
@@ -41,6 +44,10 @@ def test_prompt(m, loadbios, S, R,  input, output, continued):
 
 def test_e(m, loadbios, S, R):
     istream, ostream = loadbios('i8080', b'\n')
+    m.call(S.init, stopat=[S['init.end']])           # testing default values
     m.call(S.cmd_E, stopat=[S['cmd_E.done']])
+    assert b'0000: 00' in ostream.getvalue()
+    assert b'0018: 00' in ostream.getvalue()
+
     assert (           b'',           b'\nE\n') \
         == (istream.read(), ostream.getvalue())

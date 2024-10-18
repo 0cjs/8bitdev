@@ -10,6 +10,20 @@
 ;       until the next time it reaches `prompt`.)
 
 ; ----------------------------------------------------------------------
+
+;   This requires the system-dependent files define the following before
+;   including this file:
+;   • tmon_ram: the workspace area, which must be RAM. No code or data
+;     is generated here; it's all initialised at runtime.
+;   • tmon_rom: start of code and static data, and monitor entry point.
+
+;   Abort assembly with a clear message if an essential definition is missing.
+;   (Otherwise it says "error: expression must be evaluatable in first pass".)
+;   set ______,
+;   pushv , tmon_rom, tmon_ram
+;   popv  , ______,     ______
+
+; ----------------------------------------------------------------------
 ;   Character definitions
 
 BS          equ  $08            ; Ctrl-H, backspace
@@ -23,7 +37,26 @@ SPACE       equ  ' '
 BACKSLASH   equ  '\\'
 
 ; ----------------------------------------------------------------------
+;   RAM Work Area
+
+            org  tmon_ram
+optEs       ds   2              ; start addr for examine cmd
+optEl       ds   1              ; # of lines for examine cmd should print
+optEw       ds   1              ; # of bytes per line for examine cmd
+
+
+; ----------------------------------------------------------------------
 ;   Entry point and main program
+
+            org  tmon_rom
+
+init        ld   hl,0
+            ld   (optEs),hl     ; examine cmd start addr: $0000
+            ld   a,4
+            ld   (optEl),a      ; examine cmd # of lines
+            ld   a,8
+            ld   (optEw),a      ; examine cmd # of bytes/line (width)
+.end
 
 prompt      ld   a,'.'
             call prchar         ; prompt
@@ -56,7 +89,7 @@ read_opts   call rdchar
             jp   Z,.cancel
             halt                ; Parse option
             ;
-.execute    call prnl
+.execute   ;call prnl           ; XXX done by caller because easier loops
             ret
             ;
 .cancel     pop  hl             ; remove cmd_* return addr from stack
@@ -75,13 +108,35 @@ read_opts   call rdchar
 ;   software, e.g., by pushing an appropriate return addr on the stack.
 
 cmd_Q       call read_opts
+            call prnl
             ret
 
 ; ----------------------------------------------------------------------
 ;   Examine memory command
 
 cmd_E       call read_opts
-            ld   a,'E'
+            ld   hl,(optEs)     ; start
+            ld   a,(optEl)      ; lines
+            ld   c,a
+.nextline   call prnl
+            call prhexHL
+            ld   a,':'
             call prchar
+            call prspace
+            ld   a,(optEw)      ; bytes/line
+            ld   b,a
+.nextbyte   ld   a,(hl)
+            call prhexA
+            call prspace
+            dec  b
+            jp   NZ,.nextbyte
+            dec  c
+            jp   NZ,.nextline
+            ;
             call prnl
 .done       jp   prompt.next
+
+; ----------------------------------------------------------------------
+;   Generic routines
+
+            include "src/i8080/pr.i80"       ; printing

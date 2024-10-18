@@ -1,9 +1,12 @@
+#   XXX heavy duplication in src/i8080/pr.pt
+
 from    testmc  import *
 from    testmc.mc6800  import *
 import  pytest, re
 from    contextlib  import contextmanager
 
 R = Machine.Registers
+param = pytest.mark.parametrize
 
 test_rig = '''
             cpu 6800
@@ -20,8 +23,6 @@ T_pristr    jsr pristr
             lda #$EA
             rts
 '''
-
-param = pytest.mark.parametrize
 
 @param('str', [b'abc', b'01\n23', b''])
 def test_prstr0(m, S, R, loadbios, str):
@@ -56,9 +57,7 @@ def test_prhex(m, S, R, loadbios, val, chars):
     assert chars == outchars.getvalue()
 
 @param('val, chars', (
-    (0x0000, b'0000'),
-    (0x1234, b'1234'),
-    (0xFEDC, b'FEDC'),
+    (0x0000, b'0000'), (0x1234, b'1234'), (0xFEDC, b'FEDC'),
 ))
 def test_prhexX(m, S, R, loadbios, val, chars):
     _, outchars = loadbios()

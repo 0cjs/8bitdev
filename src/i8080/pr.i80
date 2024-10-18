@@ -1,0 +1,13 @@
+;   Generic print routines.
+;   This requires a BIOS with the following functions:
+;   • prchar
+
+; ----------------------------------------------------------------------
+
+prhexHL     ret
+
+prhexA      ret
+
+;   ♣AF ♡rest Print a space.
+prspace     ld   a,' '
+            jp   prchar         ; ret (TCO)

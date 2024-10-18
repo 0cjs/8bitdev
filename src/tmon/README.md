@@ -38,10 +38,14 @@ Commands
 
 Most commands accept optional parameters that are single characters
 followed by a hex digits item, written as `##` for eight-bit values and and
-`####` for 16-bit. Most parameters have a remembered value that will be
-printed and then backspaced over; a new value can be typed over top of this
-or just a space may be entered to keep the current remembered value
-unchanged.
+`####` for 16-bit. Input terminates after the fourth digit, or with a space
+or newline. For eight-bit values, you may also type a single quote `'`
+followed by any ASCII character; input is completed immedaitely and the hex
+value of that character will be used.
+
+Most parameters have a remembered value that will be printed and then
+backspaced over; a new value can be typed over top of this or just a space
+may be entered to keep the current remembered value unchanged.
 
 Optional parameters common to several commands are as follows. (The
 remembered value is not shared between commands except where marked.)

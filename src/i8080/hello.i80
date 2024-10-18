@@ -6,7 +6,7 @@
 ;   wouldn't on real hardware) the program returns to whatever called it.
 
 CR          equ $0D             ; Return key
-CAN         equ $03             ; Ctrl-C
+ETX         equ $03             ; Ctrl-C ("end of text")
 
 hello       ld   b,2            ; number of CRs needed for exit
 hellomsg    call prnl
@@ -19,7 +19,7 @@ hellomsg    call prnl
             jp   NZ,hellomsg    ;    no: new prompt
             jp   .exit          ;   yes: exit
 
-.nextchar   cp   CAN            ; Ctrl-C exits immediately
+.nextchar   cp   ETX            ; Ctrl-C exits immediately
             jp   Z,.exit
             cp   CR             ; CR prints hello again (resetting CR count)
             jp   Z,hello

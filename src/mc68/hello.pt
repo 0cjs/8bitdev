@@ -8,7 +8,7 @@ test_rig = '''
 '''
 
 def test_hello(m, loadbios, S, R):
-    istream, ostream = loadbios('mc6800', b'a0\rb1\x03')
+    istream, ostream = loadbios(input=b'a0\rb1\x03')
     m.call(S.hello)
 
     expected = (
@@ -19,7 +19,7 @@ def test_hello(m, loadbios, S, R):
     assert expected == ostream.getvalue()
 
 def test_hello_2x_enter_exit(m, loadbios, S, R):
-    istream, ostream = loadbios('mc6800', b'\rXX\r\r\r')
+    istream, ostream = loadbios(input=b'\rXX\r\r\r')
     m.call(S.hello)
 
     expected = (

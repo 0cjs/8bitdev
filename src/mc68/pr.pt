@@ -25,13 +25,13 @@ param = pytest.mark.parametrize
 
 @param('str', [b'abc', b'01\n23', b''])
 def test_prstr0(m, S, R, loadbios, str):
-    _, output = loadbios('mc6800')
+    _, output = loadbios()
     m.deposit(0x37FD, str + b'\x00XYZ')     # guard values
     m.call(S.prstr0, R(x=0x37FD))
     assert str == output.getvalue()
 
 def test_pristr(m, S, R, loadbios):
-    _, output = loadbios('mc6800')
+    _, output = loadbios()
     m.call(S.T_pristr, R(a=0x55))
     assert (b'abc\n\x01\xFF', R(a=0xEA)) == (output.getvalue(), m.regs)
 
@@ -43,7 +43,7 @@ def test_pristr(m, S, R, loadbios):
     (0x10, b'0'), (0xFE, b'E'),
 ), ids=tmc_tid)
 def test_prnyb(m, S, R, loadbios, val, char):
-    _, output = loadbios('mc6800')
+    _, output = loadbios()
     m.call(S.prnyb, R(a=val))
     assert char == output.getvalue()
 
@@ -51,7 +51,7 @@ def test_prnyb(m, S, R, loadbios, val, char):
     (0x00, b'00'), (0x0F, b'0F'), (0xA0, b'A0'), (0xFF, b'FF'),
 ), ids=tmc_tid)
 def test_prhex(m, S, R, loadbios, val, chars):
-    _, outchars = loadbios('mc6800')
+    _, outchars = loadbios()
     m.call(S.prhex, R(a=val))
     assert chars == outchars.getvalue()
 
@@ -61,7 +61,7 @@ def test_prhex(m, S, R, loadbios, val, chars):
     (0xFEDC, b'FEDC'),
 ))
 def test_prhexX(m, S, R, loadbios, val, chars):
-    _, outchars = loadbios('mc6800')
+    _, outchars = loadbios()
     m.call(S.prhexX, R(x=val))
     assert (R(x=val+0), chars) == (m.regs, outchars.getvalue())
 
@@ -75,7 +75,7 @@ def test_prhexX(m, S, R, loadbios, val, chars):
     (0x7F, '?'), (0xFF, '?'),               # DEL is special
 ])
 def test_prvischar(m, R, S, loadbios, char, output):
-    _, ostream = loadbios('mc6800')
+    _, ostream = loadbios()
     m.call(S.prvischar, R(a=char))
     assert output == str(ostream.getvalue(), encoding='ASCII')
 
@@ -91,7 +91,7 @@ def test_prdec_u16(m, S, R, loadbios, n):
 
     loc = 0x7000 + (n & 0xFF ^ 0x55)    # pesudo-random location for input
     m.depword(loc, n)
-    _, output = loadbios('mc6800')
+    _, output = loadbios()
     m.call(S.prdec_u16, R(x=loc))
     print('input', m.hexdump(loc, 2), '  copy', m.hexdump(S._a, 2),
         '  regs', m.regs, '  output', output.getvalue())

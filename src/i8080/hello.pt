@@ -10,12 +10,12 @@ test_rig = '''
 '''
 
 def test_prstr(m, loadbios, S, R):
-    _, ostream = loadbios('i8080')
+    _, ostream = loadbios()
     m.call(S.prstr, R(hl=S.message))
     assert b'Hello: ' == ostream.getvalue()
 
 def test_hello_ctrlC_exit(m, loadbios, S, R):
-    istream, ostream = loadbios('i8080', b'a0\rb1\x03')
+    istream, ostream = loadbios(input=b'a0\rb1\x03')
     m.call(S.hello)
 
     #   XXX remove this once we confirm that our XXX
@@ -30,7 +30,7 @@ def test_hello_ctrlC_exit(m, loadbios, S, R):
     assert expected == ostream.getvalue()
 
 def test_hello_2x_enter_exit(m, loadbios, S, R):
-    istream, ostream = loadbios('i8080', b'\rXX\r\r\r')
+    istream, ostream = loadbios(input=b'\rXX\r\r\r')
     m.call(S.hello)
 
     expected = (

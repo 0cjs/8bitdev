@@ -25,13 +25,13 @@ test_pristr jsr pristr
 
 def test_loadbios_prchar(m, S, R, loadbios):
     ' Confirm working and demonstrate use of our 6502 unit test BIOS. '
-    _, outchars = loadbios('mos65')
+    _, outchars = loadbios()
     m.call(S.prchar, R(a=ord('_')))
     m.call(S.prchar, R(a=ord('\r')))
     assert b'_\r' == outchars.getvalue()
 
 def test_pristr(m, S, R, loadbios):
-    _, output = loadbios('mos65')
+    _, output = loadbios()
     m.call(S.test_pristr)
     print('pristr_ptr', m.hexdump(S.pristr_ptr, 2)) # ptr to chars to print
     print('stack  ', m.hexdump(0x1F0, 16))          # stack

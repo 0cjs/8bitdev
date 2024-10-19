@@ -73,7 +73,7 @@ def test_qwspace_end(m, S, R):
 def test_rdchar(m, R, S, loadbios):
     ' Mostly confirms that our test framework works. '
     chars = b'!\x00\x7F'
-    inchars, _ = loadbios('mc6800', chars)
+    inchars, _ = loadbios(input=chars)
     for char in chars:
         m.call(S.rdchar, R(a=0xEA))
         assert R(a=char) == m.regs
@@ -93,7 +93,7 @@ def test_rdchar(m, R, S, loadbios):
 ))
 def test_rdline(m, R, S, loadbios, input, buf):
     TERM = b'END'
-    istream, ostream = loadbios('mc6800', input + TERM)
+    istream, ostream = loadbios(input=input + TERM)
     m.deposit(S.rdlinebuf, b'\xA5'*40)
     m.call(S.rdline)
 
@@ -114,7 +114,7 @@ def test_rdline(m, R, S, loadbios, input, buf):
     assert echo_of(input) == ostream.getvalue()
 
 def test_rdline_ctrlC(m, R, S, loadbios):
-    istream, ostream = loadbios('mc6800', b'pqr\bqp\x03END')
+    istream, ostream = loadbios(input=b'pqr\bqp\x03END')
     m.call(S.rdline)
     assert [ R(x=S.rdlinebuf, C=1), b'pqqp\x00'             ] \
         == [ m.regs,                m.bytes(m.regs.x, 5)    ]
@@ -122,7 +122,7 @@ def test_rdline_ctrlC(m, R, S, loadbios):
     assert b'pqr\bqp\a\n' == ostream.getvalue()   # BEL char sent
 
 def test_rdline_rubout_at_beginning(m, R, S, loadbios):
-    istream, ostream = loadbios('mc6800', b'\b\b\babc\b\r')
+    istream, ostream = loadbios(input=b'\b\b\babc\b\r')
 
     #   Whatever happens to be just before the buffer may not be
     #   the best sentinel bytes, but we can't overwrite it because
@@ -137,7 +137,7 @@ def test_rdline_rubout_at_beginning(m, R, S, loadbios):
 def test_rdline_overflow(m, R, S, loadbios):
     buflen = S.rdlinebuf_end - S.rdlinebuf
     bufinput = b'_' * (buflen - 3) + b'yz'
-    istream, ostream = loadbios('mc6800', bufinput + b'AB\r')
+    istream, ostream = loadbios(input=bufinput + b'AB\r')
 
     postbuf = m.bytes(S.rdlinebuf_end, 4)
     m.call(S.rdline)
@@ -185,7 +185,7 @@ def test_startline(m, S, loadbios):
             - stat byte is {:02X}
             - cummulative output: {}'''.format(stat, repr(output))
 
-    _, ostream = loadbios('mc6800')
+    _, ostream = loadbios()
     m.deposit(S.stat, 0)    # memory cleared to 0x00 assumes not at begline
     m.call(S.startline); ast(S.stat_begline, b'\n', '1: add newline')
     m.call(S.startline); ast(S.stat_begline, b'\n', '2: no additional output')
@@ -221,7 +221,7 @@ def test_prperr_offset(m, S, R):
 ])
 def test_prperr(m, S, R, loadbios, input, char):
     inbuf = set_rdlinebuf(m, input)
-    _, ostream = loadbios('mc6800')
+    _, ostream = loadbios()
 
     m.setregs(R(pc=S.prperr))
     m.stepto(stopat=[S.cmdloop])
@@ -235,7 +235,7 @@ def test_prperr_abort(m, S, loadbios):
     ''' Ensure that prperr_abort is restoring the stack to where it was
         when parsing continued, dropping anything pushed by a command.
     '''
-    loadbios('mc6800');  set_rdlinebuf(m, b'\r')
+    loadbios();  set_rdlinebuf(m, b'\r')
 
     m.deposit(0x3000, [
         #   Emulate parse loop's save of stack position.
@@ -289,7 +289,7 @@ def test_qcmdopts(m, S, R, loadbios, input, expected, err_offset):
                                 (4, 'w', S.OPTword, 0x3203),
                                 (8, 'x', S.OPTword, 0x3205),
     ])
-    _, ostream = loadbios('mc6800')
+    _, ostream = loadbios()
     set_rdlinebuf(m, input)
     with prperr_abort_check(m, err_offset):
         m.call(S.qcmdopts, R(x=opttab))
@@ -406,7 +406,7 @@ def test_query(m, S, R, loadbios, val, output):
     #   XXX this way of testing status output needs to be improved
     stat = ((val & 1) << 7) | S.stat_begline | ((MB(val)^LB(val)) & 0b00111111)
 
-    _, ostream = loadbios('mc6800')
+    _, ostream = loadbios()
     m.deposit(S.stat, stat)
     m.depword(S.Mpending, val)
 
@@ -499,7 +499,7 @@ def test_examine_output(m, S, R, loadbios, addr, width, cmdarg, lines, expmatch)
     m.deposit(0x8000, range(0x40, 0x80))    # test data to dump
     dep_examine_defaults(m, addr)
     inbuf = set_rdlinebuf(m, cmdarg)
-    _, ostream = loadbios('mc6800')
+    _, ostream = loadbios()
 
     m.call(S.Cexamine)
     print('updated: lines={:02X} width={:02X}'.format(
@@ -535,7 +535,7 @@ def test_regscmd_show(m, S, R, loadbios, regs):
     print(regs)
     depregs(m, regs)
     inbuf = set_rdlinebuf(m)
-    _, ostream = loadbios('mc6800')
+    _, ostream = loadbios()
     m.call(S.Cregisters)
     output = str(ostream.getvalue(), encoding='ASCII')
     print(output)
@@ -591,7 +591,7 @@ def test_cmdloop_quitcmd(m, S, R, loadbios):
     #   Quit doesn't return to the parser loop; it manually removes the
     #   return address that .parse added. This means our JSRs/RTSs will
     #   match, so in this one case we can use m.call().
-    istream, ostream = loadbios('mc6800', b'q\r')
+    istream, ostream = loadbios(input=b'q\r')
     m.depword(S.cmdtbl, S.cmdtbl_std)
     m.call(S.cmdloop)
     assert b'\n^q\n' ==  ostream.getvalue()
@@ -600,7 +600,7 @@ def test_cmdloop_quitcmd(m, S, R, loadbios):
 
 def test_cmdloop_cancel(m, S, R, loadbios):
     ' Confirm that ctrl-C terminates input, ignores line. '
-    istream, ostream = loadbios('mc6800', b'^~123~^\x03' b'q\r')
+    istream, ostream = loadbios(input=b'^~123~^\x03' b'q\r')
     m.depword(S.cmdtbl, S.cmdtbl_std)
     m.call(S.cmdloop)
     assert b'\n^^~123~^\x07\n' b'^q\n' ==  ostream.getvalue()
@@ -612,7 +612,7 @@ def test_cmdloop_parse_error(m, S, R, loadbios):
         `q` works properly after a parse error, that the stack is handled
         correctly when we abort parsing the command line.
     '''
-    istream, ostream = loadbios('mc6800', b'\xC0z\xC0\xC0\rq\r')
+    istream, ostream = loadbios(input=b'\xC0z\xC0\xC0\rq\r')
     m.depword(S.cmdtbl, S.cmdtbl_std)
     m.call(S.cmdloop)
     assert (
@@ -632,7 +632,7 @@ def test_cmdloop_parse_error(m, S, R, loadbios):
 
 def test_cmdloop_pending(m, S, loadbios):
     ' Ensure that pending values are loaded properly. '
-    istream, ostream = loadbios('mc6800', b'3039q\r')
+    istream, ostream = loadbios(input=b'3039q\r')
     m.call(S.init)
     assert b'\n^3039q\n' ==  ostream.getvalue()
     pendingbit = m.byte(S.stat) & 0x80  # isolate pending bit
@@ -640,7 +640,7 @@ def test_cmdloop_pending(m, S, loadbios):
 
 def test_cmdloop_multicmd(m, S, loadbios):
     ' Multiple command processing of the simplest possible commands. '
-    istream, ostream = loadbios('mc6800', b'\xC0\xC0 \xC0q\r')
+    istream, ostream = loadbios(input=b'\xC0\xC0 \xC0q\r')
     m.call(S.init)
     assert b'\n^\xC0\xC0 \xC0q\n' b'@@@' ==  ostream.getvalue()
 
@@ -652,7 +652,7 @@ def test_cmdloop_multiline(m, S, loadbios):
         another newline even though there was no output on the existing
         line. When we print newlines needs to be reworked.
     '''
-    istream, ostream = loadbios('mc6800', b' \r\xC0\rq\r')
+    istream, ostream = loadbios(input=b' \r\xC0\rq\r')
     m.call(S.init)
     expected = (
         '\n'           # newline due to stat byte being clear
@@ -669,7 +669,7 @@ def test_cmdloop_multiline(m, S, loadbios):
 
 def test_cmdloop_deposit_examine(m, S, loadbios):
     ' Simple integration test. '
-    istream, ostream = loadbios('mc6800', b'7654x 7655:ab:x :cd:x q\r')
+    istream, ostream = loadbios(input=b'7654x 7655:ab:x :cd:x q\r')
     m.call(S.init)
     print(m.regs); print(m.hexdump(m.regs.sp-8, 8))
     output = ostream.getvalue(); print(output)
@@ -686,7 +686,7 @@ def test_cmdloop_eachrts(m, S, R, loadbios):
     '''
     input = b'a800\r3q\r'
     input = b'^ \xC0\xC0q\r'
-    istream, ostream = loadbios('mc6800', input)
+    istream, ostream = loadbios(input=input)
     m.deposit(0xA800, b'ABCDEFGH')
 
     stackbase = m.regs.sp + 1

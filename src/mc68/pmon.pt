@@ -292,7 +292,7 @@ def test_qcmdopts(m, S, R, loadbios, input, expected, err_offset):
     _, ostream = loadbios()
     set_rdlinebuf(m, input)
     with prperr_abort_check(m, err_offset):
-        m.call(S.qcmdopts, R(x=opttab))
+        m.call(S.qcmdopts, R(x=opttab), stopat=[S.prperr_abort])
         print(m.hexdump(0x3200, 8))
     assert expected == m.hexdump(0x3200, 8)
 
@@ -593,7 +593,7 @@ def test_cmdloop_quitcmd(m, S, R, loadbios):
     #   match, so in this one case we can use m.call().
     istream, ostream = loadbios(input=b'q\r')
     m.depword(S.cmdtbl, S.cmdtbl_std)
-    m.call(S.cmdloop)
+    m.call(S.cmdloop, stopat=[S.Crts])
     assert b'\n^q\n' ==  ostream.getvalue()
     #   Make sure we exited at the point where we expected.
     assert R(pc=S.Crts) == m.regs
@@ -602,7 +602,7 @@ def test_cmdloop_cancel(m, S, R, loadbios):
     ' Confirm that ctrl-C terminates input, ignores line. '
     istream, ostream = loadbios(input=b'^~123~^\x03' b'q\r')
     m.depword(S.cmdtbl, S.cmdtbl_std)
-    m.call(S.cmdloop)
+    m.call(S.cmdloop, stopat=[S.Crts])
     assert b'\n^^~123~^\x07\n' b'^q\n' ==  ostream.getvalue()
     #   Make sure we exited at the point where we expected.
     assert R(pc=S.Crts) == m.regs

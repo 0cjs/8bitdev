@@ -4,7 +4,7 @@
             cpu 8080
             z80syntax exclusive
 
-            include "testmc/i8080/tmc/bios.i80"    ; `tmc` will load bioscode
+            include "testmc/i8080/tmc/biosdef.i80" ; `tmc` will load bioscode
 
             org  $100
 start       call hello

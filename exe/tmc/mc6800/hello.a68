@@ -4,7 +4,7 @@
 
             cpu 6800
             include "src/mc68/std.a68"
-            include "testmc/mc6800/tmc/bios.a68"    ; `tmc` will load bioscode
+            include "testmc/mc6800/tmc/biosdef.a68" ; `tmc` will load bioscode
 
             org $100
 start       jsr hello

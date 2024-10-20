@@ -44,7 +44,7 @@ def test_RTN(m, R, S):
     addr = 0x404                            # start of code to call SW16
     rtsaddr = addr + 3 + 1                  # JSR SW16, RTN, leaving us at RTS
     runSweet16(m, [0x00], startaddr=addr)   # Sweet 16 RTN instruction
-    assert m.regs == R(pc=rtsaddr),         'RTS instruction address'
+    assert m.regs == R(pc=m.CALL_DEFAULT_RETADDR), 'Returned to caller'
 
 def test_Sedgewick(m, R, S):
     ''' This is the example from the Sedgewick article in Woz Pak II.

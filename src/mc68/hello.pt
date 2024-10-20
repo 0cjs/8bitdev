@@ -3,7 +3,7 @@ from    testmc.mc6800  import  Machine
 test_rig = '''
             cpu 6800
             org $1000
-            include testmc/mc6800/tmc/bios.a68
+            include testmc/mc6800/tmc/biosdef.a68
             include src/mc68/hello.a68
 '''
 

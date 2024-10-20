@@ -36,10 +36,13 @@ DEL         equ  $7F
 SPACE       equ  ' '
 BACKSLASH   equ  '\\'
 
+UPCASE      equ  %11011111      ; lower case ASCII AND with this for upper case
+
 ; ----------------------------------------------------------------------
 ;   RAM Work Area
 
             org  tmon_ram
+cmd_opt_tab ds   2              ; options table for current command
 optEs       ds   2              ; start addr for examine cmd
 optEl       ds   1              ; # of lines for examine cmd should print
 optEw       ds   1              ; # of bytes per line for examine cmd
@@ -74,7 +77,7 @@ prompt      ld   a,'.'
             cp   DEL
             jp   Z,.err
             call prchar         ; echo input
-            and  %11011111      ; force to upper case
+            and  UPCASE         ; force to upper case
             ;   Dispatch command if we match one.
             ;   Commands must generate their own initial newline; see above.
             cp   'Q'
@@ -87,7 +90,18 @@ prompt      ld   a,'.'
             call prchar
 .next       jp   prompt
 
-read_opts   call rdchar
+; ----------------------------------------------------------------------
+
+;   We've found a command; it's asking us to read and update its options
+;   (specified in a table passed in HL) and execute or cancel it.
+;
+;   The options table is a sequence of 3-byte entries, terminated by a $00 byte:
+;   • byte0 [7:7]: option value size: 0=8-bit, 1=16-bit
+;   • byte0 [6:0]: option name, as upper-case ASCII letter
+;   • byte1,byte2 [15:0]: location in which to store option value
+;
+read_opts   ld   (cmd_opt_tab),hl  ; save options table
+            call rdchar
             cp   SPACE          ; Ignore spaces.
             jp   Z,.space
             cp   CR             ; Execute command
@@ -98,7 +112,17 @@ read_opts   call rdchar
             jp   Z,.cancel
             cp   NAK
             jp   Z,.cancel
+            ;
+.parse_opt  ld   hl,(cmd_opt_tab)
+            and  a,UPCASE
+            ld   b,a            ; table entry to match
+.tabnext    ld   a,(hl)
+            or   a,a            ; end of table?
+            jp   Z,.badopt      ;   yes: char does not match an option
+            and  a,$7F          ; clear high bit (option size)
+
             halt                ; Parse option
+.badopt     
             ;
 .execute    ret
             ;
@@ -117,14 +141,24 @@ read_opts   call rdchar
 ;   The caller must ensure that a `ret` will return to the right system
 ;   software, e.g., by pushing an appropriate return addr on the stack.
 
-cmd_Q       call read_opts      ; no options, but must confirm/cancel
+cmd_Q       ld   hl,no_opts     ; no options,
+            call read_opts      ;   but must confirm/cancel
             call prnl
             ret
 
 ; ----------------------------------------------------------------------
 ;   Examine memory command
 
-cmd_E       call read_opts
+cmd_E_opts  db   'S'|$80        ; start: 16-bit value
+            dw    optEs
+            db   'L'            ; number of lines to print: 8-bit value
+            dw    optEl
+            db   'W'            ; width (# of bytes to print): 8-bit value
+            dw    optEw
+no_opts     db   0              ; end of table
+
+cmd_E       ld   hl,cmd_E_opts
+            call read_opts
             ld   hl,(optEs)     ; start
             ld   a,(optEl)      ; lines
             ld   c,a

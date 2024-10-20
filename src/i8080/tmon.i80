@@ -42,10 +42,10 @@ UPCASE      equ  %11011111      ; lower case ASCII AND with this for upper case
 ;   RAM Work Area
 
             org  tmon_ram
-cmd_opt_tab ds   2              ; options table for current command
 optEs       ds   2              ; start addr for examine cmd
 optEl       ds   1              ; # of lines for examine cmd should print
 optEw       ds   1              ; # of bytes per line for examine cmd
+cmd_opt_tab ds   2              ; options table for current command
 
 
 ; ----------------------------------------------------------------------
@@ -88,7 +88,7 @@ prompt      ld   a,'.'
 .err        call errbeep
             ld   a,CR           ; back up over bad command and prompt
             call prchar
-.next       jp   prompt
+.next       jp   prompt         ; this label used as breakpoint
 
 ; ----------------------------------------------------------------------
 
@@ -101,6 +101,7 @@ prompt      ld   a,'.'
 ;   • byte1,byte2 [15:0]: location in which to store option value
 ;
 read_opts   ld   (cmd_opt_tab),hl  ; save options table
+read_opts_next
             call rdchar
             cp   SPACE          ; Ignore spaces.
             jp   Z,.space
@@ -112,17 +113,37 @@ read_opts   ld   (cmd_opt_tab),hl  ; save options table
             jp   Z,.cancel
             cp   NAK
             jp   Z,.cancel
+            cp   ' '            ; other non-printable?
+            jp   C,.badopt      ;    no: err without echoing it
+            cp   DEL            ; all chars DEL and above
+            jp   NC,.badopt     ;   are considered non-printable
+            call prchar
             ;
 .parse_opt  ld   hl,(cmd_opt_tab)
             and  a,UPCASE
             ld   b,a            ; table entry to match
-.tabnext    ld   a,(hl)
+.tabnext    ld   a,(hl)         ; option char from table
             or   a,a            ; end of table?
-            jp   Z,.badopt      ;   yes: char does not match an option
-            and  a,$7F          ; clear high bit (option size)
-
-            halt                ; Parse option
-.badopt     
+            jp   Z,.badoptBS    ;   yes: char does not match an option
+            and  a,$7F          ; clear table char high bit (option size)
+            cp   a,b            ; this option matches?
+            jp   Z,.foundopt    ;   yes: process option
+            inc  hl             ; no: next table entry
+            inc  hl
+            inc  hl
+            jp   .tabnext
+            ;
+.foundopt   ld   a,(hl)         ; load option size (will be masked later)
+            inc  hl             ; to option value location (no flags changed)
+            ld   l,(hl)         ; load location LSB
+            inc  hl             ;   and MSB
+            ld   h,(hl)
+            jp   qoptval        ; A=value size, HL=store location
+            ;
+.badoptBS   ld   a,BS           ; backspace over bad option
+            call prchar
+.badopt     call errbeep
+            jp   read_opts_next
             ;
 .execute    ret
             ;
@@ -134,6 +155,41 @@ read_opts   ld   (cmd_opt_tab),hl  ; save options table
             ;
 .space      call prchar
             jp   read_opts
+
+
+;   ♠AHL  Read ASCII hex digits, depositing the number into HL. If more
+;   digits are read than needed, only the last-entered digits are used. If
+;   bit 7 of A is set, store a 16-bit value, otherwise store an 8-bit value.
+;   Input is terminated with:
+;   • Space:                read_opts_next
+;   • Execute (newline):    `ret` (as read_opts.execute)
+;   • Cancel (^U/^X):       cancel input and goto read_opts.cancel
+;
+qoptval     and  $80            ; mask 8/16-bit flag
+            ld   c,a            ;   and save it
+            ld   de,0           ; current value
+.next       call rdchar
+            cp   ' '            ; terminate input and continue?
+            jp   NZ,+           ;    no
+            call .store         ;   yes
+            jp   read_opts_next
++           call execchar
+            halt
+
+.store:     ld   (hl),e         ; store LSB
+            ld   a,0
+            or   a,c            ; 16-bit flag set?
+            ret  Z              ;  no: we're done
+            inc  hl             ;   yes: store MSB
+            ld   (hl),d
+            ret
+
+;   ♠A Set Z flag if the char in A is an execute character (CR or LF).
+execchar    cp   CR
+            ret  Z
+            cp   LF
+            ret
+
 
 ; ----------------------------------------------------------------------
 ;   Quit command
@@ -181,6 +237,6 @@ cmd_E       ld   hl,cmd_E_opts
 .done       jp   prompt.next
 
 ; ----------------------------------------------------------------------
-;   Generic routines
+;   Support routines
 
             include "src/i8080/pr.i80"       ; printing

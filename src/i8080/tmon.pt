@@ -19,7 +19,19 @@ utest_data  db   $FF, $00, $12, $23, $34, $45, $56, $67
             db   $78, $89, $9A, $AB, $BC, $CD, $DE, $EF
 '''
 
-@pytest.mark.parametrize('input, output, continued', [
+param = pytest.mark.parametrize
+
+@param('input, expected', [
+    ('\n',    True), ('\r',    True),
+    ('\x09', False), ('\x0B', False),
+    ('\x0C', False), ('\x0E', False),
+    ('\x8A', False),
+])
+def test_execchar(m, S, R, input, expected):
+    m.call(S.execchar, R(a=ord(input), Z=not expected), trace=1)
+    assert R(Z=expected) == m.regs
+
+@param('input, output, continued', [
     #   All non-printable characters are "bad command" when waiting for command.
     (b'\x00',   b'.\a\r',     True ),
     (b'\n',     b'.\a\r',     True ),

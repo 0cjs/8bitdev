@@ -7,14 +7,14 @@ object_files = 'src/a1/pia2.p'
 #   Utility routines
 
 @pytest.mark.parametrize('x, cycles', (
-    (0x01,     23), # "no" delay: 23 μs
-    (0x02,   1819), # minimum real delay: 1.8 ms
-    (0x03,   3615), # next step: 3.6 ms; each additional step adds about 1.8 ms
+    (0x01,     29), # "no" delay: 23 μs
+    (0x02,   1825), # minimum real delay: 1.8 ms
+    (0x03,   3621), # next step: 3.6 ms; each additional step adds about 1.8 ms
    #(0x81, 229911), # half total delay available: about 230 ms (slowish test)
 ))
 def test_humdly(m, R, x, cycles):
     m.call(m.symtab.loopdly, R(x=x))
-    assert cycles == m.mpu.processorCycles  # test framework doesn't include RTS
+    assert cycles == m.mpu.processorCycles
 
 @pytest.mark.skip(reason='Slow test')
 def test_humdlymax(m, R):

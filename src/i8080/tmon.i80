@@ -101,8 +101,7 @@ prompt      ld   a,'.'
 ;   • byte1,byte2 [15:0]: location in which to store option value
 ;
 read_opts   ld   (cmd_opt_tab),hl  ; save options table
-read_opts_next
-            call rdchar
+.next       call rdchar
             cp   SPACE          ; ignore spaces.
             jp   Z,.space
             call execchar       ; execute command?
@@ -136,10 +135,10 @@ read_opts_next
             ld   h,(hl)
             jp   qoptval        ; A=value size, HL=store location
             ;
-.badoptBS   ld   a,BS           ; backspace over bad option
+.badoptBS   call backspace      ; backspace over bad option
             call prchar
 .badopt     call errbeep
-            jp   read_opts_next
+            jp   read_opts.next
             ;
 .execute    ret
             ;
@@ -152,25 +151,67 @@ read_opts_next
 .space      call prchar
             jp   read_opts
 
-
-;   ♠AHL  Read ASCII hex digits, depositing the number into HL. If more
-;   digits are read than needed, only the last-entered digits are used. If
-;   bit 7 of A is set, store a 16-bit value, otherwise store an 8-bit value.
-;   Input is terminated with:
-;   • Space:                read_opts_next
-;   • Execute (newline):    `ret` (as read_opts.execute)
+;   ♠AHL  ♣CDE Read ASCII hex digits, depositing the number into HL. If
+;   more digits are read than needed, only the last-entered digits are
+;   used. If bit 7 of A is set, store a 16-bit value, otherwise store an
+;   8-bit value. Input is terminated with:
+;   • Space:                store input; read_opts.next
+;   • Execute (newline):    store input; ret (as read_opts.execute)
 ;   • Cancel (^U/^X):       cancel input and goto read_opts.cancel
 ;
 qoptval     and  $80            ; mask 8/16-bit flag
-            ld   c,a            ;   and save it
+            ld   c,a            ;   and save it for .store, if we call that
             ld   de,0           ; current value
 .next       call rdchar
+            call cancelchar     ; abort option value input and command?
+            jp   Z,read_opts.cancel ; yes
++           call execchar       ; terminate input and execute command?
+            jp   Z,.store       ;   yes (TCO)
+            ;   We're not aborting input, but we can't yet store at this
+            ;   point because we don't know if we might abort after future
+            ;   digit input. Ideally we'd be able to handle backspace here,
+            ;   but that requires not just undoing the last digit added to
+            ;   DE but also knowing how far back we can backspace, which
+            ;   is more code than we'd like to add here right now.
+            call prvischar
             cp   ' '            ; terminate input and continue?
-            jp   NZ,+           ;    no
-            call .store         ;   yes
-            jp   read_opts_next
-+           call execchar
-            halt
+            jp   NZ,.parsedigit ;    no
+            call .store
+            jp   read_opts.next
+            ;
+            ;   Parse digit and add it to DE.
+.parsedigit call qdigit
+            jp   C,.baddigit
+            cp   $10            ; digit > 'F'?
+            jp   NC,.baddigit
+            ld   b,a            ; save new digit
+            ld   a,d
+            rlca                ; lower nybble of D to upper nybble,
+            rlca
+            rlca
+            rlca
+            and  $F0            ; clear lower nybble
+            ld   d,a            ; save upper byte's upper nybble
+            ld   a,e
+            rlca                ; swap upper/lower nybbles
+            rlca
+            rlca
+            rlca
+            ld   c,a            ; save a copy
+            and  a,$F0          ; clear lower nybble
+            ld   e,a            ; save lower byte
+            ld   a,c            ; restore copy
+            and  a,$0F          ; mask out lower (ex-upper) nybble
+            or   a,d            ; combine with upper byte's upper nybble
+            ld   d,a            ; and save it
+            ld   a,e
+            or   a,b            ; mask new digit into E lower nybble
+            ld   e,a
+            jp   .next
+
+.baddigit   call errbeep
+            call backspace      ; always ok because we displayed with prvis
+            jp   .next
 
 .store:     ld   (hl),e         ; store LSB
             ld   a,0
@@ -228,6 +269,9 @@ cmd_E       ld   hl,cmd_E_opts
 ; ----------------------------------------------------------------------
 ;   Support routines
 
+backspace   ld   a,BS           ; backspace over previous char
+            jp   prchar         ; ret (TCO)
+
 ;   ♠A Set Z flag if the char in A is an execute command character (CR or LF).
 execchar    cp   CR
             ret  Z
@@ -240,4 +284,5 @@ cancelchar  cp   CAN
             cp   NAK
             ret
 
+            include "src/i8080/qhex.i80"     ; hex parsing
             include "src/i8080/pr.i80"       ; printing

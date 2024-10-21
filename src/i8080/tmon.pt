@@ -45,7 +45,26 @@ def test_cancelchar(m, S, R, input, expected):
     assert R(Z=expected) == m.regs
 
 ####################################################################
-#   Options and command parsing
+#   Options parsing
+
+@param('char, val', [
+    ('/', None), (':', None), ('@', None), ('`', None), # outside digit range
+    ('0',    0), ('9',    9),                           # decimal range
+    ('A',  0xA), ('F',  0xF), ('f',  0xF), ('a',  0xA), # hex range
+    ('g', None), ('G', None),                           # digits above hex range
+])
+def test_qoptval_parsedigit(m, S, R, char, val):
+    next        = S['qoptval.next']
+    parsedigit  = S['qoptval.parsedigit']
+    baddigit    = S['qoptval.baddigit']
+    m.call(parsedigit, R(a=ord(char), de=0x3456), stopat=[baddigit, next])
+    if val is None:
+        assert R(de=0x3456, pc=baddigit) == m.regs
+    else:
+        assert R(de=0x4560|val, pc=next) == m.regs
+
+####################################################################
+#   Command parsing
 
 @param('input, output, continued', [
     #   All non-printable characters are "bad command" when waiting for command.

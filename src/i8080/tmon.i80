@@ -197,10 +197,10 @@ qoptval     and  $80            ; mask 8/16-bit flag
             rlca
             rlca
             rlca
-            ld   c,a            ; save a copy
+            push af             ; save a copy
             and  a,$F0          ; clear lower nybble
             ld   e,a            ; save lower byte
-            ld   a,c            ; restore copy
+            pop  af             ; restore copy
             and  a,$0F          ; mask out lower (ex-upper) nybble
             or   a,d            ; combine with upper byte's upper nybble
             ld   d,a            ; and save it

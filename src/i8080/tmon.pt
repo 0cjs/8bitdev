@@ -21,6 +21,9 @@ utest_data  db   $FF, $00, $12, $23, $34, $45, $56, $67
 
 param = pytest.mark.parametrize
 
+NAK = b'\x15'   # Ctrl-U
+CAN = b'\x18'   # Ctrl-X
+
 ####################################################################
 #   Support routines
 
@@ -35,7 +38,7 @@ def test_execchar(m, S, R, input, expected):
     assert R(Z=expected) == m.regs
 
 @param('input, expected', [
-    ('\x15',  True), ('\x18',  True),
+    (  NAK,   True), (  CAN,   True),
     ('\x14', False), ('\x16', False),
     ('\x17', False), ('\x19', False),
     ('\x85', False),
@@ -63,6 +66,32 @@ def test_qoptval_parsedigit(m, S, R, char, val):
     else:
         assert R(de=0x4560|val, pc=next) == m.regs
 
+@param('size, stored, input', [
+    #   We always check the word value; for byte values the MSB is $EE.
+    ( 8, 0xEE00, b' '),       ( 8, 0xEE00, b'\n'),      ( 8, 0xEEEE, CAN),
+    (16, 0x0000, b' '),       (16, 0x0000, b'\n'),      (16, 0xEEEE, CAN),
+    ( 8, 0xEE01, b'1 '),      ( 8, 0xEE0F, b'F '),      ( 8, 0xEE0F, b'f '),
+    (16, 0x0001, b'1 '),      (16, 0x000F, b'F '),      (16, 0x000F, b'f '),
+    ( 8, 0xEE34, b'1234 '),   (16, 0x3456, b'123456 '),
+    ( 8, 0xEE23, b'123\n'),   (16, 0x6789, b'123456789\n'),
+    ( 8, 0xEEEE, b'123'+CAN), (16, 0xEEEE, b'1234567'+NAK),
+])
+def test_qoptval_store(m, S, R, loadbios, size, stored, input):
+    ' This covers all of qoptval, so test_qoptval_parsedigit must be passing. '
+    next = S['read_opts.next']
+    execute = S['read_opts.execute']
+    cancel = S['read_opts.cancel']
+
+    if   size ==  8:  a = 0x00
+    elif size == 16:  a = 0x80
+    else:             raise ValueError('size must be 8 or 16')
+
+    loadbios(input=input)
+    m.depword(0xF002, 0xEEEE)
+    m.call(S.qoptval, R(a=a, hl=0xF002), stopat=[next, execute, cancel])
+    print(m.hexdump(0xF000, 6))
+    assert stored == m.word(0xF002)
+
 ####################################################################
 #   Command parsing
 
@@ -83,8 +112,8 @@ def test_qoptval_parsedigit(m, S, R, char, val):
     #   Q command is the simplest to test
     (b'q\n',    b'.q\n',    False),     # lower case command
     (b'Q  \r',  b'.Q  \n',  False),     # upper case command, spaces ignored
-    (b'q\x15',  b'.q\\\n',  True ),     # cancel with Ctrl-U
-    (b'q\x18',  b'.q\\\n',  True ),     # cancel with Ctrl-X
+    (b'q'+NAK,  b'.q\\\n',  True ),     # cancel with Ctrl-U
+    (b'q'+CAN,  b'.q\\\n',  True ),     # cancel with Ctrl-X
 ])
 def test_prompt(m, loadbios, S, R,  input, output, continued):
     pnext = S['prompt.next']

@@ -128,11 +128,11 @@ def test_e_settings(m, loadbios, S, R):
 
 @param('input, output, continued', [
     #   All non-printable characters are "bad command" when waiting for command.
-    (b'\x00',   b'.\a\r',     True ),
-    (b'\n',     b'.\a\r',     True ),
-    (b'\r',     b'.\a\r',     True ),
-    (b'\x1F',   b'.\a\r',     True ),
-    (b'\x7F',   b'.\a\r',     True ),
+    (b'\x00',   b'.@\a\r',  True),
+    (b'\n',     b'.J\a\r',  True),
+    (b'\r',     b'.M\a\r',  True),
+    (b'\x1F',   b'._\a\r',  True),
+    (b'\x7F',   b'.?\a\r',  True),
 
     #   Printable invalid commands are echoed and backspaced over to
     #   leave the incorrect command visible.

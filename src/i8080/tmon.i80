@@ -72,11 +72,7 @@ init        ld   hl,0
 prompt      ld   a,'.'
             call prchar         ; prompt
 .read       call rdchar
-            cp   ' '            ; printable?
-            jp   C,.err         ;    no: err without echoing it
-            cp   DEL
-            jp   Z,.err
-            call prchar         ; echo input
+            call prvischar      ; echo input visibly
             and  UPCASE         ; force to upper case
             ;   Dispatch command if we match one.
             ;   Commands must generate their own initial newline; see above.
@@ -102,24 +98,20 @@ prompt      ld   a,'.'
 ;
 read_opts   ld   (cmd_opt_tab),hl  ; save options table
 .next       call rdchar
-            cp   SPACE          ; ignore spaces.
-            jp   Z,.space
             call execchar       ; execute command?
-            jp   Z,.execute     ;   yes
+            ret  Z              ;   yes: continue running command
             call cancelchar     ; cancel command?
-            jp   Z,.cancel      ;   yes
-            cp   ' '            ; other non-printable?
-            jp   C,.badopt      ;    no: err without echoing it
-            cp   DEL            ; all chars DEL and above
-            jp   NC,.badopt     ;   are considered non-printable
-            call prchar
+            jp   Z,.cancel      ;   yes: go back to prompt
+            call prvischar
+            cp   SPACE          ; ignore spaces.
+            jp   Z,read_opts
             ;
 .parse_opt  ld   hl,(cmd_opt_tab)
             and  a,UPCASE
             ld   b,a            ; table entry to match
 .tabnext    ld   a,(hl)         ; option char from table
             or   a,a            ; end of table?
-            jp   Z,.badoptBS    ;   yes: char does not match an option
+            jp   Z,.badopt      ;   yes: char does not match an option
             and  a,$7F          ; clear table char high bit (option size)
             cp   a,b            ; this option matches?
             jp   Z,.foundopt    ;   yes: process option
@@ -136,9 +128,8 @@ read_opts   ld   (cmd_opt_tab),hl  ; save options table
             ld   l,b            ; load location LSB
             jp   qoptval        ; A=value size, HL=store location
             ;
-.badoptBS   call backspace      ; backspace over bad option
-            call prchar
-.badopt     call errbeep
+.badopt     call backspace      ; backspace over bad option
+            call errbeep
             jp   read_opts.next
             ;
 .execute    ret
@@ -149,8 +140,6 @@ read_opts   ld   (cmd_opt_tab),hl  ; save options table
             call prnl
             jp   prompt.next
             ;
-.space      call prchar
-            jp   read_opts
 
 ;   ♠AHL  ♣CDE Read ASCII hex digits, depositing the number into HL. If
 ;   more digits are read than needed, only the last-entered digits are

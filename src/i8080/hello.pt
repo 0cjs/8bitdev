@@ -5,7 +5,7 @@ test_rig = '''
             cpu 8080
             z80syntax exclusive
             org $C000
-            include testmc/i8080/tmc/bios.i80
+            include testmc/i8080/tmc/biosdef.i80
             include src/i8080/hello.i80
 '''
 

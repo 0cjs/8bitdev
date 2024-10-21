@@ -5,7 +5,7 @@ test_rig = '''
             cpu 6502
             org $1F00
             include src/mos65/std.a65
-            include "testmc/mos65/tmc/bios.a65"     ; defs for unit test BIOS
+            include "testmc/mos65/tmc/biosdef.a65"  ; defs for unit test BIOS
 pristr_ptr  equ $33
             include src/mos65/pristr.a65            ; code under test
 

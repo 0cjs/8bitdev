@@ -21,6 +21,9 @@ utest_data  db   $FF, $00, $12, $23, $34, $45, $56, $67
 
 param = pytest.mark.parametrize
 
+####################################################################
+#   Support routines
+
 @param('input, expected', [
     ('\n',    True), ('\r',    True),
     ('\x09', False), ('\x0B', False),
@@ -30,6 +33,19 @@ param = pytest.mark.parametrize
 def test_execchar(m, S, R, input, expected):
     m.call(S.execchar, R(a=ord(input), Z=not expected), trace=1)
     assert R(Z=expected) == m.regs
+
+@param('input, expected', [
+    ('\x15',  True), ('\x18',  True),
+    ('\x14', False), ('\x16', False),
+    ('\x17', False), ('\x19', False),
+    ('\x85', False),
+])
+def test_cancelchar(m, S, R, input, expected):
+    m.call(S.cancelchar, R(a=ord(input), Z=not expected), trace=1)
+    assert R(Z=expected) == m.regs
+
+####################################################################
+#   Options and command parsing
 
 @param('input, output, continued', [
     #   All non-printable characters are "bad command" when waiting for command.

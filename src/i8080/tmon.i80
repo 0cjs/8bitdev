@@ -103,16 +103,12 @@ prompt      ld   a,'.'
 read_opts   ld   (cmd_opt_tab),hl  ; save options table
 read_opts_next
             call rdchar
-            cp   SPACE          ; Ignore spaces.
+            cp   SPACE          ; ignore spaces.
             jp   Z,.space
-            cp   CR             ; Execute command
-            jp   Z,.execute
-            cp   LF
-            jp   Z,.execute
-            cp   CAN            ; Cancel command
-            jp   Z,.cancel
-            cp   NAK
-            jp   Z,.cancel
+            call execchar       ; execute command?
+            jp   Z,.execute     ;   yes
+            call cancelchar     ; cancel command?
+            jp   Z,.cancel      ;   yes
             cp   ' '            ; other non-printable?
             jp   C,.badopt      ;    no: err without echoing it
             cp   DEL            ; all chars DEL and above
@@ -184,13 +180,6 @@ qoptval     and  $80            ; mask 8/16-bit flag
             ld   (hl),d
             ret
 
-;   ♠A Set Z flag if the char in A is an execute character (CR or LF).
-execchar    cp   CR
-            ret  Z
-            cp   LF
-            ret
-
-
 ; ----------------------------------------------------------------------
 ;   Quit command
 ;
@@ -238,5 +227,17 @@ cmd_E       ld   hl,cmd_E_opts
 
 ; ----------------------------------------------------------------------
 ;   Support routines
+
+;   ♠A Set Z flag if the char in A is an execute command character (CR or LF).
+execchar    cp   CR
+            ret  Z
+            cp   LF
+            ret
+
+;   ♠A Set Z flag if the char in A is a cancel command character (^U or ^X)
+cancelchar  cp   CAN
+            ret  Z
+            cp   NAK
+            ret
 
             include "src/i8080/pr.i80"       ; printing

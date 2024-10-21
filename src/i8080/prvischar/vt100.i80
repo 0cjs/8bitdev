@@ -1,0 +1,47 @@
+;   prvischar/vt100: VT100 visual character printout
+;
+;   Requires: prchar
+
+;   ♡*   Print any (8-bit) value "visibly" as one character.
+;
+;   Underline control characters, and print high-bit-set characters
+;   in reverse. For more information see prvischar/ascii.*.
+;
+prvischar   push af
+            push bc
+            or   a,a            ; high bit set?
+            jp   P,+            ;    no
+            and  $7F            ; clear bit 7
+            ld   b,'7'          ; activate reverse
+            call .sgr
++           cp   $7F            ; DEL
+            jp   Z,.isctl
+            cp   ' '
+            jp   NC,.done
+.isctl      ;   Flipping bit 6 of a control character moves it up by $40
+            ;   into the upper-case sticks, except for DEL where it's
+            ;   moved down by 40 into the numeric/symbol stick.
+            xor  1 << 6
+            ld   b,'4'          ; underscore
+            call .sgr
+.done       call prchar
+            ld   b,'0'          ; all attributes off
+            call .sgr
+            pop  bc
+            pop  af
+            ret
+
+;   ♠B   VT-100 Select Graphic Rendition:
+;        '0'=off, '1'=bold, '4'=underscore, '7'=reverse
+.sgr        push af             ; save value
+            ld   a,$1B          ; ESC
+            call prchar
+            ld   a,'['
+            call prchar
+            ld   a,b
+            call prchar
+            ld   a,'m'
+            call prchar         ; ret (TCO)
+            pop  af
+            ret
+

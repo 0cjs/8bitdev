@@ -92,6 +92,37 @@ def test_qoptval_store(m, S, R, loadbios, size, stored, input):
     print(m.hexdump(0xF000, 6))
     assert stored == m.word(0xF002)
 
+def test_read_opts_good(m, S, R, loadbios):
+    ostream = loadbios(input=b'  b')
+    optB = ord('B')|0x80
+    testtab = 0xA000; m.deposit(testtab,
+        b'A', b'\xAA\x01', optB, b'\xBB\x02', b'\x00')
+    print('testtab:', m.hexdump(testtab, 8))
+    m.call(S.read_opts, R(hl=testtab), stopat=[S.qoptval])
+    assert R(pc=S.qoptval, a=optB, hl=0x02BB) == m.regs
+
+####################################################################
+#   E Command
+
+def test_e_defaults(m, S, R, loadbios):
+    _, ostream = loadbios(input=b'\n')
+    m.call(S.init, stopat=[S['init.end']])           # testing default values
+    m.call(S.cmd_E, stopat=[S['cmd_E.done']])
+    s = ostream.getvalue()
+    assert b'0000: 00' in s
+    assert b'0018: 00' in s
+    assert s.endswith(b'\n')
+
+def test_e_settings(m, loadbios, S, R):
+    _, ostream = loadbios(input=b'\n')
+    #   2 lines of 5 bytes of known non-zero data.
+    m.depword(S.optEs, S.utest_data)
+    m.deposit(S.optEl, 2)
+    m.deposit(S.optEw, 5)
+    m.call(S.cmd_E, stopat=[S['cmd_E.done']])
+    assert b'\n12AB: FF 00 12 23 34\n12B0: 45 56 67 78 89\n' \
+        == ostream.getvalue()
+
 ####################################################################
 #   Command parsing
 
@@ -115,7 +146,7 @@ def test_qoptval_store(m, S, R, loadbios, size, stored, input):
     (b'q'+NAK,  b'.q\\\n',  True ),     # cancel with Ctrl-U
     (b'q'+CAN,  b'.q\\\n',  True ),     # cancel with Ctrl-X
 ])
-def test_prompt(m, loadbios, S, R,  input, output, continued):
+def test_prompt_q(m, loadbios, S, R,  input, output, continued):
     pnext = S['prompt.next']
     istream, ostream = loadbios(input=input)
     m.call(S.prompt, stopat=[pnext])
@@ -124,21 +155,20 @@ def test_prompt(m, loadbios, S, R,  input, output, continued):
     assert (           b'',             output,           continued) \
         == (istream.read(), ostream.getvalue(),  pnext == m.regs.pc)
 
-def test_e_defaults(m, S, R, loadbios):
-    _, ostream = loadbios(input=b'\n')
-    m.call(S.init, stopat=[S['init.end']])           # testing default values
-    m.call(S.cmd_E, stopat=[S['cmd_E.done']])
-    s = ostream.getvalue()
-    assert b'0000: 00' in s
-    assert b'0018: 00' in s
-    assert s.endswith(b'\n')
 
-def test_e_settings(m, loadbios, S, R):
-    _, ostream = loadbios(input=b'\n')
-    #   2 lines of 5 bytes of known non-zero data.
-    m.depword(S.optEs, S.utest_data)
-    m.deposit(S.optEl, 2)
-    m.deposit(S.optEw, 5)
-    m.call(S.cmd_E, stopat=[S['cmd_E.done']])
-    assert b'\n12AB: FF 00 12 23 34\n12B0: 45 56 67 78 89\n' \
-        == ostream.getvalue()
+def Xtest_prompt_e(m, S, R, loadbios):
+    pnext = S['prompt.next']
+    commands = b'e s12aB l2 w6\nq\nEND'
+    commands = b'e s12aB\nq\nEND'
+    istream, ostream = loadbios(input=commands)
+    try:
+        m.call(S.prompt, stopat=[S['cmd_E.done']], trace=1, maxsteps=10000)
+    except Exception as e:
+        print(f'exception={e}')
+
+    print(f'optEs={m.word(S.optEs):04X}, ' \
+        f'optEl={m.byte(S.optEl)} optEw={m.byte(S.optEw)}')
+    print('output:', ostream.getvalue())
+    output = 'XXX'
+    assert (        b'END',             output) \
+        == (istream.read(), ostream.getvalue())

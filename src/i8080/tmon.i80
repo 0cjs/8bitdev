@@ -130,9 +130,10 @@ read_opts   ld   (cmd_opt_tab),hl  ; save options table
             ;
 .foundopt   ld   a,(hl)         ; load option size (will be masked later)
             inc  hl             ; to option value location (no flags changed)
-            ld   l,(hl)         ; load location LSB
-            inc  hl             ;   and MSB
-            ld   h,(hl)
+            ld   b,(hl)         ; save location LSB
+            inc  hl
+            ld   h,(hl)         ; load location MSB
+            ld   l,b            ; load location LSB
             jp   qoptval        ; A=value size, HL=store location
             ;
 .badoptBS   call backspace      ; backspace over bad option

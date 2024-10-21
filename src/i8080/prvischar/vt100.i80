@@ -1,4 +1,4 @@
-;   prvischar/vt100: VT100 visual character printout
+;   prvischar/vt100: VT100 visual character print
 ;
 ;   Requires: prchar
 
@@ -44,4 +44,3 @@ prvischar   push af
             call prchar         ; ret (TCO)
             pop  af
             ret
-

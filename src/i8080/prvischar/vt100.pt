@@ -1,5 +1,3 @@
-#   XXX heavy duplication of other prvischar tests
-
 from    testmc  import *
 from    testmc.i8080  import Machine
 import  pytest
@@ -14,7 +12,7 @@ test_rig = '''
 
 def sgr(n, s=''): return f'\x1B[{int(n)}m' + s
 
-@pytest.mark.parametrize('char, output', [
+CHAR_OUTPUT = [ (char, output + sgr(0)) for char, output in [
     (0x20, ' '), (0x5A, 'Z'), (0x7E, '~'),              # printable range
     (0xA0, sgr(7, ' ')), (0xDA, sgr(7, 'Z')),           # high bit set
     (0xFE, sgr(7, '~')),
@@ -23,11 +21,12 @@ def sgr(n, s=''): return f'\x1B[{int(n)}m' + s
     (0x80, sgr(7, sgr(4, '@'))),
     (0x9F, sgr(7, sgr(4, '_'))),
     (0x7F, sgr(4, '?')), (0xFF, sgr(7, sgr(4, '?'))),   # DEL is special
-])
-def test_prvischar(m, R, S, loadbios, char, output):
-    _, ostream = loadbios()
-    m.call(S.prvischar, R(a=char))
-    outchar = str(ostream.getvalue(), encoding='ISO-8859-1')
-    assert (output + sgr(0),  R(a=char)) \
-        == (          outchar,   m.regs )
+]]
 
+pytest.register_assert_rewrite('src.i8080.prvischar.test')
+from src.i8080.prvischar.test import prvischar_test
+#   XXX Surely there's a better way to do this than to
+#   have to define a function just to call a function.
+@pytest.mark.parametrize('char, output', CHAR_OUTPUT, ids=tmc_tid)
+def test_prvischar(m, R, S, loadbios, char, output):
+    prvischar_test(m, R, S, loadbios, char, output)

@@ -1,0 +1,33 @@
+#   XXX heavy duplication of other prvischar tests
+
+from    testmc  import *
+from    testmc.i8080  import Machine
+import  pytest
+
+test_rig = '''
+            relaxed on
+            cpu 8080
+            z80syntax exclusive
+            include testmc/i8080/tmc/biosdef.i80
+            include src/i8080/prvischar/vt100.i80
+'''
+
+def sgr(n, s=''): return f'\x1B[{int(n)}m' + s
+
+@pytest.mark.parametrize('char, output', [
+    (0x20, ' '), (0x5A, 'Z'), (0x7E, '~'),              # printable range
+    (0xA0, sgr(7, ' ')), (0xDA, sgr(7, 'Z')),           # high bit set
+    (0xFE, sgr(7, '~')),
+    (0x00, sgr(4, '@')), (0x1F, sgr(4, '_')),           # control chars
+    (0x80, sgr(7, sgr(4, '@'))),                        # hi-bit control chars
+    (0x80, sgr(7, sgr(4, '@'))),
+    (0x9F, sgr(7, sgr(4, '_'))),
+    (0x7F, sgr(4, '?')), (0xFF, sgr(7, sgr(4, '?'))),   # DEL is special
+])
+def test_prvischar(m, R, S, loadbios, char, output):
+    _, ostream = loadbios()
+    m.call(S.prvischar, R(a=char))
+    outchar = str(ostream.getvalue(), encoding='ISO-8859-1')
+    assert (output + sgr(0),  R(a=char)) \
+        == (          outchar,   m.regs )
+

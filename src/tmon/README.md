@@ -33,7 +33,8 @@ Thus both `6` and `12340006` will be interpreted as $0006 for a word value.
 During hexadecimal value input you may also type a single quote (`'`)
 followed by any character, and the ASCII value of that character will be
 taken as the next two digits of input. (This includes characters that are
-otherwise treated specially, such as newline and cancel characters.)
+otherwise treated specially, such as newline and cancel characters.) A
+double quote (`"`) will do the same but with the high bit (bit 7) set.
 
 Parameter value input is terminated by:
 - a space, which will be printed and allow for further parameters to be set

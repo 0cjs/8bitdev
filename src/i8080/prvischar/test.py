@@ -9,4 +9,3 @@ def prvischar_test(m, R, S, loadbios, char, output):
     actual = str(ostream.getvalue(), encoding='ISO-8859-1')
     assert (output,  R(a=char)) \
         == (actual,   m.regs )
-

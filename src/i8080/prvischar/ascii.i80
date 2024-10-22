@@ -1,4 +1,4 @@
-;   prvisual/ascii: ASCII-only visual character printout
+;   prvischar/ascii: ASCII-only visual character print
 ;
 ;   Requires: prchar
 

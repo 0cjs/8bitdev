@@ -1,0 +1,28 @@
+;   prscreenchar/ascii: ASCII-only screen character print
+;
+;   Requires: prchar
+
+;   ♡*   Print any (8-bit) value as its screen code
+;
+;   The output is always a character from the printable ASCII range.
+;   Printable character are printed as-is; non-printing characters are
+;   printed as a space.
+;
+;   This is a generic routine used for testing and as an example, since
+;   ASCII systems do not have separate a separate "screen code" character
+;   set. On systems that do have such a set, `prvischar` would obviously
+;   use that. (On those systems it may require going around the BIOS print
+;   routines, unless they support printing screen codes in some way.)
+;
+;   To provide a more convenient API, this preserves the original character
+;   in A, along with all other registers and flags.
+;
+prscreenchar push af
+            cp   $7F            ; DEL and higher chars
+            jp   NC,.space
+            cp   ' '
+            jp   NC,.done
+.space      ld   a,' '
+.done       call prchar
+            pop  af
+            ret

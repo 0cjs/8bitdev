@@ -5,7 +5,7 @@ This monitor is intended to run on low-memory systems (requiring only a few
 dozen bytes of RAM for work area) and be as small as reasonably possible
 while providing a more convenient interface than traditional monitors.
 
-The monitor is requires a terminal or display that has a non-destructive
+The monitor requires a terminal or display that has a non-destructive
 backspace character (i.e., moves the cursor back without erasing what's
 underneath the cursor); the only I/O routines required are single character
 input and output.
@@ -76,7 +76,8 @@ remembered value is not shared between commands except where noted.)
 - `e####`: an end address; the first address _after_ the range used by the
   command.
 
-This is a summary of the commands, in ASCII (alphabetical) order:
+This is a summary of the commands, in ASCII (alphabetical) order.
+The full command descriptions follow.
 
     '  †ASCII character deposit
     /   calculate and display value
@@ -149,7 +150,7 @@ This is a summary of the commands, in ASCII (alphabetical) order:
   (`l##` × `w##`) and the examine (`e`) command will then be run. This can
   be used to examine forward through memory a page at a time, leaving the
   `e` command's start address at the start of the last examined range when
-  you've found something of interest. this takes the same parameters as the
+  you've found something of interest. This takes the same parameters as the
   `e` command, and all values are shared with the `e` command. Note that if
   you set the `s####` parameter here, it will start on the page _after_
   that address.
@@ -172,8 +173,8 @@ This is a summary of the commands, in ASCII (alphabetical) order:
   - §`t####`: address of target data to find. I.e., the search will find a
     byte in the s/e range that matches the byte at `t####`, the next byte
     must match the byte at `t####`+1, and so on, up to the length of the
-    target data.
-  - §`l##`: The length of the search string at `t####`.
+    target data. (This may be any length up to the size of memory.)
+  - §`l##`: The length of the search string stored at `t####`.
   - §`u##`: Update the find, examine and/or deposit start addresses (bitfield).
     - b0 ($01): Update the find `s####` address to the address at which the
       data were found.
@@ -194,8 +195,10 @@ This is a summary of the commands, in ASCII (alphabetical) order:
 
 - `d` Set deposit options for `.`, `>` and `'` commands.
   - §`s####`: The address at which the next deposit will start.
-  - `e##`: Copy examine start address to deposit start address. `##`
-    must be any non-zero value.
+  - `e##`: Copy examine start address to deposit start address. `##` must
+    be any non-zero value. This is executed _after_ the command is
+    confirmed and so will override any `s####` values given as parameters
+    to the command. If set accidentally, it may be disabled with `e0`.
   - §`a##`: Advance mode. This may be:
     - $00: After executing a deposit command the §`s####` start address for
       the next deposit command will remain the same.
@@ -213,7 +216,7 @@ This is a summary of the commands, in ASCII (alphabetical) order:
 
 - `>` Hex word entry. Works as `>` but displaying two bytes in big-endian
   format, though read and written from memory in the machine's endianness.
-  I.e., on i8080 or 6502 two consective locations containing $CD and $AB
+  I.e., on i8080 or 6502 two consecutive locations containing $CD and $AB
   will be displayed and entered as `ABCD`.
 
 - `'` ASCII entry. Works as to `>` but the value is displayed as an ASCII
@@ -253,7 +256,7 @@ This is a summary of the commands, in ASCII (alphabetical) order:
 - `/` Calculate values. This command has two parameters, §`?####` and
   §`/####`. The `/` parameter value will be added to the `?` parameter
   value and the result will be displayed as hex, visible ASCII and a screen
-  code. Additional the second may be subtracted from the first and
+  code. Additionally the second may be subtracted from the first and
   displayed as hex. (This command is optional and may not be present in all
   monitors.)
 

@@ -22,8 +22,13 @@ numbers. Entering an invalid character will produce an ASCII `BEL`
 and the cursor will be backspaced over the invalid character.
 
 The first character after the prompt must be one of the commands below.
-This may be followed by spaces (which are printed but ignored), and command
-_parameters,_ each of which must be followed by a _parameter value._
+Commands marked with a dagger (†) execute immediately; most commands
+(including all that take parameters) must be confirmed with a newline
+or cancelled with a cancel character.
+
+Commands that do not immediately execute may be be followed by spaces
+(which are printed but ignored), and command _parameters,_ each of which
+must be followed by a _parameter value._
 
 Parameter values come in two sizes: byte (two hex digits) or word (16 bits;
 four hex digits), represented below by `x##` and `x####`. Missing leading
@@ -73,15 +78,13 @@ remembered value is not shared between commands except where noted.)
 
 This is a summary of the commands, in ASCII (alphabetical) order:
 
-    '   ASCII character deposit at updating address
+    '  †ASCII character deposit
     /   calculate and display value
-    <   hex byte deposit at updating address
-    >   hex word deposit at updating address
-    =   set updating address for associated deposit commands
+    .  †hex byte deposit
+    >  †hex word deposit
     :   deposit Intel hex record
-    b   copy `d` deposit address to updating address
     c   Copy memory
-    d   Deposit to memory while examining it
+    d   set Deposit options
     e   Examine memory
     f   Find data in memory
     i   Interrupt return
@@ -93,8 +96,13 @@ This is a summary of the commands, in ASCII (alphabetical) order:
     q   Quit (exit) monitor
     r   examine/edit Registers
     s   deposit Motorola S-record
+    t   Transfer memory To storage device
     v   checksum (Verify) memory
-    w   Write memory data to storage device
+    w  †Walk through (fast examine) memory
+
+    Unused letters: a b  g h  m n  u  x y z
+
+    XXX fill (can be done with copy?)
 
 #### Execution
 
@@ -115,7 +123,8 @@ This is a summary of the commands, in ASCII (alphabetical) order:
 - `q` Quit. Execute an `RTS` instruction, returning to the program that
   called the monitor. Depending on the system and the tmon entry point
   used, this may return to a default system monitor, BASIC or similar.
-  Simulators will generally exit.
+  Simulators will generally exit. Though this takes no parameters, it
+  still requires confirmation (a newline) to avoid accidental exits.
 
 #### Examining Machine State
 
@@ -135,12 +144,26 @@ This is a summary of the commands, in ASCII (alphabetical) order:
       without a built-in display.)
     - b3-7: Ignored.
 
+- `w` "Walkthrough" examination of memory. The `e` command's start address
+  `s####` will be updated to add the number of bytes it would display
+  (`l##` × `w##`) and the examine (`e`) command will then be run. This can
+  be used to examine forward through memory a page at a time, leaving the
+  `e` command's start address at the start of the last examined range when
+  you've found something of interest. this takes the same parameters as the
+  `e` command, and all values are shared with the `e` command. Note that if
+  you set the `s####` parameter here, it will start on the page _after_
+  that address.
+
 - `r` Examine/edit registers and flags. Execution with no parameters will
   display all registers and flags.
   - 8080/8085 parameters: `f##` (flags), `a##`, `b####` (BC pair),
     `d####` (DE pair), `h####` (HL pair), `s####` (stack pointer).
   - 6800 parameters: `f##` (flags), `a##`, `b##`, `x####`, `s####` (stack).
   - 6502 parameters: `f##` (flags), `a##`, `x##`, `y##`, `s##` (stack).
+
+- `p` Read from I/O port. The only parameter is §`p##` or §`p####` for the
+  port number, depending on the size of the I/O address space. This applies
+  to machines with a separate I/O address space only.
 
 - `f` Find data in memory. This command is optional and may not exist in
   all implementations. The parameters are:
@@ -151,6 +174,13 @@ This is a summary of the commands, in ASCII (alphabetical) order:
     must match the byte at `t####`+1, and so on, up to the length of the
     target data.
   - §`l##`: The length of the search string at `t####`.
+  - §`u##`: Update the find, examine and/or deposit start addresses (bitfield).
+    - b0 ($01): Update the find `s####` address to the address at which the
+      data were found.
+    - b1 ($02): Update the examine `s####` address to the address at which
+      the data were found.
+    - b2 ($04): Update the deposit `s####` address to the address at which
+      the data were found.
 
 - `v` Checksum ("Verify") memory, starting at §`s####` up to (but not
   including) §`e####/`, and print the result. Both `s` and `e` parameter
@@ -160,25 +190,37 @@ This is a summary of the commands, in ASCII (alphabetical) order:
     computed by, for each character, rotating right the accumulated 16-bit
     sum and then adding the character value to it.
 
-- `p` Read from I/O port. The only parameter is §`p##` or §`p####` for the
-  port number, depending on the size of the I/O address space. This applies
-  to machines with a separate I/O address space only.
-
 #### Depositing Data
 
-- `d` Deposit/examine byte by byte, starting at §`s####`. After pressing
-  Enter this will display the current start address and current value at
-  that address in hex, `##`, which is then backspaced over. Pressing space
-  will preserve the value at that location and skip to the next location;
-  entering one or two hex digits followed by space will update the value at
-  that location. Either way, it will then print a space and the next byte
-  for similar skip/entry. Every eight bytes a new line will be started with
-  the next address displayed again. Terminate the command by pressing
-  Enter.
+- `d` Set deposit options for `.`, `>` and `'` commands.
+  - §`s####`: The address at which the next deposit will start.
+  - `e##`: Copy examine start address to deposit start address. `##`
+    must be any non-zero value.
+  - §`a##`: Advance mode. This may be:
+    - $00: After executing a deposit command the §`s####` start address for
+      the next deposit command will remain the same.
+    - $01: After executing a deposit command, the §`s####` start address
+      will be updated to the address after the last deposited, so the
+      deposited will start filling memory after the last deposited byte.
+  - §`q##`: Deposit data echo/quiet (optional).
 
-- `c` Copy memory from §`s####` up to (but not including) §`e####` to
-  location §`t####` (target). The `s` and `e` parameters are shared with
-  the `f` (Find) command above.
+- `<` Hex byte entry. The byte at the current address is displayed as two
+  digits `##` and then backspaced over. Entering a space will skip to the
+  next address, leaving that value intact in memory. Entering one or two
+  digits followed by a space will replace that value in memory. Newline
+  terminates entry and, if advance mode is set, updates the deposit start
+  address to the address after the one where you terminated this command.
+
+- `>` Hex word entry. Works as `>` but displaying two bytes in big-endian
+  format, though read and written from memory in the machine's endianness.
+  I.e., on i8080 or 6502 two consective locations containing $CD and $AB
+  will be displayed and entered as `ABCD`.
+
+- `'` ASCII entry. Works as to `>` but the value is displayed as an ASCII
+  character using the same visible print routine as the `E` examine
+  command's ASCII option. Typing a single letter or symbol (including
+  space) immediately enters that value. (It is not possible to skip over
+  locations in this mode.)
 
 - `:` Deposit Intel hex record. All data from the colon to the next newline
   is read as [Intel hex format][intel] and deposited into memory at the
@@ -196,41 +238,15 @@ This is a summary of the commands, in ASCII (alphabetical) order:
   and §`d##` for the data to write. This applies to machines with a
   separate I/O address space only.
 
-All of the following commands share a common current address, known as the
-"updating address." Unlike most commands, the address is updated with each
-byte or word of data entered. That is, where using `d` a second time will
-start at the same address as `d` did the previous time, using `<` to enter
-a byte followed by `'` to enter a character will place those values into
-two consecutive addresses and the next use of any of these commands will
-start at the address after that.
-
-- `<` Hex byte entry at updating `=` address. The byte at the current
-  address is displayed as two digits `##` and then backspaced over.
-  Entering a space will skip to the next address, leaving that value intact
-  in memory. Entering one or two digits followed by a space will replace
-  that value in memory. Newline terminates entry.
-- `>` Hex word entry at updating `=` address. Works as `>` but displaying
-  two bytes in big-endian format, though read and written from memory in
-  the machine's endianness. I.e., on Z80 two consective locations
-  containing $CD and $AB will be displayed and entered as `ABCD`.
-- `'` ASCII entry at updating `=` address. Similar to `>` but the value is
-  displayed as an ASCII character, if printable, or a space otherwise.
-  Typing a single letter or symbol (including space) immediately enters
-  that value. (It is not possible to skip over locations in this mode.)
-
-The common "current" address of the above commands may be set with:
-
-- `=` Set updating address for hex/ASCII entry. This has no parameter
-  letters, but immediately takes a non-optional §`####` address.
-- `b` Copy `d` (deposit) start address to hex/ASCII entry address. This is
-  essentially the same as `=` except that the address is optional, and the
-  default value is the `s####` address memorised for `d`. (Mnemonic:
-  reversed 'd'.)
+- `c` Copy memory from §`s####` up to (but not including) §`e####` to
+  location §`t####` (target). The `s` and `e` parameters are shared with
+  the `f` (Find) command above.
 
 #### External Storage
 
 - `l`: Load data from device to memory. (Parameters TBD. `v##` for verify?)
-- `w`: Write memory data to device. (Parameters TBD.)
+- `t`: Transfer data from memory to device (mnemonic, "To").
+  (Parameters TBD.)
 
 #### Miscellaneous Commands
 

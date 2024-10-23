@@ -1,14 +1,30 @@
 tmon: A Monitor for Tiny Systems
 ================================
 
-This monitor is intended to run on low-memory systems (requiring only a few
-dozen bytes of RAM for work area) and be as small as reasonably possible
-while providing a more convenient interface than traditional monitors.
+`tmon` is a monitor intended to be small and run on systems with minimal
+memory, while providing a full-featured and convenient user interface.
+
+The general goals are to have:
+* Reasonably small code size: under 2 KB and ideally around 1 KB.
+* Very minimal RAM usage: just 2-3 dozen bytes so it can run on e.g. a 6802
+  with only its 128 bytes of internal RAM.
+* Significantly better features than many home computers' built-in
+  monitors.
+* A user interface focused on convenience. For example, remembering
+  recently used addresses so you need not continually re-type them and
+  allowing you to intersperse hex and ASCII data input.
+* Efficient use of the display, allowing you to display just what you need
+  and minimise non-informational printing to reduce useful information
+  scrolling off the screen.
 
 The monitor requires a terminal or display that has a non-destructive
 backspace character (i.e., moves the cursor back without erasing what's
 underneath the cursor); the only I/O routines required are single character
 input and output.
+
+
+Usage
+-----
 
 Where "newline" is used below this refers to the ASCII `CR`/Ctrl-M or
 `LF`/Ctrl-J characters or the Enter key on a system with built-in keyboard.

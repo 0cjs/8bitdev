@@ -174,7 +174,8 @@ prompt      ld   sp,monstack
 ;   position to indicate that the command has been cancelled, print
 ;   a newline, and then restart the prompt, which will reload the
 ;   the stack pointer to be at the base of the monitor stack.
-cancel      ld   a,BACKSLASH    ; indicate cancelled
+cancel      call  pr4clear      ; clear any displayed value
+            ld   a,BACKSLASH    ; indicate cancelled
             call prchar
             call prnl
 .prompt     jp   prompt
@@ -222,36 +223,39 @@ read_params ld   (w0),hl        ; save params table
             inc  hl
             ld   h,(hl)         ; load location MSB
             ld   l,b            ; load location LSB
-            jp   qhex           ; C=value size, HL=store location
+            call qhex           ; C=value size, HL=store location
+            ret  Z              ; input terminated w/execute; exec command
+            jp   .next
             ;
 .bad        call prback         ; backspace over bad param name
             call errbeep
             jp   .next
-            ;
-.execute    ret
 
-;   ♠CHL ♣ABDE ♡C   Read ASCII hex digits and update byte or word.
+;   ♠CHL ♣ABDE ♡C   Read ASCII hex digits and update byte or word (HL).
 ;
-;   If c=0 this reads and stores an 8-bit value, otherwise a 16-bit value.
+;   This reads and stores an 8-bit (C=0) or 16-bit (C=*) value.
+;   The existing value (HL) is displayed and the cursor is backspaced
+;   to the start of the value.
 ;
-;   The existing value at (HL) is displayed and the cursor is backspaced
-;   to the start of the value. 
-;   If a new value is read, it is deposited into (HL); space will keep
-;   the current value and move the cursor past it. In either case, HL
-;   is incremented to point at the address after the value.
+;   At this point the user may type an initial character:
+;   • a space to preserve the curent value:
+;     returns Z=0 ("continue input") and HL moved past the value
+;   • a `qexec` character to preserve the current value:
+;     returns Z=1 ("execute") and HL is moved past the value
+;   • a `cqcancel` character to preserve the current value:
+;     jumps to `cancel` instead of returning; HL left at the value
+;   • a digit to start entering a new value
 ;
-;   If input is cancelled, nothing is updated and HL is left where it is.
+;   Once a digit has been typed, the user may terminate digit input with:
+;   • a space to store the new value in (HL):
+;     returns Z=0 ("continue input") and HL moved past the value
+;   • a `qexec` character to store the new value in (HL):
+;     returns Z=1 ("execute") and HL is moved past the value
+;   • a `cqcancel` character to preserve the current value:
+;     jumps to `cancel` instead of returning; HL left at the value
 ;
 ;   If more digits than needed are entered the least-significant
 ;   (last-entered) digits are used.
-;
-;   Input is terminated with:
-;   • Space:             "next": store input; inc HL; jp read_params.next
-;   • Execute (newline): "exec": store input; inc HL; ret (read_params.execute)
-;   • Cancel (^U/^X):    "cancel";                    jp cancel
-;
-;   Note that this is expected to be invoked with `jp`, NOT with `call`;
-;   it relies on `ret` to end `read_params` execution.
 ;
 qhex        call prhexval       ; load (DE=val B=#digits) and print curval
             ld   a,BS           ; backspace to
@@ -286,15 +290,17 @@ qhex        call prhexval       ; load (DE=val B=#digits) and print curval
             jp   Z,.parsecharhi ;   yes
             cp   ' '            ; terminate input and continue?
             jp   NZ,.parsedigit ;    no
-            call .storeDE
-            jp   read_params.next
+            jp   .storeDE       ; ret (TCO)
 
-.keepval    call prhexval       ; print value again
+.keepval    push af
+            call prhexval       ; print value again
             call prspace
-            call .storeDE       ; increment HL (extra store is no-op)
-            jp   read_params.next ; back to parsing parameter names
+            pop  af
+            jp   .storeDE       ; increment HL, set Z, ret (TCO)
+                                ;   (extra store is no-op)
 
-.storeDE    ld   (hl),e         ; store LSB
+.storeDE    push af             ; preserve input termination char
+            ld   (hl),e         ; store LSB
             ld   a,0
             or   a,c            ; 16-bit flag set?
             jp   Z,.sdone       ;  no
@@ -305,6 +311,8 @@ qhex        call prhexval       ; load (DE=val B=#digits) and print curval
             ;   entered chars and reprint the value, so that you see any
             ;   leading 0 digits, but that seems more work than worthwhile.
             call pr4clear       ; clear extra digits if entered # was shorter
+            pop  af             ; restore input termination char
+            call qexec          ; set Z flag if it was an execute char
             ret
 
             ;   Parse digit and add it to DE.

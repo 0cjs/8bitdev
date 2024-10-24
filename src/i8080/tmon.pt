@@ -81,7 +81,7 @@ def test_qoptval_parsedigit(m, S, R, char, val):
     #   We always check the word value; for byte values the MSB is $EE.
     ( 8, 0xEEEE, b' '),       (16, 0xEEEE, b' '),   # keep curval, more params
     ( 8, 0xEEEE, b'\n'),      (16, 0xEEEE, b'\r'),  # keep curval, execute
-    (-8, 0xEEEE, NAK),        (-16, 0xEEEE, CAN),    # keep curval, cancel
+    ( 8, 0xEEEE, NAK),        (16, 0xEEEE, CAN),    # keep curval, cancel
     ( 8, 0xEE00, b'0 '),      (16, 0x0000, b'0 '),  # replace curval
     ( 8, 0xEE01, b'1 '),      ( 8, 0xEE0F, b'F '),      ( 8, 0xEE0F, b'f '),
     (16, 0x0001, b'1 '),      (16, 0x000F, b'F '),      (16, 0x000F, b'f '),
@@ -89,24 +89,29 @@ def test_qoptval_parsedigit(m, S, R, char, val):
     ( 8, 0xEE00, b"'\x00 "),  (16, 0x0D7A, b"'\r'z "),
     ( 8, 0xEE80, b'"\x00 '),  (16, 0xFFFE, b'"\x7F"~ '),
     ( 8, 0xEE23, b'123\n'),   (16, 0x6789, b'123456789\n'),
-    (-8, 0xEEEE, b'123'+CAN), (-16, 0xEEEE, b'1234567'+NAK),
+    ( 8, 0xEEEE, b'123'+CAN), (16, 0xEEEE, b'1234567'+NAK),
 ], ids=tmc_tid)
 def test_qhex_and_store(m, S, R, loadbios, size, stored, input):
     ' This covers all of qhex, so test_qoptval_parsedigit must be passing. '
-    next = S['read_params.next']
-    execute = S['read_params.execute']
-
-    if   size ==   8: c = 0x00; hlincr = 1  # 8 bits, saved
-    elif size ==  -8: c = 0x00; hlincr = 0  # 8 bits, cancelled
-    elif size ==  16: c = 0x80; hlincr = 2  # 16 bits, saved
-    elif size == -16: c = 0x80; hlincr = 0  # 16 bits, cancelled
+    if   size ==   8: c = 0x00; incr = 1  # 8 bits, saved
+    elif size ==  16: c = 0x80; incr = 2  # 16 bits, saved
     else:             raise ValueError('bad size')
+    valp = 0xF002
 
     loadbios(input=input)
     m.depword(0xF002, 0xEEEE)
-    m.call(S.qhex, R(c=c, hl=0xF002), stopat=[next, execute, S.cancel])
+    m.call(S.qhex, R(c=c, hl=0xF002), stopat=[S.cancel], trace=1)
     print(m.hexdump(0xF000, 6))
-    assert (stored, 0xF002 + hlincr) == (m.word(0xF002), m.hl)
+
+    term = input.endswith
+    if term(NAK) or term(CAN):
+        assert(S.cancel, stored, valp     ) == (  m.pc, m.word(valp), m.hl)
+    elif term(b'\r') or term(b'\n'):
+        assert(  R(Z=1), stored, valp+incr) == (m.regs, m.word(valp), m.hl)
+    elif term(b' '):
+        assert(  R(Z=0), stored, valp+incr) == (m.regs, m.word(valp), m.hl)
+    else:
+        raise ValueError(f'unterminated test data: {input!r}')
 
 def test_read_params_good(m, S, R, loadbios):
     ostream = loadbios(input=b'  b')
@@ -245,8 +250,8 @@ def test_prompt_q_nocancel(m, loadbios, S, R,  input, output, continued):
         == (istream.read(), ostream.getvalue(),  pdone == m.regs.pc)
 
 @param('input, output', [
-    (b'q'+NAK,  b'.q\\\n'),     # cancel with Ctrl-U
-    (b'q'+CAN,  b'.q\\\n'),     # cancel with Ctrl-X
+    (b'q'+NAK,  b'.q    \b\b\b\b\\\n'),     # cancel with Ctrl-U
+    (b'q'+CAN,  b'.q    \b\b\b\b\\\n'),     # cancel with Ctrl-X
 ])
 def test_prompt_cancel(m, loadbios, S, R,  input, output):
     cancel_done = S['cancel.prompt']

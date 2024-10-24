@@ -268,8 +268,10 @@ qhex        call prhexval       ; print current value; returns length in B
 .next       call rdchar
 .startval   call cqcancel       ; cancel command if requested
             jp   Z,cancel       ;   yes
+            ;   At this point we've had input before the exec char, or
+            ;   we would have exec'd above. So we must store it.
 +           call qexec          ; terminate input and execute command?
-            jp   Z,.store       ;   yes (TCO)
+            jp   Z,.storeDE     ;   yes (TCO)
             ;   We're not aborting input, but we can't yet store at this
             ;   point because we don't know if we might abort after future
             ;   digit input. Ideally we'd be able to handle backspace here,
@@ -284,7 +286,7 @@ qhex        call prhexval       ; print current value; returns length in B
             jp   Z,.parsecharhi ;   yes
             cp   ' '            ; terminate input and continue?
             jp   NZ,.parsedigit ;    no
-            call .store
+            call .storeDE
             jp   read_params.next
 
 .keepval    call prhexval       ; print value again
@@ -296,7 +298,7 @@ qhex        call prhexval       ; print current value; returns length in B
 .kdone      inc  hl             ; return next location
             jp   read_params.next ; back to parsing parameter names
 
-.store:     ld   (hl),e         ; store LSB
+.storeDE    ld   (hl),e         ; store LSB
             ld   a,0
             or   a,c            ; 16-bit flag set?
             jp   Z,.sdone       ;  no
@@ -544,19 +546,23 @@ prsphexA    push af
             pop  af
             jp   prhexA         ; ret (TCO)
 
-;   ♠CHL,B ♣A ♡*   Print hex value at HL, returning # of digits in B.
+;   ♠CHL,BDE ♣A ♡CHL   Print 2-byte (C=0) or 4-byte (C=*) value (HL).
+;                      Return value in DE and # of digits in B.
 ;   C=0: print 2-digit byte; C=*: print 4-digit word.
 ;   On return, B is set to the length printed, 2 or 4.
 prhexval    ld   b,2            ; default to 2-digit word
+            ld   d,$00          ;   with returned MSB zero just in case
             ld   a,0
             or   a,c            ; print 4-digit word?
             jp   Z,.print2      ;    no
             ld   b,4            ; update digit count
             inc  hl             ; move up to MSB
-            ld   a,(hl)
+            ld   d,(hl)
+            ld   a,d
             call prhexA
             dec  hl             ; move down to LSB
-.print2     ld   a,(hl)
+.print2     ld   e,(hl)
+            ld   a,e
             jp   prhexA         ; ret (TCO)
 
             include "src/i8080/pr.i80"       ; printing

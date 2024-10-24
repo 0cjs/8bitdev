@@ -1,0 +1,48 @@
+''' CRC-16-CCITT checksum test
+    XXX The core of these tests should be pulled up to the generic level.
+'''
+
+from    testmc  import tmc_tid
+from    testmc.i8080  import  Machine
+from    binascii  import crc_hqx
+import  pytest
+
+test_rig = '''
+            relaxed on
+            cpu 8080
+            z80syntax exclusive
+            org $8000
+            include src/i8080/checksum/crc_16_ccitt.i80
+'''
+
+@pytest.mark.parametrize('crc, input', [
+    #   These from answers to: https://stackoverflow.com/q/1918090/107294
+    (0xB1E4, [0x12, 0x34, 0x56, 0x70]),
+    (0x1AAD, [0x5A, 0x26, 0x19, 0x77]),
+    (0x29B1, b'123456789'),
+    (  None, [0]),
+    (  None, [0, 0]),
+    (  None, [0, 0, 0, 0]),
+])
+def test_cksum_crc_16_ccitt(m, S, R, crc, input):
+    if crc is None:
+        crc = crc_hqx(bytes(input), 0xFFFF)
+    m.deposit(0x4001, input)
+    m.call(S.cksum_crc_16_ccitt, R(de=0x4001, c=len(input)))
+    print(f'${m.hl:04X}: {m.hexdump(0x4001, len(input))[6:]}')
+    assert crc == m.hl, f'expected ${m.hl:04X}'
+
+@pytest.mark.parametrize('len', [
+    0x0001, 0x00FF,     # partial bocks only
+    0x0101, 0x032F,     # full blocks + partial block
+    0x0100, 0x0400,     # full blocks only
+], ids=tmc_tid)
+def test_lcksum_crc_16_ccitt(m, S, R, len):
+    data              = [0xED]
+    if len > 2: data += [0] * (len-2) 
+    if len > 1: data += [0xEE]
+
+    m.deposit(0x4002, data)
+    crc = crc_hqx(bytes(data), 0xFFFF)
+    m.call(S.lcksum_crc_16_ccitt, R(de=0x4002, bc=len))
+    assert crc == m.hl, f'expected ${crc:04X} got ${m.hl:04X}'

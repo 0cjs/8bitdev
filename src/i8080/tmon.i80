@@ -253,7 +253,7 @@ read_params ld   (w0),hl        ; save params table
 ;   Note that this is expected to be invoked with `jp`, NOT with `call`;
 ;   it relies on `ret` to end `read_params` execution.
 ;
-qhex        call prhexval       ; print current value; returns length in B
+qhex        call prhexval       ; load (DE=val B=#digits) and print curval
             ld   a,BS           ; backspace to
             call prBchars       ;   start of printed value
             call rdchar         ; first char requires special processing:
@@ -262,7 +262,7 @@ qhex        call prhexval       ; print current value; returns length in B
             jp   Z,.keepval     ;   yes
             call qexec          ; keep current value and execute?
             jp   Z,.keepval     ;   yes
-            ld   de,0           ; init current value
+            ld   de,0           ; set leading digits 0 for entering new value
             jp   .startval
 
 .next       call rdchar
@@ -291,11 +291,7 @@ qhex        call prhexval       ; print current value; returns length in B
 
 .keepval    call prhexval       ; print value again
             call prspace
-            ld   a,0
-            or   a,c            ; 16-bit flag set?
-            jp   Z,.kdone       ;    no: just one increment
-            inc  hl             ;   yes: increment twice
-.kdone      inc  hl             ; return next location
+            call .storeDE       ; increment HL (extra store is no-op)
             jp   read_params.next ; back to parsing parameter names
 
 .storeDE    ld   (hl),e         ; store LSB

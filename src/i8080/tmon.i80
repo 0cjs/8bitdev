@@ -287,8 +287,7 @@ qhex        call prhexval       ; print current value; returns length in B
             call .store
             jp   read_params.next
 
-.keepval    call clearfwd       ; clear printed value; sets B=0
-            call prhexval       ; print value again
+.keepval    call prhexval       ; print value again
             call prspace
             ld   a,0
             or   a,c            ; 16-bit flag set?
@@ -304,6 +303,10 @@ qhex        call prhexval       ; print current value; returns length in B
             inc  hl             ;   yes: store MSB
             ld   (hl),d
 .sdone      inc  hl;            ; return next location
+            ;   It would acually be a bit nicer here to back up over all the
+            ;   entered chars and reprint the value, so that you see any
+            ;   leading 0 digits, but that seems more work than worthwhile.
+            call pr4clear       ; clear extra digits if entered # was shorter
             ret
 
             ;   Parse digit and add it to DE.
@@ -431,7 +434,7 @@ cmd_E       ld   hl,cmd_E_params
 ;   at (w0) using the routine in HL. If the bit is not set, just return.
 ;
 prEdata     ld   (w2),hl        ; save address of pr* routine
-            ld   hl,vEf         ; in the formats bitfield
+            ld   hl,vEf         ; formats bitfield address
             and  a,(hl)         ;   is our bit set?
             ret  Z              ;      no: just return
             ;
@@ -529,9 +532,9 @@ prBchars    push bc
             pop  bc
             ret
 
-;   ♣AB ♡CDE   Clear B spaces from the cursor forward.
-;   (Prints B spaces followed by B backspaces.)
-clearfwd    ld   a,' '
+;   ♣AB ♡CDE   Print 4 spaces, 4 backspaces to clear ahead of cursor.
+pr4clear    ld   a,' '
+            ld   b,4
             call prBchars
             ld   a,BS
             jp   prBchars       ; ret (TCO)

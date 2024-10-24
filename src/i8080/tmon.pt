@@ -261,12 +261,15 @@ def test_prompt_e(m, S, R, loadbios):
     m.call(S.init, stopat=[S['init.end']])  # testing default values
     m.call(S.prompt, stopat=[S.exit], maxsteps=10000)
 
+    bs2 = b'\b\b'; bs4 = b'\b\b\b\b'; clr = b'    ' + bs4
+    expected = b'.e s0000' + bs4 + b'12aB ' + clr \
+             + b'l04' + bs2 + b'2 ' + clr \
+             + b'w08' + bs2 + b'6' + clr + b'\n' \
+             + b'12AB: FF 00 12 23 34 45\n12B1: 56 67 78 89 9A AB\n' \
+             + b'.q\n'
+    actual = ostream.getvalue()
+
     print(f'vEs={m.word(S.vEs):04X}, ' \
         f'vEl={m.byte(S.vEl)} vEw={m.byte(S.vEw)}')
-    print('output:', ostream.getvalue())
-    expected = \
-        b'.e s0000\x08\x08\x08\x0812aB l04\x08\x082 w08\x08\x086\n' \
-        b'12AB: FF 00 12 23 34 45\n12B1: 56 67 78 89 9A AB\n' \
-        b'.q\n'
-    assert (        b'END',           expected) \
-        == (istream.read(), ostream.getvalue())
+    print(f'{expected!r}\n{actual!r}')
+    assert (b'END', expected) == (istream.read(),   actual)

@@ -195,8 +195,7 @@ read_params ld   (w0),hl        ; save params table
 .next       call rdchar
             call qexec          ; execute command?
             ret  Z              ;   yes: continue running command
-            call qcancel        ; cancel command?
-            jp   Z,cancel       ;   yes: go back to prompt
+            call cqcancel       ; cancel command if requested
             call prvischar
             cp   SPACE          ; ignore spaces.
             jp   Z,read_params
@@ -267,7 +266,7 @@ qhex        call prhexval       ; print current value; returns length in B
             jp   .startval
 
 .next       call rdchar
-.startval   call qcancel        ; abort param value input and command?
+.startval   call cqcancel       ; cancel command if requested
             jp   Z,cancel       ;   yes
 +           call qexec          ; terminate input and execute command?
             jp   Z,.store       ;   yes (TCO)
@@ -500,10 +499,13 @@ qexec       cp   CR
             cp   LF
             ret
 
-;   ♠A Set Z flag if the char in A is a cancel command character (^U or ^X)
-qcancel     cp   CAN
-            ret  Z
+;   ♠A ♡A   If the char in A is a cancel command character (^U or ^X)
+;           cancel the current command and go back to the prompt,
+;           otherwise just return.
+cqcancel    cp   CAN
+            jp   Z,cancel
             cp   NAK
+            jp   Z,cancel
             ret
 
             include "src/i8080/qhex.i80"     ; hex parsing

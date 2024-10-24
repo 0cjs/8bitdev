@@ -44,15 +44,19 @@ def test_qexec(m, S, R, input, expected):
     m.call(S.qexec, R(a=ord(input), Z=not expected), trace=1)
     assert R(Z=expected) == m.regs
 
-@param('input, expected', [
+@param('char, cancelled', [
     (  NAK,   True), (  CAN,   True),
     ('\x14', False), ('\x16', False),
     ('\x17', False), ('\x19', False),
     ('\x85', False),
 ])
-def test_qcancel(m, S, R, input, expected):
-    m.call(S.qcancel, R(a=ord(input), Z=not expected), trace=1)
-    assert R(Z=expected) == m.regs
+def test_cqcancel(m, S, R, char, cancelled):
+    m.call(S.cqcancel, R(a=ord(char)), stopat=[S.cancel])
+    if cancelled:
+        assert R(pc=S.cancel) == m.regs
+    else:
+        assert S.cancel != m.pc
+        assert R(a=ord(char)) == m.regs      # preserved A
 
 ####################################################################
 #   Options parsing

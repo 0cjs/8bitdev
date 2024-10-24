@@ -1,21 +1,8 @@
 ;   tmon - "tiny" (relatively) 8080 monitor
 ;
 ;   See the README for the user documentation.
-;
-;   Symbol naming:
-;   • pr*   print routines
-;   • q*    parsing routines
-;   • vXx*  memorised parameter values; X=command name; x=parameter name
-
-;   XXX The commands currently continue not by calling `prompt` but by
-;       calling `prompt.next`, solely because that's how the tests
-;       determine that we are going on to parse the next command.
-;       (If they request a halt on `prompt`, it halts immediately on
-;       the call, and we'd have to find some way to continue execution
-;       until the next time it reaches `prompt`.)
 
 ; ----------------------------------------------------------------------
-
 ;   This requires the system-dependent files define the following before
 ;   including this file:
 ;   • tmon_ram: the workspace area, which must be RAM. No code or data
@@ -28,6 +15,12 @@
     set ______,
     pushv , tmon_rom, tmon_ram, tmon_stksz
     popv  , ______,     ______,     ______
+
+; ----------------------------------------------------------------------
+;   Symbol naming:
+;   • pr*   print routines
+;   • q*    parsing routines
+;   • vXx*  memorised parameter values; X=command name; x=parameter name
 
 ; ----------------------------------------------------------------------
 ;   Character definitions
@@ -153,13 +146,13 @@ prompt      ld   sp,monstack
             cp   '@'
             jp   C,.noupcase
             and  UPCASE         ; force to upper case
+.noupcase
             ;   Dispatch command if we match one.
             ;   • Commands are not called but are jumped to; they must
-            ;     themselves come back here via a jump to `prompt.next`.
+            ;     themselves come back here via a jump to `prompt.
             ;   • Commands must generate their own initial newline; see above.
             ;   • Commands that execute immediately rather than waiting for
             ;     parameters and/or confirmation are marked with a dagger (†).
-.noupcase
             cp   '.'            ; deposit bytes
             jp   Z,cmd_dot
             cp   'D'
@@ -174,7 +167,7 @@ prompt      ld   sp,monstack
 .err        call errbeep
             ld   a,CR           ; back up over bad command and prompt
             call prchar
-.next       jp   prompt         ; this label used as breakpoint
+.done       jp   prompt         ; this label used as breakpoint
 
 ;   This may be used (via `jp`) by a routine at any call depth to cancel
 ;   the current command. It will print a backslash at the current cursor
@@ -431,7 +424,7 @@ cmd_E       ld   hl,cmd_E_params
             dec  e
             jp   NZ,.startline
             ;
-.done       jp   prompt.next
+.done       jp   prompt
 
 
 ;   ♠AHL(w0) ♣*(w2)   prEdata: If the bit in A is set in (vEf), i.e., if
@@ -487,7 +480,7 @@ cmd_D       xor  a,a
             jp   Z,.done        ;   no
             ld   hl,(vEs)
             ld   (vDs),hl
-.done       jp   prompt.next
+.done       jp   prompt
 
 cmd_dot     ld   c,0            ; qhex size flag: 8-bit stores (preserved)
             call prcr           ; use existing line for entry
@@ -496,7 +489,7 @@ cmd_dot     ld   c,0            ; qhex size flag: 8-bit stores (preserved)
             call prspace
             ;
 .done       call prnl
-            jp   prompt.next
+            jp   prompt
 
 ; ----------------------------------------------------------------------
 ;   Parsing Routines `q*`

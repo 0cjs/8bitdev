@@ -232,13 +232,13 @@ def test_d_copyaddr(m, S, R, loadbios):
     (b'Q  \r',  b'.Q  \n',  False),     # upper case command, spaces ignored
 ])
 def test_prompt_q_nocancel(m, loadbios, S, R,  input, output, continued):
-    pnext = S['prompt.next']
+    pdone = S['prompt.done']
     istream, ostream = loadbios(input=input)
-    m.call(S.prompt, stopat=[pnext, S.exit])
+    m.call(S.prompt, stopat=[pdone, S.exit])
 
-    print(f'pnext=${pnext:04X}  {m.regs}')
+    print(f'pdone=${pdone:04X}  {m.regs}')
     assert (           b'',             output,           continued) \
-        == (istream.read(), ostream.getvalue(),  pnext == m.regs.pc)
+        == (istream.read(), ostream.getvalue(),  pdone == m.regs.pc)
 
 @param('input, output', [
     (b'q'+NAK,  b'.q\\\n'),     # cancel with Ctrl-U

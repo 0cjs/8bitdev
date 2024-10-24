@@ -201,9 +201,11 @@ The full command descriptions follow.
 
 - `v` Checksum ("Verify") memory, starting at §`s####` up to (but not
   including) §`e####/`, and print the result. Both `s` and `e` parameter
-  values are shared with the `c` (Copy) command below. The algorithm is
-  selected with §`f##` (mnemonic "Format"), and is one of:
-  - 0: [BSD checksum], as used by the Unix `sum` utility. A 16-bit checksum
+  values are shared with the `c` (Copy) command below. A CRC-16-CCITT
+  checksum algorithm is always available; optionally an `f##` parameter
+  (mnemonic "Format") can select other algorithms. If available, they are:
+  - $00: [CRC-16-CCITT][] (x¹⁶+x¹²+x⁵+1), used by Xmodem and many other tools.
+  - $01: [BSD checksum], as used by the Unix `sum` utility. A 16-bit checksum
     computed by, for each character, rotating right the accumulated 16-bit
     sum and then adding the character value to it.
 
@@ -290,4 +292,7 @@ that.
 <!-------------------------------------------------------------------->
 [intel]: https://en.wikipedia.org/wiki/Intel_HEX
 [motorola]: https://en.wikipedia.org/wiki/SREC_(file_format)
+
+<!-- checksum algorithms -->
 [BSD checksum]: https://en.wikipedia.org/wiki/BSD_checksum
+[CRC-16-CCITT]: https://en.wikipedia.org/wiki/Cyclic_redundancy_check#Polynomial_representations

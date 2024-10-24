@@ -145,8 +145,7 @@ init        ld   hl,0
 ;   same line.
 ;
 ;
-prompt      ld   hl,monstack
-            ld   sp,hl
+prompt      ld   sp,monstack
             ld   a,'.'
             call prchar         ; prompt
 .read       call rdchar

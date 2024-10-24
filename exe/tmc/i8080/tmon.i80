@@ -14,7 +14,7 @@ tmon_rom    equ  $300           ; easy to remember and use
 
             org  $2F0           ; just below the monitor code; above data
 
-tmc         jp   init
+tmc         jp   entry
 
 exit        ld   a,$EF          ; request simulator exit by writing $EF
             ld   ($FE),a        ;   to location $FE

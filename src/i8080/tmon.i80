@@ -38,12 +38,30 @@ BACKSLASH   equ  '\\'
 UPCASE      equ  %11011111      ; lower case ASCII AND with this for upper case
 
 ; ----------------------------------------------------------------------
+;   Other definitions
+
+JP          equ  $C3            ; 8080 JMP instruction
+
+; ----------------------------------------------------------------------
 ;   RAM Work Area
 
             org  tmon_ram
 
 stack_bot   ds   tmon_stksz
 monstack                        ; first push will deposit below this
+
+;   Registers
+ureg_FA
+ureg_F      ds   1
+ureg_A      ds   1
+ureg_BC     ds   2
+ureg_DE     ds   2
+ureg_HL     ds   2
+ureg_SP     ds   2
+ureg_PC     ds   2
+
+;   Execution parameters
+vJKs        ds   2      ; start address for J/K execution
 
 ;   Examine parameters
 vEs         ds   2      ; start addr
@@ -55,15 +73,6 @@ vEw         ds   1      ; # of bytes per line ("width")
 ;   Deposit parameters
 vDs         ds   2      ; start addr
 vDa         ds   1      ; advance mode $00=off, $01=on
-
-;   Registers
-ureg_A      ds   1
-ureg_F      ds   1
-ureg_BC     ds   2
-ureg_DE     ds   2
-ureg_HL     ds   2
-ureg_SP     ds   2
-ureg_PC     ds   2
 
 ;   Work area
 w0                              ; temporary storage
@@ -85,7 +94,7 @@ b3          ds   1
 ;   via an NMI or similar that routine would have to save the PC before
 ;   coming here.
 ;
-start       di                  ; ensure as best we can nothing will touch stack
+entry       di                  ; ensure as best we can nothing will touch stack
             ld   (ureg_A),a
             ld   a,0            ; We must save the carry separately here
             jp   NC,.savecarry  ;   because the DAD we use later will
@@ -116,9 +125,14 @@ start       di                  ; ensure as best we can nothing will touch stack
             ei                  ; interrupts can now use our stack
 .done
 
+;   XXX this should not wipe out our current parameters if they're valid;
+;   we init only on a "cold" start or if user code has stomped on our
+;   work area. Probably do this with a checksum check.
+;
 ;   XXX Once this is large enough, we should probably have a default set of
 ;   data we just copy to `tmon_ram`, rather than setting bytes individually.
 ;   Also, this wants to vary per machine, e.g., for screen width.
+;
 init        ld   hl,0
             ld   (vEs),hl       ; examine cmd start addr: $0000
             ld   a,1
@@ -161,6 +175,10 @@ prompt      ld   sp,monstack
             jp   Z,cmd_D        ; set deposit options
             cp   'E'
             jp   Z,cmd_E        ; examine memory
+            cp   'J'
+            jp   Z,cmd_J        ; jump to address
+            cp   'K'
+            jp   Z,cmd_K        ; call address
             cp   'Q'
             jp   Z,cmd_Q        ; quit
             cp   'W'
@@ -364,10 +382,44 @@ qhex        call prhexval       ; load (DE=val B=#digits) and print curval
             jp   .next
 
 ; ----------------------------------------------------------------------
-;   Quit command
-;
-;   The caller must ensure that a `ret` will return to the right system
-;   software, e.g., by pushing an appropriate return addr on the stack.
+;   Execution commands
+
+cmd_JK_params   db   'S'|$80    ; start address of execution
+                dw   vJKs
+                db   0
+
+cmd_J       halt                ; XXX exactly like cmd_K but w/o the push?
+
+;   ♣(b0,b1,b2)   Call location
+cmd_K       ld   hl,cmd_JK_params
+            call read_params
+            call prnl
+.exec
+            ;   Set up the trampoline so we can jump to the start address
+            ;   without using any registers
+            ld   a,JP
+            ld   hl,(vJKs)      ; start addr for execution
+            ld   (ureg_PC),hl   ; set last known user PC
+            ld   (b0),a
+            ld   (b1),hl
+            ;   Switch to user stack.
+            ld   hl,(ureg_SP)
+            ld   sp,hl
+            ;   Push return address on user stack.
+            ld   hl,entry
+            push hl
+            ;   Restore all registers (except SP, already done above)
+            ld   hl,(ureg_FA)
+            push hl
+            ld   hl,(ureg_BC)
+            push hl
+            ld   hl,(ureg_DE)
+            push hl
+            ld   hl,(ureg_HL)
+            pop  de
+            pop  bc
+            pop  af
+            jp   b0             ; trampoline into user code
 
 cmd_Q       ld   hl,no_params   ; no parameters,
             call read_params    ;   but must confirm/cancel

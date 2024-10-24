@@ -20,6 +20,8 @@ tmon_rom    equ  $8000
 ;   We should never reach this; tests should stopat=[S.exit].
 exit        halt
 
+usercode    ret         ; for testing jump (J) and call (K)
+
             ;   data for testing E command and similar
             org  $12AB
 utest_data  db   $FF, $00, $12, $23, $34, $45, $56, $67
@@ -187,20 +189,42 @@ def hexlist(xs):
 #   https://docs.python.org/3/library/warnings.html#warning-filter
 @pytest.mark.filterwarnings(
     'ignore:.*simulator will not generate interrupts:UserWarning')
-def test_start(m, S, R):
-    regs = R(pc=S.start,
+def test_entry(m, S, R):
+    regs = R(pc=S.entry,
              a=0xFE, bc=0x2345, de=0x6789, hl=0xABCD, sp=0xEF01,
              S=1, Z=1, H=1, P=1, C=1)
     m.setregs(regs)
-    m.stepto(stopat=[S['start.done']])
-    actual = [ i for i in m.bytes(S.ureg_A, 10) ]
+    m.stepto(stopat=[S['entry.done']])
+    actual = [ i for i in m.bytes(S.ureg_FA, 10) ]
 
     flags = 0b11010111  # on 8080, unused b5,b3 are clear, unused b1 is set
-    expected = [ 0xFE, flags,
+    expected = [ flags, 0xFE,
         0x45, 0x23, 0x89, 0x67, 0xCD, 0xAB, 0x01, 0xEF ]
-    print(hexlist(expected))
-    print(hexlist(actual))
+    print('expected', hexlist(expected))
+    print('  actual', hexlist(actual))
     assert expected == actual
+
+####################################################################
+#   Commands: Execution
+
+def test_K(m, S, R):
+    ' Call a RET instruction in user code. '
+    userstack = 0xFF80
+    r = R( a=0x12, S=1, Z=1, H=0, P=1, C=0,
+           bc=0x3456, de=0x789A, hl=0xBCDE,
+           sp=userstack - 2)
+
+    m.deposit(S.ureg_FA, [ r.f, r.a ])
+    m.depword(S.ureg_BC, [ r.bc, r.de, r.hl, userstack, 0x0000 ])  # sentinel PC
+    m.depword(S.vJKs, S.usercode)
+    print('   vJKs', m.hexdump(S.vJKs, 2))
+    print('ureg_FA', m.hexdump(S.ureg_FA, 10))
+
+    m.pc = S['cmd_K.exec']
+    m.stepto(stopat=[S.usercode], maxsteps=50)
+    assert S.usercode == m.word(S.ureg_PC)
+    assert r == m.regs
+    #   XXX test the `ret`
 
 ####################################################################
 #   Commands: Deposit

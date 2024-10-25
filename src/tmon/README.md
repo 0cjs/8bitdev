@@ -9,7 +9,7 @@ The general goals are to have:
 * Very minimal RAM usage: just 2-3 dozen bytes so it can run on e.g. a 6802
   with only its 128 bytes of internal RAM.
 * Significantly better features than many home computers' built-in
-  monitors.
+  monitors, including properly handling the user code stack.
 * A user interface focused on convenience. For example, remembering
   recently used addresses so you need not continually re-type them and
   allowing you to intersperse hex and ASCII data input.

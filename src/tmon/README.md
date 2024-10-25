@@ -1,8 +1,9 @@
-tmon: A Monitor for Tiny Systems
-================================
+tmon: The Tolerable Monitor
+===========================
 
 `tmon` is a monitor intended to be small and run on systems with minimal
-memory, while providing a full-featured and convenient user interface.
+memory, while providing a full-featured and convenient user interface. You
+may think of the "t" as standing for "tolerable" and (moderately) "tiny."
 
 The general goals are to have:
 * Reasonably small code size: under 2 KB and ideally around 1 KB.

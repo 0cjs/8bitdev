@@ -173,8 +173,11 @@ The full command descriptions follow.
 
 - `r` Examine/edit registers and flags. Execution with no parameters will
   display all registers and flags.
-  - 8080/8085 parameters: `f##` (flags), `a##`, `b####` (BC pair),
-    `d####` (DE pair), `h####` (HL pair), `s####` (stack pointer).
+  - 8080/8085 parameters: `f##` (flags), `a##`, `b##`, `c##`, `d##`, `e##`,
+    `h##`, `l##`, `p####` (program counter), `s####` (stack pointer),
+    `m##` (HL pair; mnemonic "Memory access register"),
+    `t##` (DL pair; mnemonic "Target address"),
+    `i##` (BC pair; mnemonic "Index counter")
   - 6800 parameters: `f##` (flags), `a##`, `b##`, `x####`, `s####` (stack).
   - 6502 parameters: `f##` (flags), `a##`, `x##`, `y##`, `s##` (stack).
 

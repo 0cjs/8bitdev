@@ -272,11 +272,9 @@ The full command descriptions follow.
 #### Miscellaneous Commands
 
 - `/` Calculate values. This command has two parameters, §`?####` and
-  §`/####`. The `/` parameter value will be added to the `?` parameter
-  value and the result will be displayed as hex, visible ASCII and a screen
-  code. Additionally the second may be subtracted from the first and
-  displayed as hex. (This command is optional and may not be present in all
-  monitors.)
+  §`/####`. It displays the values of `?`, `/`, the sum of the two in hex,
+  the character and screen code of the LSB of that result, and the same
+  again for the difference `?` - `/`.
 
 
 Notes

@@ -229,7 +229,7 @@ The full command descriptions follow.
       deposited will start filling memory after the last deposited byte.
   - §`q##`: Deposit data echo/quiet (optional).
 
-- `<` Hex byte entry. The byte at the current address is displayed as two
+- `.` Hex byte entry. The byte at the current address is displayed as two
   digits `##` and then backspaced over. Entering a space will skip to the
   next address, leaving that value intact in memory. Entering one or two
   digits followed by a space will replace that value in memory. Newline

@@ -48,13 +48,19 @@ UPCASE      equ  %11011111      ; (lower case ASCII) ∧ UPCASE → upper case
 
 JP          equ  $C3            ; 8080 JMP instruction
 
-;   byte-valued parameter: char followed by addr at which to store byte value
+;   Command character and address of command code definition.
+cmd         macro   char,addr
+            cp   a,char
+            jp   Z,addr
+            endm
+
+;   Byte-valued parameter: char followed by addr at which to store byte value.
 pb          macro char,addr
             db    char
             dw    addr
             endm
 
-;   word-valued parameter: char followed by addr at which to store word value
+;   Word-valued parameter: char followed by addr at which to store word value.
 pw          macro char,addr
             db    char|$80
             dw    addr
@@ -214,36 +220,21 @@ prompt      ld   sp,monstack
             ;   • Commands must generate their own initial newline; see above.
             ;   • Commands that execute immediately rather than waiting for
             ;     parameters and/or confirmation are marked with a dagger (†).
-            cp   "'"            ; deposit ASCII
-            jp   Z,cmd_quote
-            cp   '.'            ; deposit bytes
-            jp   Z,cmd_dot
-            cp   '/'            ; calculate
-            jp   Z,cmd_slash
-            cp   '>'            ; deposit words
-            jp   Z,cmd_gt
-            cp   'D'
-            jp   Z,cmd_D        ; set deposit options
-            cp   'E'
-            jp   Z,cmd_E        ; examine memory
-            cp   'I'
-            jp   Z,cmd_I        ; jump to address
-            cp   'J'
-            jp   Z,cmd_J        ; jump to address
-            cp   'K'
-            jp   Z,cmd_K        ; call address
-            cp   'O'
-            jp   Z,cmd_O        ; output to port
-            cp   'P'
-            jp   Z,cmd_P        ; input from port
-            cp   'Q'
-            jp   Z,cmd_Q        ; quit
-            cp   'R'
-            jp   Z,cmd_R        ; register set/display
-            cp   'V'
-            jp   Z,cmd_V        ; checksum
-            cp   'W'
-            jp   Z,cmd_W        ; † walk forward memory examine
+            cmd  "'",cmd_deposit_ascii
+            cmd  '.',cmd_deposit_bytes
+            cmd  '/',cmd_calculate
+            cmd  '>',cmd_deposit_words
+            cmd  'D',cmd_deposit_params
+            cmd  'E',cmd_examine_cur
+            cmd  'I',cmd_iret
+            cmd  'J',cmd_jump
+            cmd  'K',cmd_call
+            cmd  'O',cmd_port_out
+            cmd  'P',cmd_port_in
+            cmd  'Q',cmd_quit
+            cmd  'R',cmd_regs
+            cmd  'V',cmd_cksum
+            cmd  'W',cmd_examine_next
             ;   No command; generate error.
 .err        call errbeep
             ld   a,CR           ; back up over bad command and prompt
@@ -482,17 +473,18 @@ qhex        call prhexval       ; load (DE=val B=#digits) and print curval
 ; ----------------------------------------------------------------------
 ;   Execution commands
 
-cmd_JK_params   pw   'S',vJKs   ; start address of execution
-                db   0
+ptab_jump_call
+            pw   'S',vJKs       ; start address of execution
+            db   0
 
-cmd_I       ld   hl,no_params
+cmd_iret    ld   hl,ptab_none
             or   a,$FF          ; NZ: no push ret addr, ret
             jp   cmd_JKI
 
-cmd_J       or   a,$01          ; NZ: no push ret addr, jump
+cmd_jump    or   a,$01          ; NZ: no push ret addr, jump
             jp   cmd_JK
 
-cmd_K       or   a,$00          ;  Z: push ret addr, jump
+cmd_call    or   a,$00          ;  Z: push ret addr, jump
             ; fallthrough
 
 ;   ♣(t0b,t1b,t2b)   Execute location
@@ -502,7 +494,7 @@ cmd_K       or   a,$00          ;  Z: push ret addr, jump
 ;   • A=FF,NZ  call: push return to monitor addr on user stack
 ;   • A=FE,NZ  ret:  RET to addr on user stack, e.g. from RST entry to monitor
 ;
-cmd_JK      ld   hl,cmd_JK_params
+cmd_JK      ld   hl,ptab_jump_call
 cmd_JKI     push af             ; save execution mode in A, Z flag
             call read_params
             call prnl
@@ -539,7 +531,7 @@ cmd_JKI     push af             ; save execution mode in A, Z flag
 +           pop  af
             ret                 ; return from interrupt
 
-cmd_Q       ld   hl,no_params   ; no parameters,
+cmd_quit    ld   hl,ptab_none   ; no parameters,
             call read_params    ;   but must confirm/cancel
             call prnl
             jp   exit           ; system-supplied routine
@@ -547,11 +539,12 @@ cmd_Q       ld   hl,no_params   ; no parameters,
 ; ----------------------------------------------------------------------
 ;   Examine commands
 
-cmd_E_params    pw   'S',vEs    ; start: 16-bit value
-                pb   'F',vEf    ; formats bitfield (see above)
-                pb   'L',vEl    ; number of lines to print: 8-bit value
-                pb   'W',vEw    ; width (# of bytes to print): 8-bit value
-no_params       db   0          ; end of table
+ptab_examine
+            pw   'S',vEs    ; start: 16-bit value
+            pb   'F',vEf    ; formats bitfield (see above)
+            pb   'L',vEl    ; number of lines to print: 8-bit value
+            pb   'W',vEw    ; width (# of bytes to print): 8-bit value
+ptab_none   db   0          ; end of table
 
 ;   Load E and W cmd params into registers.
 getparams_EW ld  hl,(vEs)       ; start address parameter
@@ -564,15 +557,17 @@ getparams_EW ld  hl,(vEs)       ; start address parameter
             ld   e,a            ; DE: number of lines to dump
             ret
 
-cmd_W       call prcr           ; we will overwrite the command line
+cmd_examine_next
+            call prcr           ; we will overwrite the command line
             call getparams_EW   ; BC=bytes/line, DE=lines
 .addpage    add  hl,bc          ; add to start addr no. of bytes per line
             dec  e              ;   as many times as lines to dump
             jp   NZ,.addpage
             ld   (vEs),hl       ; update start address
-            jp   cmd_E.noparams ; and do the dump
+            jp   cmd_examine_cur.noparams  ; and do the dump
 
-cmd_E       ld   hl,cmd_E_params
+cmd_examine_cur
+            ld   hl,ptab_examine
             call read_params
             call prnl
 .noparams   call getparams_EW   ; BC=bytes/line DE=lines, HL=(t0w)=curline addr
@@ -635,7 +630,7 @@ prEdata     ld   (t2w),hl       ; save address of pr* routine
             jp   NZ,.nextbyte   ;    no: carry on
             ret
 
-cmd_R_params    pb   'F',ureg_F     ; flags
+ptab_regs       pb   'F',ureg_F     ; flags
                 pb   'A',ureg_A
                 pb   'B',ureg_B
                 pb   'C',ureg_C
@@ -650,7 +645,7 @@ cmd_R_params    pb   'F',ureg_F     ; flags
                 pw   'I',ureg_BC    ; mnemonic "Index" (like a count)
                 db 0
 
-cmd_R       ld   hl,cmd_R_params
+cmd_regs    ld   hl,ptab_regs
             call read_params
 .exec       call prcr           ; overwrite line, since we display everything
             ld   hl,(ureg_PC)
@@ -705,15 +700,17 @@ flagchars   db   'S'-1, 'Z'-1, 0-1, 'H'-1, 0-1, 'P'-1, 0-1, 'C'-1
 ; ----------------------------------------------------------------------
 ;   Deposit Commands
 
-cmd_D_params    pw   'S',vDs    ; start: 16-bit value
-                pb   'A',vDa    ; advance mode
-                pb   'E',t2b    ; copy examine start address: temp store
-                                ;   (t0w/t0b,t1b is used by `read_params`)
-                db   0          ; end of table
+ptab_deposit_params
+            pw   'S',vDs    ; start: 16-bit value
+            pb   'A',vDa    ; advance mode
+            pb   'E',t2b    ; copy examine start address: temp store
+                            ;   (t0w/t0b,t1b is used by `read_params`)
+            db   0          ; end of table
 
-cmd_D       xor  a,a
+cmd_deposit_params
+            xor  a,a
             ld   (t2b),a
-            ld   hl,cmd_D_params
+            ld   hl,ptab_deposit_params
             call read_params
             call prnl
             ld   a,(t2b)         ; copy examine start address?
@@ -723,10 +720,16 @@ cmd_D       xor  a,a
             ld   (vDs),hl
 .end        jp   prompt
 
-cmd_gt      ld   c,1            ; qhex size flag: 16-bit stores (preserved)
-            jp   cmd_dot1
-cmd_dot     ld   c,0            ; qhex size flag: 8-bit stores (preserved)
-cmd_dot1    call prcr           ; use existing line for entry
+cmd_deposit_words
+            ld   c,1            ; qhex size flag: 16-bit stores (preserved)
+            jp   cmd_deposit_hex
+
+cmd_deposit_bytes
+            ld   c,0            ; qhex size flag: 8-bit stores (preserved)
+            ; fallthrough
+
+cmd_deposit_hex
+            call prcr           ; use existing line for entry
             ld  hl,(vDs)        ; start address
             call praddrHL
             call prspace
@@ -745,7 +748,8 @@ depaddr     call prcr           ; use existing line for entry
             call prspace
             ret
 
-cmd_quote   call depaddr
+cmd_deposit_ascii
+            call depaddr
             ld   c,0            ; qhex size flag: 8-bit values in Ctrl-D mode
             dec  hl
 .next       inc  hl
@@ -782,13 +786,13 @@ cmd_quote   call depaddr
 ; ----------------------------------------------------------------------
 ;   Checksum and Copy Commands
 
-cmd_CV_params   pw   'S',vCVs   ; start: 16-bit value
+ptab_source     pw   'S',vCVs   ; start: 16-bit value
                 pw   'E',vCVe   ; end: 16-bit value
                 db   0
 
 ;   Currently we support only the required CRC-16-CCITT algorithm,
 ;   and thus do not bother with an `f##` parameter.
-cmd_V       ld   hl,cmd_CV_params
+cmd_cksum   ld   hl,ptab_source
             call read_params
 .exec       call prcr           ; overprint with "start.end =cksum"
             ld   hl,(vCVs)
@@ -817,31 +821,34 @@ cmd_V       ld   hl,cmd_CV_params
 ; ----------------------------------------------------------------------
 ;   Other Commands
 
-cmd_P_params    pw   'P',vPp
-                db   0
+ptab_port_in
+            pb   'P',vPp
+            db   0
 
-cmd_P       ld   hl,cmd_P_params
+cmd_port_in
+            ld   hl,ptab_port_in
             call read_params
             ld   a,(vPp)
             ld   c,a                ; port number
             ld   a,$DB              ; OUT instruction
-            jp   cmd_OP_cont
+            jp   cmd_port_cont
 
-cmd_O_params    pb  'P',vOp
-                pb  'D',vOd
-                db   0
+ptab_port_out
+            pb  'P',vOp
+            pb  'D',vOd
+            db   0
 
-cmd_O       ld   hl,cmd_O_params
+cmd_port_out
+            ld   hl,ptab_port_out
             call read_params
             ld   a,(vOp)
             ld   c,a                ; port number
             ld   a,(vOd)
             ld   d,a                ; data to write
             ld   a,$D3              ; OUT instruction
-            jp   cmd_OP_cont
             ;    fallthrough
 
-cmd_OP_cont ;   Set up trampoline
+cmd_port_cont ;  Set up trampoline
             ld   (t0b),a        ; IN/OUT instruction
             ld   a,c
             ld   (t1b),a        ; port to read/write
@@ -854,11 +861,13 @@ cmd_OP_cont ;   Set up trampoline
             call prnl
             jp   prompt
 
-cmd_slash_params    pw  '?',vSLASHq     ; left value: 16 bits
-                    pw   '/',vSLASHs    ; right value: 16 bits
-                    db   0
+ptab_calculate
+            pw  '?',vSLASHq     ; left value: 16 bits
+            pw   '/',vSLASHs    ; right value: 16 bits
+            db   0
 
-cmd_slash   ld   hl,cmd_slash_params
+cmd_calculate
+            ld   hl,ptab_calculate
             call read_params
 .exec       call prcr           ; output on same line, since we print inputs
             ;   Left/right input values

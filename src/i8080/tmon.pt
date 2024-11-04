@@ -195,7 +195,7 @@ def test_prEdata_fset(m, S, R, loadbios):
 def test_E_defaults(m, S, R, loadbios):
     _, ostream = loadbios(input=b'\n')
     m.call(S.init, stopat=[S['init.end']])           # testing default values
-    m.call(S.cmd_E, stopat=[S['cmd_E.end']])
+    m.call(S.cmd_examine_cur, stopat=[S['cmd_examine_cur.end']])
     s = ostream.getvalue();  print(s.decode('ASCII'))
     assert b'0000: 00' in s
     assert b'0018: 00' in s
@@ -208,7 +208,7 @@ def test_E_settings(m, S, R, loadbios):
     m.deposit(S.vEf, 7)              # hex, ascii, screencodes
     m.deposit(S.vEl, 2)
     m.deposit(S.vEw, 5)
-    m.call(S.cmd_E, stopat=[S['cmd_E.end']])
+    m.call(S.cmd_examine_cur, stopat=[S['cmd_examine_cur.end']])
     s = ostream.getvalue()
     print(s)
     assert b'\n' \
@@ -219,7 +219,7 @@ def test_E_settings(m, S, R, loadbios):
 def test_W_defaults(m, S, R, loadbios):
     _, ostream = loadbios(input=b'\n')
     m.call(S.init, stopat=[S['init.end']])           # testing default values
-    m.call(S.cmd_W, stopat=[S['cmd_E.end']])
+    m.call(S.cmd_examine_next, stopat=[S['cmd_examine_cur.end']])
     s = ostream.getvalue()
     print(f'vEs={m.word(S.vEs):04X} t0w={m.word(S.t0w):04X}',
         s.decode('ASCII'))
@@ -243,7 +243,7 @@ def test_R_print(m, S, R, loadbios):
     _, ostream = loadbios()
     m.deposit(S.ureg_AF, [0xD7, 0x12])
     m.depword(S.ureg_BC, [0x2345, 0x6789, 0xABCD, 0xEFFE, 0xFEEF])
-    m.call(S['cmd_R.exec'], stopat=[S['cmd_R.end']])
+    m.call(S['cmd_regs.exec'], stopat=[S['cmd_regs.end']])
     assert b'\rFEEF EFFE SZHPC 12 2345 6789 ABCD\n' \
         == ostream.getvalue()
 '''
@@ -262,7 +262,7 @@ FEEF EFFE 12 2345 6789 ABCD D7
 
 def test_R_setbytes(m, S, R, loadbios):
     loadbios(input=b'a1234 f5678 b0B c0C d0D e0E h08 l07\n')
-    m.call(S.cmd_R, stopat=[S['cmd_R.exec']])
+    m.call(S.cmd_regs, stopat=[S['cmd_regs.exec']])
     print(m.hexdump(S.ureg_AF, 12))
     assert (0x34, 0x78, 0x0B, 0x0C, 0x0D, 0x0E, 0x08, 0x07) \
         == tuple(map(m.byte, [S.ureg_A, S.ureg_F,
@@ -272,7 +272,7 @@ def test_R_setbytes(m, S, R, loadbios):
 
 def test_R_setwords(m, S, R, loadbios):
     loadbios(input=b'p0102 s0304 i0506 t0708 m090A\n')
-    m.call(S.cmd_R, stopat=[S['cmd_R.exec']])
+    m.call(S.cmd_regs, stopat=[S['cmd_regs.exec']])
     print(m.hexdump(S.ureg_AF, 12))
     assert (0x0102, 0x0304, 0x0506, 0x0708, 0x090A) == tuple(map(m.word,
         [S.ureg_PC, S.ureg_SP, S.ureg_BC, S.ureg_DE, S.ureg_HL, ]))
@@ -322,7 +322,7 @@ def test_entry(m, S, R, entrypoint, userpc):
 ####################################################################
 #   Commands: Execution
 
-@param('entrysym, retsym', [ ('cmd_J', None), ('cmd_K', 'entry'),
+@param('entrysym, retsym', [ ('cmd_jump', None), ('cmd_call', 'entry'),
 ], ids=tmc_tid)
 def test_JK(m, S, R, loadbios, entrysym, retsym):
     loadbios(input=b'\n')
@@ -363,7 +363,7 @@ def test_K(m, S, R, loadbios):
     print('   vJKs', m.hexdump(S.vJKs, 2))
     print('ureg_AF', m.hexdump(S.ureg_AF, 10))
 
-    m.call(S.cmd_K, stopat=[S.usercode])
+    m.call(S.cmd_call, stopat=[S.usercode])
     assert S.usercode == m.pc
     assert r == m.regs
     #   XXX test the `ret`
@@ -384,14 +384,14 @@ def test_I(m, S, R, loadbios):
 def test_d_startaddr(m, S, R, loadbios):
     loadbios(input=b's1234 a1\n')
     m.depword(S.vEs, 0xABCD)    # sentinel
-    m.call(S.cmd_D, stopat=[S['cmd_D.end']])
+    m.call(S.cmd_deposit_params, stopat=[S['cmd_deposit_params.end']])
     assert (      0x1234 ,         0x01 ,        0x00 ) \
         == (m.word(S.vDs), m.byte(S.vDa), m.byte(S.t2b))
 
 def test_d_copyaddr(m, S, R, loadbios):
     loadbios(input=b's5678 a0 e1\n')
     m.depword(S.vEs, 0xABCD)
-    m.call(S.cmd_D, stopat=[S['cmd_D.end']])
+    m.call(S.cmd_deposit_params, stopat=[S['cmd_deposit_params.end']])
     assert (      0xABCD ,         0x00 ,        0x01 ) \
         == (m.word(S.vDs), m.byte(S.vDa), m.byte(S.t2b))
 
@@ -414,7 +414,7 @@ def test_quote(m, S, R, loadbios, input, mem, output):
     m.depword(S.vDs, depaddr)
     m.deposit(depaddr, b'abcdefgh')
     instream, outstream = loadbios(input=input.encode('ASCII'))
-    m.call(S.cmd_quote, stopat=[S.prompt])
+    m.call(S.cmd_deposit_ascii, stopat=[S.prompt])
     assert (mem.encode('ASCII'), b'\r9000: ' + output.encode('ASCII')) \
         == (m.bytes(depaddr, 8),                 outstream.getvalue())
     assert b'' == instream.read()
@@ -424,7 +424,7 @@ def test_quote(m, S, R, loadbios, input, mem, output):
     #    a b c  d        e    f g h
     #   ^N p Q ^D 5 2 sp S ^M
     instream, outstream = loadbios(input=b'\x0EpQ\x0452 S\r')
-    m.call(S.cmd_quote, stopat=[S.prompt])
+    m.call(S.cmd_deposit_ascii, stopat=[S.prompt])
     assert (b'apQRSfgh', b'\r9000: a\bab\bpc\bQd\b64\b\b52 e\bSf\n') \
         == (m.bytes(depaddr, 8), outstream.getvalue())
     assert b'' == instream.read()
@@ -441,7 +441,7 @@ def test_v(m, S, R, loadbios, len):
 
     crc = crc_hqx(bytes(data), 0xFFFF)
     _, ostream = loadbios()
-    m.call(S['cmd_V.exec'], stopat=[S['cmd_V.end']])
+    m.call(S['cmd_cksum.exec'], stopat=[S['cmd_cksum.end']])
     assert f'\r{start:04X}.{start+len:04X}   ={crc:04X}\n' \
         == ostream.getvalue().decode('ASCII')
 
@@ -459,7 +459,7 @@ def test_slash(m, S, R, loadbios, q, s, output):
     _, ostream = loadbios()
     m.depword(S.vSLASHq, q)
     m.depword(S.vSLASHs, s)
-    m.call(S['cmd_slash.exec'], stopat=[S.prompt])
+    m.call(S['cmd_calculate.exec'], stopat=[S.prompt])
     print('expected:', output)
     print('  actual:', ostream.getvalue())
     assert output == ostream.getvalue()

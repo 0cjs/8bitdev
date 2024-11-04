@@ -10,7 +10,8 @@ The general goals are to have:
 * Very minimal RAM usage: just 2-3 dozen bytes so it can run on e.g. a 6802
   with only its 128 bytes of internal RAM.
 * Significantly better features than many home computers' built-in
-  monitors, including properly handling the user code stack.
+  monitors, including properly handling the usercode stack (or working
+  without a valid usercode stack).
 * A user interface focused on convenience. For example, remembering
   recently used addresses so you need not continually re-type them and
   allowing you to intersperse hex and ASCII data input.
@@ -20,8 +21,10 @@ The general goals are to have:
 
 The monitor requires a terminal or display that has a non-destructive
 backspace character (i.e., moves the cursor back without erasing what's
-underneath the cursor); the only I/O routines required are single character
-input and output.
+underneath the cursor) and separate CR and LF (the former returning to the
+start of the current line; the latter moving down a line). The only I/O
+routines required are single character input and output. (The single
+character input may be blocking.)
 
 
 Usage
@@ -279,15 +282,6 @@ The full command descriptions follow.
   §`/####`. It displays the values of `?`, `/`, the sum of the two in hex,
   the character and screen code of the LSB of that result, and the same
   again for the difference `?` - `/`.
-
-
-Notes
------
-
-Previous versions of this document suggested that on typing a parameter
-name the monitor should immediately display the current value of that
-parameter and backspace over it. It's not clear if we're going to implement
-that.
 
 
 

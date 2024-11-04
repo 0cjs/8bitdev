@@ -486,10 +486,10 @@ ptab_jump_call
 
 cmd_iret    ld   hl,ptab_none
             or   a,$FF          ; NZ: no push ret addr, ret
-            jp   cmd_JKI
+            jp   exec
 
 cmd_jump    or   a,$01          ; NZ: no push ret addr, jump
-            jp   cmd_JK
+            jp   jumpcall
 
 cmd_call    or   a,$00          ;  Z: push ret addr, jump
             ; fallthrough
@@ -501,8 +501,8 @@ cmd_call    or   a,$00          ;  Z: push ret addr, jump
 ;   • A=FF,NZ  call: push return to monitor addr on user stack
 ;   • A=FE,NZ  ret:  RET to addr on user stack, e.g. from RST entry to monitor
 ;
-cmd_JK      ld   hl,ptab_jump_call
-cmd_JKI     push af             ; save execution mode in A, Z flag
+jumpcall    ld   hl,ptab_jump_call
+exec        push af             ; save execution mode in A, Z flag
             call read_params
             call prnl
 .exec       call cksum_v
@@ -585,13 +585,13 @@ cmd_examine_cur
             ;
             ld   a,$01          ; hex format bit
             ld   hl,prsphexA
-            call prEdata
+            call prexamine
             ld   a,$02          ; ASCII format bit
             ld   hl,prvischar
-            call prEdata
+            call prexamine
             ld   a,$04          ; screen code format bit
             ld   hl,prscreenchar
-            call prEdata
+            call prexamine
             ;
 .nextline   call prnl
             pop  de             ; restore DE=lines remaining
@@ -605,12 +605,12 @@ cmd_examine_cur
 .end        jp   prompt
 
 
-;   ♠AHL(t0w) ♣*(t2w)   prEdata: If the bit in A is set in (vF_examine),
+;   ♠AHL(t0w) ♣*(t2w)   prexamine: If the bit in A is set in (vF_examine),
 ;   i.e. if the format is enabled, print a sequence of (vW_examine)
 ;   locations starting at (t0w) using the routine in HL. If the bit is not
 ;   set, just return.
 ;
-prEdata     ld   (t2w),hl       ; save address of pr* routine
+prexamine   ld   (t2w),hl       ; save address of pr* routine
             ld   hl,vF_examine  ; formats bitfield address
             and  a,(hl)         ;   is our bit set?
             ret  Z              ;      no: just return

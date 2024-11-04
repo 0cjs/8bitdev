@@ -176,23 +176,23 @@ def test_init(m, S, R):
 ####################################################################
 #   Commands: Examining Machine State
 
-def test_prEdata_fclear(m, S, R):
-    ' prEdata just returns if the format bit in A is not set in (vF_examine). '
+def test_prexamine_fclear(m, S, R):
+    ' prexamine just returns if the format bit in A not set in (vF_examine). '
     m.deposit(S.vF_examine, 0b11111101)
-    m.call(S.prEdata, R(a=0b10, de=0000), stopat=[0000], trace=1)
-    assert 0000 != m.pc, "prEdata should not have called DE"
+    m.call(S.prexamine, R(a=0b10, de=0000), stopat=[0000], trace=1)
+    assert 0000 != m.pc, "prexamine should not have called DE"
 
-def test_prEdata_fset(m, S, R, loadbios):
+def test_prexamine_fset(m, S, R, loadbios):
     _, ostream = loadbios()
     m.deposit(S.vF_examine, 1)          # must have a format bit set
     m.deposit(S.vW_examine, 6)          # bytes/line
     m.depword(S.t0w, S.utest_data)      # start addr of line
 
-    m.call(S.prEdata, R(a=0xFF, hl=S.prsphexA), trace=1)
+    m.call(S.prexamine, R(a=0xFF, hl=S.prsphexA), trace=1)
     s = ostream.getvalue();  print(s)
     assert b' FF 00 12 23 34 45' == s   # prints just one line
 
-def test_E_defaults(m, S, R, loadbios):
+def test_examine_defaults(m, S, R, loadbios):
     _, ostream = loadbios(input=b'\n')
     m.call(S.init, stopat=[S['init.end']])           # testing default values
     m.call(S.cmd_examine_cur, stopat=[S['cmd_examine_cur.end']])
@@ -201,7 +201,7 @@ def test_E_defaults(m, S, R, loadbios):
     assert b'0018: 00' in s
     assert s.endswith(b'\n')
 
-def test_E_settings(m, S, R, loadbios):
+def test_examine_settings(m, S, R, loadbios):
     _, ostream = loadbios(input=b'\n')
     #   2 lines of 5 bytes of known non-zero data.
     m.depword(S.vS_examine, S.utest_data)
@@ -216,7 +216,7 @@ def test_E_settings(m, S, R, loadbios):
            b'12B0: 45 56 67 78 89 EVgxI EVgx \n'    \
            == s
 
-def test_W_defaults(m, S, R, loadbios):
+def test_examine_next_defaults(m, S, R, loadbios):
     _, ostream = loadbios(input=b'\n')
     m.call(S.init, stopat=[S['init.end']])           # testing default values
     m.call(S.cmd_examine_next, stopat=[S['cmd_examine_cur.end']])
@@ -239,7 +239,7 @@ def test_prflags(m, S, R, loadbios, input, output):
     m.call(S.prflags, R(a=input))
     assert output == ostream.getvalue()
 
-def test_R_print(m, S, R, loadbios):
+def test_regs_print(m, S, R, loadbios):
     _, ostream = loadbios()
     m.deposit(S.ureg_AF, [0xD7, 0x12])
     m.depword(S.ureg_BC, [0x2345, 0x6789, 0xABCD, 0xEFFE, 0xFEEF])
@@ -260,7 +260,7 @@ FEEF EFFE 12 2345 6789 ABCD D7
 ────────────────────────────────────────
 '''
 
-def test_R_setbytes(m, S, R, loadbios):
+def test_regs_setbytes(m, S, R, loadbios):
     loadbios(input=b'a1234 f5678 b0B c0C d0D e0E h08 l07\n')
     m.call(S.cmd_regs, stopat=[S['cmd_regs.exec']])
     print(m.hexdump(S.ureg_AF, 12))
@@ -270,7 +270,7 @@ def test_R_setbytes(m, S, R, loadbios):
     assert (0x3478, 0x0B0C, 0x0D0E, 0x0807) \
         == tuple(map(m.word, [S.ureg_AF, S.ureg_BC, S.ureg_DE, S.ureg_HL, ]))
 
-def test_R_setwords(m, S, R, loadbios):
+def test_regs_setwords(m, S, R, loadbios):
     loadbios(input=b'p0102 s0304 i0506 t0708 m090A\n')
     m.call(S.cmd_regs, stopat=[S['cmd_regs.exec']])
     print(m.hexdump(S.ureg_AF, 12))
@@ -278,7 +278,7 @@ def test_R_setwords(m, S, R, loadbios):
         [S.ureg_PC, S.ureg_SP, S.ureg_BC, S.ureg_DE, S.ureg_HL, ]))
 
 @pytest.mark.xfail(strict=True)
-def test_OP():
+def test_port():
     #   XXX Need to implement IN and OUT in simulator for this.
     assert 0
 
@@ -324,7 +324,7 @@ def test_entry(m, S, R, entrypoint, userpc):
 
 @param('entrysym, retsym', [ ('cmd_jump', None), ('cmd_call', 'entry'),
 ], ids=tmc_tid)
-def test_JK(m, S, R, loadbios, entrysym, retsym):
+def test_jump_call(m, S, R, loadbios, entrysym, retsym):
     loadbios(input=b'\n')
     userstack = 0xFF80
     r = R( a=0x12, S=1, Z=1, H=0, P=1, C=0,
@@ -348,7 +348,7 @@ def test_JK(m, S, R, loadbios, entrysym, retsym):
         m.step()
         assert S[retsym] == m.pc
 
-def test_K(m, S, R, loadbios):
+def test_call(m, S, R, loadbios):
     ' Call a RET instruction in user code. '
 
     _, outstream = loadbios(input=b'\n')
@@ -370,7 +370,7 @@ def test_K(m, S, R, loadbios):
 
 @pytest.mark.filterwarnings(
     'ignore:.*simulator will not generate interrupts:UserWarning')
-def test_I(m, S, R, loadbios):
+def test_iret(m, S, R, loadbios):
     _, outstream = loadbios(input=b'r\ni\n')
     m.sp = 0xABCD
     m.pc = S.intentrytest
@@ -381,14 +381,14 @@ def test_I(m, S, R, loadbios):
 ####################################################################
 #   Commands: Deposit
 
-def test_d_startaddr(m, S, R, loadbios):
+def test_deposit_startaddr(m, S, R, loadbios):
     loadbios(input=b's1234 a1\n')
     m.depword(S.vS_examine, 0xABCD)    # sentinel
     m.call(S.cmd_deposit_params, stopat=[S['cmd_deposit_params.end']])
     assert (      0x1234 ,         0x01 ,        0x00 ) \
         == (m.word(S.vS_deposit), m.byte(S.vA_deposit), m.byte(S.t2b))
 
-def test_d_copyaddr(m, S, R, loadbios):
+def test_deposit_copyaddr(m, S, R, loadbios):
     loadbios(input=b's5678 a0 e1\n')
     m.depword(S.vS_examine, 0xABCD)
     m.call(S.cmd_deposit_params, stopat=[S['cmd_deposit_params.end']])
@@ -409,7 +409,7 @@ def test_d_copyaddr(m, S, R, loadbios):
     ("\x04cc'D \n",    'Dbcdefgh', "a\b61\b\bcc'D\b\b44     \b\b\b\b" 'b\b\n'),
     ("\x04cc'D\n",     'Dbcdefgh', "a\b61\b\bcc'D\b\b44    \b\b\b\b\n"),
 ])
-def test_quote(m, S, R, loadbios, input, mem, output):
+def test_deposit_ascii(m, S, R, loadbios, input, mem, output):
     depaddr = 0x9000
     m.depword(S.vS_deposit, depaddr)
     m.deposit(depaddr, b'abcdefgh')
@@ -419,21 +419,11 @@ def test_quote(m, S, R, loadbios, input, mem, output):
         == (m.bytes(depaddr, 8),                 outstream.getvalue())
     assert b'' == instream.read()
 
-
-    return
-    #    a b c  d        e    f g h
-    #   ^N p Q ^D 5 2 sp S ^M
-    instream, outstream = loadbios(input=b'\x0EpQ\x0452 S\r')
-    m.call(S.cmd_deposit_ascii, stopat=[S.prompt])
-    assert (b'apQRSfgh', b'\r9000: a\bab\bpc\bQd\b64\b\b52 e\bSf\n') \
-        == (m.bytes(depaddr, 8), outstream.getvalue())
-    assert b'' == instream.read()
-
 ####################################################################
 #   Commands: Checksum
 
 @param('len', [1, 0xFF, 0x100, 0x101, 0x321], ids=tmc_tid)
-def test_v(m, S, R, loadbios, len):
+def test_cksum(m, S, R, loadbios, len):
     start = 0x4000;  data  = [0xEE] * len
     m.deposit(start, data)
     m.depword(S.vS_source, start)
@@ -505,7 +495,7 @@ def test_prompt_cancel(m, loadbios, S, R,  input, output):
     assert (b'', output) == (istream.read(), ostream.getvalue())
     assert cancel_done == m.regs.pc
 
-def test_prompt_e(m, S, R, loadbios):
+def test_prompt_examine(m, S, R, loadbios):
     commands = b'e s12aB l2 w6\nq\nEND'
     istream, ostream = loadbios(input=commands)
     m.call(S.init, stopat=[S['init.end']])  # testing default values

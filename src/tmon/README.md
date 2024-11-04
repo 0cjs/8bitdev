@@ -175,15 +175,21 @@ The full command descriptions follow.
   you set the `s####` parameter here, it will start on the page _after_
   that address.
 
-- `r` Examine/edit registers and flags. Execution with no parameters will
-  display all registers and flags.
-  - 8080/8085 parameters: `f##` (flags), `a##`, `b##`, `c##`, `d##`, `e##`,
-    `h##`, `l##`, `p####` (program counter), `s####` (stack pointer),
-    `m##` (HL pair; mnemonic "Memory access register"),
-    `t##` (DL pair; mnemonic "Target address"),
-    `i##` (BC pair; mnemonic "Index counter")
-  - 6800 parameters: `f##` (flags), `a##`, `b##`, `x####`, `s####` (stack).
-  - 6502 parameters: `f##` (flags), `a##`, `x##`, `y##`, `s##` (stack).
+- `r` Examine/edit registers and flags. Execution will display all
+  registers and flags. To save space, the register values display does not
+  display the names of registers, but the order is the same as the order of
+  parameters given below. You can always enter a command parameter to
+  confirm the current value of a register. Flags are entered as a byte
+  value, but displayed as capital letters for set flags and `-` for cleared
+  flags.
+  - All platforms:  `p####` (program counter),  `s####` (stack pointer, may
+    be `s##` on some systems), `f##` (flags).
+  - 8080/8085 parameters: 
+    - Byte-width registers `a##`, `b##`, `c##`, `d##`, `e##`, `h##`, `l##`.
+    - Word-width register pairs `i##` (BC, "Index counter") `t##` (DE,
+      "Target address"), `m##` (HL, "Memory access register"),
+  - 6800 parameters: `a##`, `b##`, `x####`.
+  - 6502 parameters: `s##` (stack pointer), `a##`, `x##`, `y##`,
 
 - `p` Read from I/O port. The only parameter is §`p##` or §`p####` for the
   port number, depending on the size of the I/O address space. This applies

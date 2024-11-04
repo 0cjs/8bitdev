@@ -28,9 +28,11 @@
 ;   • q*    parsing routines
 ;   • vXx*  memorised parameter values; X=command name; x=parameter name
 
-; ----------------------------------------------------------------------
-;   Character definitions
 
+; ======================================================================
+;   Definitions
+
+;   ASCII characters
 BS          equ  $08            ; Ctrl-H, backspace
 LF          equ  $0A            ; Ctrl-J, linefeed
 CR          equ  $0D            ; Ctrl-M, carriage return
@@ -44,9 +46,8 @@ BACKSLASH   equ  '\\'
 UPCASE      equ  %11011111      ; (lower case ASCII) ∧ UPCASE → upper case
 
 ; ----------------------------------------------------------------------
-;   Other definitions
 
-JP          equ  $C3            ; 8080 JMP instruction
+iJP         equ  $C3            ; 8080 JMP instruction
 
 ;   Command character and address of command code definition.
 cmd         macro   char,addr
@@ -66,12 +67,12 @@ pw          macro char,addr
             dw    addr
             endm
 
-; ----------------------------------------------------------------------
+; ======================================================================
 ;   RAM Work Area
 
             org  tmon_ram
 
-stack_bot   ds   tmon_stksz
+            ds   tmon_stksz     ; reserve space for monitor stack
 monstack                        ; first push will deposit below this
 
 ;   Registers
@@ -108,26 +109,27 @@ vCVe        ds   2      ; copy/cksum: end addr (non-inclusive)
 vSLASHq     ds   2      ; calculate: ? param (left value)
 vSLASHs     ds   2      ; calculate: / param (right value)
 v_end
+
 v_cksum     ds   2      ; checksum to determine if we re-init
 
-;   Work area
-t0w                             ; temporary storage, word and byte
+;   Temporary storage, word and byte
+t0w
 t0b         ds   1
 t1b         ds   1
 t2w
 t2b         ds   1
 t3b         ds   1
 
-; ----------------------------------------------------------------------
+; ======================================================================
 ;   Entry point and main loop
 
             org  tmon_rom
 
 ;   Standard entry point for the monitor.
 ;
-;   We don't have a PC to save here, so we just ignore it. If we came in
-;   via an NMI or similar that routine would have to save the PC before
-;   coming here.
+;   We don't have a PC to save here, so we just retain the current value.
+;   The interrupt entry point `intentry` thus must determine the PC and
+;   save it before coming here.
 ;
 entry       di                  ; ensure as best we can nothing will touch stack
             ld   (ureg_A),a
@@ -176,13 +178,11 @@ entry       di                  ; ensure as best we can nothing will touch stack
 .done       ei                  ; interrupts can now use our stack
 .end
 
-;   XXX this should not wipe out our current parameters if they're valid;
-;   we init only on a "cold" start or if user code has stomped on our
-;   work area. Probably do this with a checksum check.
-;
-;   XXX Once this is large enough, we should probably have a default set of
-;   data we just copy to `tmon_ram`, rather than setting bytes individually.
-;   Also, this wants to vary per machine, e.g., for screen width.
+;   Check to see if our current command parameter values are "valid," i.e.,
+;   matching a previously calculated and deposited checksum. (The checksum
+;   is calculated and written just before the monitor calls usercode.)
+;   If they're not valid, we init, because this is either the first time
+;   the user has entered the monitor or something stomped on our values.
 ;
 init        call cksum_v
             ex   de,hl              ; DE = current checksum
@@ -200,13 +200,12 @@ init        call cksum_v
             jp   NZ,.loop
 .end
 
-;   Print the prompt and read a command (but not its args).
+;   Print the prompt and read a command (but not the command's parameters).
 ;
 ;   Commands are expected to generate a newline (moving to the next line
-;   after the command) before producing output because that's generally
-;   more convenient for commands generating multi-line output. This also
-;   allows us to have commands known to be short generate output on the
-;   same line.
+;   after the command) if necessary, though they may also overwrite the
+;   current line (by generating CR) if that won't overwrite any useful
+;   input made before command execution.
 ;
 prompt      ld   sp,monstack
             ld   a,'.'
@@ -216,10 +215,10 @@ prompt      ld   sp,monstack
             call upcase         ; force to upper case if letter
             ;   Dispatch command if we match one.
             ;   • Commands are not called but are jumped to; they must
-            ;     themselves come back here via a jump to `prompt.
+            ;     themselves come back here via a jump to `prompt`.
             ;   • Commands must generate their own initial newline; see above.
             ;   • Commands that execute immediately rather than waiting for
-            ;     parameters and/or confirmation are marked with a dagger (†).
+            ;     parameters and/or confirmation should be marked somehow.
             cmd  "'",cmd_deposit_ascii
             cmd  '.',cmd_deposit_bytes
             cmd  '/',cmd_calculate
@@ -241,11 +240,12 @@ prompt      ld   sp,monstack
             call prchar
 .end        jp   prompt
 
-;   This may be used (via `jp`) by a routine at any call depth to cancel
-;   the current command. It will print a backslash at the current cursor
-;   position to indicate that the command has been cancelled, print
-;   a newline, and then restart the prompt, which will reload the
-;   the stack pointer to be at the base of the monitor stack.
+;   Cancel current command. This may be used (via `jp`) by a routine at any
+;   call depth. It will print a backslash at the current cursor position to
+;   indicate that the command has been cancelled, print a newline, and then
+;   restart the prompt, which will reload the the stack pointer to be at
+;   the base of the monitor stack.
+;
 cancel      call  pr4clear      ; clear any displayed value
             ld   a,BACKSLASH    ; indicate cancelled
             call prchar
@@ -268,9 +268,15 @@ intentry    di
             ld   a,$81
             jp   entry.savecarry
 
-; ----------------------------------------------------------------------
-;   Command parameters and values
+;   Checksum the command parameters, returning the checksum in HL.
+;   When stored in (v_cksum), this lets us tell if param vals have changed.
+;
+cksum_v     ld   de,v_start
+            ld   c,v_end - v_start
+            call cksum_crc_16_ccitt
+            ret
 
+;   Initial command parameter values.
 v_initdata  dw   $8000          ; execute start
             dw   $0000          ; examine start
             db   $01            ; examine format: hex only
@@ -284,12 +290,8 @@ v_initdata  dw   $8000          ; execute start
             dw   $0000          ; calculate left arg
             dw   $0000          ; calculate right arg
 
-;   Checksum the command parameters, returning the checksum in HL.
-;   When stored in (v_cksum), this lets us tell if param vals have changed.
-cksum_v     ld   de,v_start
-            ld   c,v_end - v_start
-            call cksum_crc_16_ccitt
-            ret
+; ======================================================================
+;   Command parameter management.
 
 ;   ♠HL ♣ABCHL,(t0w)   We've found a command; it's asking us to read and
 ;   update parameters (specified in a table passed in HL) and execute or
@@ -470,6 +472,9 @@ qhex        call prhexval       ; load (DE=val B=#digits) and print curval
             call prhexA
             jp   .next
 
+; ======================================================================
+;   Commands
+
 ; ----------------------------------------------------------------------
 ;   Execution commands
 
@@ -502,7 +507,7 @@ cmd_JKI     push af             ; save execution mode in A, Z flag
             ld   (v_cksum),hl   ; do not re-init param values on re-entry
             ;   Set up the trampoline so we can jump to the start address
             ;   without using any registers
-            ld   a,JP
+            ld   a,iJP
             ld   hl,(vJKs)      ; start addr for execution
             ld   (t0b),a
             ld   (t1b),hl
@@ -695,7 +700,6 @@ prflags     ld   b,8            ; 8 bits in flags
 ;   operation because that preserves the carry flag, which contains the
 ;   value of the flag we're printing.)
 flagchars   db   'S'-1, 'Z'-1, 0-1, 'H'-1, 0-1, 'P'-1, 0-1, 'C'-1
-
 
 ; ----------------------------------------------------------------------
 ;   Deposit Commands
@@ -899,15 +903,6 @@ cmd_calculate
             call prscreenchar
             ret
 
-;   ♣A  Print HL in hex, a period, then DE in hex.
-prhexHLDE   call prhexHL
-            ld   a,'.'
-            call prchar
-            ex   hl,de
-            call prhexHL
-            ex   hl,de
-            ret
-
 ; ----------------------------------------------------------------------
 ;   Parsing Routines `q*`
 
@@ -1004,7 +999,16 @@ praddrHL    call prhexHL
             ld   a,':'
             jp   prchar         ; ret (TCO)
 
-; ----------------------------------------------------------------------
+;   ♣A  Print HL in hex, a period, then DE in hex.
+prhexHLDE   call prhexHL
+            ld   a,'.'
+            call prchar
+            ex   hl,de
+            call prhexHL
+            ex   hl,de
+            ret
+
+; ======================================================================
 ;   Misc. routines
 
 ;   ♣A   HL ← HL - DE. Affected flags: Z.

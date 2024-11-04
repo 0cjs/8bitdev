@@ -242,6 +242,23 @@ prompt      ld   sp,monstack
             call prchar
 .end        jp   prompt
 
+cmdtbl      cmd  "'",   cmd_deposit_ascii,      $FFFF
+            cmd  '.',   cmd_deposit_bytes,      $FFFF
+            cmd  '/',   cmd_calc,               ptab_calc
+            cmd  '>',   cmd_deposit_words,      $FFFF
+            cmd  'D',   cmd_deposit_params,     ptab_deposit_params
+            cmd  'E',   cmd_examine_cur,        ptab_examine
+            cmd  'I',   cmd_iret,               ptab_none
+            cmd  'J',   cmd_jump,               ptab_jump_call
+            cmd  'K',   cmd_call,               ptab_jump_call
+            cmd  'O',   cmd_port_out,           ptab_port_out
+            cmd  'P',   cmd_port_in,            ptab_port_in
+            cmd  'Q',   cmd_quit,               ptab_none
+            cmd  'R',   cmd_regs,               ptab_regs
+            cmd  'V',   cmd_cksum,              ptab_source
+            cmd  'W',   cmd_examine_next,       $FFFF
+            db   0
+
 ;   Cancel current command. This may be used (via `jp`) by a routine at any
 ;   call depth. It will print a backslash at the current cursor position to
 ;   indicate that the command has been cancelled, print a newline, and then

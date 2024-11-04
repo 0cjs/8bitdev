@@ -24,9 +24,11 @@
 
 ; ----------------------------------------------------------------------
 ;   Symbol naming:
-;   • pr*   print routines
-;   • q*    parsing routines
-;   • vXx*  memorised parameter values; X=command name; x=parameter name
+;   • pr*       print routines
+;   • q*        parsing routines
+;   • cmd_ccc   command routines: ccc=command name
+;   • ptab_ccc  parameter tables for commands; ccc=command name
+;   • vX_ccc    memorised parameter values; X=parameter name, ccc=command name
 
 
 ; ======================================================================
@@ -91,23 +93,23 @@ ureg_H      ds   1
 ureg_SP     ds   2
 ureg_PC     ds   2
 
-;   Command parameter values
+;   Command parameter values: v<PARAM>_<CMD>
 v_start
-vJKs        ds   2      ; execute: start addr
-vEs         ds   2      ; examine: start addr
-vEf         ds   1      ; examine: display format flags:
-                        ;   b0=hex, b1=ASCII, b2=screen codes
-vEl         ds   1      ; examine: # of lines to print
-vEw         ds   1      ; examine: # of bytes per line ("width")
-vDs         ds   2      ; deposit: start addr
-vDa         ds   1      ; deposit: advance mode $00=off, $01=on
-vPp         ds   1      ; input port
-vOp         ds   1      ; output port
-vOd         ds   1      ; output port data
-vCVs        ds   2      ; copy/cksum: start addr
-vCVe        ds   2      ; copy/cksum: end addr (non-inclusive)
-vSLASHq     ds   2      ; calculate: ? param (left value)
-vSLASHs     ds   2      ; calculate: / param (right value)
+vS_jump_call        ds   2      ; execute: start addr
+vS_examine          ds   2      ; examine: start addr
+vF_examine          ds   1      ; examine: display format flags:
+                                ;   b0=hex, b1=ASCII, b2=screen codes
+vL_examine          ds   1      ; examine: # of lines to print
+vW_examine          ds   1      ; examine: # of bytes per line ("width")
+vS_deposit          ds   2      ; deposit: start addr
+vA_deposit          ds   1      ; deposit: advance mode $00=off, $01=on
+vP_port_in          ds   1      ; input port
+vP_port_out         ds   1      ; output port
+vD_port_out         ds   1      ; output port data
+vS_source           ds   2      ; source range (copy/cksum/etc.): start addr
+vE_source           ds   2      ; source range: end addr (non-inclusive)
+vL_calc             ds   2      ; calc: ? param (left value)
+vR_calc             ds   2      ; calc: / param (right value)
 v_end
 
 v_cksum     ds   2      ; checksum to determine if we re-init
@@ -221,7 +223,7 @@ prompt      ld   sp,monstack
             ;     parameters and/or confirmation should be marked somehow.
             cmd  "'",cmd_deposit_ascii
             cmd  '.',cmd_deposit_bytes
-            cmd  '/',cmd_calculate
+            cmd  '/',cmd_calc
             cmd  '>',cmd_deposit_words
             cmd  'D',cmd_deposit_params
             cmd  'E',cmd_examine_cur
@@ -287,8 +289,8 @@ v_initdata  dw   $8000          ; execute start
             db   $00,$00,$00    ; input, output port, output data
             dw   $0000          ; copy/cksum start
             dw   $0000          ; copy/cksum end
-            dw   $0000          ; calculate left arg
-            dw   $0000          ; calculate right arg
+            dw   $0000          ; calc left arg
+            dw   $0000          ; calc right arg
 
 ; ======================================================================
 ;   Command parameter management.
@@ -479,7 +481,7 @@ qhex        call prhexval       ; load (DE=val B=#digits) and print curval
 ;   Execution commands
 
 ptab_jump_call
-            pw   'S',vJKs       ; start address of execution
+            pw   'S',vS_jump_call   ; start address of execution
             db   0
 
 cmd_iret    ld   hl,ptab_none
@@ -508,7 +510,7 @@ cmd_JKI     push af             ; save execution mode in A, Z flag
             ;   Set up the trampoline so we can jump to the start address
             ;   without using any registers
             ld   a,iJP
-            ld   hl,(vJKs)      ; start addr for execution
+            ld   hl,(vS_jump_call)  ; start addr for execution
             ld   (t0b),a
             ld   (t1b),hl
             ;   Switch to and set up set up user stack
@@ -545,20 +547,20 @@ cmd_quit    ld   hl,ptab_none   ; no parameters,
 ;   Examine commands
 
 ptab_examine
-            pw   'S',vEs    ; start: 16-bit value
-            pb   'F',vEf    ; formats bitfield (see above)
-            pb   'L',vEl    ; number of lines to print: 8-bit value
-            pb   'W',vEw    ; width (# of bytes to print): 8-bit value
-ptab_none   db   0          ; end of table
+            pw   'S',vS_examine     ; start: 16-bit value
+            pb   'F',vF_examine     ; formats bitfield (see above)
+            pb   'L',vL_examine     ; number of lines to print: 8-bit value
+            pb   'W',vW_examine     ; width (# of bytes to print): 8-bit value
+ptab_none   db   0                  ; end of table
 
 ;   Load E and W cmd params into registers.
-getparams_EW ld  hl,(vEs)       ; start address parameter
+getparams_EW ld  hl,(vS_examine) ; start address parameter
             ld   (t0w),hl       ; t0w: current line start
             ld   b,0
-            ld   a,(vEw)
+            ld   a,(vW_examine)
             ld   c,a            ; BC: bytes/line
             ld   d,0
-            ld   a,(vEl)
+            ld   a,(vL_examine)
             ld   e,a            ; DE: number of lines to dump
             ret
 
@@ -568,7 +570,7 @@ cmd_examine_next
 .addpage    add  hl,bc          ; add to start addr no. of bytes per line
             dec  e              ;   as many times as lines to dump
             jp   NZ,.addpage
-            ld   (vEs),hl       ; update start address
+            ld   (vS_examine),hl ; update start address
             jp   cmd_examine_cur.noparams  ; and do the dump
 
 cmd_examine_cur
@@ -603,12 +605,13 @@ cmd_examine_cur
 .end        jp   prompt
 
 
-;   ♠AHL(t0w) ♣*(t2w)   prEdata: If the bit in A is set in (vEf), i.e., if
-;   the format is enabled, print a sequence of (vEw) locations starting
-;   at (t0w) using the routine in HL. If the bit is not set, just return.
+;   ♠AHL(t0w) ♣*(t2w)   prEdata: If the bit in A is set in (vF_examine),
+;   i.e. if the format is enabled, print a sequence of (vW_examine)
+;   locations starting at (t0w) using the routine in HL. If the bit is not
+;   set, just return.
 ;
 prEdata     ld   (t2w),hl       ; save address of pr* routine
-            ld   hl,vEf         ; formats bitfield address
+            ld   hl,vF_examine  ; formats bitfield address
             and  a,(hl)         ;   is our bit set?
             ret  Z              ;      no: just return
             ;
@@ -620,7 +623,7 @@ prEdata     ld   (t2w),hl       ; save address of pr* routine
             call prspace
             ;
 +           ld   hl,(t0w)       ; current line start address
-            ld   a,(vEw)
+            ld   a,(vW_examine)
             ld   c,a            ; number of bytes to print (width)
 .nextbyte   ex   de,hl          ; save current byte address
             ld   hl,.continue
@@ -705,11 +708,11 @@ flagchars   db   'S'-1, 'Z'-1, 0-1, 'H'-1, 0-1, 'P'-1, 0-1, 'C'-1
 ;   Deposit Commands
 
 ptab_deposit_params
-            pw   'S',vDs    ; start: 16-bit value
-            pb   'A',vDa    ; advance mode
-            pb   'E',t2b    ; copy examine start address: temp store
-                            ;   (t0w/t0b,t1b is used by `read_params`)
-            db   0          ; end of table
+            pw   'S',vS_deposit     ; start: 16-bit value
+            pb   'A',vA_deposit     ; advance mode
+            pb   'E',t2b            ; copy examine start address: temp store
+                                    ;   (t0w/t0b,t1b is used by `read_params`)
+            db   0                  ; end of table
 
 cmd_deposit_params
             xor  a,a
@@ -720,8 +723,8 @@ cmd_deposit_params
             ld   a,(t2b)         ; copy examine start address?
             or   a,a
             jp   Z,.end         ;   no
-            ld   hl,(vEs)
-            ld   (vDs),hl
+            ld   hl,(vS_examine)
+            ld   (vS_deposit),hl
 .end        jp   prompt
 
 cmd_deposit_words
@@ -734,20 +737,20 @@ cmd_deposit_bytes
 
 cmd_deposit_hex
             call prcr           ; use existing line for entry
-            ld  hl,(vDs)        ; start address
+            ld  hl,(vS_deposit) ; start address
             call praddrHL
             call prspace
 .next       call qhex
             jp   NZ,.next
             call prnl
-            ld   a,(vDa)
+            ld   a,(vA_deposit)
             or   a,a
             jp   Z,.noadvance
-            ld   (vDs),hl
+            ld   (vS_deposit),hl
 .noadvance  jp   prompt
 
 depaddr     call prcr           ; use existing line for entry
-            ld  hl,(vDs)        ; start address
+            ld  hl,(vS_deposit) ; start address
             call praddrHL
             call prspace
             ret
@@ -790,8 +793,8 @@ cmd_deposit_ascii
 ; ----------------------------------------------------------------------
 ;   Checksum and Copy Commands
 
-ptab_source     pw   'S',vCVs   ; start: 16-bit value
-                pw   'E',vCVe   ; end: 16-bit value
+ptab_source     pw   'S',vS_source  ; start: 16-bit value
+                pw   'E',vE_source  ; end: 16-bit value
                 db   0
 
 ;   Currently we support only the required CRC-16-CCITT algorithm,
@@ -799,11 +802,11 @@ ptab_source     pw   'S',vCVs   ; start: 16-bit value
 cmd_cksum   ld   hl,ptab_source
             call read_params
 .exec       call prcr           ; overprint with "start.end =cksum"
-            ld   hl,(vCVs)
+            ld   hl,(vS_source)
             ld   d,h            ; start address
             ld   e,l
             call praddrHL       ; print with colon to indicate end addr follows
-            ld   hl,(vCVe)      ; end address
+            ld   hl,(vE_source) ; end address
             call prhexHL
             call subHLDE
             call pr3sp
@@ -824,28 +827,28 @@ cmd_cksum   ld   hl,ptab_source
 ;   Other Commands
 
 ptab_port_in
-            pb   'P',vPp
+            pb   'P',vP_port_in
             db   0
 
 cmd_port_in
             ld   hl,ptab_port_in
             call read_params
-            ld   a,(vPp)
+            ld   a,(vP_port_in)
             ld   c,a                ; port number
             ld   a,$DB              ; OUT instruction
             jp   cmd_port_cont
 
 ptab_port_out
-            pb  'P',vOp
-            pb  'D',vOd
+            pb  'P',vP_port_out
+            pb  'D',vD_port_out
             db   0
 
 cmd_port_out
             ld   hl,ptab_port_out
             call read_params
-            ld   a,(vOp)
+            ld   a,(vP_port_out)
             ld   c,a                ; port number
-            ld   a,(vOd)
+            ld   a,(vD_port_out)
             ld   d,a                ; data to write
             ld   a,$D3              ; OUT instruction
             ;    fallthrough
@@ -863,27 +866,27 @@ cmd_port_cont ;  Set up trampoline
             call prnl
             jp   prompt
 
-ptab_calculate
-            pw  '?',vSLASHq     ; left value: 16 bits
-            pw   '/',vSLASHs    ; right value: 16 bits
+ptab_calc
+            pw   '?',vL_calc    ; left value: 16 bits
+            pw   '/',vR_calc    ; right value: 16 bits
             db   0
 
-cmd_calculate
-            ld   hl,ptab_calculate
+cmd_calc
+            ld   hl,ptab_calc
             call read_params
 .exec       call prcr           ; output on same line, since we print inputs
             ;   Left/right input values
-            ld   hl,(vSLASHq)
+            ld   hl,(vL_calc)
             call praddrHL
             ex   hl,de
-            ld   hl,(vSLASHs)
+            ld   hl,(vR_calc)
             call prhexHL
             ex   hl,de
             ;   Addition result
             add  hl,de
             call .print
             ;   Subtraction result
-            ld   hl,(vSLASHq)
+            ld   hl,(vL_calc)
             call subHLDE
             call .print
             ;   Clear two spaces of any junk just to the right of the output.

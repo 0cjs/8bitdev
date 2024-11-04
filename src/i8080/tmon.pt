@@ -163,7 +163,7 @@ def test_init(m, S, R):
     assert m.bytes(S.v_initdata, len) == m.bytes(S.v_start, len)
 
     #   change param vals and checksum
-    m.depword(S.vJKs, 0x1234); m.depword(S.vCVe, 0x5678)
+    m.depword(S.vS_jump_call, 0x1234); m.depword(S.vE_source, 0x5678)
     m.call(S.cksum_v); m.depword(S.v_cksum, m.hl)
     newdata = m.bytes(S.v_start, len + 2)
     print('cksummed', m.hexdump(S.v_start, len + 2))
@@ -177,15 +177,15 @@ def test_init(m, S, R):
 #   Commands: Examining Machine State
 
 def test_prEdata_fclear(m, S, R):
-    ' prEdata just returns if the format bit in A is not set in (vEf). '
-    m.deposit(S.vEf, 0b11111101)
+    ' prEdata just returns if the format bit in A is not set in (vF_examine). '
+    m.deposit(S.vF_examine, 0b11111101)
     m.call(S.prEdata, R(a=0b10, de=0000), stopat=[0000], trace=1)
     assert 0000 != m.pc, "prEdata should not have called DE"
 
 def test_prEdata_fset(m, S, R, loadbios):
     _, ostream = loadbios()
-    m.deposit(S.vEf, 1)                 # must have a format bit set
-    m.deposit(S.vEw, 6)                 # bytes/line
+    m.deposit(S.vF_examine, 1)          # must have a format bit set
+    m.deposit(S.vW_examine, 6)          # bytes/line
     m.depword(S.t0w, S.utest_data)      # start addr of line
 
     m.call(S.prEdata, R(a=0xFF, hl=S.prsphexA), trace=1)
@@ -204,10 +204,10 @@ def test_E_defaults(m, S, R, loadbios):
 def test_E_settings(m, S, R, loadbios):
     _, ostream = loadbios(input=b'\n')
     #   2 lines of 5 bytes of known non-zero data.
-    m.depword(S.vEs, S.utest_data)
-    m.deposit(S.vEf, 7)              # hex, ascii, screencodes
-    m.deposit(S.vEl, 2)
-    m.deposit(S.vEw, 5)
+    m.depword(S.vS_examine, S.utest_data)
+    m.deposit(S.vF_examine, 7)              # hex, ascii, screencodes
+    m.deposit(S.vL_examine, 2)
+    m.deposit(S.vW_examine, 5)
     m.call(S.cmd_examine_cur, stopat=[S['cmd_examine_cur.end']])
     s = ostream.getvalue()
     print(s)
@@ -221,12 +221,12 @@ def test_W_defaults(m, S, R, loadbios):
     m.call(S.init, stopat=[S['init.end']])           # testing default values
     m.call(S.cmd_examine_next, stopat=[S['cmd_examine_cur.end']])
     s = ostream.getvalue()
-    print(f'vEs={m.word(S.vEs):04X} t0w={m.word(S.t0w):04X}',
+    print(f'vS_examine={m.word(S.vS_examine):04X} t0w={m.word(S.t0w):04X}',
         s.decode('ASCII'))
     assert b'0020: 00' in s
     assert b'0028: 00' in s
     assert s.endswith(b'\n')
-    assert 0x0020 == m.word(S.vEs)
+    assert 0x0020 == m.word(S.vS_examine)
 
 ####################################################################
 #   Register command and support functions
@@ -333,8 +333,8 @@ def test_JK(m, S, R, loadbios, entrysym, retsym):
 
     m.deposit(S.ureg_AF, [ r.f, r.a ])
     m.depword(S.ureg_BC, [ r.bc, r.de, r.hl, userstack, 0x0000 ])  # sentinel PC
-    m.depword(S.vJKs, S.usercode)
-    print('   vJKs', m.hexdump(S.vJKs, 2))
+    m.depword(S.vS_jump_call, S.usercode)
+    print('   vS_jump_call', m.hexdump(S.vS_jump_call, 2))
     print('ureg_AF', m.hexdump(S.ureg_AF, 10))
 
     m.pc = S[entrysym]
@@ -359,8 +359,8 @@ def test_K(m, S, R, loadbios):
 
     m.deposit(S.ureg_AF, [ r.f, r.a ])
     m.depword(S.ureg_BC, [ r.bc, r.de, r.hl, userstack, 0x0000 ])  # sentinel PC
-    m.depword(S.vJKs, S.usercode)
-    print('   vJKs', m.hexdump(S.vJKs, 2))
+    m.depword(S.vS_jump_call, S.usercode)
+    print('   vS_jump_call', m.hexdump(S.vS_jump_call, 2))
     print('ureg_AF', m.hexdump(S.ureg_AF, 10))
 
     m.call(S.cmd_call, stopat=[S.usercode])
@@ -383,17 +383,17 @@ def test_I(m, S, R, loadbios):
 
 def test_d_startaddr(m, S, R, loadbios):
     loadbios(input=b's1234 a1\n')
-    m.depword(S.vEs, 0xABCD)    # sentinel
+    m.depword(S.vS_examine, 0xABCD)    # sentinel
     m.call(S.cmd_deposit_params, stopat=[S['cmd_deposit_params.end']])
     assert (      0x1234 ,         0x01 ,        0x00 ) \
-        == (m.word(S.vDs), m.byte(S.vDa), m.byte(S.t2b))
+        == (m.word(S.vS_deposit), m.byte(S.vA_deposit), m.byte(S.t2b))
 
 def test_d_copyaddr(m, S, R, loadbios):
     loadbios(input=b's5678 a0 e1\n')
-    m.depword(S.vEs, 0xABCD)
+    m.depword(S.vS_examine, 0xABCD)
     m.call(S.cmd_deposit_params, stopat=[S['cmd_deposit_params.end']])
     assert (      0xABCD ,         0x00 ,        0x01 ) \
-        == (m.word(S.vDs), m.byte(S.vDa), m.byte(S.t2b))
+        == (m.word(S.vS_deposit), m.byte(S.vA_deposit), m.byte(S.t2b))
 
 @param('input, mem, output', [
     ('\n', 'abcdefgh', 'a\x08\n'),
@@ -411,7 +411,7 @@ def test_d_copyaddr(m, S, R, loadbios):
 ])
 def test_quote(m, S, R, loadbios, input, mem, output):
     depaddr = 0x9000
-    m.depword(S.vDs, depaddr)
+    m.depword(S.vS_deposit, depaddr)
     m.deposit(depaddr, b'abcdefgh')
     instream, outstream = loadbios(input=input.encode('ASCII'))
     m.call(S.cmd_deposit_ascii, stopat=[S.prompt])
@@ -436,8 +436,8 @@ def test_quote(m, S, R, loadbios, input, mem, output):
 def test_v(m, S, R, loadbios, len):
     start = 0x4000;  data  = [0xEE] * len
     m.deposit(start, data)
-    m.depword(S.vCVs, start)
-    m.depword(S.vCVe, start + len)
+    m.depword(S.vS_source, start)
+    m.depword(S.vE_source, start + len)
 
     crc = crc_hqx(bytes(data), 0xFFFF)
     _, ostream = loadbios()
@@ -457,9 +457,9 @@ def test_v(m, S, R, loadbios, len):
 ], ids=tmc_tid)
 def test_slash(m, S, R, loadbios, q, s, output):
     _, ostream = loadbios()
-    m.depword(S.vSLASHq, q)
-    m.depword(S.vSLASHs, s)
-    m.call(S['cmd_calculate.exec'], stopat=[S.prompt])
+    m.depword(S.vL_calc, q)
+    m.depword(S.vR_calc, s)
+    m.call(S['cmd_calc.exec'], stopat=[S.prompt])
     print('expected:', output)
     print('  actual:', ostream.getvalue())
     assert output == ostream.getvalue()
@@ -519,7 +519,7 @@ def test_prompt_e(m, S, R, loadbios):
              + b'.q\n'
     actual = ostream.getvalue()
 
-    print(f'vEs={m.word(S.vEs):04X}, ' \
-        f'vEl={m.byte(S.vEl)} vEw={m.byte(S.vEw)}')
+    print(f'vS_examine={m.word(S.vS_examine):04X}, ' \
+        f'vL_examine={m.byte(S.vL_examine)} vW_examine={m.byte(S.vW_examine)}')
     print(f'{expected!r}\n{actual!r}')
     assert (b'END', expected) == (istream.read(),   actual)

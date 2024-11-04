@@ -742,12 +742,7 @@ cmd_deposit_hex
             call prspace
 .next       call qhex
             jp   NZ,.next
-            call prnl
-            ld   a,(vA_deposit)
-            or   a,a
-            jp   Z,.noadvance
-            ld   (vS_deposit),hl
-.noadvance  jp   prompt
+            jp   deposit_end
 
 depaddr     call prcr           ; use existing line for entry
             ld  hl,(vS_deposit) ; start address
@@ -767,7 +762,7 @@ cmd_deposit_ascii
             call rdchar
             call cqcancel       ; terminate command if cancel character
             call qexec          ; "execute" char? (newline)
-            jp   Z,.end         ;   yes: input complete
+            jp   Z,deposit_end  ;   yes: input complete
             ;
             cp   a,$0E          ; Ctrl-N to skip over this location?
             jp   NZ,+           ;    no: process input
@@ -778,7 +773,7 @@ cmd_deposit_ascii
 +           cp   a,$04          ; Ctrl-D to switch to hex digit input?
             jp   NZ,.char       ;    no: normal char input
             call qhex
-            jp   Z,.end         ; we're done if qhex was exited w/"execute"
+            jp   Z,deposit_end  ; we're done if qhex was exited w/"execute"
             dec  hl
             jp   .next
             ;
@@ -786,9 +781,13 @@ cmd_deposit_ascii
             ld   (hl),a         ; store char
             call  prvischar     ; print input
             jp   .next          ; and next loc
-            ;
-.end        call prnl
-            jp   prompt
+
+deposit_end call prnl
+            ld   a,(vA_deposit)
+            or   a,a
+            jp   Z,.noadvance
+            ld   (vS_deposit),hl
+.noadvance  jp   prompt
 
 ; ----------------------------------------------------------------------
 ;   Checksum and Copy Commands

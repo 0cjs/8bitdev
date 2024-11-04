@@ -412,11 +412,14 @@ def test_deposit_copyaddr(m, S, R, loadbios):
 def test_deposit_ascii(m, S, R, loadbios, input, mem, output):
     depaddr = 0x9000
     m.depword(S.vS_deposit, depaddr)
+    m.depword(S.vA_deposit, 1)          # advance mode
     m.deposit(depaddr, b'abcdefgh')
     instream, outstream = loadbios(input=input.encode('ASCII'))
     m.call(S.cmd_deposit_ascii, stopat=[S.prompt])
     assert (mem.encode('ASCII'), b'\r9000: ' + output.encode('ASCII')) \
         == (m.bytes(depaddr, 8),                 outstream.getvalue())
+    if '\x04' not in input:
+        assert depaddr + len(input) - 1 == m.word(S.vS_deposit)
     assert b'' == instream.read()
 
 ####################################################################

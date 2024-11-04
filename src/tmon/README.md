@@ -26,6 +26,17 @@ start of the current line; the latter moving down a line). The only I/O
 routines required are single character input and output. (The single
 character input may be blocking.)
 
+### Availability and Source Code
+
+If you've received this README as part of a binary distribution, you can
+find the current version of it and all tmon source code in the
+[`0cjs/8bitdev`] repo on GitHub. The README and CPU-independent files are
+be under `src/tmon/`, the source is under `src/CPU/` where _CPU_ is a CPU
+identifier (e.g., `i8080`), and the top-level source files for specific
+platforms are under `exe/` (e.g., `exe/cpm/tmon.i80`). The source includes
+a full set of unit tests (written in [pytest]) and manual testing can be
+done at a command-line CPU/system simulator.
+
 
 Usage
 -----
@@ -292,8 +303,10 @@ The full command descriptions follow.
 
 
 <!-------------------------------------------------------------------->
+[`0cjs/8bitdev`]: https://github.com/0cjs/8bitdev/
 [intel]: https://en.wikipedia.org/wiki/Intel_HEX
 [motorola]: https://en.wikipedia.org/wiki/SREC_(file_format)
+[pytest]: https://pytest.org/
 
 <!-- checksum algorithms -->
 [BSD checksum]: https://en.wikipedia.org/wiki/BSD_checksum

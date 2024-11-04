@@ -442,18 +442,18 @@ def test_v(m, S, R, loadbios, len):
     crc = crc_hqx(bytes(data), 0xFFFF)
     _, ostream = loadbios()
     m.call(S['cmd_cksum.exec'], stopat=[S['cmd_cksum.end']])
-    assert f'\r{start:04X}.{start+len:04X}   ={crc:04X}\n' \
+    assert f'\r{start:04X}:{start+len:04X}   ={crc:04X}\n' \
         == ostream.getvalue().decode('ASCII')
 
 ####################################################################
 #   Commands: Other
 
 @param('q, s, output', [
-    (0x0000, 0x0000, b'\r0000.0000   0000 @    0000 @   \n'),
-    (0x0040, 0x0000, b'\r0040.0000   0040 @@   0040 @@  \n'),
-    (0x0000, 0x0040, b'\r0000.0040   0040 @@   FFC0 @   \n'),
-    (0x1274, 0x0202, b'\r1274.0202   1476 vv   1072 rr  \n'),
-    (0x6768, 0x7878, b'\r6768.7878   DFE0 `    EEF0 p   \n'),
+    (0x0000, 0x0000, b'\r0000:0000   0000 @    0000 @   \n'),
+    (0x0040, 0x0000, b'\r0040:0000   0040 @@   0040 @@  \n'),
+    (0x0000, 0x0040, b'\r0000:0040   0040 @@   FFC0 @   \n'),
+    (0x1274, 0x0202, b'\r1274:0202   1476 vv   1072 rr  \n'),
+    (0x6768, 0x7878, b'\r6768:7878   DFE0 `    EEF0 p   \n'),
 ], ids=tmc_tid)
 def test_slash(m, S, R, loadbios, q, s, output):
     _, ostream = loadbios()

@@ -802,11 +802,9 @@ cmd_cksum   ld   hl,ptab_source
             ld   hl,(vCVs)
             ld   d,h            ; start address
             ld   e,l
+            call praddrHL       ; print with colon to indicate end addr follows
             ld   hl,(vCVe)      ; end address
-            ;   Print start and end addresses
-            ex   de,hl
-            call prhexHLDE
-            ex   de,hl
+            call prhexHL
             call subHLDE
             call pr3sp
             ld   a,'='
@@ -875,12 +873,13 @@ cmd_calculate
             call read_params
 .exec       call prcr           ; output on same line, since we print inputs
             ;   Left/right input values
-            ld   hl,(vSLASHs)
+            ld   hl,(vSLASHq)
+            call praddrHL
             ex   hl,de
-            ld   hl,(vSLASHq)
-            call prhexHLDE
+            ld   hl,(vSLASHs)
+            call prhexHL
+            ex   hl,de
             ;   Addition result
-            ld   hl,(vSLASHq)
             add  hl,de
             call .print
             ;   Subtraction result
@@ -998,15 +997,6 @@ prhexval    ld   b,2            ; default to 2-digit word
 praddrHL    call prhexHL
             ld   a,':'
             jp   prchar         ; ret (TCO)
-
-;   ♣A  Print HL in hex, a period, then DE in hex.
-prhexHLDE   call prhexHL
-            ld   a,'.'
-            call prchar
-            ex   hl,de
-            call prhexHL
-            ex   hl,de
-            ret
 
 ; ======================================================================
 ;   Misc. routines

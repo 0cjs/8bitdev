@@ -49,7 +49,7 @@ build_asxxxx() {
 #   t8dev and project setup
 
 export T8_PROJDIR=$(cd "$(dirname "$0")" && pwd -P)
-t8dir=tool/t8dev
+t8dir=t8dev
 [[ -r $T8_PROJDIR/$t8dir/t8setup.bash ]] \
     || git submodule update --init "$T8_PROJDIR/$t8dir"
 

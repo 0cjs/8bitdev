@@ -221,21 +221,32 @@ prompt      ld   sp,monstack
             ;   • Commands must generate their own initial newline; see above.
             ;   • Commands that execute immediately rather than waiting for
             ;     parameters and/or confirmation should be marked somehow.
+            cmd  CR, cmd_newline
             cmd  "'",cmd_deposit_ascii
+            cmd  ',',cmd_deposit_params
             cmd  '.',cmd_deposit_bytes
             cmd  '/',cmd_calc
+          ; cmd  ':',cmd_deposit_intelhex
+            cmd  ';',cmd_regs_deposit
             cmd  '>',cmd_deposit_words
-            cmd  'D',cmd_deposit_params
-            cmd  'E',cmd_examine_cur
+          ; cmd  'A',cmd_examine_asm
+            cmd  'B',cmd_examine_prev
+            cmd  'D',cmd_examine_cur
+            cmd  'E',cmd_examine_params
+            cmd  'F',cmd_examine_next
             cmd  'I',cmd_iret
             cmd  'J',cmd_jump
             cmd  'K',cmd_call
+          ; cmd  'M',cmd_copymem
             cmd  'O',cmd_port_out
             cmd  'P',cmd_port_in
             cmd  'Q',cmd_quit
-            cmd  'R',cmd_regs
+            cmd  'R',cmd_regs_examine
+          ; cmd  'S',cmd_deposit_motosrec
+          ; cmd  'T',cmd_device_write
             cmd  'V',cmd_cksum
-            cmd  'W',cmd_examine_next
+          ; cmd  'W',cmd_find
+          ; cmd  'Y',cmd_device_read
             ;   No command; generate error.
 .err        call errbeep
             ld   a,CR           ; back up over bad command and prompt
@@ -553,8 +564,16 @@ ptab_examine
             pb   'W',vW_examine     ; width (# of bytes to print): 8-bit value
 ptab_none   db   0                  ; end of table
 
-;   Load E and W cmd params into registers.
-getparams_EW ld  hl,(vS_examine) ; start address parameter
+cmd_examine_params
+            ld   hl,ptab_examine
+            call read_params
+            call prnl
+.end        jp   prompt
+
+;   Load examine parameters into registers and temps:
+;   t0w=HL=start address, BC=bytes/line, DE=lines to dump
+examine_setup
+            ld  hl,(vS_examine) ; start address parameter
             ld   (t0w),hl       ; t0w: current line start
             ld   b,0
             ld   a,(vW_examine)
@@ -564,9 +583,20 @@ getparams_EW ld  hl,(vS_examine) ; start address parameter
             ld   e,a            ; DE: number of lines to dump
             ret
 
+;   XXX BROKEN add a test and then fix this
+cmd_examine_prev
+            call examine_setup  ; BC=bytes/line, DE=lines
+            ld   a,b            ; complement BC so add subtracts
+            cpl
+            ld   b,a
+            ld   a,c
+            cpl
+            ld   c,a
+            inc  bc
+            jp   cmd_examine_next.addpage
+
 cmd_examine_next
-            call prcr           ; we will overwrite the command line
-            call getparams_EW   ; BC=bytes/line, DE=lines
+            call examine_setup  ; BC=bytes/line, DE=lines
 .addpage    add  hl,bc          ; add to start addr no. of bytes per line
             dec  e              ;   as many times as lines to dump
             jp   NZ,.addpage
@@ -574,10 +604,8 @@ cmd_examine_next
             jp   cmd_examine_cur.noparams  ; and do the dump
 
 cmd_examine_cur
-            ld   hl,ptab_examine
-            call read_params
-            call prnl
-.noparams   call getparams_EW   ; BC=bytes/line DE=lines, HL=(t0w)=curline addr
+.noparams   call prcr           ; we will overwrite the command line
+            call examine_setup  ; BC=bytes/line DE=lines, HL=(t0w)=curline addr
             ;
 .startline  push bc             ; save BC=bytes/line
             push de             ; save DE=lines remaining
@@ -653,9 +681,13 @@ ptab_regs       pb   'F',ureg_F     ; flags
                 pw   'I',ureg_BC    ; mnemonic "Index" (like a count)
                 db 0
 
-cmd_regs    ld   hl,ptab_regs
+cmd_regs_deposit
+            ld   hl,ptab_regs
             call read_params
-.exec       call prcr           ; overwrite line, since we display everything
+            ; fallthrough
+
+cmd_regs_examine
+            call prcr           ; overwrite line, since we display everything
             ld   hl,(ureg_PC)
             call prhexHL
             ld   hl,(ureg_SP)
@@ -824,6 +856,11 @@ cmd_cksum   ld   hl,ptab_source
 
 ; ----------------------------------------------------------------------
 ;   Other Commands
+
+cmd_newline call prback         ; erase visible ^M
+            call prspace
+            call prnl
+            jp   prompt
 
 ptab_port_in
             pb   'P',vP_port_in

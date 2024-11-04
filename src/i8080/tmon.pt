@@ -210,11 +210,11 @@ def test_examine_settings(m, S, R, loadbios):
     m.deposit(S.vW_examine, 5)
     m.call(S.cmd_examine_cur, stopat=[S['cmd_examine_cur.end']])
     s = ostream.getvalue()
-    print(s)
-    assert b'\n' \
-           b'12AB: FF 00 12 23 34 ?@R#4    #4\n'    \
-           b'12B0: 45 56 67 78 89 EVgxI EVgx \n'    \
-           == s
+    expected =  b'\r' \
+                b'12AB: FF 00 12 23 34 ?@R#4    #4\n' \
+                b'12B0: 45 56 67 78 89 EVgxI EVgx \n'
+    print(expected); print(s)
+    assert expected == s
 
 def test_examine_next_defaults(m, S, R, loadbios):
     _, ostream = loadbios(input=b'\n')
@@ -227,6 +227,18 @@ def test_examine_next_defaults(m, S, R, loadbios):
     assert b'0028: 00' in s
     assert s.endswith(b'\n')
     assert 0x0020 == m.word(S.vS_examine)
+
+def test_examine_prev(m, S, R, loadbios):
+    _, ostream = loadbios(input=b'\n')
+    m.call(S.init, stopat=[S['init.end']])           # testing default values
+    m.call(S.cmd_examine_prev, stopat=[S['cmd_examine_cur.end']])
+    s = ostream.getvalue()
+    print(f'vS_examine={m.word(S.vS_examine):04X} t0w={m.word(S.t0w):04X}',
+        s.decode('ASCII'))
+    assert b'FFE0: 00' in s
+    assert b'FFF8: 00' in s
+    assert s.endswith(b'\n')
+    assert 0xFFE0 == m.word(S.vS_examine)
 
 ####################################################################
 #   Register command and support functions
@@ -243,7 +255,7 @@ def test_regs_print(m, S, R, loadbios):
     _, ostream = loadbios()
     m.deposit(S.ureg_AF, [0xD7, 0x12])
     m.depword(S.ureg_BC, [0x2345, 0x6789, 0xABCD, 0xEFFE, 0xFEEF])
-    m.call(S['cmd_regs.exec'], stopat=[S['cmd_regs.end']])
+    m.call(S['cmd_regs_examine'], stopat=[S['cmd_regs_examine.end']])
     assert b'\rFEEF EFFE SZHPC 12 2345 6789 ABCD\n' \
         == ostream.getvalue()
 '''
@@ -262,7 +274,7 @@ FEEF EFFE 12 2345 6789 ABCD D7
 
 def test_regs_setbytes(m, S, R, loadbios):
     loadbios(input=b'a1234 f5678 b0B c0C d0D e0E h08 l07\n')
-    m.call(S.cmd_regs, stopat=[S['cmd_regs.exec']])
+    m.call(S.cmd_regs_deposit, stopat=[S['cmd_regs_examine.end']])
     print(m.hexdump(S.ureg_AF, 12))
     assert (0x34, 0x78, 0x0B, 0x0C, 0x0D, 0x0E, 0x08, 0x07) \
         == tuple(map(m.byte, [S.ureg_A, S.ureg_F,
@@ -272,7 +284,7 @@ def test_regs_setbytes(m, S, R, loadbios):
 
 def test_regs_setwords(m, S, R, loadbios):
     loadbios(input=b'p0102 s0304 i0506 t0708 m090A\n')
-    m.call(S.cmd_regs, stopat=[S['cmd_regs.exec']])
+    m.call(S.cmd_regs_deposit, stopat=[S['cmd_regs_examine.end']])
     print(m.hexdump(S.ureg_AF, 12))
     assert (0x0102, 0x0304, 0x0506, 0x0708, 0x090A) == tuple(map(m.word,
         [S.ureg_PC, S.ureg_SP, S.ureg_BC, S.ureg_DE, S.ureg_HL, ]))
@@ -464,7 +476,6 @@ def test_slash(m, S, R, loadbios, q, s, output):
     #   All non-printable characters are "bad command" when waiting for command.
     (b'\x00',   b'.@\a\r',  True),
     (b'\n',     b'.J\a\r',  True),
-    (b'\r',     b'.M\a\r',  True),
     (b'\x1F',   b'._\a\r',  True),
     (b'\x7F',   b'.?\a\r',  True),
 
@@ -474,7 +485,10 @@ def test_slash(m, S, R, loadbios, q, s, output):
     (b'!',      b'.!\a\r',  True),
     (b'~',      b'.~\a\r',  True),
 
-    #   Q command is the simplest to test
+    #   Newline command is the simplest to test
+    (b'\rX',    b'.M\b \n.X\a\r',  True),  # XXX but need char after?
+
+    #   Q command is almost as simple to test
     (b'q\n',    b'.q\n',    False),     # lower case command
     (b'Q  \r',  b'.Q  \n',  False),     # upper case command, spaces ignored
 ])
@@ -484,6 +498,7 @@ def test_prompt_q_nocancel(m, loadbios, S, R,  input, output, continued):
     m.call(S.prompt, stopat=[pdone, S.exit])
 
     print(f'pdone=${pdone:04X}  {m.regs}')
+    print(output); print(ostream.getvalue())
     assert (           b'',             output,           continued) \
         == (istream.read(), ostream.getvalue(),  pdone == m.regs.pc)
 
@@ -499,7 +514,7 @@ def test_prompt_cancel(m, loadbios, S, R,  input, output):
     assert cancel_done == m.regs.pc
 
 def test_prompt_examine(m, S, R, loadbios):
-    commands = b'e s12aB l2 w6\nq\nEND'
+    commands = b'e s12aB l2 w6\ndq\nEND'
     istream, ostream = loadbios(input=commands)
     m.call(S.init, stopat=[S['init.end']])  # testing default values
     m.call(S.prompt, stopat=[S.exit], maxsteps=10000)
@@ -508,6 +523,7 @@ def test_prompt_examine(m, S, R, loadbios):
     expected = b'.e s0000' + bs4 + b'12aB ' + clr \
              + b'l04' + bs2 + b'2 ' + clr \
              + b'w08' + bs2 + b'6' + clr + b'\n' \
+             + b'.d\r' \
              + b'12AB: FF 00 12 23 34 45\n12B1: 56 67 78 89 9A AB\n' \
              + b'.q\n'
     actual = ostream.getvalue()

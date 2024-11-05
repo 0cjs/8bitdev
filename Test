@@ -1,5 +1,13 @@
 #!/usr/bin/env bash
-set -eu -o pipefail
+set -Eeuo pipefail
+
+trap 'ec=$?; echo 1>&2 "INTERNAL ERROR: ec=$ec line=$LINENO cmd=$BASH_COMMAND";
+      exit $ec;' ERR
+
+fail() { ec=$?; echo "FAILED exitcode=$ec ($(elapsed)s)"; exit $ec; }
+
+elapsed_start=$(date +%s)
+elapsed() { echo $(( $(date +%s) - $elapsed_start )); }
 
 ####################################################################
 #   Build functions
@@ -82,9 +90,9 @@ t8dev="$t8bin/t8dev"
 #   pytest/test scripts/etc.
 #   • -A: build and use all tools
 while [[ ${#@} -gt 0 ]]; do case "$1" in
-    --)     shift; break;;
+    --)     shift; break;;                  # remainder are pytest args
     -A)     shift; touch "$all_tools";;
-    *)      break;;
+    *)      break;;                         # guessing remainder are for pytest
 esac; done
 
 ####################################################################
@@ -158,7 +166,7 @@ command cd - >/dev/null
 #     supplying our own if it's not supplied.
 #
 [ $# -eq 0 ] && set -- -nlogical
-t8dev pytest -- --dist worksteal "$@"
+t8dev pytest -- --dist worksteal "$@" || fail
 
 ####################################################################
 
@@ -169,7 +177,7 @@ t8dev pytest -- --dist worksteal "$@"
 #   all the unit tests. (Or maybe we should just be running the
 #   submodule tests using their own completely separate top-level
 #   ./Test script, in our virtual env or theirs?)
-exit 0
+if false; then
 
 #   Functional tests are run only if we ran all unit tests. (This is not
 #   the best way to avoid running them when unwanted, but it's a convenient
@@ -180,3 +188,9 @@ exit 0
     ./t8dev/pylib/cmtconv/Test -q \
         || die $? "FAILED: cmtconv/Test (exitcode=$?)"
 } || true
+
+fi
+
+####################################################################
+
+echo "OK ($(elapsed)s)"

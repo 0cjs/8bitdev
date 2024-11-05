@@ -4,6 +4,7 @@ set -Eeuo pipefail
 trap 'ec=$?; echo 1>&2 "INTERNAL ERROR: ec=$ec line=$LINENO cmd=$BASH_COMMAND";
       exit $ec;' ERR
 
+die()  { ec="$1"; shift; echo 1>&2 "ERROR ($ec):" "$@"; exit $ec; }
 fail() { ec=$?; echo "FAILED exitcode=$ec ($(elapsed)s)"; exit $ec; }
 
 elapsed_start=$(date +%s)
@@ -87,6 +88,7 @@ T8_CLEAN_C="$fast_hack"
 t8bin="$T8_PROJDIR/$t8dir/bin"
 t8dev="$t8bin/t8dev"
 
+post_emulate=
 #   Extra argument processing for this project. These must be after the
 #   project-setup.bash arguments, but before anything to be passed on to
 #   pytest/test scripts/etc.
@@ -94,6 +96,7 @@ t8dev="$t8bin/t8dev"
 while [[ ${#@} -gt 0 ]]; do case "$1" in
     --)     shift; break;;                  # remainder are pytest args
     -A)     shift; touch "$all_tools";;
+    -E)     shift; post_emulate="$1"; shift;;
     *)      break;;                         # guessing remainder are for pytest
 esac; done
 
@@ -192,6 +195,40 @@ if false; then
 } || true
 
 fi
+
+####################################################################
+#   Post-test emulator run
+
+post_emulate_run() {
+    #   This expects that $post_emulate will be set to the path of
+    #   a file under .build/ (relative path) to run in an emulator,
+    #   or empty to indicate there's nothing to run.
+    #   • The API can surely be expanded to allow other ways of saying
+    #     what you want to run, but what sort of forms of this are
+    #     convenient needs to be worked out. But in particular we need
+    #     to work out how to specify an emulator when there are multiple
+    #     choices for a particular program, e.g., RunCPM vs. C128 CP/M.
+    #   • This function should probably eventually move to t8setup.bash,
+    #     to be defined there for use by clients.
+    [[ -n $post_emulate ]] || return 0
+
+    #   Currently accept just paths.
+    [[ -r $post_emulate ]] || die 2 "Cannot read: $post_emulate"
+    sub_path=${post_emulate#*/exe/}
+    emu_suite=${sub_path%%/*}
+    case "$emu_suite" in
+        tmc)
+            emulator=${sub_path#*/}
+            emulator=${emulator%%/*}
+            tmc "$emulator" "$post_emulate" || fail
+            ;;
+        *)
+            die 2 "Unknown emulator suite: $emu_suite"
+            ;;
+    esac
+}
+
+post_emulate_run
 
 ####################################################################
 

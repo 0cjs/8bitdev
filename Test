@@ -222,6 +222,14 @@ post_emulate_run() {
             emulator=${emulator%%/*}
             tmc "$emulator" "$post_emulate" || fail
             ;;
+        cpm)
+            #   We should support multiple CP/M emulators here, but for the
+            #   moment we are hardcoded to RunCPM. Also, there's currently
+            #   no way to specify additional files to be added to the
+            #   "disk" containing the .COM file, or specify that the
+            #   first entry should not be auto-run.
+            t8dev -vv emulator runcpm =a "$post_emulate"
+            ;;
         *)
             die 2 "Unknown emulator suite: $emu_suite"
             ;;

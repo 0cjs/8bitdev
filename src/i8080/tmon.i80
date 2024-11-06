@@ -115,12 +115,10 @@ v_end
 v_cksum     ds   2      ; checksum to determine if we re-init
 
 ;   Temporary storage, word and byte
-t0w
-t0b         ds   1
-t1b         ds   1
-t2w
-t2b         ds   1
-t3b         ds   1
+t0          ds   1
+t1          ds   1
+t2          ds   1
+t3          ds   1
 
 ; ======================================================================
 ;   Entry point and main loop
@@ -137,12 +135,12 @@ entry       di                  ; ensure as best we can nothing will touch stack
             ld   (ureg_A),a
             ;   We must save the carry bit separately here because the DAD
             ;   we use later will affect it. We set bits in A to indicate
-            ;   the value of the user carry (t0b) and whether we entered via
-            ;   an interrupt (b7). (`intentry` sets t0b to 1.)
+            ;   the value of the user carry (t0) and whether we entered via
+            ;   an interrupt (b7). (`intentry` sets t0 to 1.)
             ld   a,0
             jp   NC,.savecarry
             ld   a,1
-.savecarry  ld   (t0b),a        ; save carry and interrupt entry bits
+.savecarry  ld   (t0),a         ; save carry and interrupt entry bits
             ld   (ureg_HL),hl
             ex   de,hl
             ld   (ureg_DE),hl
@@ -162,13 +160,13 @@ entry       di                  ; ensure as best we can nothing will touch stack
             ld   a,l            ; get flags
             and  a,$FE          ; clear carry
             ld   l,a
-            ld   a,(t0b)        ; load original carry, int flag, etc.
+            ld   a,(t0)         ; load original carry, int flag, etc.
             and  $01            ;   and mask it
             or   a,l            ; bring in all other flags
             ld   (ureg_F),a
             ;   If we entered via intentry, we copy the return address to the
             ;   user PC so we can see where we came from.
-            ld   a,(t0b)
+            ld   a,(t0)
             and  $80            ; entry via int flag set?
             jp   Z,.done        ;    no: we're done
             ld   hl,(ureg_SP)   ;   yes: copy return address from stack
@@ -276,7 +274,7 @@ cancel      call  pr4clear      ; clear any displayed value
 ;
 intentry    di
             ld   (ureg_A),a
-            ld   a,$80          ; Carry (t0b) and entry via interrupt (b7) bits.
+            ld   a,$80          ; Carry (t0) and entry via interrupt (b7) bits.
             jp   NC,entry.savecarry
             ld   a,$81
             jp   entry.savecarry
@@ -306,7 +304,7 @@ v_initdata  dw   $8000          ; execute start
 ; ======================================================================
 ;   Command parameter management.
 
-;   ♠HL ♣ABCHL,(t0w)   We've found a command; it's asking us to read and
+;   ♠HL ♣ABCHL,(t0⋅1)   We've found a command; it's asking us to read and
 ;   update parameters (specified in a table passed in HL) and execute or
 ;   cancel it.
 ;
@@ -316,7 +314,7 @@ v_initdata  dw   $8000          ; execute start
 ;   • byte0 [6:0]: param name, as upper-case ASCII letter
 ;   • byte1,byte2 [15:0]: location in which to store param value
 ;
-read_params ld   (t0w),hl        ; save params table
+read_params ld   (t0),hl         ; save params table
 .next       call rdchar
             call qexec          ; execute command?
             ret  Z              ;   yes: continue running command
@@ -325,7 +323,7 @@ read_params ld   (t0w),hl        ; save params table
             cp   SPACE          ; ignore spaces.
             jp   Z,read_params
             ;
-.parse_name ld   hl,(t0w)
+.parse_name ld   hl,(t0)
             call upcase         ; force to upper case if lettter
             ld   b,a            ; table entry to match
 .tabnext    ld   a,(hl)         ; param name char from table
@@ -505,7 +503,7 @@ cmd_jump    or   a,$01          ; NZ: no push ret addr, jump
 cmd_call    or   a,$00          ;  Z: push ret addr, jump
             ; fallthrough
 
-;   ♣(t0b,t1b,t2b)   Execute location
+;   ♣(t0⋅1⋅2)   Execute location
 ;   The Z flag and A register indicates which variant execution mode we run:
 ;   • A=00,Z   jump: jump directly to code, user stack is never touched
 ;                    (thus works if user stack is invalid)
@@ -522,8 +520,8 @@ exec        push af             ; save execution mode in A, Z flag
             ;   without using any registers
             ld   a,iJP
             ld   hl,(vS_jump_call)  ; start addr for execution
-            ld   (t0b),a
-            ld   (t1b),hl
+            ld   (t0),a
+            ld   (t1),hl
             ;   Switch to and set up set up user stack
             pop  af             ; restore execution mode to A, Z flag
             ld   hl,(ureg_SP)   ; (load user stack)
@@ -544,7 +542,7 @@ exec        push af             ; save execution mode in A, Z flag
             inc  a              ; A incremented from $FF to $00?
             jp   Z,+            ;   yes: interrupt return
             pop  af             ;    no:
-            jp   t0b            ;        trampoline into user code
+            jp   t0             ;        trampoline into user code
             ;
 +           pop  af
             ret                 ; return from interrupt
@@ -571,10 +569,10 @@ cmd_examine_params
 .end        jp   prompt
 
 ;   Load examine parameters into registers and temps:
-;   t0w=HL=start address, BC=bytes/line, DE=lines to dump
+;   t0⋅1=HL=start address, BC=bytes/line, DE=lines to dump
 examine_setup
             ld  hl,(vS_examine) ; start address parameter
-            ld   (t0w),hl       ; t0w: current line start
+            ld   (t0),hl        ; t0⋅1: current line start
             ld   b,0
             ld   a,(vW_examine)
             ld   c,a            ; BC: bytes/line
@@ -605,7 +603,7 @@ cmd_examine_next
 
 cmd_examine_cur
 .noparams   call prcr           ; we will overwrite the command line
-            call examine_setup  ; BC=bytes/line DE=lines, HL=(t0w)=curline addr
+            call examine_setup  ; BC=bytes/line DE=lines, HL=(t0⋅1)=curline addr
             ;
 .startline  push bc             ; save BC=bytes/line
             push de             ; save DE=lines remaining
@@ -624,21 +622,21 @@ cmd_examine_cur
 .nextline   call prnl
             pop  de             ; restore DE=lines remaining
             pop  bc             ; restore BC=bytes/line
-            ld   hl,(t0w)       ; curline start addr
+            ld   hl,(t0)        ; curline start addr
             add  hl,bc          ; next line start addr
-            ld   (t0w),hl
+            ld   (t0),hl
             dec  e
             jp   NZ,.startline
             ;
 .end        jp   prompt
 
 
-;   ♠AHL(t0w) ♣*(t2w)   prexamine: If the bit in A is set in (vF_examine),
+;   ♠AHL(t0⋅1) ♣*(t2⋅3)   prexamine: If the bit in A is set in (vF_examine),
 ;   i.e. if the format is enabled, print a sequence of (vW_examine)
-;   locations starting at (t0w) using the routine in HL. If the bit is not
+;   locations starting at (t0⋅1) using the routine in HL. If the bit is not
 ;   set, just return.
 ;
-prexamine   ld   (t2w),hl       ; save address of pr* routine
+prexamine   ld   (t2),hl        ; save address of pr* routine
             ld   hl,vF_examine  ; formats bitfield address
             and  a,(hl)         ;   is our bit set?
             ret  Z              ;      no: just return
@@ -650,13 +648,13 @@ prexamine   ld   (t2w),hl       ; save address of pr* routine
             jp   Z,+            ;   yes: no need for an initial space
             call prspace
             ;
-+           ld   hl,(t0w)       ; current line start address
++           ld   hl,(t0)        ; current line start address
             ld   a,(vW_examine)
             ld   c,a            ; number of bytes to print (width)
 .nextbyte   ex   de,hl          ; save current byte address
             ld   hl,.continue
             push hl             ; continuation address whence pr* will return
-            ld   hl,(t2w)       ; pr* routine address
+            ld   hl,(t2)        ; pr* routine address
             push hl
             ex   de,hl          ; restore current byte address
             ld   a,(hl)         ; load byte to print
@@ -742,17 +740,17 @@ flagchars   db   'S'-1, 'Z'-1, 0-1, 'H'-1, 0-1, 'P'-1, 0-1, 'C'-1
 ptab_deposit_params
             pw   'S',vS_deposit     ; start: 16-bit value
             pb   'A',vA_deposit     ; advance mode
-            pb   'E',t2b            ; copy examine start address: temp store
-                                    ;   (t0w/t0b,t1b is used by `read_params`)
+            pb   'E',t2             ; copy examine start address: temp store
+                                    ;   (t0⋅1 is used by `read_params`)
             db   0                  ; end of table
 
 cmd_deposit_params
             xor  a,a
-            ld   (t2b),a
+            ld   (t2),a
             ld   hl,ptab_deposit_params
             call read_params
             call prnl
-            ld   a,(t2b)         ; copy examine start address?
+            ld   a,(t2)          ; copy examine start address?
             or   a,a
             jp   Z,.end         ;   no
             ld   hl,(vS_examine)
@@ -890,14 +888,14 @@ cmd_port_out
             ;    fallthrough
 
 cmd_port_cont ;  Set up trampoline
-            ld   (t0b),a        ; IN/OUT instruction
+            ld   (t0),a         ; IN/OUT instruction
             ld   a,c
-            ld   (t1b),a        ; port to read/write
+            ld   (t1),a         ; port to read/write
             ld   a,$C9
-            ld   (t2b),a        ; RET instruction
+            ld   (t2),a         ; RET instruction
             call pr3sp          ; space out before printing read/write data
             ld   a,d            ; data to write (ignored if read)
-            call t0b            ; call trampoline
+            call t0             ; call trampoline
             call prhexA
             call prnl
             jp   prompt

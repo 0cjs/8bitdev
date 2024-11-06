@@ -186,7 +186,7 @@ def test_prexamine_fset(m, S, R, loadbios):
     _, ostream = loadbios()
     m.deposit(S.vF_examine, 1)          # must have a format bit set
     m.deposit(S.vW_examine, 6)          # bytes/line
-    m.depword(S.t0w, S.utest_data)      # start addr of line
+    m.depword(S.t0, S.utest_data)      # start addr of line
 
     m.call(S.prexamine, R(a=0xFF, hl=S.prsphexA), trace=1)
     s = ostream.getvalue();  print(s)
@@ -221,7 +221,7 @@ def test_examine_next_defaults(m, S, R, loadbios):
     m.call(S.init, stopat=[S['init.end']])           # testing default values
     m.call(S.cmd_examine_next, stopat=[S['cmd_examine_cur.end']])
     s = ostream.getvalue()
-    print(f'vS_examine={m.word(S.vS_examine):04X} t0w={m.word(S.t0w):04X}',
+    print(f'vS_examine={m.word(S.vS_examine):04X} t0={m.word(S.t0):04X}',
         s.decode('ASCII'))
     assert b'0020: 00' in s
     assert b'0028: 00' in s
@@ -233,7 +233,7 @@ def test_examine_prev(m, S, R, loadbios):
     m.call(S.init, stopat=[S['init.end']])           # testing default values
     m.call(S.cmd_examine_prev, stopat=[S['cmd_examine_cur.end']])
     s = ostream.getvalue()
-    print(f'vS_examine={m.word(S.vS_examine):04X} t0w={m.word(S.t0w):04X}',
+    print(f'vS_examine={m.word(S.vS_examine):04X} t0={m.word(S.t0):04X}',
         s.decode('ASCII'))
     assert b'FFE0: 00' in s
     assert b'FFF8: 00' in s
@@ -398,14 +398,14 @@ def test_deposit_startaddr(m, S, R, loadbios):
     m.depword(S.vS_examine, 0xABCD)    # sentinel
     m.call(S.cmd_deposit_params, stopat=[S['cmd_deposit_params.end']])
     assert (      0x1234 ,         0x01 ,        0x00 ) \
-        == (m.word(S.vS_deposit), m.byte(S.vA_deposit), m.byte(S.t2b))
+        == (m.word(S.vS_deposit), m.byte(S.vA_deposit), m.byte(S.t2))
 
 def test_deposit_copyaddr(m, S, R, loadbios):
     loadbios(input=b's5678 a0 e1\n')
     m.depword(S.vS_examine, 0xABCD)
     m.call(S.cmd_deposit_params, stopat=[S['cmd_deposit_params.end']])
     assert (      0xABCD ,         0x00 ,        0x01 ) \
-        == (m.word(S.vS_deposit), m.byte(S.vA_deposit), m.byte(S.t2b))
+        == (m.word(S.vS_deposit), m.byte(S.vA_deposit), m.byte(S.t2))
 
 @param('input, mem, output', [
     ('\n', 'abcdefgh', 'a\x08\n'),

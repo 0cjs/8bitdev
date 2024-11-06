@@ -4,10 +4,6 @@ tmon TODO List
 - Print an extra space between every group of 8 hex digits being examined,
   so that it's easier to read in width=$10 mode.
 
-- Get rid of `t0w` and `t2w` and have users of a temporary word just
-  use `t0b` and `t1b` instead. This will make it easier to check (via
-  searches) what temporary storage is being used by various routines.
-
 - `intentry` should probably print the registers on entry. Not clear if we
   also should print something to indicate this is the result of `intentry`
   rather than `r`.

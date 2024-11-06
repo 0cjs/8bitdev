@@ -664,20 +664,20 @@ prexamine   ld   (t2),hl        ; save address of pr* routine
             jp   NZ,.nextbyte   ;    no: carry on
             ret
 
-ptab_regs       pb   'F',ureg_F     ; flags
-                pb   'A',ureg_A
-                pb   'B',ureg_B
-                pb   'C',ureg_C
-                pb   'D',ureg_D
-                pb   'E',ureg_E
-                pb   'H',ureg_H
-                pb   'L',ureg_L
-                pw   'P',ureg_PC
-                pw   'S',ureg_SP
-                pw   'M',ureg_HL    ; mnemonic "Memory"
-                pw   'T',ureg_DE    ; mnemonic "Target"
-                pw   'I',ureg_BC    ; mnemonic "Index" (like a count)
-                db 0
+ptab_regs   pb   'F',ureg_F     ; flags
+            pb   'A',ureg_A
+            pb   'B',ureg_B
+            pb   'C',ureg_C
+            pb   'D',ureg_D
+            pb   'E',ureg_E
+            pb   'H',ureg_H
+            pb   'L',ureg_L
+            pw   'P',ureg_PC
+            pw   'S',ureg_SP
+            pw   'M',ureg_HL    ; mnemonic "Memory"
+            pw   'T',ureg_DE    ; mnemonic "Target"
+            pw   'I',ureg_BC    ; mnemonic "Index" (like a count)
+            db 0
 
 cmd_regs_deposit
             ld   hl,ptab_regs

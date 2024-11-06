@@ -16,10 +16,12 @@ build_toolsets() {
     [[ -f $all_tools ]] && t8dev buildtoolset asxxxx
     t8dev buildtoolset asl
     t8dev buildtoolset osimg
+    t8dev buildtoolset ctools
     t8dev buildtoolset dos33fs
     t8dev buildtoolset linapple
     t8dev buildtoolset RunCPM
     t8dev buildtoolset bm2
+    t8dev buildtoolset cscp
 }
 
 #   ASxxxx builds

@@ -1,9 +1,8 @@
 from    testmc.i8080  import  Machine
 
 test_rig = '''
-            relaxed on
             cpu 8080
-            z80syntax exclusive
+            include  src/i8080/std.i80
             org $C000
             include testmc/i8080/tmc/biosdef.i80
             include src/i8080/hello.i80

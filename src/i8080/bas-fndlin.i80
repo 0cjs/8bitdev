@@ -1,8 +1,7 @@
 ;   Various ideas about code to scan through MS-BASIC TXTTAB
 
-            relaxed on              ; accept $nn hex number syntax
             cpu 8080
-            z80syntax exclusive
+            include  src/i8080/std.i80
 
 ; ----------------------------------------------------------------------
 ;   Standard BASIC variables

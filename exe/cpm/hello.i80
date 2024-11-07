@@ -1,6 +1,5 @@
-            relaxed on
             cpu 8080
-            z80syntax exclusive
+            include  src/i8080/std.i80
 
             org  $0100
 

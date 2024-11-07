@@ -3,8 +3,7 @@ import  pytest
 
 test_rig = '''
             cpu 8080
-            z80syntax exclusive
-            relaxed on
+            include  src/i8080/std.i80
             org $1000
             include src/i8080/qhex.i80
 '''

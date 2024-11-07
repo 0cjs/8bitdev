@@ -4,11 +4,11 @@ from    binascii  import crc_hqx
 import  pytest
 
 test_rig = '''
-            relaxed on
             cpu 8080
-            z80syntax exclusive
-            org $8000
+            include  src/i8080/std.i80
             include testmc/i8080/tmc/biosdef.i80
+
+            org $8000
 
 ;   Tweak some default parameter values tests. This both checks that the
 ;   defaults are properly taken from these settings and lets us use

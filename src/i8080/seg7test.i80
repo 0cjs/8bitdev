@@ -1,8 +1,7 @@
 ;   seg7test: Various routines to test 7-segment displays
 
             cpu 8080
-            z80syntax exclusive
-            relaxed on
+            include  src/i8080/std.i80
 
 segments    equ  $83F8          ; Address of leftmost 7-segment display
                                 ;   (of 8) on TK-80, TK-85

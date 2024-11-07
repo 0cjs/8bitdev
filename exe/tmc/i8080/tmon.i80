@@ -1,9 +1,7 @@
 ;   tmon for `testmc.tmc i8080` simulator.
 
-            relaxed on
             cpu 8080
-            z80syntax exclusive
-
+            include  src/i8080/std.i80
             include "testmc/i8080/tmc/biosdef.i80" ; `tmc` will load bioscode
 
 ;   Our RAM workspace and code locations are chosen here just to be easy

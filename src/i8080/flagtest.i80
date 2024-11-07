@@ -1,8 +1,7 @@
 ;   flagtest.i80: various tests to see flags affected by instructions
 
             cpu 8080
-            z80syntax exclusive
-            relaxed on
+            include  src/i8080/std.i80
 
 ;   8085 Flags:
 ;   • $80   S sign

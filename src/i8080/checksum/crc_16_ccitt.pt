@@ -8,9 +8,8 @@ from    binascii  import crc_hqx
 import  pytest
 
 test_rig = '''
-            relaxed on
             cpu 8080
-            z80syntax exclusive
+            include  src/i8080/std.i80
             org $8000
             include src/i8080/checksum/crc_16_ccitt.i80
 '''

@@ -10,24 +10,12 @@
             cpu 8080
             include  src/i8080/std.i80
 
-BDOS        equ  $0005
-CONIN       equ  1
-CONOUT      equ  2
-
 tmon_ram    equ  $180
 tmon_stksz  equ  $40            ; data at $1A0
 tmon_rom    equ  $200           ; easy to remember and use
 
             org  $100           ; start of TPA
 tpa
-            ld   a,'G'
-            call prchar
-            ld   a,'H'
-            call prchar
-            ld   a,'I'
-            call prchar
-            call $0000
-
             ;   Set up "breakpoint" RST.
             ld   a,I_JP
             ld   (RST_38),a     ; RST 7 for breakpoint, like DDT
@@ -37,47 +25,7 @@ tpa
 
 exit        jp   RST_00         ; Return to CP/M.
 
-; ----------------------------------------------------------------------
-;   Emulate the standard BIOS functions that tmon expects.
-
-BEL         equ  $07
-
-prchar      push bc
-            push de
-            ld   c,CONOUT
-            ld   e,a
-            ; fallthrough
-
-;   Common part of BDOS calls done in a way that preserves registers.
-;   This expects BC already to have been saved on the stack, and C to
-;   contain the BDOS function.
-bdosP       push hl
-            call BDOS
-            pop  hl
-            pop  de
-            pop  bc
-            ret
-
-rdchar      push bc
-            push de
-            ld   c,CONIN
-            ld   e,a
-            jp   bdosP          ; ret (TCO)
-
-prnl        push bc
-            push de
-            push hl
-            ld   c,CONIN
-            ld   e,CR
-            call BDOS
-            ld   e,LF
-            call BDOS
-            pop hl
-            pop de
-            pop bc
-
-errbeep     ld   a,BEL
-            jp   prchar         ; ret (TCO)
+            include testmc/i8080/bios/cpmcode.i80
 
     if $ >= tmon_ram
             error   'setup routine stomped on tmon code!'

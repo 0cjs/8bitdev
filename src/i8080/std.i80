@@ -25,14 +25,14 @@
 ;   Restart addresses
 ;   We use the Zilog $00,$08,$10,… convention, not Intel 0,1,2,….
 
-RST_00      equ $00
-RST_08      equ $08
-RST_10      equ $10
-RST_18      equ $18
-RST_20      equ $20
-RST_28      equ $28
-RST_30      equ $30
-RST_38      equ $38
+RST_00      equ $00     ; 8080: RST 0
+RST_08      equ $08     ; 8080: RST 1
+RST_10      equ $10     ; 8080: RST 2
+RST_18      equ $18     ; 8080: RST 3
+RST_20      equ $20     ; 8080: RST 4
+RST_28      equ $28     ; 8080: RST 5
+RST_30      equ $30     ; 8080: RST 6
+RST_38      equ $38     ; 8080: RST 7
 
 RST_TRAP    equ $24     ; 8085: NMI
 RST_2C      equ $2C     ; 8085: RST5.5

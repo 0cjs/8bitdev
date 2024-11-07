@@ -228,7 +228,7 @@ post_emulate_run() {
             #   no way to specify additional files to be added to the
             #   "disk" containing the .COM file, or specify that the
             #   first entry should not be auto-run.
-            t8dev -vv emulator runcpm =a "$post_emulate"
+            t8dev emulator runcpm =a "$post_emulate"
             ;;
         *)
             die 2 "Unknown emulator suite: $emu_suite"

@@ -22,3 +22,26 @@ tmon TODO List
   that triggered it. (Then print CR, 19 spaces to clear and execute the
   desired command; we don't want to do more because e.g. Epson HC-20 has
   only a 20-chars/line LCD display.)
+
+
+Platform-specific TODO
+----------------------
+
+### Kyocera-85
+
+- Get it running on PC-8201, or TRS-80 Model 100.
+
+### CP/M
+
+- Initial version, `TMON100.COM`, loads like a normal CP/M program into the
+  TPA at $100.
+- A better version would work like DDT, relocating itself to the top of
+  memory. Possibly this could be set up as a (temporary?) CCP replacement.
+- Once that's set up, device load/save can set up an FCB and load to/save
+  from the TPA.
+
+### PC-8001 / PC-8001mkII
+
+- Burn into 8K expansion ROM ($6000-$7FFF), with the pre-init setting up
+  extra BASIC command to enter tmon.
+- Add CMT load/save.

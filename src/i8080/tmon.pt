@@ -10,6 +10,16 @@ test_rig = '''
             org $8000
             include testmc/i8080/tmc/biosdef.i80
 
+;   Tweak some default parameter values tests. This both checks that the
+;   defaults are properly taken from these settings and lets us use
+;   settings that produce less output that the "default" defaults, which
+;   are designed for 80-column, many-line terminals.
+vini_start  equ  $0000      ; examine etc. default start (XXX should move this)
+vini_format equ  $01        ; examine format: hex only
+vini_width  equ  $08        ; examine width
+
+; ----------------------------------------------------------------------
+
 tmon_ram    equ  $6F00      ; chose values for these that
 tmon_stksz  equ  $100       ;   put our data at $7000
 tmon_rom    equ  $8000

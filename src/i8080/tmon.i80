@@ -287,17 +287,34 @@ cksum_v     ld   de,v_start
             call cksum_crc_16_ccitt
             ret
 
+; ======================================================================
 ;   Initial command parameter values.
-v_initdata  dw   $8000          ; execute start
-            dw   $0000          ; examine start
-            db   $01            ; examine format: hex only
-            db   $04            ; examine #lines
-            db   $08            ; examine width #bytes
-            dw   $8000          ; deposit start
+
+v_default   macro   name,value
+        ifndef  name
+name        equ  value
+        endif
+            endm
+
+;   These default parameters are fairly well suited for a system with ROM
+;   in the lower 32K, RAM in the upper 32K and an 80-column terminal.
+;
+    v_default  vini_start,  $8000   ; start addr of examine, deposit, execute,
+    v_default  vini_end,    $8100   ;   etc.; end addr of copy, cksum etc.
+    v_default  vini_lines,  4       ; examine: number of lines to print
+    v_default  vini_width,  16      ; examine: bytes/line to print
+    v_default  vini_format, $03     ; examine: hex+ascii format
+
+v_initdata  dw   vini_start     ; execute start
+            dw   vini_start     ; examine start
+            db   vini_format    ; examine format
+            db   vini_lines     ; examine #lines
+            db   vini_width     ; examine width #bytes
+            dw   vini_start     ; deposit start
             db   $00            ; deposit advance mode off
             db   $00,$00,$00    ; input, output port, output data
-            dw   $0000          ; copy/cksum start
-            dw   $0000          ; copy/cksum end
+            dw   vini_start     ; copy/cksum start
+            dw   vini_end       ; copy/cksum end
             dw   $0000          ; calc left arg
             dw   $0000          ; calc right arg
 

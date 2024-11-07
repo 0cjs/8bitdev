@@ -47,12 +47,16 @@ character input may be blocking.)
 
 If you've received this README as part of a binary distribution, you can
 find the current version of it and all tmon source code in the
-[`0cjs/8bitdev`] repo on GitHub. The README and CPU-independent files are
-be under `src/tmon/`, the source is under `src/CPU/` where _CPU_ is a CPU
-identifier (e.g., `i8080`), and the top-level source files for specific
-platforms are under `exe/` (e.g., `exe/cpm/tmon.i80`). The source includes
-a full set of unit tests (written in [pytest]) and manual testing can be
-done at a command-line CPU/system simulator.
+[`0cjs/8bitdev`] repo on GitHub.
+- The README and CPU-independent files are be under `src/tmon/`.
+- The platform-independent source for each CPU is under `src/CPU/` where
+  _CPU_ is a CPU identifier such as `i8080`.
+- The top-level source files for specific platforms are under `exe/` (e.g.,
+  `exe/cpm/tmon.i80`).
+
+The source includes a full set of unit tests (written in [pytest]) and
+manual testing can be done at a command-line CPU/system simulator, or in
+various platform simulators.
 
 
 Usage

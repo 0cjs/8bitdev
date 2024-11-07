@@ -994,7 +994,9 @@ prNsp       ld   a,' '
 
 ;   ♠AB ♣A ♡B*   Print char in A, B times. (Preserves B.)
 prBchars    push bc
-.next       call prchar
+            ld   c,a
+.next       ld   a,c
+            call prchar
             dec  b
             jp   NZ,.next
             pop  bc

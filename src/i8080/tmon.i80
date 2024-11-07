@@ -95,24 +95,24 @@ ureg_PC     ds   2
 
 ;   Command parameter values: v<PARAM>_<CMD>
 v_start
-vS_jump_call        ds   2      ; execute: start addr
-vS_examine          ds   2      ; examine: start addr
-vF_examine          ds   1      ; examine: display format flags:
-                                ;   b0=hex, b1=ASCII, b2=screen codes
-vL_examine          ds   1      ; examine: # of lines to print
-vW_examine          ds   1      ; examine: # of bytes per line ("width")
-vS_deposit          ds   2      ; deposit: start addr
-vA_deposit          ds   1      ; deposit: advance mode $00=off, $01=on
-vP_port_in          ds   1      ; input port
-vP_port_out         ds   1      ; output port
-vD_port_out         ds   1      ; output port data
-vS_source           ds   2      ; source range (copy/cksum/etc.): start addr
-vE_source           ds   2      ; source range: end addr (non-inclusive)
-vL_calc             ds   2      ; calc: ? param (left value)
-vR_calc             ds   2      ; calc: / param (right value)
+vS_jump_call    ds   2      ; execute: start addr
+vS_examine      ds   2      ; examine: start addr
+vF_examine      ds   1      ; examine: display format flags:
+                            ;   b0=hex, b1=ASCII, b2=screen codes
+vL_examine      ds   1      ; examine: # of lines to print
+vW_examine      ds   1      ; examine: # of bytes per line ("width")
+vS_deposit      ds   2      ; deposit: start addr
+vA_deposit      ds   1      ; deposit: advance mode $00=off, $01=on
+vP_port_in      ds   1      ; input port
+vP_port_out     ds   1      ; output port
+vD_port_out     ds   1      ; output port data
+vS_source       ds   2      ; source range (copy/cksum/etc.): start addr
+vE_source       ds   2      ; source range: end addr (non-inclusive)
+vL_calc         ds   2      ; calc: ? param (left value)
+vR_calc         ds   2      ; calc: / param (right value)
+;
 v_end
-
-v_cksum     ds   2      ; checksum to determine if we re-init
+v_cksum         ds   2      ; checksum to determine if we re-init
 
 ;   Temporary storage, word and byte
 t0          ds   1

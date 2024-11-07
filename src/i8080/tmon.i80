@@ -609,7 +609,7 @@ cmd_examine_cur
             call praddrHL       ; entered with HL=curline start addr
             ;
             ld   a,$01          ; hex format bit
-            ld   hl,prsphexA
+            ld   hl,prmhexA
             call prexamine
             ld   a,$02          ; ASCII format bit
             ld   hl,prvischar
@@ -640,14 +640,8 @@ prexamine   ld   (t2),hl        ; save address of pr* routine
             and  a,(hl)         ;   is our bit set?
             ret  Z              ;      no: just return
             ;
-            ;   This is a pretty horrible special case to compensate for the
-            ;   fact that prsphexA prints an initial space and the other
-            ;   routines don't.
-            dec  a              ; are we the first format?
-            jp   Z,+            ;   yes: no need for an initial space
             call prspace
-            ;
-+           ld   hl,(t0)        ; current line start address
+            ld   hl,(t0)        ; current line start address
             ld   a,(vW_examine)
             ld   c,a            ; number of bytes to print (width)
 .nextbyte   ex   de,hl          ; save current byte address
@@ -1003,10 +997,23 @@ prstr       ld   a,(hl)
             inc  hl
             jp   prstr
 
-prsphexA    push af
-            call prspace
-            pop  af
-            jp   prhexA         ; ret (TCO)
+;   ♠AC ♣A ♡*   Print a byte in hex as part of multiple bytes on a line.
+;               Spacing afterwards depends on C:
+;               • C=0:   1 space: we're done printing the line
+;               • C/8≠0: 1 space: we're in a group of 8 bytes
+;               • C/8=0: 2 spaces: we're separating next 8-byte group
+;               The space at the end gives better separation w/anything else
+;               coming after.
+prmhexA     call prhexA
+            ld   a,c
+            dec  a              ; last byte of line for 1-based count?
+            jp   Z,prspace      ;   yes: one trailing space and ret (TCO)
+            call prspace        ;    no: trailing space and may have a second
+            ld   a,c
+            and  a,$07          ; mask bottom three bits
+            dec  a              ; adjust for 1-based count
+            ret  NZ             ;   no: just the one space is fine
+            jp   prspace        ;  yes: add a second space and ret (TCO)
 
 ;   ♠CHL,BDE ♣A ♡CHL   Print 2-byte (C=0) or 4-byte (C=*) value (HL).
 ;                      Return value in DE and # of digits in B.

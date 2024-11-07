@@ -1,9 +1,6 @@
 tmon TODO List
 ==============
 
-- Print an extra space between every group of 8 hex digits being examined,
-  so that it's easier to read in width=$10 mode.
-
 - `intentry` should probably print the registers on entry. Not clear if we
   also should print something to indicate this is the result of `intentry`
   rather than `r`.

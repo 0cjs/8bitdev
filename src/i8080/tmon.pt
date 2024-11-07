@@ -186,11 +186,11 @@ def test_prexamine_fset(m, S, R, loadbios):
     _, ostream = loadbios()
     m.deposit(S.vF_examine, 1)          # must have a format bit set
     m.deposit(S.vW_examine, 6)          # bytes/line
-    m.depword(S.t0, S.utest_data)      # start addr of line
+    m.depword(S.t0, S.utest_data)       # start addr of line
 
-    m.call(S.prexamine, R(a=0xFF, hl=S.prsphexA), trace=1)
+    m.call(S.prexamine, R(a=0xFF, hl=S.prmhexA))
     s = ostream.getvalue();  print(s)
-    assert b' FF 00 12 23 34 45' == s   # prints just one line
+    assert b' FF 00 12 23 34 45 ' == s   # prints just one line
 
 def test_examine_defaults(m, S, R, loadbios):
     _, ostream = loadbios(input=b'\n')
@@ -211,9 +211,9 @@ def test_examine_settings(m, S, R, loadbios):
     m.call(S.cmd_examine_cur, stopat=[S['cmd_examine_cur.end']])
     s = ostream.getvalue()
     expected =  b'\r' \
-                b'12AB: FF 00 12 23 34 ?@R#4    #4\n' \
-                b'12B0: 45 56 67 78 89 EVgxI EVgx \n'
-    print(expected); print(s)
+                b'12AB: FF 00 12 23 34  ?@R#4    #4\n' \
+                b'12B0: 45 56 67 78 89  EVgxI EVgx \n'
+    print('expected:', expected); print('  actual:', s)
     assert expected == s
 
 def test_examine_next_defaults(m, S, R, loadbios):
@@ -524,11 +524,11 @@ def test_prompt_examine(m, S, R, loadbios):
              + b'l04' + bs2 + b'2 ' + clr \
              + b'w08' + bs2 + b'6' + clr + b'\n' \
              + b'.d\r' \
-             + b'12AB: FF 00 12 23 34 45\n12B1: 56 67 78 89 9A AB\n' \
+             + b'12AB: FF 00 12 23 34 45 \n12B1: 56 67 78 89 9A AB \n' \
              + b'.q\n'
     actual = ostream.getvalue()
 
     print(f'vS_examine={m.word(S.vS_examine):04X}, ' \
         f'vL_examine={m.byte(S.vL_examine)} vW_examine={m.byte(S.vW_examine)}')
-    print(f'{expected!r}\n{actual!r}')
+    print(f'expected: {expected!r}\n  actual: {actual!r}')
     assert (b'END', expected) == (istream.read(),   actual)

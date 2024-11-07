@@ -37,6 +37,8 @@ MB          function addr,((addr & $FF00) >> 8)
 ;   • Unfortunately, this currently uses the native duplication syntax,
 ;     i.e. a prefixed bracketed count `[8]$FF` on 6502.
 
+dup         function    count,data,[count]data
+
 ds          macro {NOEXPAND}
             rmb ALLARGS
             endm

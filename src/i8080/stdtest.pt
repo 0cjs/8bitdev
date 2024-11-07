@@ -13,6 +13,6 @@ test_rig = '''
 pytest.register_assert_rewrite('src.stdtest')
 from src.stdtest import (
     test_LB_MB                  as test_LB_MB_i8080,
-    #    This is broken because we need N dup X instead of N[X].
+   # This is broken because we need N dup X instead of N[X].
    #test_ds_db_dw               as test_ds_db_dw_i8080,
     )

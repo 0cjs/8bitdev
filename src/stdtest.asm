@@ -19,5 +19,15 @@ T_MB_12340      equ MB($12340)
 defalloctest
 dstest0         ds  3
 dstest1         ds  1
+
+;   The dup() function doesn't work for reasons we don't understand; asl
+;   always gives us "unknown function," though if we reduce the definition
+;   to one parameter it finds the function and gives us a wrong number of
+;   params error. So for the moment we stick with the Motorola syntax and
+;   disable the Intel test of this.
+;dbtest         db  $00,"abc",dup(2,$FF)
 dbtest          db  $00,"abc",[2]$FF
+
 dwtest          dw  $ABCD
+
+

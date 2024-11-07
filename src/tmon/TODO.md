@@ -33,7 +33,7 @@ Platform-specific TODO
 
 ### CP/M
 
-- Initial version, `TMON100.COM`, loads like a normal CP/M program into the
+- Initial version, `TMONLVT.COM`, loads like a normal CP/M program into the
   TPA at $100.
 - A better version would work like DDT, relocating itself to the top of
   memory. Possibly this could be set up as a (temporary?) CCP replacement.

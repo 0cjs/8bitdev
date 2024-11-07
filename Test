@@ -197,6 +197,15 @@ if false; then
 fi
 
 ####################################################################
+#   Collect up files that we sometimes release
+
+reldir=.build/release
+mkdir -p $reldir/tmon/
+cp src/tmon/README.md src/tmon/TODO.md $reldir/tmon/
+cp .build/obj/exe/cpm/tmonlvt.com $reldir/tmon/TMONLVT.COM
+
+
+####################################################################
 #   Post-test emulator run
 
 post_emulate_run() {

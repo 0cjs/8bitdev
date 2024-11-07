@@ -1,12 +1,6 @@
 tmon TODO List
 ==============
 
-- Consider changing deposit parameter `F` to something that can't be
-  confused with a hex digit, so that it's not accidentally set when
-  one types `D` and a hex address that include `F`, without remembering
-  that you need to type `S` first. (And are there other parameters that
-  are similar?)
-
 - `intentry` should probably print the registers on entry. Not clear if we
   also should print something to indicate this is the result of `intentry`
   rather than `r`.

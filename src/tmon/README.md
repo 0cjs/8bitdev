@@ -175,19 +175,19 @@ The full command descriptions follow.
 - `e` Set memory examine parameters. This does not display anything, but
   sets the parameters that will be used by the `d`, `f`, and `b` commands.
   - §`s####`: Start address.
-  - §`l##`: Number of lines to print (default 4).
+  - §`l##`: number of Lines to print (default 4).
   - §`w##`: Width as number of bytes to examine.
-  - §`f##`: Format. This is a bitfield with values listed below; all
-    formats that are enabled will be printed in sequence on the same line.
-    - b0 ($01): Hex format as bytes separated by spaces.
+  - §`m##`: display Mode. This is a bitfield with values listed below; all
+    display modes that are enabled will be printed in sequence on the same line.
+    - b0 ($01): hexadecimal values as bytes separated by spaces.
     - b1 ($02): ASCII characters in "visible" form, where control
       characters and those with bit 7 set are shown as printable characters
       that may be distinguished in a special way.
-    - b2 ($04): Screen codes, i.e., the character that is displayed if that
+    - b2 ($04): screen codes, i.e., the character that is displayed if that
       value is deposited directly into the character buffer for the
       computer's display. (This generally produces just ASCII on systems
       without a built-in display.)
-    - b3-7: Ignored.
+    - b3-7: ignored.
 
 - °`d` Examine ("Display") memory. Displays the contents of memory using
   the location and format set by the `e` command.
@@ -228,8 +228,8 @@ The full command descriptions follow.
 - `v` Checksum ("Verify") memory, starting at §`s####` up to (but not
   including) §`e####/`, and print the result. Both `s` and `e` parameter
   values are shared with the `c` (Copy) command below. The CRC-16-CCITT
-  checksum algorithm is always available; in some implementations an `f##`
-  parameter (mnemonic "Format") can select other algorithms. If available,
+  checksum algorithm is always available; in some implementations an `m##`
+  parameter (mnemonic "Mode") can select other algorithms. If available,
   they are:
   - $00: [CRC-16-CCITT][] (x¹⁶+x¹²+x⁵+1), used by Xmodem and many other
     tools.
@@ -261,11 +261,11 @@ The full command descriptions follow.
     be any non-zero value. This is executed _after_ the command is
     confirmed and so will override any `s####` values given as parameters
     to the command. If set accidentally, it may be disabled with `e0`.
-  - §`a##`: Advance mode. This may be:
+  - §`n##`: advance to Next mode. This may be:
     - $00: After executing a deposit command the §`s####` start address for
       the next deposit command will remain the same.
     - $01: After executing a deposit command, the §`s####` start address
-      will be updated to the address after the last deposited, so the
+      will be updated to the next address after the last deposited, so the
       deposited will start filling memory after the last deposited byte.
   - §`q##`: Deposit data echo/quiet (optional).
 
@@ -300,7 +300,7 @@ The full command descriptions follow.
 
 - `o` Output (write) to I/O port. Parameters are §`p##` or §`p####` for the
   port address (depending on the size of the machine's I/O address space)
-  and §`d##` for the data to write. This applies only to machines with a
+  and §`v##` for the data to write. This applies only to machines with a
   separate I/O address space.
 
 - `m` Copy ("Move") memory from §`s####` up to (but not including) §`e####`

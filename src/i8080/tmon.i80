@@ -97,15 +97,15 @@ ureg_PC     ds   2
 v_start
 vS_jump_call    ds   2      ; execute: start addr
 vS_examine      ds   2      ; examine: start addr
-vF_examine      ds   1      ; examine: display format flags:
+vM_examine      ds   1      ; examine: display mode flags:
                             ;   b0=hex, b1=ASCII, b2=screen codes
 vL_examine      ds   1      ; examine: # of lines to print
 vW_examine      ds   1      ; examine: # of bytes per line ("width")
 vS_deposit      ds   2      ; deposit: start addr
-vA_deposit      ds   1      ; deposit: advance mode $00=off, $01=on
+vN_deposit      ds   1      ; deposit: advance to next mode $00=off, $01=on
 vP_port_in      ds   1      ; input port
 vP_port_out     ds   1      ; output port
-vD_port_out     ds   1      ; output port data
+vV_port_out     ds   1      ; output port value
 vS_source       ds   2      ; source range (copy/cksum/etc.): start addr
 vE_source       ds   2      ; source range: end addr (non-inclusive)
 vL_calc         ds   2      ; calc: ? param (left value)
@@ -311,7 +311,7 @@ v_initdata  dw   vini_start     ; execute start
             db   vini_lines     ; examine #lines
             db   vini_width     ; examine width #bytes
             dw   vini_start     ; deposit start
-            db   $00            ; deposit advance mode off
+            db   $00            ; deposit advance to next mode off
             db   $00,$00,$00    ; input, output port, output data
             dw   vini_start     ; copy/cksum start
             dw   vini_end       ; copy/cksum end
@@ -574,7 +574,7 @@ cmd_quit    ld   hl,ptab_none   ; no parameters,
 
 ptab_examine
             pw   'S',vS_examine     ; start: 16-bit value
-            pb   'F',vF_examine     ; formats bitfield (see above)
+            pb   'M',vM_examine     ; display mode bitfield (see above)
             pb   'L',vL_examine     ; number of lines to print: 8-bit value
             pb   'W',vW_examine     ; width (# of bytes to print): 8-bit value
 ptab_none   db   0                  ; end of table
@@ -647,13 +647,13 @@ cmd_examine_cur
 .end        jp   prompt
 
 
-;   ♠AHL(t0⋅1) ♣*(t2⋅3)   prexamine: If the bit in A is set in (vF_examine),
+;   ♠AHL(t0⋅1) ♣*(t2⋅3)   prexamine: If the bit in A is set in (vM_examine),
 ;   i.e. if the format is enabled, print a sequence of (vW_examine)
 ;   locations starting at (t0⋅1) using the routine in HL. If the bit is not
 ;   set, just return.
 ;
 prexamine   ld   (t2),hl        ; save address of pr* routine
-            ld   hl,vF_examine  ; formats bitfield address
+            ld   hl,vM_examine  ; formats bitfield address
             and  a,(hl)         ;   is our bit set?
             ret  Z              ;      no: just return
             ;
@@ -749,7 +749,7 @@ flagchars   db   'S'-1, 'Z'-1, 0-1, 'H'-1, 0-1, 'P'-1, 0-1, 'C'-1
 
 ptab_deposit_params
             pw   'S',vS_deposit     ; start: 16-bit value
-            pb   'A',vA_deposit     ; advance mode
+            pb   'N',vN_deposit     ; advance to next mode
             pb   'E',t2             ; copy examine start address: temp store
                                     ;   (t0⋅1 is used by `read_params`)
             db   0                  ; end of table
@@ -823,7 +823,7 @@ cmd_deposit_ascii
             jp   .next          ; and next loc
 
 deposit_end call prnl
-            ld   a,(vA_deposit)
+            ld   a,(vN_deposit)
             or   a,a
             jp   Z,.noadvance
             ld   (vS_deposit),hl
@@ -884,7 +884,7 @@ cmd_port_in
 
 ptab_port_out
             pb  'P',vP_port_out
-            pb  'D',vD_port_out
+            pb  'V',vV_port_out
             db   0
 
 cmd_port_out
@@ -892,7 +892,7 @@ cmd_port_out
             call read_params
             ld   a,(vP_port_out)
             ld   c,a                ; port number
-            ld   a,(vD_port_out)
+            ld   a,(vV_port_out)
             ld   d,a                ; data to write
             ld   a,$D3              ; OUT instruction
             ;    fallthrough

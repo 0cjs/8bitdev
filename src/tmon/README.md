@@ -23,7 +23,7 @@ memory, while providing a full-featured and convenient user interface. You
 may think of the "t" as standing for "tolerable" and (moderately) "tiny."
 
 The general goals are to have:
-* Reasonably small code size: under 2 KB and ideally around 1 KB.
+* Reasonably small code size: under 2 KB.
 * Very minimal RAM usage: just 2-3 dozen bytes so it can run on e.g. a 6802
   with only its 128 bytes of internal RAM.
 * Significantly better features than many home computers' built-in

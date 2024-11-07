@@ -1,0 +1,80 @@
+;   tmon for CP/M: low RAM version
+;
+;   This runs in the TPA at $100, where it loads, as is usual for CP/M
+;   programs. This is not so great for debugging other programs, since
+;   loading a normal program would overwrite the monitor, but it at
+;   least allows you to play with the interface and explore the hardware
+;   and OS of your system.
+;
+
+            cpu 8080
+            include  src/i8080/std.i80
+
+BDOS        equ  $0005
+CONIN       equ  1
+CONOUT      equ  2
+
+tmon_ram    equ  $140
+tmon_stksz  equ  $40            ; data at $180
+tmon_rom    equ  $200           ; easy to remember and use
+
+            org  $100           ; start of TPA
+tpa         ;   Set up "breakpoint" RST.
+            ld   a,I_JP
+            ld   (RST_38),a     ; RST 7 for breakpoint, like DDT
+            ld   hl,intentry
+            ld   (RST_38+1),hl
+            jp   entry          ; Start monitor.
+
+exit        jp   RST_00         ; Return to CP/M.
+
+; ----------------------------------------------------------------------
+;   Emulate the standard BIOS functions that tmon expects.
+
+BEL         equ  $07
+
+prchar      push bc
+            ld   c,CONOUT
+            ; fallthrough
+
+;   Common part of BDOS calls done in a way that preserves registers.
+;   This expects BC already to have been saved on the stack, and C to
+;   contain the BDOS function.
+bdosP       push de
+            push hl
+            call BDOS
+            pop  hl
+            pop  de
+            pop  bc
+            ret
+
+rdchar      push bc
+            ld   c,CONIN
+            jp   bdosP          ; ret (TCO)
+
+prnl        push bc
+            push de
+            push hl
+            ld   c,CONIN
+            ld   a,CR
+            call BDOS
+            ld   a,LF
+            call BDOS
+            pop hl
+            pop de
+            pop bc
+
+errbeep     ld   a,BEL
+            jp   prchar         ; ret (TCO)
+
+    if $ >= tmon_ram
+            error   'setup routine stomped on tmon code!'
+    endif
+
+            include "src/i8080/tmon.i80"    ; org tmon_rom
+            ;   VT100 is most common these days because people are connecting
+            ;   to their CP/M machines with PCs, rather than ADM-3As.
+            include src/i8080/prvischar/vt100.i80
+            include src/i8080/prscreenchar/ascii.i80
+
+            end tpa

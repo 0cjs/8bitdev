@@ -581,7 +581,6 @@ examine_setup
             ld   e,a            ; DE: number of lines to dump
             ret
 
-;   XXX BROKEN add a test and then fix this
 cmd_examine_prev
             call examine_setup  ; BC=bytes/line, DE=lines
             ld   a,b            ; complement BC so add subtracts

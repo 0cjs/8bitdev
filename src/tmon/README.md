@@ -1,6 +1,22 @@
 tmon: The Tolerable Monitor
 ===========================
 
+### Contents
+
+- [Introduction](#introduction)
+  - [Availability and Source Code](#availability-and-source-code)
+- [Usage](#usage)
+- [Commands](#commands)
+  - [Execution](#execution)
+  - [Examining Machine State](#examining-machine-state)
+  - [Modifying Machine State (Depositing Data)](#modifying-machine-state-depositing-data)
+  - [External Storage](#external-storage)
+  - [Miscellaneous Commands](#miscellaneous-commands)
+
+
+Introduction
+------------
+
 `tmon` is a monitor intended to be small and run on systems with minimal
 memory, while providing a full-featured and convenient user interface. You
 may think of the "t" as standing for "tolerable" and (moderately) "tiny."

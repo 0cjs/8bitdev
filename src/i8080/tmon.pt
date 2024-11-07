@@ -349,8 +349,7 @@ def test_jump_call(m, S, R, loadbios, entrysym, retsym):
     print('   vS_jump_call', m.hexdump(S.vS_jump_call, 2))
     print('ureg_AF', m.hexdump(S.ureg_AF, 10))
 
-    m.pc = S[entrysym]
-    m.stepto(stopat=[S.usercode])
+    m.stepto(S[entrysym], stopat=[S.usercode])
     print(' ustack', m.hexdump(userstack -4, 6))
     assert S.usercode == m.pc
     if retsym:  r = r.clone(sp=userstack - 2)   # return address on stack
@@ -385,8 +384,7 @@ def test_call(m, S, R, loadbios):
 def test_iret(m, S, R, loadbios):
     _, outstream = loadbios(input=b'r\ni\n')
     m.sp = 0xABCD
-    m.pc = S.intentrytest
-    m.stepto(stopat=[S.intentrytest+1])
+    m.stepto(S.intentrytest, stopat=[S.intentrytest+1])
     print(outstream.getvalue())
     assert (S.intentrytest+1, 0xABCD) == (m.pc, m.sp)
 

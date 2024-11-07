@@ -19,8 +19,7 @@ def test_hello_ctrlC_exit(m, loadbios, S, R):
     m.call(S.hello)
 
     #   XXX remove this once we confirm that our XXX
-   #m.setregs(R(pc=S.hello))
-   #m.stepto(stopat=[S['hellomsg.exit']+3])
+   #m.stepto(S.hello, stopat=[S['hellomsg.exit']+3])
 
     expected = (
         b'\nHello: '    b'a0'

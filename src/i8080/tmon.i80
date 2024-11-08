@@ -163,7 +163,7 @@ entry1      di                  ; ensure as best we can nothing will touch stack
             ;   an interrupt (b7). (`intentry` sets t0 to 1.)
             ld   a,0
             jp   NC,.savecarry
-            ld   a,1
+            ld   a,1            ; set "carry was set" bit, flags unaffected
 .savecarry  ld   (t0),a         ; save carry and interrupt entry bits
             ld   (ureg_HL),hl
             ex   de,hl

@@ -327,7 +327,7 @@ def test_entry(m, S, R, entrypoint, userpc):
              a=0xFE, bc=0x2345, de=0x6789, hl=0xABCD, sp=0xEF01,
              S=0, Z=1, H=1, P=1, C=1)
     m.setregs(regs)
-    m.stepto(stopat=[S['entry.end']])
+    m.stepto(stopat=[S['entry1.end']])
     actual = [ i for i in m.bytes(S.ureg_AF, 10) ]
 
     flags = 0b01010111  # on 8080, unused b5,b3 are clear, unused b1 is set

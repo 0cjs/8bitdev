@@ -125,13 +125,37 @@ t3          ds   1
 
             org  tmon_rom
 
-;   Standard entry point for the monitor.
+;   Locations `tmon_rom` and `tmon_rom`+3  are the standard entry points
+;   for the monitor.
+;   • `entry` must be used for initial startup, and can be used when a
+;     program wants to "exit" back to the monitor. This saves all registers
+;     but the PC.
+;   • `intentry` is the entry point for interrupts, whether via hardware
+;     or software (the latter typically an RST instruction). This saves
+;     all registers including the PC, and the `I`
+
+entry       jp entry1
+
+;   Interrupt entry point for the monitor.
+;   Interrupts on the 8080 push only the return address on the stack.
 ;
-;   We don't have a PC to save here, so we just retain the current value.
-;   The interrupt entry point `intentry` thus must determine the PC and
-;   save it before coming here.
+;   We want to use as much of `entry` as possible, but because at the start
+;   we can use no registers or flags until we save them we duplicate some
+;   code. The only difference is that we set, rather than clear, the "entry
+;   via interrupt" bit (b7) in A to indicate that we want to set the user
+;   PC to set the user PC to the return address on the user stack.
 ;
-entry       di                  ; ensure as best we can nothing will touch stack
+intentry    di
+            ld   (ureg_A),a
+            ld   a,$80          ; Carry (t0) and entry via interrupt (b7) bits.
+            jp   NC,entry1.savecarry
+            ld   a,$81
+            jp   entry1.savecarry
+
+;   We don't have a PC to save here: either `intentry` above saved it or
+;   we entered via `entry` with no known user PC, so we just retain the
+;   last known value.
+entry1      di                  ; ensure as best we can nothing will touch stack
             ld   (ureg_A),a
             ;   We must save the carry bit separately here because the DAD
             ;   we use later will affect it. We set bits in A to indicate
@@ -262,22 +286,6 @@ cancel      call  pr4clear      ; clear any displayed value
             call prchar
             call prnl
 .prompt     jp   prompt
-
-;   Interrupt entry point for the monitor.
-;   Interrupts on the 8080 push only the return address on the stack.
-;
-;   We want to use as much of `entry` as possible, but because at the start
-;   we can use no registers or flags until we save them we duplicate some
-;   code. The only difference is that we set, rather than clear, the "entry
-;   via interrupt" bit (b7) in A to indicate that we want to set the user
-;   PC to set the user PC to the return address on the user stack.
-;
-intentry    di
-            ld   (ureg_A),a
-            ld   a,$80          ; Carry (t0) and entry via interrupt (b7) bits.
-            jp   NC,entry.savecarry
-            ld   a,$81
-            jp   entry.savecarry
 
 ;   Checksum the command parameters, returning the checksum in HL.
 ;   When stored in (v_cksum), this lets us tell if param vals have changed.

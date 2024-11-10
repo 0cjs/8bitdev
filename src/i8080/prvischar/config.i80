@@ -1,0 +1,54 @@
+;   prvischar/config: Configurable visual character print
+;
+;   The client must provide three symbols pointing to terminal control
+;   strings to set attributes, each prefixed by a character count byte:
+;
+;   • prvattr_none: Disable all attributes
+;   • prvattr_A:    Enable attribute "A," typically some sort of emphasis
+;                   such as underline or italic.
+;   • prvattr_B:    Enable attribute "B," typically some sort of "bold"
+;                   attribute such as reverse.
+;
+;   Requires: prchar
+
+;   ♡*   Print any (8-bit) value "visibly" as one character.
+;
+;   Print control characters in prvattr_A and high-bit-set characters
+;   in prvattr_B. For more information see prvischar/ascii.*.
+;
+prvischar   push af
+            push bc
+            push hl
+            or   a,a            ; high bit set?
+            call M,.hibit
+            cp   $7F            ; DEL
+            jp   Z,.isctl
+            cp   ' '
+            jp   NC,.finish
+.isctl      ;   Flipping bit 6 of a control character moves it up by $40
+            ;   into the upper-case sticks, except for DEL where it's
+            ;   moved down by 40 into the numeric/symbol stick.
+            xor  1 << 6
+            ld   hl,prvattr_A
+            call .prattr
+.finish     call prchar
+            ld   hl,prvattr_none
+            call .prattr
+            pop  hl
+            pop  bc
+            pop  af
+            ret
+
+.hibit      and  $7F            ; clear bit 7
+            ld   hl,prvattr_B
+            ; fallthrough
+
+.prattr     ld   c,(hl)
+-           inc  hl
+            dec  c
+            ret  M              ; length must be < $80 chars!
+            push AF
+            ld   a,(hl)
+            call prchar
+            pop  AF
+            jp   -

@@ -19,6 +19,7 @@
 prvischar   push af
             push bc
             push hl
+            ld   hl,$0000       ; "no attribute on printed" indication
             or   a,a            ; high bit set?
             call M,.hibit
             cp   $7F            ; DEL
@@ -32,9 +33,12 @@ prvischar   push af
             ld   hl,prvattr_A
             call .prattr
 .finish     call prchar
+            ld   a,h            ; attribute printed?
+            or   a,l            ;   i.e. HL ≠ $0000?
+            jp   Z,+            ; no, no need to disable attribute
             ld   hl,prvattr_none
             call .prattr
-            pop  hl
++           pop  hl
             pop  bc
             pop  af
             ret

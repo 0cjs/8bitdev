@@ -16,7 +16,7 @@ prvattr_B       db  $03,'!!<'
 def sgr(n, s=''): return f'\x1B[{int(n)}m' + s
 
 CHAR_OUTPUT = [
-    (0x20, ' >'),       (0x61, 'a>'),       (0x7E, '~>'),        # printable
+    (0x20, ' '),        (0x61, 'a'),        (0x7E, '~'),        # printable
     (0xA0, '!!< >'),    (0xDA, '!!<Z>'),    (0xFE, '!!<~>') ,   # ctrl
     (0x00, '$<@>'),     (0x1F, '$<_>'),     (0x7F, '$<?>'),     # hi-bit
     (0x80, '!!<$<@>'),  (0x9F, '!!<$<_>'),  (0xFF, '!!<$<?>'),  # ctrl + hi-bit

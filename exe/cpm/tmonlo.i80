@@ -16,7 +16,18 @@ tmon_rom    equ  $200           ; easy to remember and use
 
             org  $100           ; start of TPA
 tpa
-            ;   Set up "breakpoint" RST.
+            jp  cpm_setup
+
+            ;   We place the terminal code strings as close to the start
+            ;   as we can manage to make them easy to patch. The default
+            ;   VT100 codes are only 4 characters long, but we leave room
+            ;   for six for more verbose terminals.
+ESC             equ  $1B
+prvattr_none    db   4,   ESC,'[0m', '  '
+prvattr_A       db   4,   ESC,'[4m', '  '
+prvattr_B       db   4,   ESC,'[7m', '  '
+
+cpm_setup   ;   Set up "breakpoint" RST.
             ld   a,I_JP
             ld   (RST_38),a     ; RST 7 for breakpoint, like DDT
             ld   hl,intentry
@@ -34,7 +45,7 @@ exit        jp   RST_00         ; Return to CP/M.
             include "src/i8080/tmon.i80"    ; org tmon_rom
             ;   VT100 is most common these days because people are connecting
             ;   to their CP/M machines with PCs, rather than ADM-3As.
-            include src/i8080/prvischar/vt100.i80
+            include src/i8080/prvischar/config.i80
             include src/i8080/prscreenchar/ascii.i80
 
             end tpa

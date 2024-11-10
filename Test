@@ -202,7 +202,7 @@ fi
 reldir=.build/release
 mkdir -p $reldir/tmon/
 cp src/tmon/README.md src/tmon/TODO.md $reldir/tmon/
-cp .build/obj/exe/cpm/tmonlvt.com $reldir/tmon/TMONLVT.COM
+cp .build/obj/exe/cpm/tmonlo.com $reldir/tmon/TMONLO.COM
 
 
 ####################################################################

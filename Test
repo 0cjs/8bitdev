@@ -200,7 +200,8 @@ fi
 #   Collect up files that we sometimes release
 
 reldir=.build/release
-mkdir -p $reldir/tmon/
+rm    -rf $reldir/tmon/
+mkdir -p  $reldir/tmon/
 cp src/tmon/README.md src/tmon/TODO.md $reldir/tmon/
 cp .build/obj/exe/cpm/tmonlo.com $reldir/tmon/TMONLO.COM
 

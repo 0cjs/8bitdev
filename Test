@@ -199,11 +199,13 @@ fi
 ####################################################################
 #   Collect up files that we sometimes release
 
-reldir=.build/release
-rm    -rf $reldir/tmon/
-mkdir -p  $reldir/tmon/
-cp src/tmon/README.md src/tmon/TODO.md $reldir/tmon/
-cp .build/obj/exe/cpm/tmonlo.com $reldir/tmon/TMONLO.COM
+(   cd "$T8_PROJDIR"
+    reldir=.build/release
+    rm    -rf $reldir/tmon/
+    mkdir -p  $reldir/tmon/
+    cp src/tmon/README.md src/tmon/TODO.md $reldir/tmon/
+    cp .build/obj/exe/cpm/tmonlo.com $reldir/tmon/TMONLO.COM
+)
 
 
 ####################################################################

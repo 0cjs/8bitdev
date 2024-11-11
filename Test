@@ -125,6 +125,7 @@ manual_build=(
     exe/jr200/hello.a68 exe/jr200/pmon.a68 exe/jr200/samples.a68
     exe/mb6885/hello.a68 exe/mb6885/pmon.a68
         exe/mb6885/kbscan.a68 exe/mb6885/writenum.a68
+    exe/m100/hello.i85
     exe/tmc/i8080/hello.i80 exe/tmc/i8080/tmon.i80
     exe/tmc/mc6800/hello.a68 exe/tmc/mc6800/pmon.a68
 )
@@ -238,6 +239,14 @@ post_emulate_run() {
             #   "disk" containing the .COM file, or specify that the
             #   first entry should not be auto-run.
             t8dev emulator runcpm -a "$post_emulate"
+            ;;
+        m100)
+            #   Virtual T: Model 100, 102, 200
+            #   https://github.com/mc68-net/virtualt.git
+            #   Has a fix; see readme for Debian packages req'd.
+            echo XXX emu_suite=$emu_suite
+            echo XXX sub_path=$sub_path
+            die 99 "Write me."
             ;;
         *)
             die 2 "Unknown emulator suite: $emu_suite"

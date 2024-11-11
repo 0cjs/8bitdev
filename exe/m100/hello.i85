@@ -1,0 +1,17 @@
+;   "Hello, world" for TRS-80 Model 100
+;
+;   Load and run with XXX...
+
+            cpu 8085
+            include  src/i8080/std.i80
+
+;   XXX replace this with a real BIOS
+prchar      equ  $0000
+prnl        equ  $0000
+rdchar      equ  $0000
+
+;   Place this at XXX because XXX.
+            org  $F200
+            include "src/i8080/hello.i80"
+
+            end hello

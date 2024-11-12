@@ -199,7 +199,7 @@ fi
 ####################################################################
 #   Collect up files that we sometimes release
 
-(   cd "$T8_PROJDIR"
+(   command cd "$T8_PROJDIR"
     reldir=.build/release
     rm    -rf $reldir/tmon/
     mkdir -p  $reldir/tmon/

@@ -50,6 +50,7 @@ MB          function addr,((addr & $FF00) >> 8)
 ;   Constant definition and storage allocation already uses the Intel
 ;   DS/DB/DW syntax.
 
+;   XXX This doesn't work; still looking for a way to deal with this.
 dup         function count,data,count dup data
 
 ;--------------------------------------------------------------------------

@@ -20,13 +20,15 @@ defalloctest
 dstest0         ds  3
 dstest1         ds  1
 
-;   The dup() function doesn't work for reasons we don't understand; asl
-;   always gives us "unknown function," though if we reduce the definition
-;   to one parameter it finds the function and gives us a wrong number of
-;   params error. So for the moment we stick with the Motorola syntax and
-;   disable the Intel test of this.
-;dbtest         db  $00,"abc",dup(2,$FF)
-dbtest          db  $00,"abc",[2]$FF
+
+;   The dup() function doesn't work, probably because it produces a "real"
+;   value which is inserted into the db/byt without further interpretation,
+;   rather than text that would then be parsed again by db/byt argument
+;   interpretation. We're still working out how to deal with this.
+;dbtest         db  $00,"abc",dup(3,$FF),$00      ; attempt at generic
+;dbtest         db  $00,"abc",3 dup $FF,$00       ; Intel syntax
+;dbtest         db  $00,"abc",[3]$FF,$00          ; Motorola syntax
+dbtest          db  $00,"abc",$FF,$FF,$FF,$00
 
 dwtest          dw  $ABCD
 

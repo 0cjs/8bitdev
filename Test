@@ -14,15 +14,11 @@ elapsed() { echo $(( $(date +%s) - $elapsed_start )); }
 #   Build functions
 
 build_toolsets() {
-    [[ -f $all_tools ]] && t8dev buildtoolset asxxxx
-    t8dev buildtoolset asl
-    t8dev buildtoolset osimg
-    t8dev buildtoolset ctools
-    t8dev buildtoolset dos33fs
-    t8dev buildtoolset linapple
-    t8dev buildtoolset RunCPM
-    t8dev buildtoolset bm2
-    t8dev buildtoolset cscp
+    #   Toolchains, utilities, emulators.
+    t8dev toolset asl
+    [[ -f $all_tools ]] && t8dev toolset asxxxx
+    t8dev toolset osimg ctools dos33fs
+    t8dev toolset bm2 cscp linapple RunCPM
 }
 
 #   ASxxxx builds
@@ -48,12 +44,12 @@ build_asxxxx() {
     #   Though we don't need to explicitly specify `simple` as an input
     #   file for the link (aslink would get it from the output file) we
     #   do so anyway to test that t8dev handles it correctly.
-    t8dev asx     src/asxxxx/simple.a65
-    t8dev asxlink src/asxxxx/simple simple
-    t8dev asx     src/asxxxx/reloctest.a65
-    t8dev asxlink src/asxxxx/reloctest -- -b '_code=0x400'
-    t8dev asx     src/asxxxx/zptest.a65
-    t8dev asxlink src/asxxxx/zptest -- -b '_code=0x0300'
+    t8dev asx asm  src/asxxxx/simple.a65
+    t8dev asx link src/asxxxx/simple simple
+    t8dev asx asm  src/asxxxx/reloctest.a65
+    t8dev asx link src/asxxxx/reloctest -b '_code=0x400'
+    t8dev asx asm  src/asxxxx/zptest.a65
+    t8dev asx link src/asxxxx/zptest -b '_code=0x0300'
 }
 
 ####################################################################
@@ -116,8 +112,8 @@ build_asxxxx
 #   below, we must be using the proper CWD to which the paths are relative.
 command cd -P "$T8_PROJDIR"
 
-t8dev aslt8dev
-t8dev aslauto exe/ src/ --exclude=src/asxxxx/
+t8dev asl t8dev
+t8dev asl auto exe/ src/ --exclude=src/asxxxx/
 manual_build=(
     #   Top-level programs whose build is not triggered by automated tests.
     src/asl/nomacro.a65         # Test/demo for ASL macro expansion
@@ -132,7 +128,7 @@ manual_build=(
     exe/tmc/i8080/hello.i80 exe/tmc/i8080/tmon.i80
     exe/tmc/mc6800/hello.a68 exe/tmc/mc6800/pmon.a68
 )
-t8dev asl "${manual_build[@]}"
+t8dev asl asm "${manual_build[@]}"
 
 #   This builds an Apple II disk image from an AS source file. Probably
 #   this should be in smaller steps so we can extend the idea to building
@@ -171,7 +167,7 @@ command cd - >/dev/null
 #     supplying our own if it's not supplied.
 #
 [ $# -eq 0 ] && set -- -nlogical
-t8dev pytest -- --dist worksteal "$@" || fail
+t8dev pytest --dist worksteal "$@" || fail
 
 ####################################################################
 
@@ -228,6 +224,7 @@ post_emulate_run() {
     [[ -r $post_emulate ]] || die 2 "Cannot read: $post_emulate"
     sub_path=${post_emulate#*/exe/}
     emu_suite=${sub_path%%/*}
+    echo "suite=$emu_suite sub_path=$sub_path"
     case "$emu_suite" in
         tmc)
             emulator=${sub_path#*/}
@@ -240,7 +237,7 @@ post_emulate_run() {
             #   no way to specify additional files to be added to the
             #   "disk" containing the .COM file, or specify that the
             #   first entry should not be auto-run.
-            t8dev emulator runcpm =a "$post_emulate"
+            t8dev emulator runcpm -a "$post_emulate"
             ;;
         *)
             die 2 "Unknown emulator suite: $emu_suite"

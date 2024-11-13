@@ -7,6 +7,12 @@ tmon TODO List
 
 - Ctrl-N should probably advance without changing in hex input mode, too.
 
+- Ctrl-J in input mode (hex or ASCII) should start a new line with the
+  current address at the front, in case one is getting lost in long streams
+  of input. (Or perhaps another character; right now we consider LF
+  to be the same as CR: "execute," in order to handle systems that send
+  LF with the Enter key. It's not clear if any systems actually do this.)
+
 - Add a byte/word switch mode in word/byte deposit mode. Perhaps Ctrl-D
   ("digits change") to match the Ctrl-D in ASCII entry mode?
 

@@ -53,6 +53,14 @@ NAK = b'\x15'   # Ctrl-U
 CAN = b'\x18'   # Ctrl-X
 
 ####################################################################
+#   Pytest improvements.
+#   Possibly this should be pulled up to a more generic/shared location.
+
+def XXX(*args):
+    ' Mark test parameters as (strictly) expected to fail. '
+    return pytest.param(*args, marks=pytest.mark.xfail(strict=True))
+
+####################################################################
 #   Generic routines
 
 @param('hl, de, result', [
@@ -401,45 +409,58 @@ def test_iret(m, S, R, loadbios):
 ####################################################################
 #   Commands: Deposit
 
-def test_deposit_startaddr(m, S, R, loadbios):
+def test_depset_startaddr(m, S, R, loadbios):
     loadbios(input=b's1234 n1\n')
     m.depword(S.vS_examine, 0xABCD)    # sentinel
     m.call(S.cmd_deposit_params, stopat=[S['cmd_deposit_params.end']])
     assert (      0x1234 ,         0x01 ,        0x00 ) \
         == (m.word(S.vS_deposit), m.byte(S.vN_deposit), m.byte(S.t2))
 
-def test_deposit_copyaddr(m, S, R, loadbios):
+def test_depset_copyaddr(m, S, R, loadbios):
     loadbios(input=b's5678 n0 e1\n')
     m.depword(S.vS_examine, 0xABCD)
     m.call(S.cmd_deposit_params, stopat=[S['cmd_deposit_params.end']])
     assert (      0xABCD ,         0x00 ,        0x01 ) \
         == (m.word(S.vS_deposit), m.byte(S.vN_deposit), m.byte(S.t2))
 
-@param('input, mem, output', [
-    ('\n', 'abcdefgh', 'a\x08\n'),
-    ('X0\a~\n',           'X0\a~efgh',    'a\bX' 'b\b0' 'c\bG' 'd\b~' 'e\b\n'),
+#   Deposit modes: hex bytes, hex words, ASCII.
+B = object(); W = object(); A = object()
+CLR4 = '    \x08\x08\x08\x08'   # clear-on-execute output
+
+@param('mode, depfwd, input, mem, output', [
+    XXX(B, 0, '\n', 'abcdefgh', '61\b\b61 '+CLR4+'\n'),
+    (B, 2, '31 32\n', '12cdefgh', '61\b\b31 '+CLR4+'62\b\b32'+CLR4+'\n'),
+
+    (A, 0, '\n', 'abcdefgh', 'a\x08\n'),
+    (A, 4, 'X0\a~\n',           'X0\a~efgh',    'a\bX' 'b\b0' 'c\bG' 'd\b~' 'e\b\n'),
     #   Spaces are entered as data, not interpreted as skip.
-    ('  \n',              '  cdefgh',     'a\b ' 'b\b ' 'c\b\n'),
+    (A, 2, '  \n',              '  cdefgh',     'a\b ' 'b\b ' 'c\b\n'),
     #   Instead Ctrl-F is used for skip.
-    ('\x06!\x06\x06\n',   'a!cdefgh',     'a\ba' 'b\b!' 'c\bc' 'd\bd' 'e\b\n'),
+    (A, 4, '\x06!\x06\x06\n',   'a!cdefgh',     'a\ba' 'b\b!' 'c\bc' 'd\bd' 'e\b\n'),
     #   ^D goes into "digit" mode: one byte using the hex input routine.
-    ('X\x04a1b2c _\n',    'X,_defgh',
+    (A, 3, 'X\x04a1b2c _\n',    'X,_defgh',
             'a\bX' 'b\b62\b\ba1b2c     \b\b\b\b' 'c\b_' 'd\b\n'),
     #   ^D hex input allows ascii input via ', etc.
-    ("\x04cc'D \n",    'Dbcdefgh', "a\b61\b\bcc'D\b\b44     \b\b\b\b" 'b\b\n'),
-    ("\x04cc'D\n",     'Dbcdefgh', "a\b61\b\bcc'D\b\b44    \b\b\b\b\n"),
+    (A, 1, "\x04cc'D \n",    'Dbcdefgh', "a\b61\b\bcc'D\b\b44     \b\b\b\b" 'b\b\n'),
+    (A, 1, "\x04cc'D\n",     'Dbcdefgh', "a\b61\b\bcc'D\b\b44    \b\b\b\b\n"),
 ])
-def test_deposit_ascii(m, S, R, loadbios, input, mem, output):
+def test_deposit(m, S, R, loadbios, mode, input, depfwd, mem, output):
+    if   mode is B: inpsize = 2; cmd = S.cmd_deposit_bytes
+    elif mode is W: inpsize = 4; cmd = S.cmd_deposit_words
+    elif mode is A: inpsize = 1; cmd = S.cmd_deposit_ascii
+    else:           assert 0, 'Bad deposit mode.'
+
     depaddr = 0x9000
     m.depword(S.vS_deposit, depaddr)
     m.depword(S.vN_deposit, 1)          # advance to next mode
     m.deposit(depaddr, b'abcdefgh')
+    print(f'{m.word(S.vS_deposit):4X}') # XXX
     instream, outstream = loadbios(input=input.encode('ASCII'))
-    m.call(S.cmd_deposit_ascii, stopat=[S.prompt])
+    m.call(cmd, stopat=[S.prompt])
     assert (mem.encode('ASCII'), b'\r9000: ' + output.encode('ASCII')) \
         == (m.bytes(depaddr, 8),                 outstream.getvalue())
-    if '\x04' not in input:
-        assert depaddr + len(input) - 1 == m.word(S.vS_deposit)
+    print(f'{m.word(S.vS_deposit):4X}') # XXX
+    assert depaddr + depfwd == m.word(S.vS_deposit)
     assert b'' == instream.read()
 
 ####################################################################

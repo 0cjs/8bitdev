@@ -328,7 +328,8 @@ def hexlist(xs):
 #   https://docs.python.org/3/library/warnings.html#warning-filter
 @pytest.mark.filterwarnings(
     'ignore:.*simulator will not generate interrupts:UserWarning')
-def test_entry(m, S, R, entrypoint, userpc):
+def test_entry(m, S, R, loadbios, entrypoint, userpc):
+    loadbios()                          # because intentry prints
     m.depword(S.ureg_PC, 0xDEAD)
     m.depword(0xEF01, 0x8001)           # return address, if needed
 

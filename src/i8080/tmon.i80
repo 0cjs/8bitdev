@@ -193,15 +193,20 @@ entry1      di                  ; ensure as best we can nothing will touch stack
             ;   user PC so we can see where we came from.
             ld   a,(t0)
             and  $80            ; entry via int flag set?
-            jp   Z,.done        ;    no: we're done
+            jp   Z,.end         ;   no: skip additional intentry processing
+            ;
             ld   hl,(ureg_SP)   ;   yes: copy return address from stack
             ld   e,(hl)
             inc  hl
             ld   d,(hl)
             ex   de,hl
             ld   (ureg_PC),hl
-.done       ei                  ; interrupts can now use our stack
-.end
+            ld   a,'!'          ; indicate we came in via int
+            call prchar
+            call prspace
+            ;
+.end        ei                  ; interrupts can now use our stack
+            call showregs       ; always print registers on entry
 
 ;   Check to see if our current command parameter values are "valid," i.e.,
 ;   matching a previously calculated and deposited checksum. (The checksum
@@ -707,7 +712,10 @@ cmd_regs_deposit
 
 cmd_regs_examine
             call prcr           ; overwrite line, since we display everything
-            ld   hl,(ureg_PC)
+            call showregs
+.end        jp   prompt
+
+showregs    ld   hl,(ureg_PC)
             call prhexHL
             ld   hl,(ureg_SP)
             call .spprhexHL
@@ -726,7 +734,7 @@ cmd_regs_examine
             ld   hl,(ureg_HL)
             call .spprhexHL
             call prnl
-.end        jp   prompt
+            ret
             ;
 .spprhexHL  call prspace
             call prhexHL

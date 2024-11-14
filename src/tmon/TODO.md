@@ -1,9 +1,8 @@
 tmon TODO List
 ==============
 
-- `intentry` should probably print the registers on entry. Not clear if we
-  also should print something to indicate this is the result of `intentry`
-  rather than `r`.
+- Fix bug with the `K` call command; the return to the monitor is broken.
+  (We seem to be placing $0000 on the stack.)
 
 - Add a byte/word switch mode in word/byte deposit mode. Perhaps Ctrl-D
   ("digits change") to match the Ctrl-D in ASCII entry mode?

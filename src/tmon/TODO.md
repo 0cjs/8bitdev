@@ -1,8 +1,20 @@
 tmon TODO List
 ==============
 
+Bug Fixes
+---------
+
+- `exec` seems quite broken. We are using the user stack to restore the
+  registers, which will break if the user stack is invalid. Perhaps setting
+  up the trampoline with a JMP, CALL or RET based on which command we're
+  executing will let us better deal with register restoration.
+
 - Fix bug with the `K` call command; the return to the monitor is broken.
   (We seem to be placing $0000 on the stack.)
+
+
+General TODO
+------------
 
 - Add a byte/word switch mode in word/byte deposit mode. Perhaps Ctrl-D
   ("digits change") to match the Ctrl-D in ASCII entry mode?

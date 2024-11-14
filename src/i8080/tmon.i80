@@ -412,6 +412,8 @@ qhex        call prhexval       ; load (DE=val B=#digits) and print curval
                                 ;   space is preserve, but after it's store
             cp   ' '            ; keep current value and continue params?
             jp   Z,.keepval     ;   yes
+            cp   ACK            ; alternate keep (Ctrl-F)
+            jp   Z,.keepval
             call qexec          ; execute (not changing current val)?
             ret  Z              ;   yes
             ld   de,0           ; set leading digits 0 for entering new value

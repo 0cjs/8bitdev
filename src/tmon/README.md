@@ -296,11 +296,14 @@ The full command descriptions follow.
   digits followed by a space will replace that value in memory. Newline
   terminates entry and, if advance mode is set, updates the deposit start
   address to the address after the one where you terminated this command.
+  Enter Ctrl-F or space to skip over locations, preserving the previous
+  value.
 
 - °`>` Hex word entry. Works as `>` but displaying two bytes in big-endian
   format, though read and written from memory in the machine's endianness.
   I.e., on i8080 or 6502 two consecutive locations containing $CD and $AB
-  will be displayed and entered as `ABCD`.
+  will be displayed and entered as `ABCD`. Enter Ctrl-F or space to skip
+  over locations, preserving the previous value.
 
 - °`'` ASCII entry. Works as to `>` but the value is displayed as an ASCII
   character using the same visible print routine as the examine commands'

@@ -5,8 +5,6 @@ tmon TODO List
   also should print something to indicate this is the result of `intentry`
   rather than `r`.
 
-- Ctrl-F should probably advance without changing in hex input mode, too.
-
 - Ctrl-J in input mode (hex or ASCII) should start a new line with the
   current address at the front, in case one is getting lost in long streams
   of input. (Or perhaps another character; right now we consider LF

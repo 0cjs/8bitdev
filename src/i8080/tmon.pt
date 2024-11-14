@@ -430,8 +430,11 @@ B = object(); W = object(); A = object()
 CLR4 = '    \x08\x08\x08\x08'   # clear-on-execute output
 
 @param('mode, depfwd, input, mem, output', [
+    #   '\x06' below is Ctrl-F to leave cur unchanged and move to next location
+
     (B, 0, '\n', 'abcdefgh', '61\b\b\n'),
     (B, 2, '31 32\n', '12cdefgh', '61\b\b31 '+CLR4+'62\b\b32'+CLR4+'\n'),
+    (B, 2, '\x0621\n', 'a!cdefgh', '61\b\b61 '+CLR4+'62\b\b21'+CLR4+'\n'),
 
     (A, 0, '\n', 'abcdefgh', 'a\x08\n'),
     (A, 4, 'X0\a~\n',           'X0\a~efgh',    'a\bX' 'b\b0' 'c\bG' 'd\b~' 'e\b\n'),

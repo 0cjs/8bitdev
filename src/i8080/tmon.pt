@@ -420,8 +420,8 @@ def test_deposit_copyaddr(m, S, R, loadbios):
     ('X0\a~\n',           'X0\a~efgh',    'a\bX' 'b\b0' 'c\bG' 'd\b~' 'e\b\n'),
     #   Spaces are entered as data, not interpreted as skip.
     ('  \n',              '  cdefgh',     'a\b ' 'b\b ' 'c\b\n'),
-    #   Instead ^N is used for skip.
-    ('\x0E!\x0E\x0E\n',   'a!cdefgh',     'a\ba' 'b\b!' 'c\bc' 'd\bd' 'e\b\n'),
+    #   Instead Ctrl-F is used for skip.
+    ('\x06!\x06\x06\n',   'a!cdefgh',     'a\ba' 'b\b!' 'c\bc' 'd\bd' 'e\b\n'),
     #   ^D goes into "digit" mode: one byte using the hex input routine.
     ('X\x04a1b2c _\n',    'X,_defgh',
             'a\bX' 'b\b62\b\ba1b2c     \b\b\b\b' 'c\b_' 'd\b\n'),

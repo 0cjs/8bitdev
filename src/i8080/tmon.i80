@@ -35,6 +35,7 @@
 ;   Definitions
 
 ;   ASCII characters
+ACK         equ  $06            ; Ctrl-F, keep current val and move forward
 BS          equ  $08            ; Ctrl-H, backspace
 LF          equ  $0A            ; Ctrl-J, linefeed
 CR          equ  $0D            ; Ctrl-M, carriage return
@@ -812,7 +813,7 @@ cmd_deposit_ascii
             call qexec          ; "execute" char? (newline)
             jp   Z,deposit_end  ;   yes: input complete
             ;
-            cp   a,$0E          ; Ctrl-N to skip over this location?
+            cp   a,ACK          ; Ctrl-F to skip over this location?
             jp   NZ,+           ;    no: process input
             ld   a,(hl)         ;   yes: reprint and move to next char
             call prvischar

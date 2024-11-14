@@ -305,7 +305,7 @@ The full command descriptions follow.
 - °`'` ASCII entry. Works as to `>` but the value is displayed as an ASCII
   character using the same visible print routine as the examine commands'
   ASCII option. Typing a single letter or symbol (including space)
-  immediately enters that value. Enter Ctrl-N to skip over locations,
+  immediately enters that value. Enter Ctrl-F to skip over locations,
   preserving the previous value.
 
 - `:` Deposit Intel hex record. All data from the colon to the next newline

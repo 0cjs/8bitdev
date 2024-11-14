@@ -5,12 +5,6 @@ tmon TODO List
   also should print something to indicate this is the result of `intentry`
   rather than `r`.
 
-- Ctrl-J in input mode (hex or ASCII) should start a new line with the
-  current address at the front, in case one is getting lost in long streams
-  of input. (Or perhaps another character; right now we consider LF
-  to be the same as CR: "execute," in order to handle systems that send
-  LF with the Enter key. It's not clear if any systems actually do this.)
-
 - Add a byte/word switch mode in word/byte deposit mode. Perhaps Ctrl-D
   ("digits change") to match the Ctrl-D in ASCII entry mode?
 
@@ -49,3 +43,15 @@ Platform-specific TODO
 - Burn into 8K expansion ROM ($6000-$7FFF), with the pre-init setting up
   extra BASIC command to enter tmon.
 - Add CMT load/save.
+
+
+Not TODO
+--------
+
+- We considered adding Ctrl-J in input mode (hex or ASCII) to start a new
+  line displaying the current address and then continuing with input, in
+  case one is getting lost in long streams of input. However, it's only a
+  single extra keystroke to hit Enter followed by the deposit command
+  again. This is not _quite_ as easy as Ctrl-J, since you need to remember
+  which deposit command you were using, but it's still not worth the extra
+  code space, and this is somewhat dificult to implement.

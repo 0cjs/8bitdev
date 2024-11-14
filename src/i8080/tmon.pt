@@ -144,12 +144,14 @@ def test_qhex_and_store(m, S, R, loadbios, size, stored, input):
 
     loadbios(input=input)
     m.depword(0xF002, 0xEEEE)
-    m.call(S.qhex, R(c=c, hl=0xF002), stopat=[S.cancel], trace=1)
+    m.call(S.qhex, R(c=c, hl=0xF002), stopat=[S.cancel])
     print(m.hexdump(0xF000, 6))
 
     term = input.endswith
     if term(NAK) or term(CAN):
         assert(S.cancel, stored, valp     ) == (  m.pc, m.word(valp), m.hl)
+    elif input == b'\r' or input == b'\n':  # no data actually entered
+        assert(  R(Z=1), stored, valp     ) == (m.regs, m.word(valp), m.hl)
     elif term(b'\r') or term(b'\n'):
         assert(  R(Z=1), stored, valp+incr) == (m.regs, m.word(valp), m.hl)
     elif term(b' '):
@@ -428,7 +430,7 @@ B = object(); W = object(); A = object()
 CLR4 = '    \x08\x08\x08\x08'   # clear-on-execute output
 
 @param('mode, depfwd, input, mem, output', [
-    XXX(B, 0, '\n', 'abcdefgh', '61\b\b61 '+CLR4+'\n'),
+    (B, 0, '\n', 'abcdefgh', '61\b\b\n'),
     (B, 2, '31 32\n', '12cdefgh', '61\b\b31 '+CLR4+'62\b\b32'+CLR4+'\n'),
 
     (A, 0, '\n', 'abcdefgh', 'a\x08\n'),
@@ -454,12 +456,10 @@ def test_deposit(m, S, R, loadbios, mode, input, depfwd, mem, output):
     m.depword(S.vS_deposit, depaddr)
     m.depword(S.vN_deposit, 1)          # advance to next mode
     m.deposit(depaddr, b'abcdefgh')
-    print(f'{m.word(S.vS_deposit):4X}') # XXX
     instream, outstream = loadbios(input=input.encode('ASCII'))
     m.call(cmd, stopat=[S.prompt])
     assert (mem.encode('ASCII'), b'\r9000: ' + output.encode('ASCII')) \
         == (m.bytes(depaddr, 8),                 outstream.getvalue())
-    print(f'{m.word(S.vS_deposit):4X}') # XXX
     assert depaddr + depfwd == m.word(S.vS_deposit)
     assert b'' == instream.read()
 

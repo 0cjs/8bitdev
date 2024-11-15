@@ -1,4 +1,4 @@
-from    testmc  import tmc_tid
+from    testmc  import LB, MB, tmc_tid
 from    testmc.i8080  import  Machine
 from    binascii  import crc_hqx
 import  pytest
@@ -33,13 +33,17 @@ rsti        equ $6 * $8     ; address of RST 6
             include src/i8080/prvischar/ascii.i80
             include src/i8080/prscreenchar/ascii.i80
 
-;   We should never reach this; tests should stopat=[S.exit].
-exit        halt
+exit        halt            ; exit routine used by monitor
 
-usercode    ret         ; for testing jump (J) and call (K)
+jump_test   inc  a
+            inc  hl
+jump_test_E halt
 
-intentrytest rst rsti
-             halt
+call_test   inc  b
+            inc  de
+call_test_E ret
+
+iret_test   halt
 
             ;   data for testing E command and similar
             org  $12AB
@@ -183,7 +187,7 @@ def test_init(m, S, R):
     assert m.bytes(S.v_initdata, len) == m.bytes(S.v_start, len)
 
     #   change param vals and checksum
-    m.depword(S.vS_jump_call, 0x1234); m.depword(S.vE_source, 0x5678)
+    m.depword(S.vS_exec, 0x1234); m.depword(S.vE_source, 0x5678)
     m.call(S.cksum_v); m.depword(S.v_cksum, m.hl)
     newdata = m.bytes(S.v_start, len + 2)
     print('cksummed', m.hexdump(S.v_start, len + 2))
@@ -355,59 +359,40 @@ def test_entry(m, S, R, loadbios, entrypoint, userpc):
 ####################################################################
 #   Commands: Execution
 
-@param('entrysym, retsym', [ ('cmd_jump', None), ('cmd_call', 'entry'),
-], ids=tmc_tid)
-def test_jump_call(m, S, R, loadbios, entrysym, retsym):
+def test_jump(m, S, R, loadbios):
     loadbios(input=b'\n')
     userstack = 0xFF80
-    r = R( a=0x12, S=1, Z=1, H=0, P=1, C=0,
-           bc=0x3456, de=0x789A, hl=0xBCDE,
-           sp=userstack)
-
-    m.deposit(S.ureg_AF, [ r.f, r.a ])
-    m.depword(S.ureg_BC, [ r.bc, r.de, r.hl, userstack, 0x0000 ])  # sentinel PC
-    m.depword(S.vS_jump_call, S.usercode)
-    print('   vS_jump_call', m.hexdump(S.vS_jump_call, 2))
-    print('ureg_AF', m.hexdump(S.ureg_AF, 10))
-
-    m.stepto(S[entrysym], stopat=[S.usercode])
-    print(' ustack', m.hexdump(userstack -4, 6))
-    assert S.usercode == m.pc
-    if retsym:  r = r.clone(sp=userstack - 2)   # return address on stack
-    assert r == m.regs
-
-    if retsym:
-        m.step()
-        assert S[retsym] == m.pc
+    m.deposit(userstack-4, b'\xEA' * 8)     # sentinels
+    m.depword(S.ureg_AF, [0x12FF, 0x3456, 0x789A, 0xBCDE, userstack, 0xEBEB])
+    m.depword(S.vS_exec, S.jump_test)
+    m.stepto(S.cmd_jump, stopat=[S.jump_test_E], trace=1)
+    assert R(a=0x13, bc=0x3456, de=0x789A, hl=0xBCDF, pc=S.jump_test_E) == m.regs
+    assert b'\xEA' * 8 == m.bytes(userstack-4, 8), 'stack trashed!'
 
 def test_call(m, S, R, loadbios):
-    ' Call a RET instruction in user code. '
-
-    _, outstream = loadbios(input=b'\n')
+    loadbios(input=b'\n')
     userstack = 0xFF80
-    r = R( a=0x12, S=1, Z=1, H=0, P=1, C=0,
-           bc=0x3456, de=0x789A, hl=0xBCDE,
-           sp=userstack - 2)
+    m.deposit(userstack-4, b'\xEA' * 8)     # sentinels
+    m.depword(S.ureg_AF, [0x12FF, 0x3456, 0x789A, 0xBCDE, userstack, 0xEBEB])
+    m.depword(S.vS_exec, S.call_test)
+    m.depword(S.ureg_SP, userstack)
 
-    m.deposit(S.ureg_AF, [ r.f, r.a ])
-    m.depword(S.ureg_BC, [ r.bc, r.de, r.hl, userstack, 0x0000 ])  # sentinel PC
-    m.depword(S.vS_jump_call, S.usercode)
-    print('   vS_jump_call', m.hexdump(S.vS_jump_call, 2))
-    print('ureg_AF', m.hexdump(S.ureg_AF, 10))
+    m.stepto(S.cmd_call, stopat=[S.call_test_E], trace=1)
+    assert R(a=0x12, bc=0x3556, de=0x789B, hl=0xBCDE,
+        sp=userstack-2, pc=S.call_test_E) == m.regs
+    expected_stack \
+        = bytes([0xEA, 0xEA, LB(S.entry), MB(S.entry), 0xEA, 0xEA, 0xEA, 0xEA])
+    assert expected_stack == m.bytes(userstack-4, 8), 'stack trashed!'
 
-    m.call(S.cmd_call, stopat=[S.usercode])
-    assert S.usercode == m.pc
-    assert r == m.regs
-    #   XXX test the `ret`
-
-@pytest.mark.filterwarnings(
-    'ignore:.*simulator will not generate interrupts:UserWarning')
 def test_iret(m, S, R, loadbios):
-    _, outstream = loadbios(input=b'r\ni\n')
-    m.sp = 0xABCD
-    m.stepto(S.intentrytest, stopat=[S.intentrytest+1])
-    print(outstream.getvalue())
-    assert (S.intentrytest+1, 0xABCD) == (m.pc, m.sp)
+    #   The common code is tested in test_jump and test_call.
+    loadbios(input=b'\n')
+    userstack = 0xFF80
+    m.depword(S.ureg_SP, userstack)
+    m.depword(userstack, S.iret_test)
+    print(f'iret_test={S.iret_test:4X} ', m.hexdump(userstack-2,8))
+    m.stepto(S.cmd_iret, stopat=[S.iret_test], trace=1)
+    assert R(sp=userstack+2, pc=S.iret_test) == m.regs
 
 ####################################################################
 #   Commands: Deposit
@@ -417,14 +402,14 @@ def test_depset_startaddr(m, S, R, loadbios):
     m.depword(S.vS_examine, 0xABCD)    # sentinel
     m.call(S.cmd_deposit_params, stopat=[S['cmd_deposit_params.end']])
     assert (      0x1234 ,         0x01 ,        0x00 ) \
-        == (m.word(S.vS_deposit), m.byte(S.vN_deposit), m.byte(S.t2))
+        == (m.word(S.vS_deposit), m.byte(S.vN_deposit), m.byte(S.t0))
 
 def test_depset_copyaddr(m, S, R, loadbios):
     loadbios(input=b's5678 n0 e1\n')
     m.depword(S.vS_examine, 0xABCD)
     m.call(S.cmd_deposit_params, stopat=[S['cmd_deposit_params.end']])
     assert (      0xABCD ,         0x00 ,        0x01 ) \
-        == (m.word(S.vS_deposit), m.byte(S.vN_deposit), m.byte(S.t2))
+        == (m.word(S.vS_deposit), m.byte(S.vN_deposit), m.byte(S.t0))
 
 #   Deposit modes: hex bytes, hex words, ASCII.
 B = object(); W = object(); A = object()

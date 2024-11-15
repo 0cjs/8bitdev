@@ -4,17 +4,18 @@ tmon TODO List
 Bug Fixes
 ---------
 
-- `exec` seems quite broken. We are using the user stack to restore the
-  registers, which will break if the user stack is invalid. Perhaps setting
-  up the trampoline with a JMP, CALL or RET based on which command we're
-  executing will let us better deal with register restoration.
-
-- Fix bug with the `K` call command; the return to the monitor is broken.
-  (We seem to be placing $0000 on the stack.)
+- The execution commands currently print a CR, but we don't print on one
+  entry which means that if usercode prints out stuff without a newline,
+  its stuck right up against the register display (which can be
+  particularly hard to read when the output is numbers). We should probably
+  have the exec commands print a CR and clear to EOL, and have entry print
+  the newline.
 
 
 General TODO
 ------------
+
+- Add ability to use a clear-to-EOL function if the terminal supports it.
 
 - Add a byte/word switch mode in word/byte deposit mode. Perhaps Ctrl-D
   ("digits change") to match the Ctrl-D in ASCII entry mode?

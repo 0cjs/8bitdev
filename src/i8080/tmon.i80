@@ -50,7 +50,9 @@ UPCASE      equ  %11011111      ; (lower case ASCII) ∧ UPCASE → upper case
 
 ; ----------------------------------------------------------------------
 
-iJP         equ  $C3            ; 8080 JMP instruction
+iCALL       equ  $CD            ; 8080 CALL aaaa instruction
+iJP         equ  $C3            ; 8080 JMP aaaa instruction
+iRET        equ  $C9            ; 8080 RET instruction
 
 ;   Command character and address of command code definition.
 cmd         macro   char,addr
@@ -96,7 +98,7 @@ ureg_PC     ds   2
 
 ;   Command parameter values: v<PARAM>_<CMD>
 v_start
-vS_jump_call    ds   2      ; execute: start addr
+vS_exec         ds   2      ; execute: start addr
 vS_examine      ds   2      ; examine: start addr
 vM_examine      ds   1      ; examine: display mode flags:
                             ;   b0=hex, b1=ASCII, b2=screen codes
@@ -335,7 +337,7 @@ v_initdata  dw   vini_start     ; execute start
 ; ======================================================================
 ;   Command parameter management.
 
-;   ♠HL ♣ABCHL,(t0⋅1)   We've found a command; it's asking us to read and
+;   ♠HL ♣ABCHL,(t2⋅3)   We've found a command; it's asking us to read and
 ;   update parameters (specified in a table passed in HL) and execute or
 ;   cancel it.
 ;
@@ -345,7 +347,7 @@ v_initdata  dw   vini_start     ; execute start
 ;   • byte0 [6:0]: param name, as upper-case ASCII letter
 ;   • byte1,byte2 [15:0]: location in which to store param value
 ;
-read_params ld   (t0),hl         ; save params table
+read_params ld   (t2),hl         ; save params table
 .next       call rdchar
             call qexec          ; execute command?
             ret  Z              ;   yes: continue running command
@@ -354,7 +356,7 @@ read_params ld   (t0),hl         ; save params table
             cp   SPACE          ; ignore spaces.
             jp   Z,read_params
             ;
-.parse_name ld   hl,(t0)
+.parse_name ld   hl,(t2)
             call upcase         ; force to upper case if lettter
             ld   b,a            ; table entry to match
 .tabnext    ld   a,(hl)         ; param name char from table
@@ -522,63 +524,64 @@ qhex        call prhexval       ; load (DE=val B=#digits) and print curval
 ; ----------------------------------------------------------------------
 ;   Execution commands
 
-ptab_jump_call
-            pw   'S',vS_jump_call   ; start address of execution
+ptab_exec   pw   'S',vS_exec        ; start address of execution
             db   0
 
-cmd_iret    ld   hl,ptab_none
-            or   a,$FF          ; NZ: no push ret addr, ret
+cmd_iret    ld   a,iRET
+            ld   (t0),a
+            ld   hl,ptab_none
             jp   exec
 
-cmd_jump    or   a,$01          ; NZ: no push ret addr, jump
-            jp   jumpcall
+cmd_call    ld   a,iJP          ; we simulate the call with a JP
+            ld   (t0),a
+            ld   hl,(ureg_SP)   ;   after pushing the monitor entry point
+            dec  hl             ;   on the user stack
+            ld   a,MB(entry)
+            ld   (hl),a
+            dec  hl
+            ld   a,LB(entry)
+            ld   (hl),a
+            ld   (ureg_SP),hl
+            ;
+            ld   hl,ptab_exec
+            jp   exec
 
-cmd_call    or   a,$00          ;  Z: push ret addr, jump
-            ; fallthrough
+cmd_jump    ld   a,iJP
+            ld   (t0),a
+            ld   hl,ptab_exec
+            jp   exec
+
+            ;   XXX optimise the above with a ↓ fallthrough etc.
+            ;   and maybe remove dup code in cmd_{call,jump}
 
 ;   ♣(t0⋅1⋅2)   Execute location
-;   The Z flag and A register indicates which variant execution mode we run:
-;   • A=00,Z   jump: jump directly to code, user stack is never touched
-;                    (thus works if user stack is invalid)
-;   • A=FF,NZ  call: push return to monitor addr on user stack
-;   • A=FE,NZ  ret:  RET to addr on user stack, e.g. from RST entry to monitor
+;   This sets up a trampoline at (t0⋅1⋅2) that does the appropriate JMP or
+;   RET to start execution. Using this means that we need not use or change
+;   any registers to execute at an arbitrary address.
 ;
-jumpcall    ld   hl,ptab_jump_call
-exec        push af             ; save execution mode in A, Z flag
-            call read_params
-            call prnl
-.exec       call cksum_v
-            ld   (v_cksum),hl   ; do not re-init param values on re-entry
-            ;   Set up the trampoline so we can jump to the start address
-            ;   without using any registers
-            ld   a,iJP
-            ld   hl,(vS_jump_call)  ; start addr for execution
-            ld   (t0),a
-            ld   (t1),hl
-            ;   Switch to and set up set up user stack
-            pop  af             ; restore execution mode to A, Z flag
-            ld   hl,(ureg_SP)   ; (load user stack)
-            ld   sp,hl
-            jp   NZ,+           ; Z clear, skip...
-            ld   hl,entry       ;   ...push of entry on stack
-            push hl
-+           ;   Restore all registers (except SP, already done above)
-            ld   hl,(ureg_AF)
-            push hl
-            ld   hl,(ureg_BC)
-            push hl
+exec        call read_params
+            call prnl           ; to easily identify output from the routine
+            ;
+            call cksum_v        ; checksum current params so we don't re-init
+            ld   (v_cksum),hl   ;   on re-entry if they've not been stomped
+            ;
+            ld   hl,(vS_exec)
+            ld   (t1),hl        ; set addr or JMP or CALL instruction
+            ;   Restore user values to most registers
             ld   hl,(ureg_DE)
             push hl
-            ld   hl,(ureg_HL)
             pop  de
+            ld   hl,(ureg_BC)
+            push hl
             pop  bc
-            inc  a              ; A incremented from $FF to $00?
-            jp   Z,+            ;   yes: interrupt return
-            pop  af             ;    no:
-            jp   t0             ;        trampoline into user code
-            ;
-+           pop  af
-            ret                 ; return from interrupt
+            ld   hl,(ureg_AF)
+            push hl
+            pop  af
+            ;   Switch to and set up set up user stack
+            ld   hl,(ureg_SP)   ; (load user stack)
+            ld   sp,hl
+            ld   hl,(ureg_HL)
+            jp   t0             ; trampoline into user code
 
 cmd_quit    ld   hl,ptab_none   ; no parameters,
             call read_params    ;   but must confirm/cancel
@@ -769,17 +772,16 @@ flagchars   db   'S'-1, 'Z'-1, 0-1, 'H'-1, 0-1, 'P'-1, 0-1, 'C'-1
 ptab_deposit_params
             pw   'S',vS_deposit     ; start: 16-bit value
             pb   'N',vN_deposit     ; advance to next mode
-            pb   'E',t2             ; copy examine start address: temp store
-                                    ;   (t0⋅1 is used by `read_params`)
+            pb   'E',t0             ; copy examine start address: temp store
             db   0                  ; end of table
 
 cmd_deposit_params
             xor  a,a
-            ld   (t2),a
+            ld   (t0),a
             ld   hl,ptab_deposit_params
             call read_params
             call prnl
-            ld   a,(t2)          ; copy examine start address?
+            ld   a,(t0)          ; copy examine start address?
             or   a,a
             jp   Z,.end         ;   no
             ld   hl,(vS_examine)

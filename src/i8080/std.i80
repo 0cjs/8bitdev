@@ -8,6 +8,9 @@
 ;   file is included; that allows this file to use MOMCPU/MOMCPUNAME
 ;   to change its behaviour for different 8080/8085/Z80 variants.
 ;
+;   Our standard constant definition and storage allocation of DS/DB/DW
+;   is native on this CPU.
+;
 
 ;   In general, we use {NOEXPAND} on macros that do not generate code in
 ;   order to keep the listing clean. However, for macros that do generate
@@ -45,13 +48,6 @@ RST_3C      equ $3C     ; 8085: RST7.5
 
 LB          function addr,(addr & $FF)
 MB          function addr,((addr & $FF00) >> 8)
-
-;--------------------------------------------------------------------------
-;   Constant definition and storage allocation already uses the Intel
-;   DS/DB/DW syntax.
-
-;   XXX This doesn't work; still looking for a way to deal with this.
-dup         function count,data,count dup data
 
 ;--------------------------------------------------------------------------
 ;   Some instructions used with self-modifying code are used so frequently

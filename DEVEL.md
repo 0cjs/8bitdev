@@ -10,6 +10,14 @@ Packages needed for old Python builds of third party software:
 To-do List
 ----------
 
+#### Bugs
+
+- Once the `dw` being wrong-endian for big-endian machines bug is fixed
+  (still present in ASL build 280), add `N dup XXXX` test for `dw`.
+- We should probably be checking the assembler version in `std.CPU` files
+  because our code makes assumptions about various newer features being
+  available. (Possibly t8dev should be doing this too.)
+
 #### Cleanup
 
 - scr/tmc68/biocode: use `ds prchar-$` (current PC) to org routine locations

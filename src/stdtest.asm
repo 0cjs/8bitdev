@@ -19,17 +19,8 @@ T_MB_12340      equ MB($12340)
 defalloctest
 dstest0         ds  3
 dstest1         ds  1
+dbtest          db  $00,"abc",3 dup $FF,$00       ; Intel dup syntax for `db`
 
-
-;   The dup() function doesn't work, probably because it produces a "real"
-;   value which is inserted into the db/byt without further interpretation,
-;   rather than text that would then be parsed again by db/byt argument
-;   interpretation. We're still working out how to deal with this.
-;dbtest         db  $00,"abc",dup(3,$FF),$00      ; attempt at generic
-;dbtest         db  $00,"abc",3 dup $FF,$00       ; Intel syntax
-;dbtest         db  $00,"abc",[3]$FF,$00          ; Motorola syntax
-dbtest          db  $00,"abc",$FF,$FF,$FF,$00
-
+;   XXX We should be testing `dup` syntax here, too.
+;   That's waiting on an endian fix for `dw` for 6800.
 dwtest          dw  $ABCD
-
-

@@ -18,7 +18,7 @@ build_toolsets() {
     t8dev toolset asl
     [[ -f $all_tools ]] && t8dev toolset asxxxx
     t8dev toolset osimg ctools dos33fs
-    t8dev toolset bm2 cscp linapple RunCPM
+    t8dev toolset bm2 cscp linapple RunCPM VirtualT
 }
 
 #   ASxxxx builds

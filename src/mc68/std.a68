@@ -2,7 +2,7 @@
 ;   std.a68 - Standard 6800 definitions
 ;
 ;   These are some standard definitions (mainly macros) we commonly
-;   use with source code assembled with the Macro Assembler AS.
+;   use with source code assembled with the Macro Assembler AS (ASL).
 ;
 ;   The CPU must be specified with the `CPU` pseudo-op before this
 ;   file is included; that allows this file to use MOMCPU/MOMCPUNAME
@@ -13,6 +13,10 @@
 ;   is allowed and we use that. Native repetition syntax is prefixed count
 ;   in brackets (`[8]$FF`), but as of build 280 Intel `8 dup $FF` is
 ;   supported for DB/DW.
+;
+;   Build 281 is required for dw to store words in the big-endian order
+;   required for this CPU, instead of the little-endian order used for
+;   8080/8085/Z80 and 6502 CPUs.
 
 ;   In general, we use {NOEXPAND} on macros that do not generate code in
 ;   order to keep the listing clean. However, for macros that do generate
@@ -34,12 +38,3 @@ mvec_RESET  equ $FFFE
 
 LB          function addr,(addr & $FF)
 MB          function addr,((addr & $FF00) >> 8)
-
-; ----------------------------------------------------------------------
-;   XXX This is necessary only because the, unlike the native `fdb`,
-;   the assembler's `dw` always seems to store words in little-endian
-;   order, rather than native machine order (as of build 280).
-
-dw          macro
-            fdb ALLARGS
-            endm

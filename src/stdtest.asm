@@ -21,6 +21,4 @@ dstest0         ds  3
 dstest1         ds  1
 dbtest          db  $00,"abc",3 dup $FF,$00       ; Intel dup syntax for `db`
 
-;   XXX We should be testing `dup` syntax here, too.
-;   That's waiting on an endian fix for `dw` for 6800.
 dwtest          dw  $ABCD

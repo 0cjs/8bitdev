@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+#
+#   88 - run a command in this repos t8dev/virtualenv setup
+#
+#   With no arguments, this will start a subshell.
+#
+set -Eeuo pipefail
+trap 'ec=$?; echo 1>&2 "INTERNAL ERROR: ec=$ec line=$LINENO cmd=$BASH_COMMAND";
+      exit $ec;' ERR
+
+export T8_PROJDIR=$(cd "$(dirname "$0")" && pwd -P)
+. "$T8_PROJDIR"/t8dev/t8setup.bash
+if [[ $# -gt 0 ]]; then
+    exec "$@"
+else
+    export PS1='XXX' # (('"$(basename "$(pwd"))"'))'
+    exec bash --rcfile <(echo '. ~/.bashrc; PS1="(($(basename "$(pwd)"))) $ "')
+fi

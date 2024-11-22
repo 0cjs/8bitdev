@@ -1,0 +1,17 @@
+;   "Hello, world" for NEC PC-8001 expansion ROM.
+
+            cpu 8080
+            include  src/i8080/std.i80
+
+            org $6000           ; start of expansion ROM
+            db  'AB'            ; signature indicating expansion ROM present
+
+exprom_init ld   a,'!'
+            rst  $18            ; print char in A
+            ld   a,'\r'
+            rst  $18
+            ld   a,'\n'
+            rst  $18
+            ret                 ; continue main ROM init
+
+message     db 'Expansion ROM!'

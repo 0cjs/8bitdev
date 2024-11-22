@@ -12,22 +12,41 @@ prchar      macro
 prstr       equ  $52ED          ; ♠HL ♣?? print HL→ $00-terminated string
                                 ;   (only works after BASIC has initialised)
 
+diskbreq    equ  $1875          ; "Disk BASIC feature" error
+basicret    equ  $3C82          ; ??? return to basic after USR, etc.?
+
+;   Command hooks return with RET.
+jp_cmd      equ  $F0FC          ; jump point for BASIC `CMD`
+
 ; ----------------------------------------------------------------------
-;   Main
+;   Expansion ROM Init
 
             org  $6000          ; start of expansion ROM
             db   'AB'           ; signature indicating expansion ROM present
 
-exprom_init
-            ld   hl,message
+exprom_init ld   hl,.message
             call prstr_alt
+            ld   hl,cmd_hi
+            ld   (jp_cmd+1),hl
             ret                 ; continue main ROM init
+.message    db '8bitdev expansion ROM installed.\r\n',0
 
 prstr_alt   ld   a,(hl)
             inc  hl             ; move past terminator before exit
             or   a,a
             ret  Z
             prchar
-            jr  prstr_alt
+            jr   prstr_alt
 
-message     db 'Expansion ROM detected!\r\n',0
+; ----------------------------------------------------------------------
+;   BASIC `CMD` extensions
+
+cmd         call cmd_hi
+            ret                 ; no need for `basicret`
+
+;   Minimal "Hello, world."
+cmd_hi      ld   hl,.message
+            call prstr
+            ret
+
+.message    db   'Hi there.\r\n',0

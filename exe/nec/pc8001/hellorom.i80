@@ -6,14 +6,16 @@
 ; ----------------------------------------------------------------------
 ;   PC-8001 BIOS
 
-prchar      macro
+rst_prchar  macro
             rst  $18            ; ♠A ♣?? print char in A
             endm
+prchar      equ  $40A6
 prstr       equ  $52ED          ; ♠HL ♣?? print HL→ $00-terminated string
                                 ;   (only works after BASIC has initialised)
 
 diskbreq    equ  $1875          ; "Disk BASIC feature" error
 basicret    equ  $3C82          ; ??? return to basic after USR, etc.?
+monitor     equ  $5C66          ; enter monitor
 
 ;   Command hooks return with RET.
 jp_cmd      equ  $F0FC          ; jump point for BASIC `CMD`
@@ -26,7 +28,7 @@ jp_cmd      equ  $F0FC          ; jump point for BASIC `CMD`
 
 exprom_init ld   hl,.message
             call prstr_alt
-            ld   hl,cmd_hi
+            ld   hl,cmd
             ld   (jp_cmd+1),hl
             ret                 ; continue main ROM init
 .message    db '8bitdev expansion ROM installed.\r\n',0
@@ -35,13 +37,26 @@ prstr_alt   ld   a,(hl)
             inc  hl             ; move past terminator before exit
             or   a,a
             ret  Z
-            prchar
+            rst_prchar
             jr   prstr_alt
 
 ; ----------------------------------------------------------------------
 ;   BASIC `CMD` extensions
 
-cmd         call cmd_hi
+cmd         ;   HL→ the remainder of the command line, converted to upper
+            ;   case, leading spaces skipped, $00-terminated.
+            call prhexHL
+            ld   a,' '
+            rst_prchar
+            ld   h,d
+            ld   l,e
+            call prhexHL
+            ld   a,' '
+            rst_prchar
+            ld   h,b
+            ld   l,c
+            call prhexHL
+            call monitor
             ret                 ; no need for `basicret`
 
 ;   Minimal "Hello, world."
@@ -50,3 +65,8 @@ cmd_hi      ld   hl,.message
             ret
 
 .message    db   'Hi there.\r\n',0
+
+; ----------------------------------------------------------------------
+;   Support routines
+
+            include  src/i8080/pr.i80   ; XXX will be included by tmon.i80

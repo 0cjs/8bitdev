@@ -1,4 +1,4 @@
-;   "Hello, world" for NEC PC-8001 expansion ROM.
+;   NEC PC-8001 expansion ROM with various programs and experiments.
 
             cpu Z80
             include  src/i8080/std.i80

@@ -127,7 +127,7 @@ manual_build=(
         exe/mb6885/kbscan.a68 exe/mb6885/writenum.a68
     exe/tmc/i8080/hello.i80 exe/tmc/i8080/tmon.i80
     exe/tmc/mc6800/hello.a68 exe/tmc/mc6800/pmon.a68
-    exe/nec/pc8001/hellorom.i80
+    exe/nec/pc8001/exprom1.i80
 )
 t8dev asl asm "${manual_build[@]}" || fail
 
@@ -151,7 +151,7 @@ cmtconv -p jr200 -i obj \
 cmtconv -p mb6885 -i obj \
     -f HELLO.B "$exeobj/mb6885/hello.p" "$exeobj/mb6885/hello.wav"
 
-p2bin -q "$exeobj/nec/pc8001/hellorom.p" "$exeobj/nec/pc8001/hellorom.bin"
+p2bin -q "$exeobj/nec/pc8001/exprom1.p" "$exeobj/nec/pc8001/exprom1.bin"
 
 #   Change back to original CWD so we can use relative paths to that as
 #   command line parameters to this Test script. (This makes command-line

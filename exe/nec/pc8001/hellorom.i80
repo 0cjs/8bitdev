@@ -1,17 +1,33 @@
 ;   "Hello, world" for NEC PC-8001 expansion ROM.
 
-            cpu 8080
+            cpu Z80
             include  src/i8080/std.i80
 
-            org $6000           ; start of expansion ROM
-            db  'AB'            ; signature indicating expansion ROM present
+; ----------------------------------------------------------------------
+;   PC-8001 BIOS
 
-exprom_init ld   a,'!'
-            rst  $18            ; print char in A
-            ld   a,'\r'
-            rst  $18
-            ld   a,'\n'
-            rst  $18
+prchar      macro
+            rst  $18            ; ♠A ♣?? print char in A
+            endm
+prstr       equ  $52ED          ; ♠HL ♣?? print HL→ $00-terminated string
+                                ;   (only works after BASIC has initialised)
+
+; ----------------------------------------------------------------------
+;   Main
+
+            org  $6000          ; start of expansion ROM
+            db   'AB'           ; signature indicating expansion ROM present
+
+exprom_init
+            ld   hl,message
+            call prstr_alt
             ret                 ; continue main ROM init
 
-message     db 'Expansion ROM!'
+prstr_alt   ld   a,(hl)
+            inc  hl             ; move past terminator before exit
+            or   a,a
+            ret  Z
+            prchar
+            jr  prstr_alt
+
+message     db 'Expansion ROM detected!\r\n',0

@@ -129,7 +129,7 @@ manual_build=(
     exe/tmc/mc6800/hello.a68 exe/tmc/mc6800/pmon.a68
     exe/nec/pc8001/hellorom.i80
 )
-t8dev asl asm "${manual_build[@]}"
+t8dev asl asm "${manual_build[@]}" || fail
 
 #   This builds an Apple II disk image from an AS source file. Probably
 #   this should be in smaller steps so we can extend the idea to building

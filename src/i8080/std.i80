@@ -22,7 +22,9 @@
 ;   CPU/Assembly Language Setup
 
     relaxed on              ; allow $NN hex constants
+  if MOMCPUNAME != 'Z80'
     z80syntax exclusive     ; life is easier with the same syntax everywhere
+  endif
 
 ;--------------------------------------------------------------------------
 ;   Restart addresses

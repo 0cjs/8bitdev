@@ -128,6 +128,7 @@ manual_build=(
     exe/tmc/i8080/hello.i80 exe/tmc/i8080/tmon.i80
     exe/tmc/mc6800/hello.a68 exe/tmc/mc6800/pmon.a68
     exe/nec/pc8001/exprom1.i80
+    exe/kc85/m100/hi.i85
 )
 t8dev asl asm "${manual_build[@]}" || fail
 
@@ -152,6 +153,7 @@ cmtconv -p mb6885 -i obj \
     -f HELLO.B "$exeobj/mb6885/hello.p" "$exeobj/mb6885/hello.wav"
 
 p2bin -q "$exeobj/nec/pc8001/exprom1.p" "$exeobj/nec/pc8001/exprom1.bin"
+p2bin -q "$exeobj/kc85/m100/hi.p" "$exeobj/kc85/m100/HI.CO"
 
 #   Change back to original CWD so we can use relative paths to that as
 #   command line parameters to this Test script. (This makes command-line
@@ -251,6 +253,14 @@ post_emulate_run() {
             #   XXX This works only for PC-8001. We'll have to work out how
             #   to use different ROM patchspecs for other machines.
             t8dev emu cscp "$emulator" N80.ROM=@6000:$post_emulate
+            ;;
+        kc85)
+            #   No command line options for anything here. We should probably
+            #   mod VirtualT to take a command line option to automatically
+            #   do the File » Load file from HD menu item on the given file.
+            mkdir -p .build/emulator/virtualt/
+            cp "$post_emulate" .build/emulator/virtualt/
+            t8dev emulator virtualt
             ;;
         *)
             die 2 "Unknown emulator suite: $emu_suite"

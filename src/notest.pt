@@ -1,0 +1,4 @@
+#   Handy pytest target for when we don't want to run any unit tests.
+
+def test_nothing():
+    assert True

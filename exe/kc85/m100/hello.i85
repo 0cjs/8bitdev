@@ -1,0 +1,34 @@
+;   "Hello, world" for TRS-80 Model 100 (or any Kyocera-85 compatible?).
+;
+;   You must do a `CLEAR 256,62000` (or a lower address) in BASIC before
+;   this will load.
+
+            cpu 8085
+            include  src/i8080/std.i80
+
+; ----------------------------------------------------------------------
+;   XXX This is an entirely bogus hack. We should ask t8dev to generate
+;   the .CO file, and it should find the source, make sure it's built,
+;   and then generate the .CO file with a proper header based on the
+;   first/start/end addresses in the ASL .p file.
+
+CO_header   org  62000 -6
+.start      dw   start
+.length     dw   end-start
+.entry      dw   start
+
+; ----------------------------------------------------------------------
+;   BIOS
+
+LCD         equ  $4B44
+CHGET       equ  $12CB
+
+prnl        equ  $4222
+prchar      equ  LCD
+rdchar      equ  CHGET
+
+; ----------------------------------------------------------------------
+
+            org  62000
+start       include src/i8080/hello.i80
+end         end start

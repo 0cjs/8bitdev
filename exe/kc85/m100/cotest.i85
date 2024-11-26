@@ -46,7 +46,7 @@ KEYX        equ  $7270      ; ♣? (combines CHSNS and BRKCHK; C=1=break)
 
 ; ------------------------------
 
-MAXRAM      equ  $F5F0
+MAXRAM      equ  $F5F0      ; Start of BASIC/BIOS workspace (62960).
 HIMEM       equ  $F5F4
 
 ; ----------------------------------------------------------------------

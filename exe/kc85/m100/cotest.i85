@@ -38,4 +38,5 @@ start       ;   Screen cleared on entry from menu, but not from BASIC.
 
 .message    db   'Type a char: ',0
 
+            assert_co_range
 end         end start

@@ -1,12 +1,14 @@
 ;   "Hello, world" for TRS-80 Model 100 (or any Kyocera-85 compatible?).
 ;
-;   You must do a `CLEAR 256,62000` (or a lower address) in BASIC before
+;   You must do a `CLEAR 256,62800` (or a lower address) in BASIC before
 ;   this will load.
 
             cpu 8085
             include  src/i8080/std.i80
             include  src/kc85/biosdef.i85
 
-            org  62000
+            org  62800
 start       include src/i8080/hello.i80
+
+            assert_co_range
 end         end start

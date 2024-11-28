@@ -48,3 +48,11 @@ HIMEM       equ  $F5F4      ; BASIC will not touch memory above this.
 
 rdchar      equ  CHGET
 prchar      equ  LCD
+
+;   Assert that our end address is within the range usable by a .CO file,
+;   i.e., that it doesn't intrude into the BASIC/BIOS workspace area.
+assert_co_range macro {NOEXPAND}
+    if $ > MAXRAM
+            error 'workspace overlap: last PC=$\{$} > MAXRAM=$\{MAXRAM}'
+    endif
+            endm

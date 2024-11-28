@@ -1,0 +1,27 @@
+;   prvischar/loctl.i80: All characters except for ASCII ctrl chars visible
+;
+;   This is for system where characters throughout the entire 8-bit range
+;   are printable, except for ASCII control characters ($00-$1F and $7F).
+;
+;   Requires: prchar, prevon, prevoff
+
+;   ♡*
+prvischar   push af
+            cp   a,$7F          ; DEL?
+            jp   Z,.makevis     ;   yes: make visible
+            cp   a,$20          ; any other ASCII control character?
+            jp   C,.makevis     ;   yes: make visible
+            call prchar         ; RET (TCO); already a visible character
+            pop  af             ; XXX do we really need to preserve A?
+            ret
+            ;
+.makevis    add  a,$40          ; bring to visible range
+            jp   P,+            ; was a $00-$1F char
+            ld   a,'?'          ; was DEL
++           push af
+            call prevon         ; set reverse mode
+            pop  af
+            call prchar
+            call prevoff        ; clear reverse mode
+            pop  af
+            ret

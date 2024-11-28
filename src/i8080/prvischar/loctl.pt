@@ -1,0 +1,29 @@
+from    testmc  import *
+from    testmc.i8080  import Machine
+import  pytest
+
+test_rig = '''
+            cpu 8080
+            include  src/i8080/std.i80
+            include testmc/i8080/tmc/biosdef.i80
+            include src/i8080/prvischar/loctl.i80
+
+prevon      ld   a,'+'      ; ♣A
+            jp   prchar
+
+prevoff     ld   a,'-'      ; ♣A
+            jp   prchar
+
+'''
+
+CHAR_OUTPUT = [
+    (0x20, ' '), (0x5A, 'Z'), (0x7E, '~'),  # printable range
+    (0x80, '\x80'), (0xFF, '\xFF'),         # high bit set
+    (0x00, '+@-'), (0x1F, '+_-'),           # control chars
+    (0x7F, '+?-'),                          # DEL is special
+]
+pytest.register_assert_rewrite('src.generic')
+from src.generic import a_output_test
+@pytest.mark.parametrize('char, output', CHAR_OUTPUT, ids=tmc_tid)
+def test_prvischar(m, R, S, loadbios, char, output):
+    a_output_test(S.prvischar, m, R, S, loadbios, char, output)

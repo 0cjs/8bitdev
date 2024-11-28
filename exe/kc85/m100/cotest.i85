@@ -50,10 +50,10 @@ MAXRAM      equ  $F5F0      ; Start of BASIC/BIOS workspace (62960).
 HIMEM       equ  $F5F4
 
 ; ----------------------------------------------------------------------
-;   XXX This is an entirely bogus hack. We should ask t8dev to generate
-;   the .CO file, and it should find the source, make sure it's built,
-;   and then generate the .CO file with a proper header based on the
-;   first/start/end addresses in the ASL .p file.
+;   This is a hack; one normally uses the r8format `p2b` program to
+;   generate the header, as we do for other programs in this directory.
+;   We leave this here however as documentation about how to do it
+;   "by hand" when necessary.
 
 CO_header   org  $F580 -6
 .start      dw   start

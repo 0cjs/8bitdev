@@ -10,32 +10,58 @@
 ;   Only symbols in upper case are public APIs; the rest are internal.
 
 ; ------------------------------
-;   Core printing routine
+;   Display/Printing
+;   From TRS-80 Model 100 Technical Reference Manual, p.79-80
 
 LCD         equ  $4B44      ; ♠A ♣? RST 20: print char at current cursor
                             ;   position, moving cursor to next position
                             ;   (honours printer flag $F675)
-prchar      macro
-            rst  $20
-            endm
+PLOT        equ  $744C      ; set pixel D=x(0-239) E=y(0-63)
+UNPLOT      equ  $744D      ; clear pixel D=x(0-239) E=y(0-63)
+POSIT       equ  $427C      ; return current curor pos H=col(1-40), L=row(1-8)
+ESCA        equ  $4270      ; send escape code sequence A=code
 
-; ------------------------------
-;   Printing routines
+;   [X] is escape code sequence
+CRLF        equ  $4222
+HOME        equ  $422D      ;     cursor to home position (1,1)
+CLS         equ  $4231      ;     clear display
+SETSYS      equ  $4235      ; [T] "Set system line" (lock line 8)
+RSTSYS      equ  $423A      ; [U] "Reset system line" (unlock line 8)
+LOCK        equ  $423F      ; [Y] lock display (no scrolling)
+UNLOCK      equ  $4244      ; [W] unlock display (allow scrolling)
+CURSON      equ  $4249      ; [P] turn on cursor
+CUROFF      equ  $424E      ; [Q] turn off cursor
+DELLIN      equ  $4253      ; [M] delete line at current cursor pos
+INSLIN      equ  $4258      ; [L] insert line at current cursor pos
+ERAEOL      equ  $425D      ; [K] erase from cursor to end of line
+ENTREV      equ  $4269      ; [p] set reverse character mode
+EXTREV      equ  $426E      ; [q] turn off reverse character mode
 
 pbstr       equ  $27B1      ; ♠HL ♣? BASIC prstr routine.
                             ;   HL→str, terminates on $00 or `"`.
-prnl        equ  $4222
 
-CHGET       equ  $12CB      ; ♣? KYREAD with wait on empty keyboard buffer
+;   LCD variables and status locations
+CSRY        equ  $F639      ; cursor position (row)
+CSRX        equ  $F63A      ; cursor position (column)
+BEGLCD      equ  $FE00      ; start of LCD memory
+ENDLCD      equ  $FF40      ; end of LCD memory
+
+; ------------------------------
+;   Input
+;   From TRS-80 Model 100 Technical Reference Manual, p.81-83
+
 KYREAD      equ  $7242      ; ♠A ♣? Check for and return key from kbd buffer.
                             ;   Z=1 no kepress available.
                             ;   Z=0: • C=0 ASCII value in A
                             ;        • C=1 special value in A:
                             ;          $00=F1, …, $07=F8, $08=LABEL, $09=PRINT
                             ;          $0A=Shift-PRINT, $0B=PASTE
+CHGET       equ  $12CB      ; ♣? KYREAD with wait on empty keyboard buffer
+                            ;   F1-F8 return programmed strings
 CHSNS       equ  $13DB      ; ♣? Check for key available: Z=1=no, Z=0=yes
-BRKCHK      equ  $7283      ; ♣? If ^C/Shift-Brk/^S has been pressed, Z=1
 KEYX        equ  $7270      ; ♣? (combines CHSNS and BRKCHK; C=1=break)
+BRKCHK      equ  $7283      ; ♣? If ^C/Shift-Brk/^S has been pressed, Z=1
+INLIN       equ  $4644      ; read line from keyboard to $F685
 
 ; ------------------------------
 
@@ -46,8 +72,13 @@ HIMEM       equ  $F5F4      ; BASIC will not touch memory above this.
 ; ----------------------------------------------------------------------
 ;   "Standard" (tmc) BIOS definitions
 
+prchar      macro           ; not yet standard, but should be?
+            rst  $20
+            endm
+
 rdchar      equ  CHGET
 prchar      equ  LCD
+prnl        equ  CRLF
 
 ;   Assert that our end address is within the range usable by a .CO file,
 ;   i.e., that it doesn't intrude into the BASIC/BIOS workspace area.

@@ -4,7 +4,7 @@
 ;   code to an emulator or real machine and running it there.
 
             cpu 6502
-            include "src/a1/def.a65"
+            include "src/a1/biosdef.a65"
 
             org $300
 

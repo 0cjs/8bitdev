@@ -4,7 +4,7 @@
 ;
 
             cpu     6502
-            include "src/a2/def.a65"
+            include "src/a2/biosdef.a65"
 
 ;---------------------------------------------------------------------
 ;   (PIC) dumpmonvar: print monitor UI variables

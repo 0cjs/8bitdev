@@ -5,7 +5,7 @@
 
             cpu 6502
             include "src/mos65/std.a65"
-            include "src/a1/def.a65"
+            include "src/a1/biosdef.a65"
 
             org $400
 

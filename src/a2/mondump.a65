@@ -13,7 +13,7 @@
 ;   https://github.com/0cjs/sedoc/blob/master/8bit/apple2/monitor.md
 
             cpu     6502
-            include "src/a2/def.a65"
+            include "src/a2/biosdef.a65"
 
             org     $300        ; suggested; it's location-independent
 

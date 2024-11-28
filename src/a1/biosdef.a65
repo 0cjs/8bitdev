@@ -1,4 +1,4 @@
-;   a1/def.a65 - Apple I definitions
+;   a1/biosdef.a65 - Apple I definitions
 ;
 ;   These use the labels from the Apple I Monitor ROM listing in the
 ;   manual, where relevant.

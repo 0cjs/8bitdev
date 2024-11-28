@@ -1,4 +1,4 @@
-;   a2/def.a65 - Apple II definitions
+;   a2/biosdef.a65 - Apple II definitions
 ;
 ;   These use the labels from the Apple II Autostart ROM listing in the
 ;   Apple II Reference Manual.

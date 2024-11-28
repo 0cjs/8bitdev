@@ -159,6 +159,12 @@ cmtconv -p mb6885 -i obj \
 p2bin -q "$exeobj/nec/pc8001/exprom1.p" "$exeobj/nec/pc8001/exprom1.bin"
 p2bin -q "$exeobj/kc85/m100/cotest.p" "$exeobj/kc85/m100/COTEST.CO"
 p2b kc85 "$exeobj/kc85/m100/hello.p" "$exeobj/kc85/m100/HELLO.CO"
+p2b kc85 "$exeobj/kc85/m100/tmon.p" "$exeobj/kc85/m100/TMON.CO"
+
+#   Hack to make emulator use easier. VirtualT File » Load from HD always
+#   starts in the emulator dir, regardless of where you last left it.
+mkdir -p $BUILDDIR/emulator/virtualt
+cp $exeobj/kc85/m100/*.CO $BUILDDIR/emulator/virtualt/
 
 
 ####################################################################

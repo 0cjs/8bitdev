@@ -209,11 +209,14 @@ fi
 #   Build Releases Files
 
 (   command cd "$T8_PROJDIR"
-    reldir=.build/release
-    rm    -rf $reldir/tmon/
-    mkdir -p  $reldir/tmon/
+    reldir=.build/release/unpacked
+    rm    -rf $reldir/ .build/release/*.zip
+    mkdir -p  $reldir/tmon/{cpm,m100}/
     cp src/tmon/README.md src/tmon/TODO.md $reldir/tmon/
-    cp .build/obj/exe/cpm/tmonlo.com $reldir/tmon/TMONLO.COM
+    cp .build/obj/exe/cpm/tmonlo.com $reldir/tmon/cpm/TMONLO.COM
+    cp .build/obj/exe/kc85/m100/TMON.CO $reldir/tmon/m100/
+    command cd .build/release/unpacked/
+    zip -q -r ../8bitdev-$(date "+%s").zip .
 )
 
 

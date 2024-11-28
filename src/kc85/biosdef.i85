@@ -1,0 +1,50 @@
+;   Kyocera Kyotronic 85 (KC85) BIOS Definitions
+;
+;   Assumes you have included src/i8080/std.i80.
+;
+;   XXX It's not clear how much of this is really common between all KC85
+;   systems, though the KC85 and TRS-80 Model 100 seem fairly close. This
+;   is all currently based on M100 info, and differences will be extracted
+;   out to separate model-specific files at some point.
+;
+;   Only symbols in upper case are public APIs; the rest are internal.
+
+; ------------------------------
+;   Core printing routine
+
+LCD         equ  $4B44      ; ♠A ♣? RST 20: print char at current cursor
+                            ;   position, moving cursor to next position
+                            ;   (honours printer flag $F675)
+prchar      macro
+            rst  $20
+            endm
+
+; ------------------------------
+;   Printing routines
+
+pbstr       equ  $27B1      ; ♠HL ♣? BASIC prstr routine.
+                            ;   HL→str, terminates on $00 or `"`.
+prnl        equ  $4222
+
+CHGET       equ  $12CB      ; ♣? KYREAD with wait on empty keyboard buffer
+KYREAD      equ  $7242      ; ♠A ♣? Check for and return key from kbd buffer.
+                            ;   Z=1 no kepress available.
+                            ;   Z=0: • C=0 ASCII value in A
+                            ;        • C=1 special value in A:
+                            ;          $00=F1, …, $07=F8, $08=LABEL, $09=PRINT
+                            ;          $0A=Shift-PRINT, $0B=PASTE
+CHSNS       equ  $13DB      ; ♣? Check for key available: Z=1=no, Z=0=yes
+BRKCHK      equ  $7283      ; ♣? If ^C/Shift-Brk/^S has been pressed, Z=1
+KEYX        equ  $7270      ; ♣? (combines CHSNS and BRKCHK; C=1=break)
+
+; ------------------------------
+
+MAXRAM      equ  $F5F0      ; Start of BASIC/BIOS workspace (62960). Constant.
+HIMEM       equ  $F5F4      ; BASIC will not touch memory above this.
+                            ;   Can be modified directly or with CLEAR.
+
+; ----------------------------------------------------------------------
+;   "Standard" (tmc) BIOS definitions
+
+rdchar      equ  CHGET
+prchar      equ  LCD

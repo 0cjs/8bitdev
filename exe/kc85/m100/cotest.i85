@@ -10,44 +10,7 @@
 
             cpu  8085
             include  src/i8080/std.i80
-
-; ----------------------------------------------------------------------
-;   BIOS
-;   Only symbols in upper case are public APIs; the rest are internal.
-
-; ------------------------------
-;   Core printing routine
-
-LCD         equ  $4B44      ; ♠A ♣? RST 20: print char at current cursor
-                            ;   position, moving cursor to next position
-                            ;   (honours printer flag $F675)
-prchar      equ  LCD
-prchar      macro
-            rst  $20
-            endm
-
-; ------------------------------
-;   Printing routines
-
-pbstr       equ  $27B1      ; ♠HL ♣? BASIC prstr routine.
-                            ;   HL→str, terminates on $00 or `"`.
-prnl        equ  $4222
-
-CHGET       equ  $12CB      ; ♣? KYREAD with wait on empty keyboard buffer
-KYREAD      equ  $7242      ; ♠A ♣? Check for and return key from kbd buffer.
-                            ;   Z=1 no kepress available.
-                            ;   Z=0: • C=0 ASCII value in A
-                            ;        • C=1 special value in A:
-                            ;          $00=F1, …, $07=F8, $08=LABEL, $09=PRINT
-                            ;          $0A=Shift-PRINT, $0B=PASTE
-CHSNS       equ  $13DB      ; ♣? Check for key available: Z=1=no, Z=0=yes
-BRKCHK      equ  $7283      ; ♣? If ^C/Shift-Brk/^S has been pressed, Z=1
-KEYX        equ  $7270      ; ♣? (combines CHSNS and BRKCHK; C=1=break)
-
-; ------------------------------
-
-MAXRAM      equ  $F5F0      ; Start of BASIC/BIOS workspace (62960).
-HIMEM       equ  $F5F4
+            include  src/kc85/biosdef.i85
 
 ; ----------------------------------------------------------------------
 ;   This is a hack; one normally uses the r8format `p2b` program to

@@ -5,18 +5,7 @@
 
             cpu 8085
             include  src/i8080/std.i80
-
-; ----------------------------------------------------------------------
-;   BIOS
-
-LCD         equ  $4B44
-CHGET       equ  $12CB
-
-prnl        equ  $4222
-prchar      equ  LCD
-rdchar      equ  CHGET
-
-; ----------------------------------------------------------------------
+            include  src/kc85/biosdef.i85
 
             org  62000
 start       include src/i8080/hello.i80

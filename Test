@@ -106,11 +106,13 @@ esac; done
 build_asxxxx
 
 ####################################################################
-#   Builds and tests
+#   Builds
 
-#   Because we use relative paths in the lists of things to build/exclude
-#   below, we must be using the proper CWD to which the paths are relative.
-command cd -P "$T8_PROJDIR"
+#   We use paths relative to $T8_PROJDIR in the lists below, so we need
+#   to chdir to that. That's fine because we don't use any user command
+#   line arguments for this. But after we must change back to the user's
+#   CWD so any relative paths in command line args work.
+command pushd "$T8_PROJDIR" >/dev/null
 
 t8dev asl t8dev
 t8dev asl auto exe/ src/ --exclude=src/asxxxx/
@@ -132,12 +134,14 @@ manual_build=(
 )
 t8dev asl asm "${manual_build[@]}" || fail
 
+command popd >/dev/null
+
 #   This builds an Apple II disk image from an AS source file. Probably
 #   this should be in smaller steps so we can extend the idea to building
 #   output for other microcomputers where we may want, e.g., a raw file
 #   for an emulator, a tape image with that file, and a disk image with
 #   that file that autoboots, all from the same build.
-t8dev a2dsk exe/a2/charset.a65
+t8dev a2dsk exe/a2/charset.a65      # path relative to .build/
 
 #   Various other builds of things from .p files.
 #   Not yet figured out how this should be integrated into t8dev.
@@ -156,10 +160,8 @@ p2bin -q "$exeobj/nec/pc8001/exprom1.p" "$exeobj/nec/pc8001/exprom1.bin"
 p2bin -q "$exeobj/kc85/m100/cotest.p" "$exeobj/kc85/m100/COTEST.CO"
 p2bin -q "$exeobj/kc85/m100/hello.p" "$exeobj/kc85/m100/HELLO.CO"
 
-#   Change back to original CWD so we can use relative paths to that as
-#   command line parameters to this Test script. (This makes command-line
-#   completion easier.)
-command cd - >/dev/null
+####################################################################
+#   Tests
 
 #   Unit Tests
 #   • If we are given no options, add `-nlogical` to run things more
@@ -174,8 +176,6 @@ command cd - >/dev/null
 #
 [ $# -eq 0 ] && set -- -nlogical
 t8dev pytest --dist worksteal "$@" || fail
-
-####################################################################
 
 #   XXX We no longer run the cmtconv functional tests from here because
 #   there are path issues when we use tool/t8dev instead of t8dev.
@@ -199,7 +199,7 @@ if false; then
 fi
 
 ####################################################################
-#   Collect up files that we sometimes release
+#   Build Releases Files
 
 (   command cd "$T8_PROJDIR"
     reldir=.build/release

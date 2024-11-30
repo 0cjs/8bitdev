@@ -25,4 +25,17 @@ getkey      equ  $0690
 ; ----------------------------------------------------------------------
 ;   Hardware
 
+;   Key codes. $00-$0F are the number keys.
+key_run     equ   $10
+key_ret     equ   $11
+key_cont    equ   key_ret
+key_adset   equ   $12
+key_rdec    equ   $13
+key_rinc    equ   $14
+key_wrent   equ   $15
+key_store   equ   $16
+key_mode    equ   key_store
+key_load    equ   $17
+key_reg     equ   key_load
+
 segments    equ  $83F8      ; leftmost 7-segment display

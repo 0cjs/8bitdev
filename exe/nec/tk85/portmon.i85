@@ -20,6 +20,7 @@ in_port     equ  $8303
 ; ----------------------------------------------------------------------
 
             org  $1800
+
 init        ld   a,$00          ; initial port
             ld   (port),a
             call read_port_init
@@ -52,7 +53,17 @@ read        ld   hl,.dispval    ; return addr
             call prbyte
             ;
             call getkey         ; keypress available?
-            cp   a,$10          ; and it's a number?
+            cp   a,key_rinc     ; next port?
+            jp   NZ,+
+            ld   a,(port)
+            inc  a
+            jp   .newport
++           cp   a,key_rdec     ; previous port?
+            jp   NZ,+
+            ld   a,(port)
+            dec  a
+            jp   .newport
++           cp   a,$10          ; it's a number?
             jp   NC,read        ;    no: read and update display
             ;
             ld   e,2            ; display left digit of new port being entered
@@ -67,11 +78,11 @@ read        ld   hl,.dispval    ; return addr
 -           call waitkey        ; get next keypress
             cp   a,$10          ; number?
             jp   NC,-           ;    no: ignore it
-            ld   e,3            ; display right digit of new port number
-            call prnyb
             ld   hl,port
             or   a,(hl)         ; mask in upper nybble
-            ld   (port),a       ; and save new port
+.newport    ld   (port),a       ; save new port
+            ld   e,3            ; display right digit of new port number
+            call prbyte
             ;
             jp   read
 

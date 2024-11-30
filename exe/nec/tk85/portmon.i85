@@ -35,31 +35,44 @@ init1       ;   Clear display.
             ld   a,$70
             ld   (segments+4),a
 
-read        ld   hl,.dispval    ; return addr for simulated call
-            push hl
-            ld   hl,(readbyte)
+read        ld   hl,.dispval    ; return addr
+            push hl             ;   for simulated call
             ld   a,(port)
+            ld   e,3            ; print port in left side of display
+            call prbyte
+            ld   a,(port)       ; read port value
+            ld   hl,(readbyte)
             jp   (hl)
-.dispval    push af             ; save number
-            rrca                ; shift upper nybble down
-            rrca
-            rrca
-            rrca
-            call glyphA
-            ld   (segments+6),a ; display glyph for upper nybble
-            pop  af             ; restore number
-            call glyphA
-            ld   (segments+7),a ; display glyph for lower nybble
+.dispval    ld   e,7            ; rightmost LED display
+            call prbyte
             ;
             jp   read
 
-;   ♠A ♣ADEHL   Return glyph for number in lower nybble of A
-glyphA      ld   hl,charsegs    ; numbers pattern table
-            ld   d,$00          ; index of MSB
+;   ♠AE ♣ABCDHL   Print A as two digits at the LED position given in E
+;   (lower nybble) and the LED position to its left (upper nybble).
+prbyte      call prnyb          ; print lower nybble
+            rrca                ; shift upper nybble to lower
+            rrca
+            rrca
+            rrca
+            ; FALLTHROUGH       ; RET (TCO) and print it
+
+;   ♠AE ♣BCDHL   Print the digit in the lower nybble of A at the LED
+;   position given by E (0-7). A is preserved, and E will be decremented on
+;   return to have the next call print a more significant digit.
+prnyb       push af             ; preserve value
+            ld   hl,charsegs    ; glyph table base address
+            ld   b,$00          ; index MSB
             and  a,$0F          ; mask lower nybble
-            ld   e,a
-            add  hl,de          ; index into table
+            ld   c,a            ; index LSB
+            add  hl,bc          ; index into glyph table
             ld   a,(hl)         ; load glyph
+            ld   hl,segments    ; leftmost LED position
+            ld   d,$00          ; LED position MSB
+            add  hl,de          ; move up to requested segment
+            ld   (hl),a         ; display glyph
+            dec  e              ; previous LED position
+            pop  af             ; restore input value
             ret
 
 ;   ♠A  Return A+1. Used for testing the main routine.

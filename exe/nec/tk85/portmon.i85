@@ -46,6 +46,28 @@ read        ld   hl,.dispval    ; return addr
 .dispval    ld   e,7            ; rightmost LED display
             call prbyte
             ;
+            call getkey         ; keypress available?
+            cp   a,$10          ; and it's a number?
+            jp   NC,read        ;    no: read and update display
+            ;
+            ld   e,2            ; display left digit of new port being entered
+            call prnyb
+            rlca                ; move digit to upper nybble
+            rlca
+            rlca
+            rlca
+            ld   (port),a       ; save upper nybble
+            ld   a,$00          ; clear port display lower nybble
+            ld   (segments+3),a
+-           call waitkey        ; get next keypress
+            cp   a,$10          ; number?
+            jp   NC,-           ;    no: ignore it
+            ld   e,3            ; display right digit of new port number
+            call prnyb
+            ld   hl,port
+            or   a,(hl)         ; mask in upper nybble
+            ld   (port),a       ; and save new port
+            ;
             jp   read
 
 ;   ♠AE ♣ABCDHL   Print A as two digits at the LED position given in E

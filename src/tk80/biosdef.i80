@@ -6,13 +6,23 @@
       endif
     endif
 
-;   ROM data
+; ----------------------------------------------------------------------
+;   ROM routines and data.
+
     ifdef TK80
-charsegs    equ  $01E9
-    endif
-    ifdef TK85
-charsegs    equ  $05B3
+charsegs    equ  $01E9  ; 7-seg display glyphs: o123456789AbCdEF
+waitkey     equ  $0216  ; Wait for keypress from `getkey`.
+getkey      equ  $0223  ; A=$FF if no key pressed or last key not released
+                        ;   otherwise keycode $00-$17
     endif
 
+    ifdef TK85
+charsegs    equ  $05B3  ; 7-seg display glyphs: 0123456789AbCdEFHJLnoPqrUuyh -.
+waitkey     equ  $0684
+getkey      equ  $0690
+    endif
+
+; ----------------------------------------------------------------------
+;   Hardware
 
 segments    equ  $83F8      ; leftmost 7-segment display

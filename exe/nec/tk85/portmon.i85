@@ -2,28 +2,28 @@
 
         cpu 8085
         include  src/i8080/std.i80
+TK85    equ  1
         include  src/tk80/biosdef.i80
 
 ;   Pointer to a routine that that will read a byte based on an argument
 ;   in A, and return the value read in A. Typically this will be a routine
 ;   that reads a the I/O port given in A, but it can be anything you like.
 readbyte    equ  $8300
+;   The current argument to `readbyte`.
+port        equ  $8302
 
             org  $1000
-init        ld   hl,read_Aplus1
+init        ld   a,$5E          ; XXX change this to $00 after testing
+            ld   (port),a
+            ld   hl,read_Aplus1
             ld   (readbyte),hl
             nop
             nop
             nop
             nop
             nop
-            nop
-            nop
-            nop
-            nop
-            nop
 
-start       ;   Clear display.
+init1       ;   Clear display.
             ld   a,0
             ld   hl,segments
             ld   c,8
@@ -35,8 +35,32 @@ start       ;   Clear display.
             ld   a,$70
             ld   (segments+4),a
 
-            halt                ; XXX
-            rst  $00            ; restart monitor
+read        ld   hl,.dispval    ; return addr for simulated call
+            push hl
+            ld   hl,(readbyte)
+            ld   a,(port)
+            jp   (hl)
+.dispval    push af             ; save number
+            rrca                ; shift upper nybble down
+            rrca
+            rrca
+            rrca
+            call glyphA
+            ld   (segments+6),a ; display glyph for upper nybble
+            pop  af             ; restore number
+            call glyphA
+            ld   (segments+7),a ; display glyph for lower nybble
+            ;
+            jp   read
+
+;   ♠A ♣ADEHL   Return glyph for number in lower nybble of A
+glyphA      ld   hl,charsegs    ; numbers pattern table
+            ld   d,$00          ; index of MSB
+            and  a,$0F          ; mask lower nybble
+            ld   e,a
+            add  hl,de          ; index into table
+            ld   a,(hl)         ; load glyph
+            ret
 
 ;   ♠A  Return A+1. Used for testing the main routine.
 read_Aplus1 inc  a

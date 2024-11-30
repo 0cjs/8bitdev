@@ -1,4 +1,18 @@
 ;   NEC TK-80 and TK-85 trainer board BIOS definitions.
 
-segments    equ  $83F8      ; leftmost 7-segment display
+    ifndef TK80
+      ifndef TK85
+        error 'TK80 or TK85 must be defined'
+      endif
+    endif
 
+;   ROM data
+    ifdef TK80
+charsegs    equ  $01E9
+    endif
+    ifdef TK85
+charsegs    equ  $05B3
+    endif
+
+
+segments    equ  $83F8      ; leftmost 7-segment display

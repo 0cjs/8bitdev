@@ -1,0 +1,4 @@
+;   NEC TK-80 and TK-85 trainer board BIOS definitions.
+
+segments    equ  $83F8      ; leftmost 7-segment display
+

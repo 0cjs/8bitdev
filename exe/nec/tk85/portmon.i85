@@ -1,0 +1,43 @@
+;   portmon: Monitor current values read from an I/O space address
+
+        cpu 8085
+        include  src/i8080/std.i80
+        include  src/tk80/biosdef.i80
+
+;   Pointer to a routine that that will read a byte based on an argument
+;   in A, and return the value read in A. Typically this will be a routine
+;   that reads a the I/O port given in A, but it can be anything you like.
+readbyte    equ  $8300
+
+            org  $1000
+init        ld   hl,read_Aplus1
+            ld   (readbyte),hl
+            nop
+            nop
+            nop
+            nop
+            nop
+            nop
+            nop
+            nop
+            nop
+            nop
+
+start       ;   Clear display.
+            ld   a,0
+            ld   hl,segments
+            ld   c,8
+-           ld   (hl),a
+            inc  hl
+            dec  c
+            jp   NZ,-
+            ;   Show '⊢' indicating value.
+            ld   a,$70
+            ld   (segments+4),a
+
+            halt                ; XXX
+            rst  $00            ; restart monitor
+
+;   ♠A  Return A+1. Used for testing the main routine.
+read_Aplus1 inc  a
+            ret

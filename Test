@@ -153,6 +153,7 @@ p2bin -q "$exeobj/nec/pc8001/exprom1.p" "$exeobj/nec/pc8001/exprom1.bin"
 p2bin -q "$exeobj/kc85/m100/cotest.p" "$exeobj/kc85/m100/COTEST.CO"
 p2b kc85 "$exeobj/kc85/m100/hello.p" "$exeobj/kc85/m100/HELLO.CO"
 p2b kc85 "$exeobj/kc85/m100/tmon.p" "$exeobj/kc85/m100/TMON.CO"
+p2bin -q "$exeobj/nec/tk85/portmon.p" "$exeobj/nec/tk85/portmon.bin"
 
 #   Hack to make emulator use easier. VirtualT File » Load from HD always
 #   starts in the emulator dir, regardless of where you last left it.
@@ -233,7 +234,6 @@ post_emulate_run() {
     [[ -r $post_emulate ]] || die 2 "Cannot read: $post_emulate"
     sub_path=${post_emulate#*/exe/}
     emu_suite=${sub_path%%/*}
-    echo "suite=$emu_suite sub_path=$sub_path"
     case "$emu_suite" in
         tmc)
             emulator=${sub_path#*/}
@@ -249,14 +249,30 @@ post_emulate_run() {
             t8dev emulator runcpm -a "$post_emulate"
             ;;
         nec)
-            #   Currently assumes that the path given is for the extension ROM.
-            #   Note that the emulator is running under WINE which makes focus
-            #   odd: you need to pass the pointer through the menu bar.
-            emulator=${sub_path#*/}
-            emulator=${emulator%%/*}
-            #   XXX This works only for PC-8001. We'll have to work out how
-            #   to use different ROM patchspecs for other machines.
-            t8dev emu cscp "$emulator" N80.ROM=@6000:$post_emulate
+            emulator=${sub_path#*/}     # All 'nec' is done with CSCP
+            emulator=${emulator%%/*}    #   emulator suite.
+            case "$emulator" in
+                pc8001)
+                    #   Currently assumes that the path given is for the
+                    #   extension ROM. Note that the emulator is running
+                    #   under WINE which makes focus odd: you need to pass
+                    #   the pointer through the menu bar.
+                    patchspec="N80.ROM=@6000:$post_emulate"
+                    ;;
+                tk85)
+                    #   We can load only ROM with command-line arguments,
+                    #   and even there just $000-$7FF and $0C00-$7BFF. For
+                    #   the moment, just assume that the .bin file is a
+                    #   straight p2bin of the .p file, and get the start
+                    #   address from the .p. And also assume it's in the
+                    #   $0C00-$7BFF range of EXT.ROM.
+                    start_addr=$(plist "${post_emulate/.bin/.p}" \
+                        | awk '/CODE/ { print $3; exit }')
+                    #   Subtract EXT.ROM start and hexify result.
+                    start_addr=$(printf "%X" $((0x$start_addr - 0xC00)))
+                    patchspec="EXT.ROM=@$start_addr:$post_emulate"
+            esac
+            t8dev emu cscp "$emulator" "$patchspec"
             ;;
         kc85)
             #   No command line options for anything here. We should probably

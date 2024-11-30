@@ -9,17 +9,22 @@ TK85    equ  1
 ;   in A, and return the value read in A. Typically this will be a routine
 ;   that reads a the I/O port given in A, but it can be anything you like.
 readbyte    equ  $8300
+
 ;   The current argument to `readbyte`.
 port        equ  $8302
 
-            org  $1000
-init        ld   a,$5E          ; XXX change this to $00 after testing
+;   The routine that actually loads data from a given port, which must
+;   be in RAM because the port number itself is modified.
+in_port     equ  $8303
+
+; ----------------------------------------------------------------------
+
+            org  $1800
+init        ld   a,$00          ; initial port
             ld   (port),a
-            ld   hl,read_Aplus1
+            call read_port_init
+            ld   hl,read_port
             ld   (readbyte),hl
-            nop
-            nop
-            nop
             nop
             nop
 
@@ -97,6 +102,27 @@ prnyb       push af             ; preserve value
             pop  af             ; restore input value
             ret
 
+; ----------------------------------------------------------------------
+
 ;   ♠A  Return A+1. Used for testing the main routine.
 read_Aplus1 inc  a
             ret
+
+;   Set up/modify the routine in RAM that does an arbitrary port read.
+read_port_init
+            ld   hl,in_port     ; routine address
+            ;
+            ld   a,$DB          ; IN instruction
+            ld   (hl),a
+            inc  hl
+            ;
+            ld   a,(port)       ; port number (modified later)
+            ld   (hl),a
+            inc  hl
+            ;
+            ld   a,$C9          ; RET instruction
+            ld   (hl),a
+            ret
+
+read_port   ld   (in_port+1),a
+            jp   in_port        ; RET (TCO)

@@ -18,9 +18,15 @@
 
 ;   Abort assembly with a clear message if an essential definition is missing.
 ;   (Otherwise it says "error: expression must be evaluatable in first pass".)
-    set ______,
-    pushv , tmon_rom, tmon_ram, tmon_stksz
-    popv  , ______,     ______,     ______
+;
+;   XXX This doesn't work inside a section … endsection block. We should
+;   just change this to generate error messages in some nice way. Maybe we
+;   can set up a std.i80 macro that tests a symbol and generates an error
+;   if it's not defined.
+;
+;   set ______,
+;   pushv , tmon_rom, tmon_ram, tmon_stksz
+;   popv  , ______,     ______,     ______
 
 ; ----------------------------------------------------------------------
 ;   Symbol naming:

@@ -17,6 +17,7 @@ outchar     equ  $40A6
 diskbreq    equ  $1875          ; "Disk BASIC feature" error
 basicret    equ  $3C82          ; ??? return to basic after USR, etc.?
 monitor     equ  $5C66          ; enter monitor
+perr_syntax equ  $3BDF
 
 ;   BASIC statement hooks. These are initialised with `jp err_notimpl`.
 err_notimpl equ  $1875          ; "Disk BASIC Feature" error routine
@@ -90,9 +91,10 @@ init        ld   hl,.message    ; print "ROM installed" banner
 ;   • BC→ Address of statement hook.
 ;   The cursor is left at start of a new line.
 ;
-;   XXX We return with `basicret` because that seems to work, and a plain
-;   RET always prints "Syntax Error." The top of the stack contains $41FA,
-;   but it's not clear if this is a real return address or just rubbish.
+;   XXX Not clear how we return error versus not. RET sometimes generates
+;   a "Syntax error," sometimes not; it must depend on flags or something.
+;   for the moment, we hack it by using `basicret`, but that may be
+;   wrong, especially when it comes to stack handling.
 
 ;   Unknown statement handler. Print HL, DE, BC and return addr on stack
 ;   which will let us figure out what statements correspond to what
@@ -113,14 +115,18 @@ stmt_other  call prhexHL
             call prhexHL
             ex   (sp),hl
             call prnl
-           ;call monitor        ; drop to monitor for debugging
+            call monitor        ; drop to monitor for debugging
             jp   basicret
 
-cmd         jp   cmd_hi         ;
-
+;   Parse argument to `CMD` statement and run matching routine.
+;   This is a bogus little Q&D routine that checks only the first
+;   character given as an argument to `CMD`.
+cmd         ld   a,(hl)         ; first char of argument
+            cp   a,'I'
+            jp   Z,cmd_hi
+            jp   perr_syntax
 
 ;   Minimal "Hello, world."
-
 cmd_hi      ld   hl,.message
             call prstr
             jp   basicret

@@ -127,6 +127,8 @@ cmd         ld   a,(hl)         ; first char of argument
             jp   Z,cmd_hi
             cp   a,'H'
             jp   Z,cmd_hello
+            cp   a,'T'
+            jp   Z,cmd_tmon
             jp   perr_syntax
 
 ; ----------------------------------------------------------------------
@@ -150,6 +152,38 @@ cmd_hello   call hello
             public hello
             include src/i8080/hello.i80
     endsection hello
+
+; ----------------------------------------------------------------------
+;   tmon
+;
+;   XXX TODO:
+;   - BS prints a visible char; need to fix print routine I guess
+;   - prvischar and prscreenchar need to be set up for inverse (and maybe
+;     prvischar should be using that printable BS, etc.)
+;   - tmon_ram area needs to find a better home (BASIC stomps on it?)
+;   - should set default `E` width based on 40/80 col mode?
+
+cmd_tmon
+
+    section tmon
+
+tmon_rom    equ  $
+tmon_ram    equ  $EA00-$30      ; XXX overlaps BASIC unless we CLEAR!
+tmon_stksz  equ  $20
+
+            public entry
+            include src/i8080/tmon.i80
+
+            include src/i8080/prvischar/ascii.i80       ; XXX no reverse
+            include src/i8080/prscreenchar/ascii.i80    ; XXX no reverse
+
+exit        jp   basicret
+
+BEL         equ  $07
+errbeep     ld   a,BEL
+            jp   prchar         ; RET
+
+    endsection tmon
 
 ; ----------------------------------------------------------------------
 ;   End of Expansion ROM.

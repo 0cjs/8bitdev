@@ -6,67 +6,134 @@
 ; ----------------------------------------------------------------------
 ;   PC-8001 BIOS
 
-rst_prchar  macro
-            rst  $18            ; ♠A ♣?? print char in A
+prchar      equ  $0257          ; ♠A ♡* print char to CRT
+
+;   ♠A ♣?   print char in A to current output device
+rst__outchar macro
+            rst  $18
             endm
-prchar      equ  $40A6
-prstr       equ  $52ED          ; ♠HL ♣?? print HL→ $00-terminated string
-                                ;   (only works after BASIC has initialised)
+outchar     equ  $40A6
 
 diskbreq    equ  $1875          ; "Disk BASIC feature" error
 basicret    equ  $3C82          ; ??? return to basic after USR, etc.?
 monitor     equ  $5C66          ; enter monitor
 
-;   Command hooks return with RET.
-jp_cmd      equ  $F0FC          ; jump point for BASIC `CMD`
+;   BASIC statement hooks. These are initialised with `jp err_notimpl`.
+err_notimpl equ  $1875          ; "Disk BASIC Feature" error routine
+sj_00       equ  $F0E1          ; start of statement hook table
+sj_CMD      equ  $F0FC          ; jump point for BASIC `CMD`
+sj_end      equ  $F1B6          ; end (exclusive) of statement hook table
 
 ; ----------------------------------------------------------------------
-;   Expansion ROM Init
+;   Expansion ROM Header
 
             org  $6000          ; start of expansion ROM
             db   'AB'           ; signature indicating expansion ROM present
+exprom_init jp   init           ; entry point of expansion ROM initialisation
 
-exprom_init ld   hl,.message
-            call prstr_alt
-            ld   hl,cmd
-            ld   (jp_cmd+1),hl
-            ret                 ; continue main ROM init
-.message    db '8bitdev expansion ROM installed.\r\n',0
+; ----------------------------------------------------------------------
+;   General I/O Routines
 
-prstr_alt   ld   a,(hl)
+            include  src/i8080/pr.i80   ; XXX will be included by tmon.i80
+
+;   We don't use the BASIC routine because we need this before it's init'd.
+prstr       ld   a,(hl)
             inc  hl             ; move past terminator before exit
             or   a,a
             ret  Z
-            rst_prchar
-            jr   prstr_alt
+            call prchar
+            jr   prstr
+
+prnl        push af
+            ld   a,'\r'
+            call prchar
+            ld   a,'\n'
+            call prchar
+            pop  af
+            ret
 
 ; ----------------------------------------------------------------------
-;   BASIC `CMD` extensions
+;   ROM Init
 
-cmd         ;   HL→ the remainder of the command line, converted to upper
-            ;   case, leading spaces skipped, $00-terminated.
+init        ld   hl,.message    ; print "ROM installed" banner
+            call prstr
+            ;   All statement hook table entries jump to stmt_other.
+            ld   d,MB(stmt_other)
+            ld   e,LB(stmt_other)
+            ld   hl,sj_00
+            ;   Actually, the statement hook table, which we'd calculate as
+            ;   b,(sj_end-sj_00)/3, is probably too long, since entries
+            ;   near the end are filled with RET, and other things in the
+            ;   BIOS call these and expect no failure. So instead we use
+            ;   the $2E from the ROM routine that inits the table.
+            ld   b,$2E
+-           inc  hl             ; skip past JMP
+            ld   (hl),e         ; address LSB
+            inc  hl
+            ld   (hl),d         ; address MSB
+            inc  hl
+            djnz -
+            ;   Fill in specific commands for which we have other actions.
+            ld   hl,cmd         ; hook BASIC `CMD` statement
+            ld   (sj_CMD+1),hl
+            ret                 ; continue main ROM init
+            ;
+.message    db '8bitdev expansion ROM #1.\r\n',0
+
+; ----------------------------------------------------------------------
+;   BASIC Statement Hooks
+;
+;   These are entered through statement hook table entries, with:
+;   • HL→ The remainder of the command line, converted to upper case,
+;     leading spaces skipped, $00-terminated.
+;   • DE→ Address of command processing routine in `iltbl`.
+;   • BC→ Address of statement hook.
+;   The cursor is left at start of a new line.
+;
+;   XXX We return with `basicret` because that seems to work, and a plain
+;   RET always prints "Syntax Error." The top of the stack contains $41FA,
+;   but it's not clear if this is a real return address or just rubbish.
+
+;   Unknown statement handler. Print HL, DE, BC and return addr on stack
+;   which will let us figure out what statements correspond to what
+;   addresses in the statement hook table.
+stmt_other  call prhexHL
+            ld   a,' '
+            call prchar
+            ex   de,hl
             call prhexHL
             ld   a,' '
-            rst_prchar
-            ld   h,d
-            ld   l,e
-            call prhexHL
-            ld   a,' '
-            rst_prchar
+            call prchar
             ld   h,b
             ld   l,c
             call prhexHL
-            call monitor
-            ret                 ; no need for `basicret`
+            ld   a,' '
+            call prchar
+            ex   (sp),hl
+            call prhexHL
+            ex   (sp),hl
+            call prnl
+           ;call monitor        ; drop to monitor for debugging
+            jp   basicret
+
+cmd         jp   cmd_hi         ;
+
 
 ;   Minimal "Hello, world."
+
 cmd_hi      ld   hl,.message
             call prstr
-            ret
+            jp   basicret
 
 .message    db   'Hi there.\r\n',0
 
 ; ----------------------------------------------------------------------
-;   Support routines
+;   End of Expansion ROM.
 
-            include  src/i8080/pr.i80   ; XXX will be included by tmon.i80
+    if $ > $7FFC
+            error 'code PC=$\{$} > expansion RAM max $\{tmon_ram_end}'
+    endif
+
+            org  $7FFD
+;altmonvec  dw   altmon         ; alternate monitor entry point
+;           db   $55            ; magic byte for `MON` to use altmonvec

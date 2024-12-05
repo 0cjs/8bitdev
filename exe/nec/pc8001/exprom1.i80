@@ -7,6 +7,7 @@
 ;   PC-8001 BIOS
 
 prchar      equ  $0257          ; ♠A ♡* print char to CRT
+rdchar      equ  $0F75          ; ♠A ♣BCHL wait for char from keyboar
 
 ;   ♠A ♣?   print char in A to current output device
 rst__outchar macro
@@ -124,14 +125,31 @@ stmt_other  call prhexHL
 cmd         ld   a,(hl)         ; first char of argument
             cp   a,'I'
             jp   Z,cmd_hi
+            cp   a,'H'
+            jp   Z,cmd_hello
             jp   perr_syntax
 
+; ----------------------------------------------------------------------
 ;   Minimal "Hello, world."
+
 cmd_hi      ld   hl,.message
             call prstr
             jp   basicret
 
 .message    db   'Hi there.\r\n',0
+
+; ----------------------------------------------------------------------
+;   A more sophisticated "Hello, world" that reads and writes chars.
+;
+;   XXX this has its own prstr, which should be extracted.
+
+cmd_hello   call hello
+            jp   basicret
+
+    section hello
+            public hello
+            include src/i8080/hello.i80
+    endsection hello
 
 ; ----------------------------------------------------------------------
 ;   End of Expansion ROM.

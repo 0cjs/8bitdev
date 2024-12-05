@@ -1,4 +1,4 @@
-;   MC6800 "Hello, world."
+;   Intel 8080 "Hello, world."
 ;
 ;   This also tests input, reading and echoing what you type and
 ;   re-printing the greeting on every CR. ^C will "exit" to an invalid
@@ -36,8 +36,8 @@ hellomsg    call prnl
 
 message     db  "Hello: \0"
 
-    ;   Print the 0-terminated string pointed to by HL.
-    ;   XXX This should be a common routine in src/i8080/pr.i80
+;   Print the 0-terminated string pointed to by HL.
+;   XXX This should be extrated to src/i8080/pr.i80 or somewhere...
 prstr       ld   a,(hl)
             or   a,a
             jp   Z,.done

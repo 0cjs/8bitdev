@@ -1,0 +1,47 @@
+from    testmc.i8080 import  Machine
+import  pytest
+
+test_rig = '''
+            cpu 8080
+            include  src/i8080/std.i80
+            org $1000
+            include src/i8080/slookup.i80
+
+sltab       slentry  $0001, 'a123'
+            slentry  $0000, 'a12'
+            slentry  $1234, ''
+            slentry  $F000, 'a'
+sltab_end   slentry_end
+
+target0     db   0              ; empty string
+notfound2   db   'xy',0         ; no str of this length in table
+notfound3   db   'aXX',0        ; no match of strs len=3 in table
+target1     db   'a123',0
+'''
+
+def test_slookup0_empty_table(m, S, R):
+    m.call(S.slookup0, R(hl=S.target0, de=S.sltab_end, Z=0))
+    assert R(hl=S.target0, Z=1) == m.regs
+    assert R(de=S.sltab_end) == m.regs      # test check only; not API
+
+def test_slookup0_notfound2(m, S, R):
+    ' Length differs from all items; no need to do any string comparisons. '
+    m.call(S.slookup0, R(hl=S.notfound2, de=S.sltab, Z=0))
+    assert R(hl=S.notfound2, Z=1) == m.regs
+    assert R(de=S.sltab_end) == m.regs      # test check only; not API
+
+def test_slookup0_notfound3(m, S, R):
+    ' String comparison failures. '
+    m.call(S.slookup0, R(hl=S.notfound3, de=S.sltab, Z=0))
+    assert R(hl=S.notfound3, Z=1) == m.regs
+
+def test_slookup0_target1(m, S, R):
+    m.call(S.slookup0, R(hl=S.target1, de=S.sltab, Z=1))
+    assert R(hl=S.target1, Z=0) == m.regs
+    assert 0x0001 == m.word(m.de)
+
+@pytest.mark.xfail(strict=True, reason='empty string lookup does not yet work')
+def test_slookup0_target0(m, S, R):
+    m.call(S.slookup0, R(hl=S.target0, de=S.sltab, Z=1))
+    assert R(hl=S.target0, Z=0) == m.regs
+    assert 0x1234 == m.word(m.de)

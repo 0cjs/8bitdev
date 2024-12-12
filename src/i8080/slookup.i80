@@ -1,0 +1,92 @@
+;   slookup - table lookup of string → word value
+;
+;   XXX This currently does not work for empty string lookups, though the
+;   fix for this should not be too hard.
+;
+;   This is an interesting approach that is in particular convenient for
+;   the caller (both when defining the tables and doing the lookups), but
+;   it's quite a lot of code, and so probably not actualy worthwhile to use.
+
+; ----------------------------------------------------------------------
+;   Build an entry in a table for `slookup`. Each table entry is:
+;   • A byte containing the length of the string.
+;   • Bytes containing the string data.
+;   • A word value associated with the table entry.
+;   The table is terminated with a $FF value, which allows the matching
+;   of an empty string but limits the maximum string length to 254.
+slentry     macro word,str,{EXPAND}
+            db   strlen(str)
+            dw   word
+        if strlen(str) > 0
+            db   str
+        endif
+            endm
+
+;   Place an end marker for an `slookup` table.
+slentry_end macro
+            db   $FF
+            endm
+
+; ----------------------------------------------------------------------
+;   ♠DEHL ♣*    Find the string HL→str0 in DE→table of `msent` entries.
+;   Returns:
+;   • Z=0 found. Z=1 not found.
+;   • DE→msent word value if found, otherwise end of table
+slookup0    push hl
+            ld   b,$FF          ; calculate length of target string
+-           inc  b
+            ld   a,(hl)
+            inc  hl
+            or   a,a            ; $00-terminator?
+            jp   NZ,-           ;    no: increment length
+            pop  hl             ; restore target string ptr, length left in B
+            ; FALLTHROUGH
+
+;   ♠BDEHL ♣*   As `slookup0` but B=len(HL→str)
+slookup     ld   a,(de)         ; this entry's string length
+            cp   a,$FF          ; end of table?
+            ret  Z              ;   yes: done
+            ;
+            cp   a,b            ; same length as target string?
+            jp   Z,.cmpstr      ;   yes: compare target str w/this entry's str
+            ;
+            add  a,1+2          ; add to str len: length byte + result word
+            add  a,e            ; move to next entry
+            ld   e,a
+            ld   a,d            ; handle overflow
+            adc  a,0
+            ld   d,a
+            jp   slookup
+            ;
+.cmpstr     push hl             ; save start of target string
+            push bc             ; save original target string length
+            inc de              ; skip past length (we know it matches)
+            push de             ; save potential return value of match
+            inc de              ; move to just before string in table
+            ;
+            dec  hl             ; move to just before target string start
+-           inc  hl
+            inc  de
+            ld   a,(de)
+            cp   a,(hl)
+            jp   NZ,.nonmatch
+            dec  b              ; more chars to compare?
+            jp   NZ,-           ;   yes: carry on
+            or   a,0            ; no: it's a match, flag success
+            pop de              ; restore return value of match
+            pop bc
+            pop hl
+            ret
+            ;
+.nonmatch   ;   We didn't match after comparing one or more bytes.
+            ;   Move up to the next entry in the table.
+            ld   a,e        ; current pos in table LSB
+            add  a,b        ; add remaining unchecked chars
+            ld   e,a
+            ld   a,d        ; add carry if necessary
+            adc  a,0
+            ld   d,a
+            pop  hl         ; discard saved return value of match
+            pop  bc
+            pop  hl
+            jp   slookup

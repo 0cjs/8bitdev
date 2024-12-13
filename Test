@@ -114,8 +114,8 @@ build_asxxxx
 #   CWD so any relative paths in command line args work.
 command pushd "$T8_PROJDIR" >/dev/null
 
-t8dev asl t8dev
-t8dev asl auto exe/ src/ --exclude=src/asxxxx/
+t8dev asl t8dev || fail
+t8dev asl auto exe/ src/ --exclude=src/asxxxx/ || fail
 manual_build=(
     #   Top-level programs whose build is not triggered by automated tests.
     src/asl/nomacro.a65         # Test/demo for ASL macro expansion

@@ -1,0 +1,34 @@
+;   strtabi - get index of a target string in a string table
+
+;   ♠CDEHL ♡HL   Find the index of 0-terminated string at HL
+;   in the list of zero-terminated strings at DE. Returns:
+;   • Z=0=found or Z=1=not found.
+;   • C  index of target string in table
+;   • DE → entry after target string in table, or table end marker if not found
+strtabi     ld   c,0            ; init return value
+strtabic    ld   a,(de)         ; 1st char of this table entry
+            or   a,a            ; end of table?
+            ret  Z              ;   yes: not found; return Z=1 w/DE pointing
+                                ;        to end of table marker.
+            push hl             ; save target string start
+-           ld   a,(de)         ; current char in table entry
+            cp   a,(hl)         ; matches target?
+            jp   NZ,.nomatch    ;    no: move on to next entry
+            or   a,a            ; current match is end of string?
+            jp   Z,.match       ;   yes: return success
+            inc  hl             ;    no: move on to next char
+            inc  de
+            jp   -
+            ;
+.nomatch    pop  hl             ; restore target string pointer
+            inc  c              ; count the entry we are skipping
+-           ld   a,(de)         ; current char in entry
+            inc  de             ; move to next char in entry or past end marker
+            or   a,a            ; end of entry marker?
+            jp   NZ,-           ;    no: move forward to it
+            jp   strtabic
+            ;
+.match      pop  hl             ; restore target pointer
+            inc  de             ; DE → next table entry
+            inc  a              ; clear Z flag for successful return
+            ret

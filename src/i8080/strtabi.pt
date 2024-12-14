@@ -1,0 +1,41 @@
+from    testmc.i8080 import  Machine
+import  pytest
+
+test_rig = '''
+            cpu 8080
+            include  src/i8080/std.i80
+            org $1000
+            include src/i8080/strtabi.i80
+
+strtab0     db   'a000',0
+strtab1     db   'a1',0
+strtab2     db   'a02',0
+strtabend   db   0              ; "empty" str is table end
+
+notfound1   db   'x',0
+notfound5   db   'a0000',0
+found0      db   'a000',0       ; we don't use the tab entries themselves so
+found2      db   'a02'          ;   we test with target addrs outside table
+
+'''
+
+FOUND = 0; NOTFOUND = 1
+
+def test_strtabi_empty_table(m, S, R):
+    m.call(S.strtabi, R(hl=S.found2, de=S.strtabend, Z=FOUND))
+    assert R(Z=NOTFOUND, c=0, de=S.strtabend, hl=S.found2) == m.regs
+
+@pytest.mark.parametrize('target, expZ, expC, expDEsym', [
+    [ 'x',      NOTFOUND, 3, 'strtabend' ],
+    [ 'a0000',  NOTFOUND, 3, 'strtabend' ],
+    [ 'a000',      FOUND, 0, 'strtab1' ],
+    [ 'a02',       FOUND, 2, 'strtabend' ],
+])
+def test_strtabi(m, S, R, target, expZ, expC, expDEsym):
+    taddr = 0x2222
+    m.deposit(taddr, target.encode('ISO-8859-1'))
+    m.deposit(taddr + len(target), [0])
+    print(m.hexdump(taddr, 8))
+
+    m.call(S.strtabi, R(hl=taddr, de=S.strtab0, Z=(not expZ)), trace=0)
+    assert R(Z=expZ, c=expC, de=S[expDEsym]) == m.regs

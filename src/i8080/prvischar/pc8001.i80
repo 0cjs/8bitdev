@@ -1,0 +1,54 @@
+;   prvischar/pc8001: PC-8001/8801 visual character print
+;
+;   Requires: prchar
+
+;   The PC-8001 `prchar` ($0257, ♠A ♡* print char to CRT) routine is
+;   interesting; most control characters print as a glyph indicating the
+;   code (e.g., `␌`) including, unfortunately, backspace (`␈`).
+;
+;   The following codes print a blank space:
+;     • $00 NUL, $20 spc, $127 DEL, $A0, $F8-$FF
+;   The following codes are interpreted as control characters:
+;     • $07 BEL (beeps)
+;     • $09 TAB forward to next tab stop (column mod 8 == 0)
+;     • $0A LF  move cursor down one line
+;     • $0B VT  home cursor
+;     • $0C FF  clear screen and home cursor
+;     • $0D CR  move cursor to start of line
+;     • $1C FS  cursor right
+;     • $1D GS  cursor left
+;     • $1E RS  cursor up
+;     • $1F US  cursor down
+;   All codes above are blank in the character ROM.
+;
+;   XXX Currently this prints all nonprinting chars as a centre-dot `•`.
+;   This is fairly acceptable since the output is quite readable: the
+;   majority of control chars have a glyph. But it would be nice to have
+;   the ones without be in inverse since they are "important" (CR, LF, etc.).
+
+
+;   ♡*   Print any (8-bit) value "visibly" as one character.
+prvischar   push af
+            or   a,a            ; $00?
+            jp   Z,.prdot
+            jp   M,.print       ; $80-$FF?
+            cp   $7F            ; DEL?
+            jp   Z,.prdot
+            cp   $20            ; ASCII printable char?
+            jp   NC,.print
+            cp   $1C            ; cursor movement?
+            jp   NC,.prdot
+            cp   $0E            ; printable between cursor movement and CR etc.?
+            jp   NC,.print
+            cp   $09            ; CR etc. range?
+            jp   NC,.prdot
+            cp   $07            ; BEL?
+            jp   NZ,.print
+            ; fallthrough
+
+.dot        equ  $A5            ; centre dot character
+.prdot      ld   a,.dot
+.print      call prchar
+            pop  af
+            ret
+

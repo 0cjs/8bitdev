@@ -1,0 +1,29 @@
+from    testmc  import *
+from    testmc.i8080  import Machine
+import  pytest
+
+test_rig = '''
+            cpu 8080
+            include  src/i8080/std.i80
+            include testmc/i8080/tmc/biosdef.i80
+            include src/i8080/prvischar/pc8001.i80
+'''
+
+DOT = '\xA5'   # centre-dot character
+
+CHAR_OUTPUT = [
+    (0x00, DOT),
+    (0x01, '\x01'), (0x06, '\x06'),
+    (0x07, DOT),    (0x08, '\x08'),
+    (0x09, DOT),    (0x0D, DOT),
+    (0x0E, '\x0E'), (0x1B, '\x1B'),
+    (0x20, ' '),
+    (0x7E, '\x7E'), (0x7F, DOT),
+    (0x80, '\x80'), (0xFF, '\xFF'),
+]
+
+pytest.register_assert_rewrite('src.generic')
+from src.generic import a_output_test
+@pytest.mark.parametrize('char, output', CHAR_OUTPUT, ids=tmc_tid)
+def test_prvischar_pc8001(m, R, S, loadbios, char, output):
+    a_output_test(S.prvischar, m, R, S, loadbios, char, output)

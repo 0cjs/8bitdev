@@ -200,15 +200,21 @@ if false; then
 fi
 
 ####################################################################
-#   Build Releases Files
+#   Build Release Files
 
 (   command cd "$T8_PROJDIR"
     reldir=.build/release/unpacked
     rm    -rf $reldir/ .build/release/*.zip
+
     mkdir -p  $reldir/tmon/{cpm,m100}/
-    cp src/tmon/README.md src/tmon/TODO.md $reldir/tmon/
-    cp .build/obj/exe/cpm/tmonlo.com $reldir/tmon/cpm/TMONLO.COM
-    cp .build/obj/exe/kc85/m100/TMON.CO $reldir/tmon/m100/
+    cp src/tmon/README.md src/tmon/TODO.md      $reldir/tmon/
+    cp .build/obj/exe/cpm/tmonlo.com            $reldir/tmon/cpm/TMONLO.COM
+    cp .build/obj/exe/kc85/m100/TMON.CO         $reldir/tmon/m100/
+
+    mkdir -p  $reldir/pc8001/
+    cp exe/nec/pc8001/README.md .build/obj/exe/nec/pc8001/exprom1.bin \
+        $reldir/pc8001/
+
     command cd .build/release/unpacked/
     zip -q -r ../8bitdev-$(date "+%s").zip .
 )

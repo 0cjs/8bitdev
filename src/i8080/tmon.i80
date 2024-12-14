@@ -51,6 +51,9 @@ DEL         equ  $7F
 
 SPACE       equ  ' '
 BACKSLASH   equ  '\\'
+    ifndef BACKSPACE            ; Systems such as PC-8001 where `prchar` takes
+BACKSPACE   equ  BS             ; different char to move the cursor back one
+    endif                       ; position can override this.
 
 UPCASE      equ  %11011111      ; (lower case ASCII) ∧ UPCASE → upper case
 
@@ -421,7 +424,7 @@ read_params ld   (t2),hl         ; save params table
 ;   (last-entered) digits are used.
 ;
 qhex        call prhexval       ; load (DE=val B=#digits) and print curval
-            ld   a,BS           ; backspace to
+            ld   a,BACKSPACE    ; backspace to
             call prBchars       ;   start of printed value
             call rdchar         ; first char requires special processing:
                                 ;   space is preserve, but after it's store
@@ -1009,7 +1012,7 @@ upcase      cp   '@'            ; in the letters area?
 ;   Printing Routines `pr*`
 
 ;   ♣A ♡*   Backspace over the last printed character
-prback      ld   a,BS
+prback      ld   a,BACKSPACE
             jp   prchar         ; ret (TCO)
 
 ;   ♣A ♡*   Print a carriage return to move to the start of the current line.
@@ -1034,7 +1037,7 @@ prBchars    push bc
 ;   ♣AB ♡CDE   Print 4 spaces, 4 backspaces to clear ahead of cursor.
 pr4clear    ld   b,4
             call prNsp
-            ld   a,BS
+            ld   a,BACKSPACE
             jp   prBchars       ; ret (TCO)
 
 ;   ♠HL ♣AHL   Print the zero-terminated string at HL.

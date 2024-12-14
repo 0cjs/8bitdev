@@ -199,6 +199,7 @@ cmd_tmon
 tmon_rom    equ  $
 tmon_ram    equ  $EA00-$30      ; XXX overlaps BASIC unless we CLEAR!
 tmon_stksz  equ  $20
+BACKSPACE   equ  $1D            ; cursor left
 
             public entry
             include src/i8080/tmon.i80

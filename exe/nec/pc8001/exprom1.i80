@@ -152,7 +152,7 @@ cmd         ;   HL→cmdargs,0
 
             include  src/i8080/strtabi.i80
 
-cmdtab_str  db   'HI',0
+cmdtab_str  db   'HELP',0
             db   'HELLO',0
             db   'T',$B7,0       ; "TMON": $B7 = `MON` token
             db   0
@@ -167,7 +167,7 @@ cmd_hi      ld   hl,.message
             call prstr
             jp   basicret
 
-.message    db   'Hi there.\r\n',0
+.message    db   'CMD HELP|HELLO|TMON\r\n',0
 
 ; ----------------------------------------------------------------------
 ;   A more sophisticated "Hello, world" that reads and writes chars.

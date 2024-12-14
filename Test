@@ -15,10 +15,10 @@ elapsed() { echo $(( $(date +%s) - $elapsed_start )); }
 
 build_toolsets() {
     #   Toolchains, utilities, emulators.
-    t8dev toolset asl
-    [[ -f $all_tools ]] && t8dev toolset asxxxx
-    t8dev toolset osimg ctools dos33fs
-    t8dev toolset bm2 cscp linapple RunCPM VirtualT
+    t8dev toolset asl || fail
+    [[ -f $all_tools ]] && { t8dev toolset asxxxx || fail; }
+    t8dev toolset osimg ctools dos33fs || fail
+    t8dev toolset bm2 cscp linapple RunCPM VirtualT || fail
 }
 
 #   ASxxxx builds

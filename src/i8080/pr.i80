@@ -36,3 +36,22 @@ prnyb       and  $0F
 ;
 prspace     ld   a,' '
             jp   prchar         ; ret (TCO)
+
+; ----------------------------------------------------------------------
+;   Debugging Macros (no code space used if not used).
+;   Since we've got the hex print routines around anyway, make available
+;   some macros useful for debugging code in emulators etc.
+
+pdebugA     macro {NOEXPAND}
+            push AF             ; preserve flags
+            call prhexA
+            call prspace
+            pop AF
+            endm
+
+pdebugHL    macro {NOEXPAND}
+            push AF             ; preserve flags
+            call prhexHL
+            call prspace
+            pop AF
+            endm

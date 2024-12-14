@@ -63,9 +63,9 @@ prnl        push af
 
 init        ld   hl,.message    ; print "ROM installed" banner
             call prstr
-            ;   All statement hook table entries jump to stmt_other.
-            ld   d,MB(stmt_other)
-            ld   e,LB(stmt_other)
+            ;   All statement hook table entries enter tmon.
+            ld   d,MB(intentry)
+            ld   e,LB(intentry)
             ld   hl,sj_00
             ;   Actually, the statement hook table, which we'd calculate as
             ;   b,(sj_end-sj_00)/3, is probably too long, since entries
@@ -100,28 +100,6 @@ init        ld   hl,.message    ; print "ROM installed" banner
 ;   a "Syntax error," sometimes not; it must depend on flags or something.
 ;   for the moment, we hack it by using `basicret`, but that may be
 ;   wrong, especially when it comes to stack handling.
-
-;   Unknown statement handler. Print HL, DE, BC and return addr on stack
-;   which will let us figure out what statements correspond to what
-;   addresses in the statement hook table.
-stmt_other  call prhexHL
-            ld   a,' '
-            call prchar
-            ex   de,hl
-            call prhexHL
-            ld   a,' '
-            call prchar
-            ld   h,b
-            ld   l,c
-            call prhexHL
-            ld   a,' '
-            call prchar
-            ex   (sp),hl
-            call prhexHL
-            ex   (sp),hl
-            call prnl
-            call monitor        ; drop to monitor for debugging
-            jp   basicret
 
 ;   Parse argument to `CMD` statement and run matching routine.
 ;   This is a bogus little Q&D routine that checks only the first
@@ -195,6 +173,7 @@ cmd_hello   call hello
 cmd_tmon
 
     section tmon
+            public intentry
 
 tmon_rom    equ  $
 tmon_ram    equ  $EA00-$30      ; XXX overlaps BASIC unless we CLEAR!

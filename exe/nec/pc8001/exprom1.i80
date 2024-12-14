@@ -18,7 +18,11 @@ outchar     equ  $40A6
 diskbreq    equ  $1875          ; "Disk BASIC feature" error
 basicret    equ  $3C82          ; ??? return to basic after USR, etc.?
 monitor     equ  $5C66          ; enter monitor
-perr_syntax equ  $3BDF
+
+perr_syntax equ  $3BDF          ; "Syntax error"
+perr_misop  equ  $3BF4          ; "Missing operand"
+perr_type   equ  $3BF7          ; "Type mismatch"
+perror      equ  $3BF9          ; ♠C=error code
 
 ;   BASIC statement hooks. These are initialised with `jp err_notimpl`.
 err_notimpl equ  $1875          ; "Disk BASIC Feature" error routine
@@ -36,7 +40,7 @@ exprom_init jp   init           ; entry point of expansion ROM initialisation
 ; ----------------------------------------------------------------------
 ;   General I/O Routines
 
-            include  src/i8080/pr.i80   ; XXX will be included by tmon.i80
+            include  src/i8080/pr.i80
 
 ;   We don't use the BASIC routine because we need this before it's init'd.
 prstr       ld   a,(hl)
@@ -86,8 +90,8 @@ init        ld   hl,.message    ; print "ROM installed" banner
 ;   BASIC Statement Hooks
 ;
 ;   These are entered through statement hook table entries, with:
-;   • HL→ The remainder of the command line, converted to upper case,
-;     leading spaces skipped, $00-terminated.
+;   • HL→ The remainder of the command line, tokenized (leading spaces
+;     skipped, converted to upper case, tokens substituted, $00-terminated).
 ;   • DE→ Address of command processing routine in `iltbl`.
 ;   • BC→ Address of statement hook.
 ;   The cursor is left at start of a new line.
@@ -122,14 +126,39 @@ stmt_other  call prhexHL
 ;   Parse argument to `CMD` statement and run matching routine.
 ;   This is a bogus little Q&D routine that checks only the first
 ;   character given as an argument to `CMD`.
-cmd         ld   a,(hl)         ; first char of argument
-            cp   a,'I'
-            jp   Z,cmd_hi
-            cp   a,'H'
-            jp   Z,cmd_hello
-            cp   a,'T'
-            jp   Z,cmd_tmon
-            jp   perr_syntax
+cmd         ;   HL→cmdargs,0
+            ld  a,(hl)
+            or  a,a             ; No argument?
+            jp  Z,perr_misop    ;   yes: "Missing operand"
+            ld   de,cmdtab_str
+            call strtabi        ; match a valid argument?
+            jp   NZ,+           ;   yes: execute matching routine
+            ld   e,5            ; "Illegal function call"
+            jp   perror
+            ;
++
+            ld   hl,cmdtab_addr
+            ld   a,c
+            add  a,a            ; byte index → word index
+            add  a,l            ; index into table
+            ld   l,a
+            jp   NC,+           ; add carry if necessary (Z80 jr is shorter)
+            inc  h
++           ld   a,(hl)         ; load address from table
+            inc  hl
+            ld   h,(hl)
+            ld   l,a
+            jp   (hl)
+
+            include  src/i8080/strtabi.i80
+
+cmdtab_str  db   'HI',0
+            db   'HELLO',0
+            db   'T',$B7,0       ; "TMON": $B7 = `MON` token
+            db   0
+cmdtab_addr dw   cmd_hi
+            dw   cmd_hello
+            dw   cmd_tmon
 
 ; ----------------------------------------------------------------------
 ;   Minimal "Hello, world."

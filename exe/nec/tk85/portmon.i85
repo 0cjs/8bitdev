@@ -1,4 +1,12 @@
 ;   portmon: Monitor current values read from an I/O space address
+;
+;   This continuously reads the port number shown in the left-hand side
+;   of the display and on the right, after a turnstile, displays the value
+;   last read. (E.g., `08 ⊢ FF`) The INC and DEC keys will increment and
+;   decrement the port number (wrapping around at $FF/$00), and you may
+;   also type two digits on the hex keypad to set a port number directly.
+;
+;   This is intended to aid in debugging hardware projects.
 
         cpu 8085
         include  src/i8080/std.i80

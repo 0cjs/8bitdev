@@ -151,7 +151,7 @@ The full command descriptions follow.
     i   Interrupt return
     j   Jump to address
     k   call address
-    m   copy ("Move") memory
+    m   Memory copy/fill ("Move")
     o   Output (write) to I/O port
     p   read from I/O Port
     q   Quit (exit) monitor
@@ -163,8 +163,6 @@ The full command descriptions follow.
     y   read into memory from storage device ("yank")
 
     Unused letters: c g h l n u x z
-
-    XXX fill (can be done with copy?)
 
 #### Execution
 
@@ -327,9 +325,17 @@ The full command descriptions follow.
   and §`v##` for the data to write. This applies only to machines with a
   separate I/O address space.
 
-- `m` Copy ("Move") memory from §`s####` up to (but not including) §`e####`
-  to location §`t####` (target). The `s` and `e` parameters are shared with
-  the `w` (Find/Where) command above.
+- `m` Memory copy/fill.
+  - Source data is from §`s####` up to (but not including) §`e####`. These
+    parameters are shared with the `w` (Find/Where) command above.
+  - The data at the source range are copied to locations starting at
+    §`t####` (target) up to `u####`. If the source range is longer than the
+    target range, only the first part of the source range is copied. If the
+    source range is shorter, its data are repeated as many times as
+    necessary to fill the destination range (thus implementing a fill
+    command).
+  - The `v##` parameter takes a number of copies and set the `u####`
+    parameter such that that many copies of the source range will be made.
 
 #### External Storage
 

@@ -1,6 +1,7 @@
 from    testmc  import LB, MB, tmc_tid
 from    testmc.i8080  import  Machine
 from    binascii  import crc_hqx
+from    itertools  import cycle, islice
 import  pytest
 
 test_rig = '''
@@ -78,6 +79,30 @@ def test_subHLDE(m, S, R, hl, de, result):
     C = hl >= de            # Would be nice to affect carry, but we don't
                             # need it right now and might increase size.
     assert R(hl=result, de=de, Z=Z) == m.regs
+
+@param('bc, hl, cy', [
+    #   BC ≥ HL
+    (0x0000, 0x0000, False),    (0x0001, 0x0000, False),
+    (0x00FF, 0x0000, False),    (0x0100, 0x0000, False),
+    (0x8001, 0x7FFF, False),    (0xFFFF, 0x0000, False),
+    (0xFFFF, 0xFFFE, False),    (0xFFFF, 0xFFFF, False),
+    #   BC < HL
+    (0x0000, 0x0001, True),     (0x7FFF, 0x8000, True),
+    (0xFFFE, 0xFFFF, True),     (0x0000, 0xFFFF, True),
+], ids=tmc_tid)
+def test_cpBCHL(m, S, R, bc, hl, cy):
+    m.call(S.cpBCHL, R(bc=bc, hl=hl, C=not cy))
+    assert R(C=cy) == m.regs
+
+@param('result, hl, bc', [
+    (0x0000, 0x0000, 0x0000), (0x0001, 0x0001, 0x0000), (0xFFFF, 0xFFFF, 0x0000),
+    (0xFFFE, 0xFFFF, 0x0001), (0xFFFE, 0x0002, 0x0004), (0x7000, 0x9000, 0x2000),
+], ids=tmc_tid)
+def test_subHLpBC(m, S, R, result, hl, bc):
+    addr = 0x9876
+    m.depword(addr, bc)
+    m.call(S.subHLpBC, R(hl=hl, bc=addr))
+    assert R(hl=result) == m.regs
 
 ####################################################################
 #   Support routines
@@ -453,7 +478,7 @@ def test_deposit(m, S, R, loadbios, mode, input, depfwd, mem, output):
     assert b'' == instream.read()
 
 ####################################################################
-#   Commands: Checksum
+#   Commands: Checksum, Memory Copy
 
 @param('len', [1, 0xFF, 0x100, 0x101, 0x321], ids=tmc_tid)
 def test_cksum(m, S, R, loadbios, len):
@@ -467,6 +492,47 @@ def test_cksum(m, S, R, loadbios, len):
     m.call(S['cmd_cksum.exec'], stopat=[S['cmd_cksum.end']])
     assert f'\r{start:04X}:{start+len:04X}   ={crc:04X}\n' \
         == ostream.getvalue().decode('ASCII')
+
+@param('s, e, t, u', [
+    #   target range is always fully filled.
+    (0x100, 0x108, 0x110, 0x110),       # src 0/8 → target len 0
+    (0x100, 0x108, 0x110, 0x118),       # src 8/8 → target len 8
+    (0x100, 0x108, 0x110, 0x113),       # src 3/8 → target len 3
+    (0x100, 0x103, 0x110, 0x118),       # src 3/3 → target len 8, copy src 2.7×
+    (0x204, 0x20C, 0x200, 0x208),       # src > target, but overlapped
+    pytest.param(
+        *(0x200, 0x208, 0x204, 0x20A),  # src < target, but overlapped
+        marks=pytest.mark.xfail(strict=True, reason='No reverse copy yet')),
+   #    The test itself doesn't handle ranges that wrap past the end
+   #    of memory to the beginning, and it's a bit difficult to make it
+   #    handle that.
+   #(0xFFFE, 0x0002, 0x0100, 0x0104),
+   #(0x0100, 0x0104, 0xFFFE, 0x0002),
+], ids=tmc_tid)
+def test_memcopy_u(m, S, R, s, e, t, u):
+    #   Set parameters (Warning: relies on param order in memory)
+    m.depword(S.vS_source, [s, e, t, u, 0])
+    print('s,t,e,u', m.hexdump(S.vS_source, 8))
+
+    source_data = list(map(lambda x: (x+0x80) & 0xFF, range(s, e)))
+    m.deposit(s, source_data)
+    print(m.hexdump(s-2, e-s+4))
+
+    destlen = u - t
+    if destlen < 0: destlen += 0x10000
+    expected_target_data = list(islice(cycle(source_data), destlen))
+
+    try:    # print info in case of crash
+        m.call(S['cmd_memcopy.exec'], stopat=[S.prompt])
+    finally:
+        print(m.hexdump(t-2, destlen+4))
+    assert bytes(expected_target_data) == m.bytes(t, u-t)
+
+@pytest.mark.xfail
+def test_memcopy_v(m, S, R):
+    ' Use `V` param to calculate target end from other addrs. '
+    assert 0
+
 
 ####################################################################
 #   Commands: Other

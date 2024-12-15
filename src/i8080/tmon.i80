@@ -202,23 +202,21 @@ entry1      di                  ; ensure as best we can nothing will touch stack
             and  $01            ;   and mask it
             or   a,l            ; bring in all other flags
             ld   (ureg_F),a
-            ;   If we entered via intentry, we copy the return address to the
-            ;   user PC so we can see where we came from.
-            ld   a,(t0)
-            and  $80            ; entry via int flag set?
-            jp   Z,.end         ;   no: skip additional intentry processing
+            ld   a,(t0)         ; load original carry, int flag, etc.
+            and  $80            ; isolate entry-via-int flag
+            ld   a,'.'          ; (pre-showregs entry symbol if not)
+            jp   Z,.end         ; if not entry, skip additional int processing
             ;
-            ld   hl,(ureg_SP)   ;   yes: copy return address from stack
-            ld   e,(hl)
+            ld   hl,(ureg_SP)   ; entered via intentry, so copy the return
+            ld   e,(hl)         ;   address on the stack to the user PC
             inc  hl
             ld   d,(hl)
             ex   de,hl
             ld   (ureg_PC),hl
-            ld   a,'!'          ; indicate we came in via int
-            call prchar
-            call prspace
+            ld   a,'^'          ; indicate we came in via int
             ;
 .end        ei                  ; interrupts can now use our stack
+            call prchar         ; pre-regs entry indication character
             call showregs       ; always print registers on entry
 
 ;   Check to see if our current command parameter values are "valid," i.e.,

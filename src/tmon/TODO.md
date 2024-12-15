@@ -4,13 +4,6 @@ tmon TODO List
 Bug Fixes
 ---------
 
-- The execution commands currently print a CR, but we don't print on one
-  entry which means that if usercode prints out stuff without a newline,
-  its stuck right up against the register display (which can be
-  particularly hard to read when the output is numbers). We should probably
-  have the exec commands print a CR and clear to EOL, and have entry print
-  the newline.
-
 
 General TODO
 ------------

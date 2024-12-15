@@ -120,6 +120,8 @@ vP_port_out     ds   1      ; output port
 vV_port_out     ds   1      ; output port value
 vS_source       ds   2      ; source range (copy/cksum/etc.): start addr
 vE_source       ds   2      ; source range: end addr (non-inclusive)
+vT_target       ds   2      ; target range: start addr
+vU_target       ds   2      ; target range: end addr
 vL_calc         ds   2      ; calc: ? param (left value)
 vR_calc         ds   2      ; calc: / param (right value)
 ;
@@ -276,7 +278,7 @@ prompt      ld   sp,monstack
             cmd  'I',cmd_iret
             cmd  'J',cmd_jump
             cmd  'K',cmd_call
-          ; cmd  'M',cmd_copymem
+            cmd  'M',cmd_memcopy
             cmd  'O',cmd_port_out
             cmd  'P',cmd_port_in
             cmd  'Q',cmd_quit
@@ -340,6 +342,8 @@ v_initdata  dw   vini_start     ; execute start
             db   $00,$00,$00    ; input, output port, output data
             dw   vini_start     ; copy/cksum start
             dw   vini_end       ; copy/cksum end
+            dw   $0000          ; target range: start address
+            dw   $0000          ; target range: end address
             dw   $0000          ; calc left arg
             dw   $0000          ; calc right arg
 
@@ -862,8 +866,11 @@ deposit_end call prnl
 ; ----------------------------------------------------------------------
 ;   Checksum and Copy Commands
 
-ptab_source     pw   'S',vS_source  ; start: 16-bit value
-                pw   'E',vE_source  ; end: 16-bit value
+ptab_target     pw   'T',vT_target  ; target start: 16-bit value
+                pw   'U',vU_target  ; target end: 16-bit value
+                pw   'V',t0         ; calculate target end from other addrs
+ptab_source     pw   'S',vS_source  ; source start: 16-bit value
+                pw   'E',vE_source  ; source end: 16-bit value
                 db   0
 
 ;   Currently we support only the required CRC-16-CCITT algorithm,
@@ -891,6 +898,50 @@ cmd_cksum   ld   hl,ptab_source
 
             ;   Included here because required for all monitors.
             include src/i8080/checksum/crc_16_ccitt.i80
+
+cmd_memcopy ld   hl,ptab_target
+            call read_params
+.exec
+            ;   XXX calculate and save the len(source)
+            ;   if len(target) > len(source):
+            ;       len(target) -= len(source)
+            ;       reset cur(source) to start(source)
+            ;       copy len(source) → cur(target)
+            ;       loop
+            ;   else:
+            ;       reset cur(source) to start(source)
+            ;       copy len(target) 
+
+            ld   a,(vT_target)  ; BC: length to copy
+            cpl
+            add  a,1            ;   generate 2s complement of start address...
+            ld   c,a
+            ld   a,(vT_target+1)
+            cpl
+            adc  a,0
+            ld   b,a
+            ld   hl,(vU_target)
+            add  hl,bc          ;   ...making this a subtraction from end addr
+            ld   c,l
+            ld   b,h
+            ld   hl,(vT_target) ; DE: current target addr
+            ld   d,h
+            ld   e,l
+            ld   hl,(vS_source) ; HL: current source addr
+            ;
+            ;   XXX we should be breaking this up into chunks of len(source)
+            ;   size, with the last chunk size being reduced to fill in
+            ;   the last remaining bits of the destination range
+            ;
+.copychunk  push bc             ; save remaining (?) length?
+.copynext   dec  bc
+            ld   a,c
+            or   a,b
+            ret  Z
+
+
+
+.end        jp prompt
 
 ; ----------------------------------------------------------------------
 ;   Other Commands

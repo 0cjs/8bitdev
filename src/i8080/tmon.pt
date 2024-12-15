@@ -1,6 +1,7 @@
 from    testmc  import LB, MB, tmc_tid
 from    testmc.i8080  import  Machine
 from    binascii  import crc_hqx
+from    itertools  import cycle, islice
 import  pytest
 
 test_rig = '''
@@ -453,7 +454,7 @@ def test_deposit(m, S, R, loadbios, mode, input, depfwd, mem, output):
     assert b'' == instream.read()
 
 ####################################################################
-#   Commands: Checksum
+#   Commands: Checksum, Memory Copy
 
 @param('len', [1, 0xFF, 0x100, 0x101, 0x321], ids=tmc_tid)
 def test_cksum(m, S, R, loadbios, len):
@@ -467,6 +468,33 @@ def test_cksum(m, S, R, loadbios, len):
     m.call(S['cmd_cksum.exec'], stopat=[S['cmd_cksum.end']])
     assert f'\r{start:04X}:{start+len:04X}   ={crc:04X}\n' \
         == ostream.getvalue().decode('ASCII')
+
+@param('s, e, t, u', [
+    (0x100, 0x108, 0x110, 0x118),
+    (0x100, 0x108, 0x110, 0x113),
+    (0x100, 0x103, 0x110, 0x118),
+    #   XXX high target addrs (crossover 0?)
+    #   XXX overlapping copy forward/back
+], ids=tmc_tid)
+def test_memcopy_u(m, S, R, s, e, t, u):
+    #   Warning: this relies on the order of saved params from vS_source on.
+    m.depword(S.vS_source, [s, e, t, u, 0])
+    print('s,t,e,u', m.hexdump(S.vS_source, 8))
+
+    source_data = list(map(lambda x: (x+0x80) & 0xFF, range(s, e)))
+    m.deposit(s, source_data)
+    print(m.hexdump(s-2, e-s+4))
+
+    target_data = list(islice(cycle(source_data), u - t))
+    m.call(S['cmd_memcopy.exec'], stopat=[S['cmd_memcopy.end']])
+    print(m.regs)
+    print(m.hexdump(t-2, u-t+4))
+    assert target_data == m.bytes(t, u-t)
+
+@pytest.mark.xfail
+def test_memcopy_v(m, S, R):
+    assert 0
+
 
 ####################################################################
 #   Commands: Other

@@ -8,6 +8,11 @@ Bug Fixes
 General TODO
 ------------
 
+- While entering params for `e` command, we should be able to type `d` and
+  have it immediately do a dump, rather than having to Enter then do `d` on
+  a new line to get the dump. (Saves both typing and a display line on
+  screen.)
+
 - Add ability to use a clear-to-EOL function if the terminal supports it.
 
 - Add a byte/word switch mode in word/byte deposit mode. Perhaps Ctrl-D

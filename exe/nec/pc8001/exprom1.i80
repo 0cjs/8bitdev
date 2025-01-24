@@ -134,14 +134,14 @@ cmdtab_str  db   'HELP',0
             db   'HELLO',0
             db   'T',$B7,0       ; "TMON": $B7 = `MON` token
             db   0
-cmdtab_addr dw   cmd_hi
+cmdtab_addr dw   cmd_help
             dw   cmd_hello
             dw   cmd_tmon
 
 ; ----------------------------------------------------------------------
 ;   Minimal "Hello, world."
 
-cmd_hi      ld   hl,.message
+cmd_help    ld   hl,.message
             call prstr
             jp   basicret
 

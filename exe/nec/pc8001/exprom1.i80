@@ -6,6 +6,8 @@
 ; ----------------------------------------------------------------------
 ;   PC-8001 BIOS
 
+;   Note that prchar (and perhaps other routines) are quite stack-heavy;
+;   they may easily use well over 16 bytes (maybe 24 or more?).
 prchar      equ  $0257          ; ♠A ♡* print char to CRT
 rdchar      equ  $0F75          ; ♠A ♣BCHL wait for char from keyboar
 
@@ -188,10 +190,14 @@ cmd_tmon
 ;   all our saved values. We need to figure out why.
 
 tmon_rom    equ  $
-tmon_ram    equ  $EA00-$50      ; $50 > storage area + stack size
-                                ; XXX overlaps BASIC unless we CLEAR!
-                                ; XXX no check doesn't go past $EA00
-tmon_stksz  equ  $20
+
+;   Start our stack/work area at the first byte after the work area used by
+;   `MON`. Nothing after the MON work area is used after initialisation.
+;   Note we allocate plenty of stack because the ROM routines use quite a
+;   bit: tmon has been seen to use 42 bytes when calling prchar and the like.
+tmon_ram    equ  $FF3D
+tmon_stksz  equ  $FF80-tmon_ram  ; 67 bytes stack
+
 BACKSPACE   equ  $1D            ; cursor left
 
             public entry

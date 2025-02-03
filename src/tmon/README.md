@@ -1,6 +1,9 @@
 tmon: The Tolerable Monitor
 ===========================
 
+This is the generic documentation applicable to all versions of tmon;
+there are also [platform-specific notes](./PLATFORM.md).
+
 ### Contents
 
 - [Introduction](#introduction)
@@ -66,6 +69,10 @@ Where "newline" is used below this refers to the ASCII `CR`/Ctrl-M or
 `LF`/Ctrl-J characters or the Enter key on a system with built-in keyboard.
 When "Cancel" is used below this refers to ASCII `NAK`/Ctrl-U or
 `CAN`/Ctrl-X character.
+
+Note that input of ASCII backspace (`BS`/Ctrl-H) not supported by the
+monitor (you will get an illegal character indication); undesired input
+data are cancelled with "Cancel" character.
 
 The user is prompted with a `.` or similar small dot. Input is case
 insensitive, and consists of _input items_ that are single characters

@@ -169,25 +169,12 @@ cmd_hello   call hello
 ;   - BS prints a visible char; need to fix print routine I guess
 ;   - prvischar and prscreenchar need to be set up for inverse (and maybe
 ;     prvischar should be using that printable BS, etc.)
-;   - tmon_ram area needs to find a better home (BASIC stomps on it?)
 ;   - should set default `E` width based on 40/80 col mode?
 
 cmd_tmon
 
     section tmon
             public intentry
-
-;   Currently the tmon_ram area is supposed to be just below the BASIC
-;   workspace starting at $EA00. (We should ideally find a better place
-;   for it where the ROM won't stomp on it if the user doesn't do a CLEAR
-;   command to lower the end of BASIC string memory.) However, we have no
-;   check here that the tmon_ram area doesn't extend into the $EA00 area
-;   where it would stomp on BASIC stuff (and BASIC stomp on it when
-;   re-entered). This needs to be added.
-;
-;   XXX actually, even with this configuration, returning to BASIC and
-;   then re-entering tmon stomps something in the tmon data, resetting
-;   all our saved values. We need to figure out why.
 
 tmon_rom    equ  $
 

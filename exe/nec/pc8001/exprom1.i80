@@ -166,10 +166,11 @@ cmd_hello   call hello
 ;   tmon
 ;
 ;   XXX TODO:
-;   - BS prints a visible char; need to fix print routine I guess
 ;   - prvischar and prscreenchar need to be set up for inverse (and maybe
 ;     prvischar should be using that printable BS, etc.)
 ;   - should set default `E` width based on 40/80 col mode?
+;   - Add option to exit to MON instead of BASIC.
+;   - Add RST for monitor entry.
 
 cmd_tmon
 
@@ -198,6 +199,11 @@ exit        jp   basicret
 BEL         equ  $07
 errbeep     ld   a,BEL
             jp   prchar         ; RET
+
+init_platform
+            ld   a,'i'
+            jp  prchar          ; RET
+            ret
 
     endsection tmon
 

@@ -240,7 +240,13 @@ init        call cksum_v
             inc  de
             dec  b
             jp   NZ,.loop
+    if (MOMPASS == 1) || symexist(init_platform)
+            ;   If available, call platform-specific init code
+            ;   for comand parameter values.
+            call init_platform
+    endif
 .end
+            ; FALLTHROUGH
 
 ;   Print the prompt and read a command (but not the command's parameters).
 ;

@@ -17,7 +17,7 @@ rst__outchar macro
             endm
 outchar     equ  $40A6
 
-diskbreq    equ  $1875          ; "Disk BASIC feature" error
+err_notimpl equ  $1875          ; "Disk BASIC Feature" error routine
 basicret    equ  $3C82          ; ??? return to basic after USR, etc.?
 monitor     equ  $5C66          ; enter monitor
 
@@ -27,7 +27,7 @@ perr_type   equ  $3BF7          ; "Type mismatch"
 perror      equ  $3BF9          ; ♠C=error code
 
 ;   BASIC statement hooks. These are initialised with `jp err_notimpl`.
-err_notimpl equ  $1875          ; "Disk BASIC Feature" error routine
+crt_width   equ  $EA65          ; current text screen width (chars)
 sj_00       equ  $F0E1          ; start of statement hook table
 sj_CMD      equ  $F0FC          ; jump point for BASIC `CMD`
 sj_end      equ  $F1B6          ; end (exclusive) of statement hook table
@@ -166,10 +166,11 @@ cmd_hello   call hello
 ;   tmon
 ;
 ;   XXX TODO:
-;   - BS prints a visible char; need to fix print routine I guess
 ;   - prvischar and prscreenchar need to be set up for inverse (and maybe
 ;     prvischar should be using that printable BS, etc.)
 ;   - should set default `E` width based on 40/80 col mode?
+;   - Add option to exit to MON instead of BASIC.
+;   - Add RST for monitor entry.
 
 cmd_tmon
 
@@ -198,6 +199,15 @@ exit        jp   basicret
 BEL         equ  $07
 errbeep     ld   a,BEL
             jp   prchar         ; RET
+
+init_platform
+            ld   a,72-1         ; min. screen width for 16-bytes/line examine
+            ld   hl,crt_width
+            cp   (hl)           ; min-1 ≥ current width
+            ret  c              ;   yes: use default examine width
+            ld   a,8            ;    no: switch to 8 bytes/line
+            ld   (vW_examine),a
+            ret
 
     endsection tmon
 

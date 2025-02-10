@@ -36,6 +36,11 @@ rsti        equ $6 * $8     ; address of RST 6
 
 exit        halt            ; exit routine used by monitor
 
+init_platform
+            ld   a,0xEE
+            ld   (t0),a
+            ret
+
 jump_test   inc  a
             inc  hl
 jump_test_E halt
@@ -200,16 +205,18 @@ def test_read_params_good(m, S, R, loadbios):
 ####################################################################
 #   Command parameter value initialization
 
-def test_init(m, S, R):
+def test_init_platform(m, S, R):
     len = S.v_end - S.v_start
     print('initdata', m.hexdump(S.v_initdata, len + 2))
 
     m.deposit(S.v_start, [0xFF] * (len + 2))
     print('  before', m.hexdump(S.v_start, len + 2))
+    m.deposit(S.t0, 0xDD)           # sentinel for init_platform
 
     m.call(S.init, stopat=[S['init.end']])
     print('  inited', m.hexdump(S.v_start, len + 2))
     assert m.bytes(S.v_initdata, len) == m.bytes(S.v_start, len)
+    assert 0xEE == m.byte(S.t0), 'value not set by init_platform'
 
     #   change param vals and checksum
     m.depword(S.vS_exec, 0x1234); m.depword(S.vE_source, 0x5678)

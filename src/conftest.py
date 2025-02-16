@@ -1,1 +1,0 @@
-from    testmc.pytest  import *

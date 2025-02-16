@@ -32,7 +32,7 @@ The general goals are to have:
 * Significantly better features than many home computers' built-in
   monitors, including properly handling the usercode stack (or working
   without a valid usercode stack).
-* A user interface focused on convenience. For example, remembering
+* A [user interface] focused on convenience. For example, remembering
   recently used addresses so you need not continually re-type them and
   allowing you to intersperse hex and ASCII data input.
 * Efficient use of the display, allowing you to display just what you need
@@ -392,6 +392,7 @@ Bugs:
 [intel]: https://en.wikipedia.org/wiki/Intel_HEX
 [motorola]: https://en.wikipedia.org/wiki/SREC_(file_format)
 [pytest]: https://pytest.org/
+[user interface]: ./ui-design.md
 
 <!-- checksum algorithms -->
 [BSD checksum]: https://en.wikipedia.org/wiki/BSD_checksum

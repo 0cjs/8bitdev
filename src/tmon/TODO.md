@@ -8,6 +8,9 @@ Bug Fixes
 General TODO
 ------------
 
+- See `src/i8080/tmon.i80` head comments for a list of commands
+  yet to be implmented.
+
 - Add ability to use a clear-to-EOL function if the terminal supports it.
 
 - Add a byte/word switch mode in word/byte deposit mode. Perhaps Ctrl-D

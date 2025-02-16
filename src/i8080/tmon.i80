@@ -4,9 +4,9 @@
 
 ; ----------------------------------------------------------------------
 ;   Status:
-;   • Implemented:  J K I Q E W R V D . > ' /
+;   • Implemented:  ' , . > / ; B D E F I J K M Q R V
 ;   • Untested:     O P           # tests require addtional support from t8dev
-;   • To-do:        F C : S L T
+;   • To-do:        W T Y : S A   # roughly priority order
 
 ; ----------------------------------------------------------------------
 ;   This requires the system-dependent files define the following before

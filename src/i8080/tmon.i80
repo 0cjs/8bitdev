@@ -645,10 +645,10 @@ cmd_examine_next
             dec  e              ;   as many times as lines to dump
             jp   NZ,.addpage
             ld   (vS_examine),hl ; update start address
-            jp   cmd_examine_cur.noparams  ; and do the dump
+            ; fallthrough: do the display
 
 cmd_examine_cur
-.noparams   call prcr           ; we will overwrite the command line
+            call prcr           ; we will overwrite the command line
             call examine_setup  ; BC=bytes/line DE=lines, HL=(t0⋅1)=curline addr
             ;
 .startline  push bc             ; save BC=bytes/line

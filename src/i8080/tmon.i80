@@ -613,8 +613,7 @@ ptab_none   db   0                  ; end of table
 cmd_examine_params
             ld   hl,ptab_examine
             call read_params
-            call prnl
-.end        jp   prompt
+.end        jp   cmd_examine_cur
 
 ;   Load examine parameters into registers and temps:
 ;   t0⋅1=HL=start address, BC=bytes/line, DE=lines to dump
@@ -676,7 +675,6 @@ cmd_examine_cur
             jp   NZ,.startline
             ;
 .end        jp   prompt
-
 
 ;   ♠AHL(t0⋅1) ♣*(t2⋅3)   prexamine: If the bit in A is set in (vM_examine),
 ;   i.e. if the format is enabled, print a sequence of (vW_examine)

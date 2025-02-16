@@ -151,10 +151,10 @@ The full command descriptions follow.
     ;   modify (deposit to) registers
     >  ¹hex word deposit
     a   examine assembly code
-    b  ¹examine memory Backwards (display previous page)
-    d  ¹examine ("Display") memory at current location
-    e   set Examine memory parameters
-    f  ¹examine memory Forward (display next page)
+    b  ¹examine memory Backwards (previous page)
+    d  ¹examine ("Display") memory with current parameters
+    e   examine memory with parameters
+    f  ¹examine memory Forward (next page)
     i   Interrupt return
     j   Jump to address
     k   call address
@@ -198,11 +198,11 @@ The full command descriptions follow.
 - °`r` Examine registers and flags. See the `;` command for details of what
   is displayed.
 
-- `e` Set memory examine parameters. This does not display anything, but
-  sets the parameters that will be used by the `d`, `f`, and `b` commands.
+- `e` Set memory examine parameters and examine memory. This sets the
+  parameters that will be also be used by the `d`, `f`, and `b` commands.
   - §`s####`: Start address.
   - §`l##`: number of Lines to print (default 4).
-  - §`w##`: Width as number of bytes to examine.
+  - §`w##`: line Width as number of bytes to examine.
   - §`m##`: display Mode. This is a bitfield with values listed below; all
     display modes that are enabled will be printed in sequence on the same line.
     - b0 ($01): hexadecimal values as bytes separated by spaces.
@@ -215,13 +215,14 @@ The full command descriptions follow.
       without a built-in display.)
     - b3-7: ignored.
 
-- °`d` Examine ("Display") memory. Displays the contents of memory using
-  the location and format set by the `e` command.
+- °`d` Examine ("Display") memory with current parameters. Displays the
+  contents of memory using the location and format set by the `e` command.
+  (This is the same as `e` but does not require a CR to execute.)
 
 - °`f` Examine Forward. The `e` command's start address `s####` will be
   updated to add the number of bytes that `d` would display (`l##` × `w##`)
-  and the display (`d`) command will be executed. This can be used to
-  examine forward through memory a block at a time, leaving the `e`
+  and using these new parameters the memory will be displayed. This can be
+  used to examine forward through memory a block at a time, leaving the `e`
   command's start address at the start of the last examined range when
   you've found something of interest.
 

@@ -598,7 +598,7 @@ def test_prompt_cancel(m, loadbios, S, R,  input, output):
     assert cancel_done == m.regs.pc
 
 def test_prompt_examine(m, S, R, loadbios):
-    commands = b'e s12aB l2 w6\ndq\nEND'
+    commands = b'e s12aB l2 w6\nq\nEND'
     istream, ostream = loadbios(input=commands)
     m.call(S.init, stopat=[S['init.end']])  # testing default values
     m.call(S.prompt, stopat=[S.exit], maxsteps=10000)
@@ -606,8 +606,7 @@ def test_prompt_examine(m, S, R, loadbios):
     bs2 = b'\b\b'; bs4 = b'\b\b\b\b'; clr = b'    ' + bs4
     expected = b'.e s0000' + bs4 + b'12aB ' + clr \
              + b'l04' + bs2 + b'2 ' + clr \
-             + b'w08' + bs2 + b'6' + clr + b'\n' \
-             + b'.d\r' \
+             + b'w08' + bs2 + b'6' + clr + b'\r' \
              + b'12AB: FF 00 12 23 34 45 \n12B1: 56 67 78 89 9A AB \n' \
              + b'.q\n'
     actual = ostream.getvalue()

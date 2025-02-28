@@ -19,7 +19,7 @@ outchar     equ  $40A6
 
 err_notimpl equ  $1875          ; "Disk BASIC Feature" error routine
 basicret    equ  $3C82          ; ??? return to basic after USR, etc.?
-monitor     equ  $5C66          ; enter monitor
+omonstart   equ  $5C35          ; enter original ROM monitor
 
 perr_syntax equ  $3BDF          ; "Syntax error"
 perr_misop  equ  $3BF4          ; "Missing operand"
@@ -66,6 +66,12 @@ prnl        push af
 init        ld   hl,.message    ; print "ROM installed" banner
             call prstr
             ;   All statement hook table entries enter tmon.
+            ;   • This is a temporary thing to help us debug which statement
+            ;     hooks correspond to which statements, and can be removed
+            ;     once that's properly documented.
+            ;   • XXX We need to test if Disk BASIC overwrites our settings
+            ;     of the statement hooks, calls them before/after, or just
+            ;     leaves them alone.
             ld   d,MB(intentry)
             ld   e,LB(intentry)
             ld   hl,sj_00
@@ -81,6 +87,7 @@ init        ld   hl,.message    ; print "ROM installed" banner
             ld   (hl),d         ; address MSB
             inc  hl
             djnz -
+            ;
             ;   Fill in specific commands for which we have other actions.
             ld   hl,cmd         ; hook BASIC `CMD` statement
             ld   (sj_CMD+1),hl
@@ -175,6 +182,7 @@ cmd_hello   call hello
 cmd_tmon
 
     section tmon
+            public entry
             public intentry
 
 tmon_rom    equ  $
@@ -188,13 +196,26 @@ tmon_stksz  equ  $FF80-tmon_ram  ; 67 bytes stack
 
 BACKSPACE   equ  $1D            ; cursor left
 
-            public entry
             include src/i8080/tmon.i80
 
             include src/i8080/prvischar/pc8001.i80      ; XXX no reverse
             include src/i8080/prscreenchar/ascii.i80    ; XXX no reverse
 
-exit        jp   basicret
+exit        ld   a,(t0)
+            dec  a          ; a=1 ?
+            jp   nz,+       ;    no: try next value
+            ;
+            ;   Enter the standard ROM monitor (original `MON`) and restart
+            ;   tmon when done. This is somewhat more convenient for us
+            ;   because, unlike going back to BASIC, no re-init of things
+            ;   is done (so we can more easily examine the results of what
+            ;   was done in the original monitor) and we can get back to
+            ;   BASIC easily enough with `q`uit anyway.
+            call omonstart  ;   yes: call original ROM monitor
+                            ;        through entry point that returns to us
+            jp   entry      ;        and return to us
+            ;
++           jp   basicret   ; 0 or any other value re-enters BASIC
 
 BEL         equ  $07
 errbeep     ld   a,BEL
@@ -218,6 +239,6 @@ init_platform
             error 'code PC=$\{$} > expansion RAM max $\{tmon_ram_end}'
     endif
 
-            org  $7FFD
-;altmonvec  dw   altmon         ; alternate monitor entry point
-;           db   $55            ; magic byte for `MON` to use altmonvec
+            org  $7FFC
+            jp   intentry       ; entry point used by `MON`
+            db   $55            ;   if this magic byte set to $55

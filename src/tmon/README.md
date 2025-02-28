@@ -187,11 +187,11 @@ The full command descriptions follow.
   on the stack before executing at the start address, so that a `RTS` or
   `RET` will save the registers and return to the monitor.
 
-- `q` Quit. Return to the program that called the monitor. Depending on the
-  system and the tmon entry point used, this may return to a default system
-  monitor, BASIC or similar. Simulators will generally exit. Though this
-  takes no parameters, it still requires confirmation (a newline) to avoid
-  accidental exits.
+- `q` Quit. The "to" parameter `t##` determines whence it will quit;
+  typically `0` (the default) is back to the system BASIC, default system
+  monitor, or similar. (For command-line simulators, it usually exits the
+  simulator.) Other "to" values, if available, [vary by
+  platform](./PLATFORM.md).
 
 #### Examining Machine State
 

@@ -601,7 +601,11 @@ exec        call read_params
             ld   hl,(ureg_HL)
             jp   t0             ; trampoline into user code
 
-cmd_quit    ld   hl,ptab_none   ; no parameters,
+ptab_quit   pb   'T',t0         ; exit "to" whence specified by number
+
+cmd_quit    xor  a,a
+            ld   (t0),a
+            ld   hl,ptab_quit
             call read_params    ;   but must confirm/cancel
             call prnl
             jp   exit           ; system-supplied routine

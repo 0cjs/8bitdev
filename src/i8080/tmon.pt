@@ -560,6 +560,19 @@ def test_slash(m, S, R, loadbios, q, s, output):
     print('  actual:', ostream.getvalue())
     assert output == ostream.getvalue()
 
+def test_quit_default(m, S, R, loadbios):
+    _, ostream = loadbios(input=b'q\r')
+    m.deposit(S.t0, 123)               # sentinel
+    m.call(S.cmd_quit, stopat=[S.exit])
+    assert 0 == m.byte(S.t0)
+
+@param('t', [0, 1, 2, 0xFF])
+def test_quit_param(m, S, R, loadbios, t):
+    _, ostream = loadbios(input=bytes(f'qt{t:x}\r', 'ASCII'))
+    m.deposit(S.t0, (t-3) & 0xFF )      # sentinel
+    m.call(S.cmd_quit, stopat=[S.exit])
+    assert t == m.byte(S.t0)
+
 ####################################################################
 #   Command parsing
 

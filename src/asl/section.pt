@@ -1,0 +1,11 @@
+from    testmc.mos65 import  Machine
+import  pytest
+
+object_files = 'src/asl/section.p'
+
+def test_section_references(m, S):
+    assert 0x0000 == S.foo
+    #   Though this is `foo : [aa]` in the .lst file, in the .map
+    #   file it's just `foo[0]`. The section number to section name
+    #   mapping is on a later "Info for Section 0 aa" line.
+    assert 0x0100 == S['foo[0]']    # [0] = first section declared

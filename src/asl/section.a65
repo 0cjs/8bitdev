@@ -1,0 +1,37 @@
+;   Test of sections and referencing symbols from them.
+
+            cpu 6502
+
+            org  $000
+foo         db   $0A            ; global    foo
+
+            org  $100
+          section    aa         ; level 1   :aa:
+foo         db   $1A            ;           :aa:foo
+bar         db   $1B            ;           :aa:bar
+
+            org  $200
+          section    bb         ; level 2   :aa:bb:
+foo         db   $2A            ;           :aa:bb:foo
+            public bar          ;           bar         (not bar[aa], bar[bb])
+bar         db   $2B            ;           :aa:bb:bar
+            public baz:parent   ;           :aa:baz     (not baz[bb])
+baz         db   $2C            ;           :aa:bb:baz
+
+            org  $300
+          section    bb         ; level 3   :aa:sec2:sec2:
+foo         db   $3A            ;           :aa:sec2:sec2:foo
+          endsection bb
+          endsection bb
+quux        db   $1C            ;           :aa:quux
+          endsection aa
+
+            org  $1000
+          section bb            ; level 1   :bb
+foo         db   $4A            ;           :bb:foo
+          endsection bb
+
+    message 'foo=\{foo}'
+
+;   This reference fails with "error: unknown section". Not clear why.
+;   message ':aa:foo=\{foo[aa]}'

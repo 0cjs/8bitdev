@@ -175,8 +175,6 @@ cmd_hello   call hello
 ;   XXX TODO:
 ;   - prvischar and prscreenchar need to be set up for inverse (and maybe
 ;     prvischar should be using that printable BS, etc.)
-;   - should set default `E` width based on 40/80 col mode?
-;   - Add option to exit to MON instead of BASIC.
 ;   - Add RST for monitor entry.
 
 cmd_tmon

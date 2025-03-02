@@ -48,8 +48,6 @@ Platform-specific TODO
 
 ### PC-8001 / PC-8001mkII
 
-- Burn into 8K expansion ROM ($6000-$7FFF), with the pre-init setting up
-  extra BASIC command to enter tmon.
 - Add CMT load/save.
 
 

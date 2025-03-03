@@ -56,3 +56,4 @@ MB          function addr,((addr & $FF00) >> 8)
 ;   that it's worth having a common definition for them.
 
 I_JP        equ  $C3        ; 8080 JMP instruction
+I_RET       equ  $C9        ; 8080 RET instruction

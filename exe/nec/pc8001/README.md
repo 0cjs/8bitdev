@@ -31,6 +31,30 @@ execute any code you like to simulate an actual command routine. The `i`
 command will return back to the BASIC code that called the statement
 vector.
 
+### ROM/EPROM Hardware
+
+It's unlikely that you will be able to contract to have actual 2364 ROMs
+burned, so most likely you will want to use an adapter board that does the
+pinout conversion to let you use a 2764 (or larger) EPROM. There are [many
+of these][gh-2364-adapter]; the one we like is the [RetroStack 2332/2364
+ROM Adapter][gh-rs-23xx].
+
+An issue you're likely to encounter with any adapter is that the ROM
+sockets on the PC-8001 and PC-8001mkII have very narrow pin holes, and the
+machine pins usually used on adapters will not fit. There are special pins
+one can buy that match the dimensions of the pins on actual ICs, but we've
+not seen a source for these in some time. There is also, espeically on the
+mkII, little space above the ROM socket for a stack of adapter board,
+socket and EPROM.
+
+One option is to use a [DIP IDC connector][dk-dipidc] to bring the socket
+out via ribbon cable to another location. We're looking at a project to
+bring it out the back of the machine (the ribbon cable coming out through
+the printer connector slot, which is taller than the expansion connector
+slot) to an external adapter board with a ZIF connector, allowing easy
+changes to the EPROM without opening the machine. (More will be reported
+here as the project proceeds.)
+
 ### Execution in an Emulator
 
 [`8bitdev`] builds and makes available the CSCP project Japanese
@@ -45,5 +69,10 @@ that directory, which speeds startup.)
 
 
 <!-------------------------------------------------------------------->
-[tmon]: https://github.com/0cjs/8bitdev/tree/main/src/tmon
 [`8bitdev`]: https://github.com/0cjs/8bitdev/
+[tmon]: https://github.com/0cjs/8bitdev/tree/main/src/tmon
+
+<!-- ROM/EPROM Hardware -->
+[dk-dipidc]: https://www.digikey.jp/en/products/filter/rectangular-connectors/board-in-direct-wire-to-board/317?s=N4IgjCBcoBw1oDGUBmBDANgZwKYBoQB7KAbXAFYwBOAJipAF0CAHAFyhAGVWAnASwB2AcxABfAuQBsAZgQhkkdNnxFSIGnEnwmINh279hY0aKA
+[gh-2364-adapter]: https://github.com/search?q=+2364+adapter&ref=opensearch&type=repositories
+[gh-rs-23xx]: https://github.com/RetroStack/2332_2364-ROM_Adapter

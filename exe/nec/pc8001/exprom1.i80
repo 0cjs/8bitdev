@@ -32,6 +32,11 @@ sj_00       equ  $F0E1          ; start of statement hook table
 sj_CMD      equ  $F0FC          ; jump point for BASIC `CMD`
 sj_end      equ  $F1B6          ; end (exclusive) of statement hook table
 
+user_rst20  equ  $F1DA          ; RST $20 … $38 jump to these hooks.
+user_rst28  equ  $F1DD
+user_rst30  equ  $F1E0
+user_rst38  equ  $F1E3
+
 ; ----------------------------------------------------------------------
 ;   Expansion ROM Header
 
@@ -65,6 +70,13 @@ prnl        push af
 
 init        ld   hl,.message    ; print "ROM installed" banner
             call prstr
+            ;   Set RST $30 to enter tmon.
+            ld   a,I_JP
+            ld   (user_rst30),a
+            ld   a,LB(intentry)
+            ld   (user_rst30+1),a
+            ld   a,MB(intentry)
+            ld   (user_rst30+2),a
             ;   All statement hook table entries enter tmon.
             ;   • This is a temporary thing to help us debug which statement
             ;     hooks correspond to which statements, and can be removed
@@ -173,6 +185,8 @@ cmd_hello   call hello
 ;   tmon
 ;
 ;   XXX TODO:
+;   - tmon parameters are still being destroyed on return to BASIC and
+;     re-entry: figure out why and fix/move if necessary.
 ;   - prvischar and prscreenchar need to be set up for inverse (and maybe
 ;     prvischar should be using that printable BS, etc.)
 ;   - Add RST for monitor entry.

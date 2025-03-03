@@ -27,6 +27,8 @@ probably an 8001mkII in N-BASIC mode (but not N₈₀-BASIC as of yet).
   - `t1` will call the original monitor; Ctrl-B there will return to tmon
     as that's less invasive (returning to BASIC probably resets all sorts
     of variables) and generally more convenient.
+- The `user_rst30` vector is set to `intentry` so that `RST $30` will enter
+  tmon. (This can be used to set breakpoints in code in RAM.)
 
 See the [exprom1 README][exprom1-rm] for more information on other contents
 of that ROM.

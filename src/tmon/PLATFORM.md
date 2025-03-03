@@ -14,8 +14,9 @@ registers (IX, IY) or the alternate register set (A', B', etc.).
 
 ### NEC PC-8001 Series
 
-A single PC-8001 build is part of PC-8001 expansion ROM #1,
-[`exe/nec/pc8001/exprom1.i80`]; this runs only on the original PC-8001 and
+A single PC-8001 build is part of PC-8001 expansion ROM #1. (Source code:
+[`exe/nec/pc8001/exprom1.i80`]; release in the `pc8001` subdirectory of the
+release archive.) This runs only on the original PC-8001 (tested) and
 probably an 8001mkII in N-BASIC mode (but not N₈₀-BASIC as of yet).
 
 - As with all control characters, backspace prints a `␈`; as normal for
@@ -27,9 +28,8 @@ probably an 8001mkII in N-BASIC mode (but not N₈₀-BASIC as of yet).
     as that's less invasive (returning to BASIC probably resets all sorts
     of variables) and generally more convenient.
 
-Currently the expansion ROM also takes over all of the "Disk BASIC"
-statement hooks, using `CMD` for various functions (try `CMD HELP`) and
-having all other statement hooks drop to tmon for debugging purposes.
+See the [exprom1 README][exprom1-rm] for more information on other contents
+of that ROM.
 
 
 Other CPUs
@@ -44,3 +44,4 @@ Support is planned for 6800, 6502, and perhaps 6809 and 68000.
 
 <!-------------------------------------------------------------------->
 [`exe/nec/pc8001/exprom1.i80`]: https://github.com/0cjs/8bitdev/blob/main/exe/nec/pc8001/exprom1.i80
+[exprom1-rm]: https://github.com/0cjs/8bitdev/blob/main/exe/nec/pc8001/README.md

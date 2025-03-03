@@ -207,7 +207,7 @@ fi
     rm    -rf $reldir/ .build/release/*.zip
 
     mkdir -p  $reldir/tmon/{cpm,m100}/
-    cp src/tmon/README.md src/tmon/TODO.md      $reldir/tmon/
+    cp src/tmon/*                               $reldir/tmon/
     cp .build/obj/exe/cpm/tmonlo.com            $reldir/tmon/cpm/TMONLO.COM
     cp .build/obj/exe/kc85/m100/TMON.CO         $reldir/tmon/m100/
 

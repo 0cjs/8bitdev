@@ -31,7 +31,11 @@ quux        db   $1C            ;           :aa:quux
 foo         db   $4A            ;           :bb:foo
           endsection bb
 
+;   References from outside any section can access only symbols defined
+;   outside sections and symbols from sections marked `public`.
     message 'foo=\{foo}'
 
-;   This reference fails with "error: unknown section". Not clear why.
+;   This reference fails with "error: unknown section" because (per §3.8)
+;   symbol lookups always search only up the branch of the tree on which
+;   the current section resides.
 ;   message ':aa:foo=\{foo[aa]}'

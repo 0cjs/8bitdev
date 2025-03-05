@@ -205,7 +205,8 @@ def test_read_params_good(m, S, R, loadbios):
 ####################################################################
 #   Command parameter value initialization
 
-def test_init_platform(m, S, R):
+def test_init_platform(m, S, R, loadbios):
+    loadbios()      # capture printed re-init notification
     len = S.v_end - S.v_start
     print('initdata', m.hexdump(S.v_initdata, len + 2))
 
@@ -624,7 +625,7 @@ def test_prompt_examine(m, S, R, loadbios):
     m.call(S.prompt, stopat=[S.exit], maxsteps=10000)
 
     bs2 = b'\b\b'; bs4 = b'\b\b\b\b'; clr = b'    ' + bs4
-    expected = b'.e s0000' + bs4 + b'12aB ' + clr \
+    expected = b'@.e s0000' + bs4 + b'12aB ' + clr \
              + b'l04' + bs2 + b'2 ' + clr \
              + b'w08' + bs2 + b'6' + clr + b'\r' \
              + b'12AB: FF 00 12 23 34 45 \n12B1: 56 67 78 89 9A AB \n' \

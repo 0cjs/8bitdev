@@ -131,7 +131,10 @@ commands on the left hand and modification commands on the right.
 
 Most parameters have a memorised value that will be used if a new value for
 it is not specified when entering the command. This is marked with a § sign
-before the parameter name.
+before the parameter name. The memorised values are checked and initialised
+to default values for the system if it appears they've been trashed (or not
+yet initialised); an `@` will be printed before the prompt when they are
+(re-)initialised.
 
 Certain parameter names have a common meaning across all commands that
 support them, unless otherwise described in the command description. (The

@@ -231,6 +231,8 @@ init        call cksum_v
             ld   hl,(v_cksum)       ; HL = previous checksum
             call subHLDE            ; same?
             jp   Z,.end             ;   yes; do not re-init
+            ld   a,'@'
+            call prchar             ; notify that we're re-initing param vals
 .copy       ld   hl,v_initdata
             ld   de,v_start
             ld   b,v_end - v_start

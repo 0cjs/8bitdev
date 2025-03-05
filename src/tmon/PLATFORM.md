@@ -33,6 +33,26 @@ probably an 8001mkII in N-BASIC mode (but not N₈₀-BASIC as of yet).
 See the [exprom1 README][exprom1-rm] for more information on other contents
 of that ROM.
 
+### CP/M
+
+The `TMONLVT.COM` version resides in "low" memory, starting at $0100
+at the start of the TPA. This means that it can't be used to examine
+or debug other CP/M programs, but it's still useful for experimentation
+and getting a feel for how tmon works. It's also hard-coded for a VT100
+terminal, which affects the ASCII display when examining memory. (It
+uses inverse for high-bit set, and underlines control characters.)
+
+Both these issues will be fixed in a future release of CP/M tmon better
+suited for use in that environment. In the short term there will be an easy
+patch method to change the terminal codes, and in the long term it will
+relocate itself into high memory so that it can be used like `DDT` (or
+perhaps even as a sort of weird CCP replacement).
+
+Bugs:
+- There appears to be an issue with the `K` (call) command under CP/M;
+  calling a `ret` does not return to the monitor and it seems that the
+  return address to the monitor is not being pushed on the user stack.
+
 
 Other CPUs
 ----------

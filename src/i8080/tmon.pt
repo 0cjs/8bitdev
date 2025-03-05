@@ -565,7 +565,8 @@ def test_quit_default(m, S, R, loadbios):
     _, ostream = loadbios(input=b'q\r')
     m.deposit(S.t0, 123)               # sentinel
     m.call(S.cmd_quit, stopat=[S.exit])
-    assert 0 == m.byte(S.t0)
+    crc = crc_hqx(m.bytes(S.v_start, S.v_end - S.v_start), 0xFFFF)
+    assert (0, crc) == (m.byte(S.t0), m.word(S.v_cksum))
 
 @param('t', [0, 1, 2, 0xFF])
 def test_quit_param(m, S, R, loadbios, t):

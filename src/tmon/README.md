@@ -70,19 +70,36 @@ Where "newline" is used below this refers to the ASCII `CR`/Ctrl-M or
 When "Cancel" is used below this refers to ASCII `NAK`/Ctrl-U or
 `CAN`/Ctrl-X character.
 
-Note that input of ASCII backspace (`BS`/Ctrl-H) not supported by the
-monitor (you will get an illegal character indication); undesired input
-data are cancelled with "Cancel" character.
+Note that input of ASCII backspace (`BS`/Ctrl-H) not supported by tmon:
+you will get an illegal character indication. Undesired input data are
+cancelled with "Cancel" character.
 
-The user is prompted with a `.` or similar small dot. Input is case
-insensitive, and consists of _input items_ that are single characters
-representing commands or parameter names and strings of hexadecimal
-numbers. Entering an invalid character will produce an ASCII `BEL`
-and the cursor will be backspaced over the invalid character.
+#### Prompt
 
-The first character after the prompt must be one of the commands below.
-Commands marked with a superscript 1 (¹) are "single key" commands that
-execute immediately. All other commands (including all that take
+The user is prompted with a period `.` or similar small dot. On entry to
+tmon this may be preceded by one or both of the following characters:
+- `^` indicates that tmon was entered via the `intentry` entry point
+  (instead of `entry`) and the user PC value has been set to the word at
+  the top of the user stack on entry. (The user PC value is informational
+  only; the execution command `i`nt-return starts execution with a `RET`,
+  using the value on top of the user stack, and the `k`all and `j`ump
+  execution commands use the value specified as the §`s` parameter to that
+  command.
+- `@` indicates that the parameter area has been re-initialised to default
+  values. This happens if the parameter area has not yet been initialised
+  (e.g., when you enter tmon for the first time) or has been modified since
+  a tmon execution command was run.
+
+#### Entering Commands and Parameter Values
+
+Input is case insensitive, and consists of _input items_ that are single
+characters representing commands or parameter names and strings of
+hexadecimal numbers. Entering an invalid character will produce an ASCII
+`BEL` and the cursor will be backspaced over the invalid character.
+
+The first character entered after the prompt must be one of the commands
+below. Commands marked with a superscript 1 (¹) are "single key" commands
+that execute immediately. All other commands (including all that take
 parameters) must be confirmed with a newline or cancelled with a cancel
 character.
 

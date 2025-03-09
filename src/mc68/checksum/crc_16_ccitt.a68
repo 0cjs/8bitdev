@@ -1,0 +1,54 @@
+;   CRC-16-CCITT (x¹⁶+x¹²+x⁵+1) as used by Xmodem, etc.
+
+;   ♣AB   Calculate for B bytes starting at X, returning checksum in `cksum`.
+;         B, X and `cksum` are all updated.
+;         The ckupd_* entry point updates an existing checksum in `cksum`
+;         with further data, instead of starting a new one.
+;
+cksum_crc_16_ccitt
+            lda  A,#$FF
+            sta  cksum
+            sta  cksum+1
+ckupd_crc_16_ccitt
+;;          ld   a,(X)
+;;          inc  X
+;;          xor  h
+;;          ld   h,a
+;;          ld   b,8
+;.bit        add  hl,hl          ; shift left by 1
+;;          jp   NC,.nextbit    ; if no high bit comes out the top...
+;;          ld   a,h
+;;          xor  $10            ; flip bit 11 (MSB bit 4)
+;;          ld   h,a
+;;          ld   a,l
+;;          xor  $21            ; flip bits 5, 0
+;;          ld   l,a
+;.nextbit    dec  b
+;;          jp   NZ,.bit
+;;          dec  b
+;;          jp   NZ,ckupd_crc_16_ccitt
+            rts
+
+;   Calculate for `cklen` bytes starting at X, returning checksum in `cksum`
+;
+;   XXX This is actually almost generic for any cksum_*/ckupd_* routine;
+;   we just need a trampoline to jump to the routine itself and some way
+;   to set the proper init value.
+;
+lcksum_crc_16_ccitt
+;;          ld   hl,$FFFF       ; init here because we always call ckupd_*
+;;          push bc
+;;          ld   a,0
+;;          or   a,b
+;;          jp   Z,.partblk
+;;          ld   b,0            ; full block ($100 bytes)
+;.fullblk    push bc
+;;          call ckupd_crc_16_ccitt
+;;          pop  bc
+;;          dec  b              ; finished full blocks?
+;;          jp   NZ,.fullblk    ;   no
+;.partblk    pop  bc
+;;          ld   a,0
+;;          or   a,b            ; do we have a partial block at end?
+;;          ret  Z              ;   no: we're done
+            jmp  ckupd_crc_16_ccitt ; ret (TCO)

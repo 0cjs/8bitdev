@@ -185,11 +185,8 @@ cmd_hello   call hello
 ;   tmon
 ;
 ;   XXX TODO:
-;   - tmon parameters are still being destroyed on return to BASIC and
-;     re-entry: figure out why and fix/move if necessary.
 ;   - prvischar and prscreenchar need to be set up for inverse (and maybe
 ;     prvischar should be using that printable BS, etc.)
-;   - Add RST for monitor entry.
 
 cmd_tmon
 

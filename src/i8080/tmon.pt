@@ -194,7 +194,7 @@ def test_qhex_and_store(m, S, R, loadbios, size, stored, input):
         raise ValueError(f'unterminated test data: {input!r}')
 
 def test_read_params_good(m, S, R, loadbios):
-    ostream = loadbios(input=b'  b')
+    out = loadbios(input=b'  b')
     optB = ord('B')|0x80
     testtab = 0xA000; m.deposit(testtab,
         b'A', b'\xAA\x01', optB, b'\xBB\x02', b'\x00')
@@ -206,7 +206,7 @@ def test_read_params_good(m, S, R, loadbios):
 #   Saved parameter value initialization
 
 def test_init_platform(m, S, R, loadbios):
-    _, ostream = loadbios()      # capture printed re-init notification
+    _, out = loadbios()      # capture printed re-init notification
     len = S.v_end - S.v_start
     print('initdata', m.hexdump(S.v_initdata, len + 2))
 
@@ -218,9 +218,9 @@ def test_init_platform(m, S, R, loadbios):
     print('  inited', m.hexdump(S.v_start, len + 2))
     assert m.bytes(S.v_initdata, len) == m.bytes(S.v_start, len)
     assert 0xEE == m.byte(S.t0), 'value not set by init_platform'
-    assert b'@' == ostream.written(), \
+    assert b'@' == out.written(), \
         'user should have been notified of param re-init'
-    ostream.clear()
+    out.clear()
 
     #   change param vals and checksum
     m.depword(S.vS_exec, 0x1234); m.depword(S.vE_source, 0x5678)
@@ -232,7 +232,7 @@ def test_init_platform(m, S, R, loadbios):
     m.call(S.init, stopat=[S['init.end']])
     print(' reinitt', m.hexdump(S.v_start, len + 2))
     assert newdata == m.bytes(S.v_start, len + 2)
-    assert b'' == ostream.written(), \
+    assert b'' == out.written(), \
         'user should not have been notified of param re-init'
 
 ####################################################################
@@ -245,33 +245,33 @@ def test_prexamine_fclear(m, S, R):
     assert 0000 != m.pc, "prexamine should not have called DE"
 
 def test_prexamine_fset(m, S, R, loadbios):
-    _, ostream = loadbios()
+    _, out = loadbios()
     m.deposit(S.vM_examine, 1)          # must have a format bit set
     m.deposit(S.vW_examine, 6)          # bytes/line
     m.depword(S.t0, S.utest_data)       # start addr of line
 
     m.call(S.prexamine, R(a=0xFF, hl=S.prmhexA))
-    s = ostream.getvalue();  print(s)
+    s = out.written(print=True)
     assert b' FF 00 12 23 34 45 ' == s   # prints just one line
 
 def test_examine_defaults(m, S, R, loadbios):
-    _, ostream = loadbios(input=b'\n')
+    _, out = loadbios(input=b'\n')
     m.call(S.init, stopat=[S['init.end']])           # testing default values
     m.call(S.cmd_examine_cur, stopat=[S['cmd_examine_cur.end']])
-    s = ostream.getvalue();  print(s.decode('ASCII'))
+    s = out.written(print=True)
     assert b'0000: 00' in s
     assert b'0018: 00' in s
     assert s.endswith(b'\n')
 
 def test_examine_settings(m, S, R, loadbios):
-    _, ostream = loadbios(input=b'\n')
+    _, out = loadbios(input=b'\n')
     #   2 lines of 5 bytes of known non-zero data.
     m.depword(S.vS_examine, S.utest_data)
     m.deposit(S.vM_examine, 7)              # hex, ascii, screencodes
     m.deposit(S.vL_examine, 2)
     m.deposit(S.vW_examine, 5)
     m.call(S.cmd_examine_cur, stopat=[S['cmd_examine_cur.end']])
-    s = ostream.getvalue()
+    s = out.written()
     expected =  b'\r' \
                 b'12AB: FF 00 12 23 34  ?@R#4    #4\n' \
                 b'12B0: 45 56 67 78 89  EVgxI EVgx \n'
@@ -279,10 +279,10 @@ def test_examine_settings(m, S, R, loadbios):
     assert expected == s
 
 def test_examine_next_defaults(m, S, R, loadbios):
-    _, ostream = loadbios(input=b'\n')
+    _, out = loadbios(input=b'\n')
     m.call(S.init, stopat=[S['init.end']])           # testing default values
     m.call(S.cmd_examine_next, stopat=[S['cmd_examine_cur.end']])
-    s = ostream.getvalue()
+    s = out.written()
     print(f'vS_examine={m.word(S.vS_examine):04X} t0={m.word(S.t0):04X}',
         s.decode('ASCII'))
     assert b'0020: 00' in s
@@ -291,10 +291,10 @@ def test_examine_next_defaults(m, S, R, loadbios):
     assert 0x0020 == m.word(S.vS_examine)
 
 def test_examine_prev(m, S, R, loadbios):
-    _, ostream = loadbios(input=b'\n')
+    _, out = loadbios(input=b'\n')
     m.call(S.init, stopat=[S['init.end']])           # testing default values
     m.call(S.cmd_examine_prev, stopat=[S['cmd_examine_cur.end']])
-    s = ostream.getvalue()
+    s = out.written()
     print(f'vS_examine={m.word(S.vS_examine):04X} t0={m.word(S.t0):04X}',
         s.decode('ASCII'))
     assert b'FFE0: 00' in s
@@ -309,17 +309,17 @@ def test_examine_prev(m, S, R, loadbios):
     (0x00,  b'-----'), (0xFF,  b'SZHPC'), (0x91,  b'S-H-C'),
 ], ids=tmc_tid)
 def test_prflags(m, S, R, loadbios, input, output):
-    _, ostream = loadbios()
+    _, out = loadbios()
     m.call(S.prflags, R(a=input))
-    assert output == ostream.getvalue()
+    assert output == out.written()
 
 def test_regs_print(m, S, R, loadbios):
-    _, ostream = loadbios()
+    _, out = loadbios()
     m.deposit(S.ureg_AF, [0xD7, 0x12])
     m.depword(S.ureg_BC, [0x2345, 0x6789, 0xABCD, 0xEFFE, 0xFEEF])
     m.call(S['cmd_regs_examine'], stopat=[S['cmd_regs_examine.end']])
     assert b'\rFEEF EFFE SZHPC 12 2345 6789 ABCD\n' \
-        == ostream.getvalue()
+        == out.written()
 '''
 Various ideas for printing registers:
 ────────────────────────────────────────
@@ -486,7 +486,7 @@ def test_deposit(m, S, R, loadbios, mode, input, depfwd, mem, output):
     instream, outstream = loadbios(input=input.encode('ASCII'))
     m.call(cmd, stopat=[S.prompt])
     assert (mem.encode('ASCII'), b'\r9000: ' + output.encode('ASCII')) \
-        == (m.bytes(depaddr, 8),                 outstream.getvalue())
+        == (m.bytes(depaddr, 8),                 outstream.written())
     assert depaddr + depfwd == m.word(S.vS_deposit)
     assert b'' == instream.read()
 
@@ -501,10 +501,10 @@ def test_cksum(m, S, R, loadbios, len):
     m.depword(S.vE_source, start + len)
 
     crc = crc_hqx(bytes(data), 0xFFFF)
-    _, ostream = loadbios()
+    _, out = loadbios()
     m.call(S['cmd_cksum.exec'], stopat=[S['cmd_cksum.end']])
     assert f'\r{start:04X}:{start+len:04X}   ={crc:04X}\n' \
-        == ostream.getvalue().decode('ASCII')
+        == out.written().decode('ASCII')
 
 @param('s, e, t, u', [
     #   target range is always fully filled.
@@ -558,16 +558,16 @@ def test_memcopy_v(m, S, R):
     (0x6768, 0x7878, b'\r6768:7878   DFE0 `    EEF0 p   \n'),
 ], ids=tmc_tid)
 def test_slash(m, S, R, loadbios, q, s, output):
-    _, ostream = loadbios()
+    _, out = loadbios()
     m.depword(S.vL_calc, q)
     m.depword(S.vR_calc, s)
     m.call(S['cmd_calc.exec'], stopat=[S.prompt])
     print('expected:', output)
-    print('  actual:', ostream.getvalue())
-    assert output == ostream.getvalue()
+    print('  actual:', out.written())
+    assert output == out.written()
 
 def test_quit_default(m, S, R, loadbios):
-    _, ostream = loadbios(input=b'q\r')
+    _, out = loadbios(input=b'q\r')
     m.deposit(S.t0, 123)               # sentinel
     m.call(S.cmd_quit, stopat=[S.exit])
     crc = crc_hqx(m.bytes(S.v_start, S.v_end - S.v_start), 0xFFFF)
@@ -575,7 +575,7 @@ def test_quit_default(m, S, R, loadbios):
 
 @param('t', [0, 1, 2, 0xFF])
 def test_quit_param(m, S, R, loadbios, t):
-    _, ostream = loadbios(input=bytes(f'qt{t:x}\r', 'ASCII'))
+    _, out = loadbios(input=bytes(f'qt{t:x}\r', 'ASCII'))
     m.deposit(S.t0, (t-3) & 0xFF )      # sentinel
     m.call(S.cmd_quit, stopat=[S.exit])
     assert t == m.byte(S.t0)
@@ -605,13 +605,13 @@ def test_quit_param(m, S, R, loadbios, t):
 ])
 def test_prompt_q_nocancel(m, loadbios, S, R,  input, output, continued):
     pdone = S['prompt.end']
-    istream, ostream = loadbios(input=input)
+    inp, out = loadbios(input=input)
     m.call(S.prompt, stopat=[pdone, S.exit])
 
     print(f'pdone=${pdone:04X}  {m.regs}')
-    print(output); print(ostream.getvalue())
+    print(output); print(out.written())
     assert (           b'',             output,           continued) \
-        == (istream.read(), ostream.getvalue(),  pdone == m.regs.pc)
+        == (inp.read(), out.written(),  pdone == m.regs.pc)
 
 @param('input, output', [
     (b'q'+NAK,  b'.q    \b\b\b\b\\\n'),     # cancel with Ctrl-U
@@ -619,14 +619,14 @@ def test_prompt_q_nocancel(m, loadbios, S, R,  input, output, continued):
 ])
 def test_prompt_cancel(m, loadbios, S, R,  input, output):
     cancel_done = S['cancel.prompt']
-    istream, ostream = loadbios(input=input)
+    inp, out = loadbios(input=input)
     m.call(S.prompt, stopat=[cancel_done])
-    assert (b'', output) == (istream.read(), ostream.getvalue())
+    assert (b'', output) == (inp.read(), out.written())
     assert cancel_done == m.regs.pc
 
 def test_prompt_examine(m, S, R, loadbios):
     commands = b'e s12aB l2 w6\nq\nEND'
-    istream, ostream = loadbios(input=commands)
+    inp, out = loadbios(input=commands)
     m.call(S.init, stopat=[S['init.end']])  # testing default values
     m.call(S.prompt, stopat=[S.exit], maxsteps=10000)
 
@@ -636,9 +636,9 @@ def test_prompt_examine(m, S, R, loadbios):
              + b'w08' + bs2 + b'6' + clr + b'\r' \
              + b'12AB: FF 00 12 23 34 45 \n12B1: 56 67 78 89 9A AB \n' \
              + b'.q\n'
-    actual = ostream.getvalue()
+    actual = out.written()
 
     print(f'vS_examine={m.word(S.vS_examine):04X}, ' \
         f'vL_examine={m.byte(S.vL_examine)} vW_examine={m.byte(S.vW_examine)}')
     print(f'expected: {expected!r}\n  actual: {actual!r}')
-    assert (b'END', expected) == (istream.read(),   actual)
+    assert (b'END', expected) == (inp.read(),   actual)

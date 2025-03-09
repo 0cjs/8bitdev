@@ -203,10 +203,10 @@ def test_read_params_good(m, S, R, loadbios):
     assert R(pc=S.qhex, hl=0x02BB) == m.regs
 
 ####################################################################
-#   Command parameter value initialization
+#   Saved parameter value initialization
 
 def test_init_platform(m, S, R, loadbios):
-    loadbios()      # capture printed re-init notification
+    _, ostream = loadbios()      # capture printed re-init notification
     len = S.v_end - S.v_start
     print('initdata', m.hexdump(S.v_initdata, len + 2))
 
@@ -218,6 +218,9 @@ def test_init_platform(m, S, R, loadbios):
     print('  inited', m.hexdump(S.v_start, len + 2))
     assert m.bytes(S.v_initdata, len) == m.bytes(S.v_start, len)
     assert 0xEE == m.byte(S.t0), 'value not set by init_platform'
+    assert b'@' == ostream.written(), \
+        'user should have been notified of param re-init'
+    ostream.clear()
 
     #   change param vals and checksum
     m.depword(S.vS_exec, 0x1234); m.depword(S.vE_source, 0x5678)
@@ -229,6 +232,8 @@ def test_init_platform(m, S, R, loadbios):
     m.call(S.init, stopat=[S['init.end']])
     print(' reinitt', m.hexdump(S.v_start, len + 2))
     assert newdata == m.bytes(S.v_start, len + 2)
+    assert b'' == ostream.written(), \
+        'user should not have been notified of param re-init'
 
 ####################################################################
 #   Commands: Examining Machine State

@@ -220,11 +220,12 @@ entry1      di                  ; ensure as best we can nothing will touch stack
             call prchar         ; pre-regs entry indication character
             call showregs       ; always print registers on entry
 
-;   Check to see if our current command parameter values are "valid," i.e.,
-;   matching a previously calculated and deposited checksum. (The checksum
-;   is calculated and written just before the monitor calls usercode.)
-;   If they're not valid, we init, because this is either the first time
-;   the user has entered the monitor or something stomped on our values.
+;   Check to see if our current saved command parameter values are valid,
+;   i.e., matching a previously calculated and deposited checksum. (The
+;   checksum is calculated and written just before the monitor calls
+;   usercode or exits.)
+;       If invalid, we init because this is either the first time the user
+;   has entered the monitor or something stomped on our values.
 ;
 init        call cksum_v
             ex   de,hl              ; DE = current checksum

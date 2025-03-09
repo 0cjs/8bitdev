@@ -3,25 +3,23 @@
 '''
 
 from    testmc  import tmc_tid
-from    testmc.i8080  import  Machine
+from    testmc.mc6800  import  Machine
 from    binascii  import crc_hqx
 import  pytest
 
 test_rig = '''
-            cpu 8080
-            include  src/i8080/std.i80
-            org $8000
-            include src/i8080/checksum/crc_16_ccitt.i80
+            cpu  6800
+            include  src/mc68/std.a68
+            org  $8000
+            include src/mc68/checksum/crc_16_ccitt.a68
+            org  $9000
+cksum       ds   2
+cklen       ds   2
 '''
-
-#   XXX should be generic/global
-def XXX(*args):
-    ' Mark test parameters as (strictly) expected to fail. '
-    return pytest.param(*args, marks=pytest.mark.xfail(strict=True))
 
 @pytest.mark.parametrize('crc, input', [
     #   These from answers to: https://stackoverflow.com/q/1918090/107294
-    XXX(0xFFFF, []),    # loop always calcs ≥ 1 byte; maybe that's the API
+    (0xFFFF, []),    # maybe API is loop always calcs ≥ 1 byte, like i8080
     (0xB1E4, [0x12, 0x34, 0x56, 0x70]),
     (0x1AAD, [0x5A, 0x26, 0x19, 0x77]),
     (0x29B1, b'123456789'),
@@ -33,9 +31,10 @@ def test_cksum_crc_16_ccitt(m, S, R, crc, input):
     if crc is None:
         crc = crc_hqx(bytes(input), 0xFFFF)
     m.deposit(0x4001, input)
-    m.call(S.cksum_crc_16_ccitt, R(de=0x4001, c=len(input)))
-    print(f'${m.hl:04X}: {m.hexdump(0x4001, len(input))[6:]}')
-    assert crc == m.hl, f'expected ${m.hl:04X}'
+    m.call(S.cksum_crc_16_ccitt, R(x=0x4001, b=len(input)))
+    cksum = m.word(S.cksum)
+    print(f'${cksum:04X}: {m.hexdump(0x4001, len(input))[6:]}')
+    assert crc == cksum, f'expected ${cksum:04X}'
 
 @pytest.mark.parametrize('len', [
     0x0001, 0x00FF,     # partial bocks only
@@ -49,5 +48,8 @@ def test_lcksum_crc_16_ccitt(m, S, R, len):
 
     m.deposit(0x4002, data)
     crc = crc_hqx(bytes(data), 0xFFFF)
-    m.call(S.lcksum_crc_16_ccitt, R(de=0x4002, bc=len))
-    assert crc == m.hl, f'expected ${crc:04X} got ${m.hl:04X}'
+    m.depword(S.cksum, 0x0000)
+    m.depword(S.cklen, len)
+    m.call(S.lcksum_crc_16_ccitt, R(x=0x4002))
+    cksum = m.word(S.cksum)
+    assert crc == cksum, f'expected ${crc:04X} got ${cksum:04X}'

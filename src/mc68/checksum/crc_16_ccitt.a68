@@ -6,14 +6,14 @@
 ;         with further data, instead of starting a new one.
 ;
 cksum_crc_16_ccitt
-            lda  A,#$FF
-            sta  cksum
-            sta  cksum+1
+            lda  A,#$FF         ;   ld   hl,$FFFF simulated
+            sta  A,MB(cksum)    ;   ld   h,a
+            sta  A,LB(cksum)    ;   ld   l,a
 ckupd_crc_16_ccitt
-;;          ld   a,(X)
-;;          inc  X
-;;          xor  h
-;;          ld   h,a
+            lda  A,0,X          ;   ld   a,(de)
+            inx                 ;   inc  de
+            eor  A,cksum        ;   xor  a,h
+            sta  A,cksum        ;   ld   h,a
 ;;          ld   b,8
 ;.bit        add  hl,hl          ; shift left by 1
 ;;          jp   NC,.nextbit    ; if no high bit comes out the top...

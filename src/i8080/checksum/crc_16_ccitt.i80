@@ -11,7 +11,7 @@ cksum_crc_16_ccitt
 ckupd_crc_16_ccitt
             ld   a,(de)
             inc  de
-            xor  h
+            xor  a,h
             ld   h,a
             ld   b,8
 .bit        add  hl,hl          ; shift left by 1

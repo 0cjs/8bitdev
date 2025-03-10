@@ -11,16 +11,16 @@ cksum_crc_16_ccitt
 ckupd_crc_16_ccitt
             ld   a,(de)
             inc  de
-            xor  h
+            xor  a,h
             ld   h,a
             ld   b,8
 .bit        add  hl,hl          ; shift left by 1
             jp   NC,.nextbit    ; if no high bit comes out the top...
             ld   a,h
-            xor  $10            ; flip bit 11 (MSB bit 4)
+            xor  a,$10          ; flip bit 11 (MSB bit 4)
             ld   h,a
             ld   a,l
-            xor  $21            ; flip bits 5, 0
+            xor  a,$21          ; flip bits 5, 0
             ld   l,a
 .nextbit    dec  b
             jp   NZ,.bit

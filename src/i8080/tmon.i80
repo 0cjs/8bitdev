@@ -902,7 +902,7 @@ cmd_cksum   ld   hl,ptab_source
             ;
             ld   b,h            ; length
             ld   c,l
-            call lcksum_crc_16_ccitt
+            call cksum_crc_16_ccitt
             call prhexHL
             call prnl
 .end        jp   prompt

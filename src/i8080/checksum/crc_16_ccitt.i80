@@ -1,9 +1,9 @@
 ;   CRC-16-CCITT (x¹⁶+x¹²+x⁵+1) as used by Xmodem, etc.
 ;   This is essentially the same as the many Z80 implementations on the web.
 
-;   ♠CDEHL ♣AB   Checksum C bytes starting at DE, returning checksum in HL.
+;   ♠CDEHL ♣AB   Checksum BC bytes starting at DE, returning checksum in HL.
 ;                On return, DE is updated to the next byte it would process
-;                and C = 0.
+;                and BC = 0.
 ;   The ckupd_* entry point updates an existing checksum in HL
 ;   with further data, instead of starting a new one.
 
@@ -36,30 +36,8 @@ ckupd_crc_16_ccitt
 .nextbit    dec  b
             jp   NZ,.bit
             pop  bc             ; restore remaining length
-            dec  c
-            jp   NZ,ckupd_crc_16_ccitt
-            ret
-
-;   Calculate for BC bytes starting at DE, returning checksum in HL.
-;
-;   XXX This is actually almost generic for any cksum_*/ckupd_* routine;
-;   we just need a trampoline to jump to the routine itself and some way
-;   to set the proper init value.
-;
-lcksum_crc_16_ccitt
-            ld   hl,$FFFF       ; init here because we always call ckupd_*
-            push bc
-            ld   a,0
-            or   a,b
-            jp   Z,.partblk
-            ld   c,0            ; full block ($100 bytes)
-.fullblk    push bc
-            call ckupd_crc_16_ccitt
-            pop  bc
-            dec  b              ; finished full blocks?
-            jp   NZ,.fullblk    ;   no
-.partblk    pop  bc
-            ld   a,0
-            or   a,c            ; do we have a partial block at end?
-            ret  Z              ;   no: we're done
-            jp   ckupd_crc_16_ccitt ; ret (TCO)
+            dec  bc
+            ld   a,b
+            or   a,c                    ; bc == 0 ?
+            ret  Z                      ;   yes: we're done
+            jp   ckupd_crc_16_ccitt     ;   no: continue

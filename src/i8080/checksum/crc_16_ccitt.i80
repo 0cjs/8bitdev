@@ -23,6 +23,7 @@ ckupd_crc_16_ccitt
             inc  de
             xor  a,h
             ld   h,a
+            push bc             ; save remaining length
             ld   b,8            ; loop through 8 bits
 .bit        add  hl,hl          ; shift current state left by 1
             jp   NC,.nextbit    ; if no high bit comes out the top...
@@ -34,6 +35,7 @@ ckupd_crc_16_ccitt
             ld   l,a
 .nextbit    dec  b
             jp   NZ,.bit
+            pop  bc             ; restore remaining length
             dec  c
             jp   NZ,ckupd_crc_16_ccitt
             ret

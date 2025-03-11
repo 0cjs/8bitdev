@@ -10,7 +10,7 @@ import  pytest
 test_rig = '''
             cpu 8080
             include  src/i8080/std.i80
-            org $8000
+            org $80
             include src/i8080/checksum/crc_16_ccitt.i80
 '''
 
@@ -22,26 +22,21 @@ test_rig = '''
     (  None, [0]),
     (  None, [0, 0]),
     (  None, [0, 0, 0, 0]),
-])
+    (  None, [0xED] * 0xFF),
+    (  None, [0xED] * 0x100),
+    (  None, [0xED] * 0x101),
+    (  None, [0xED] * 0x201),
+   #(  None, [0xED] * 0x1001),      # ~0.5s
+    #   The following require maxsteps=1e7
+   #(  None, [0xED] * 0xDE00),
+   #(  None, [0xED] * 0xDF00),      # XXX bad CRC; why?
+], ids=tmc_tid)
 def test_cksum_crc_16_ccitt(m, S, R, crc, input):
     if crc is None:
         crc = crc_hqx(bytes(input), 0xFFFF)
-    m.deposit(0x4001, input)
-    m.call(S.cksum_crc_16_ccitt, R(de=0x4001, c=len(input)))
-    print(f'${m.hl:04X}: {m.hexdump(0x4001, len(input))[6:]}')
+    DATA = 0x100
+    m.deposit(DATA, input)
+    m.call(S.cksum_crc_16_ccitt, R(de=DATA, bc=len(input)), maxsteps=1e7)
+    print(f'len=${len(input):04X}' \
+        f' ${m.hl:04X}: {m.hexdump(DATA, len(input))[6:200]}')
     assert crc == m.hl, f'expected ${m.hl:04X}'
-
-@pytest.mark.parametrize('len', [
-    0x0001, 0x00FF,     # partial bocks only
-    0x0101, 0x032F,     # full blocks + partial block
-    0x0100, 0x0400,     # full blocks only
-], ids=tmc_tid)
-def test_lcksum_crc_16_ccitt(m, S, R, len):
-    data              = [0xED]
-    if len > 2: data += [0] * (len-2) 
-    if len > 1: data += [0xEE]
-
-    m.deposit(0x4002, data)
-    crc = crc_hqx(bytes(data), 0xFFFF)
-    m.call(S.lcksum_crc_16_ccitt, R(de=0x4002, bc=len))
-    assert crc == m.hl, f'expected ${crc:04X} got ${m.hl:04X}'

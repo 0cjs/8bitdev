@@ -317,7 +317,7 @@ cancel      call  pr4clear      ; clear any displayed value
 ;   Checksum the command parameters, returning the checksum in HL.
 ;   When stored in (v_cksum), this lets us tell if param vals have changed.
 cksum_v     ld   de,v_start
-            ld   c,v_end - v_start
+            ld   bc,v_end - v_start
             call cksum_crc_16_ccitt
             ret
 
@@ -902,7 +902,7 @@ cmd_cksum   ld   hl,ptab_source
             ;
             ld   b,h            ; length
             ld   c,l
-            call lcksum_crc_16_ccitt
+            call cksum_crc_16_ccitt
             call prhexHL
             call prnl
 .end        jp   prompt

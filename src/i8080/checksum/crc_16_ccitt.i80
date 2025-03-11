@@ -1,26 +1,36 @@
 ;   CRC-16-CCITT (x¹⁶+x¹²+x⁵+1) as used by Xmodem, etc.
 ;   This is essentially the same as the many Z80 implementations on the web.
 
-;   ♣AB   Calculate for C bytes starting at DE, returning checksum in HL.
-;         C, DE and HL are all updated.
-;         The ckupd_* entry point updates an existing checksum in HL
-;         with further data, instead of starting a new one.
+;   ♠CDEHL ♣AB   Checksum C bytes starting at DE, returning checksum in HL.
+;                On return, DE is updated to the next byte it would process
+;                and C = 0.
+;   The ckupd_* entry point updates an existing checksum in HL
+;   with further data, instead of starting a new one.
+
+;   The polynomial, which does not include bit 16 = 1 for x¹⁶, is:
 ;
+;       0001 0000 0010 0001
+;          │        │     └ bit 0: x⁰ = 1
+;          │        └ bit 5: x⁵
+;          └ bit 12: x¹²
+;
+polynomial  equ  $1021
+
 cksum_crc_16_ccitt
-            ld   hl,$FFFF
+            ld   hl,$FFFF       ; initialisation vector
 ckupd_crc_16_ccitt
-            ld   a,(de)
+            ld   a,(de)         ; byte to checksum
             inc  de
             xor  a,h
             ld   h,a
-            ld   b,8
-.bit        add  hl,hl          ; shift left by 1
+            ld   b,8            ; loop through 8 bits
+.bit        add  hl,hl          ; shift current state left by 1
             jp   NC,.nextbit    ; if no high bit comes out the top...
             ld   a,h
-            xor  a,$10          ; flip bit 11 (MSB bit 4)
+            xor  a,MB(polynomial) ; flip bit 12
             ld   h,a
             ld   a,l
-            xor  a,$21          ; flip bits 5, 0
+            xor  a,LB(polynomial) ; flip bits 5, 0
             ld   l,a
 .nextbit    dec  b
             jp   NZ,.bit

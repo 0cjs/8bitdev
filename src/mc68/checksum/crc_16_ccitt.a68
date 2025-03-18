@@ -1,0 +1,56 @@
+;   CRC-16-CCITT (x¹⁶+x¹²+x⁵+1) as used by Xmodem, etc.
+
+;   XXX Callers may or may not want the start address parameter
+;   (`cksum_crc_16_ccitt_start`) to be updated; tmon doesn't. Perhaps we
+;   should be using X just for that, and then the caller can decide whether
+;   it wants to `stx` after the routine is done to save the next start
+;   address.
+
+;   ♠cksum_crc_16_ccitt_{cksum,start,len} ♣A,B,X
+;   Calculate for _len bytes (minimum 1) starting at _start, returning
+;   checksum in _cksum. The ckupd_* entry point updates an existing
+;   checksum in _cksum with further data, instead of starting a new one.
+
+cksum_crc_16_ccitt
+            lda  A,#$FF         ; $FFFF initialisation vector
+            sta  A,cksum_crc_16_ccitt_cksum
+            sta  A,cksum_crc_16_ccitt_cksum+1
+            ; fallthrough
+
+ckupd_crc_16_ccitt
+.cksum      equ  cksum_crc_16_ccitt_cksum
+.start      equ  cksum_crc_16_ccitt_start
+.len        equ  cksum_crc_16_ccitt_len
+            ldx  .start
+            lda  A,0,X
+            inx
+            stx  .start
+            ldx  #.cksum
+            eor  A,0,X
+            sta  A,0,X
+            lda  B,#8               ; loop through 8 bits
+.bit        asl  1,X                ; shift cksum left and bring out top bit
+            rol  0,X
+            bcc  .nextbit
+            lda  A,0,X
+            eor  A,#MB(.polynomial) ; flip bit 12 (polynomial MSB)
+            sta  A,0,X
+            lda  A,1,X
+            eor  A,#LB(.polynomial) ; flip bits 5 and 0 (polynomial LSB)
+            sta  A,1,X
+.nextbit    dec  B
+            bne  .bit
+            ldx  .len
+            dex
+            stx  .len
+            bne  ckupd_crc_16_ccitt
+            rts
+
+;   The polynomial, which does not include bit 16 = 1 for x¹⁶, is:
+;
+;       0001 0000 0010 0001
+;          │        │     └ bit 0: x⁰ = 1
+;          │        └ bit 5: x⁵
+;          └ bit 12: x¹²
+;
+.polynomial equ  $1021

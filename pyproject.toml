@@ -1,2 +1,10 @@
 [tool.pytest.ini_options]
+
+#   This is actually set on the command line by `t8dev pytest`, but a) that
+#   doesn't take effect if the user runs pytest standalone, and b) it's not
+#   clear if we should override any user selection. Perhaps we should be
+#   suggesting a pyproject.toml to the user?
+cache_dir = '.build/pytest/cache'
+
+#   Parallelism on the tests.
 addopts = '-n4'

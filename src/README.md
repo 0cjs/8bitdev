@@ -9,16 +9,38 @@ containing code for a particular microcomputer or other system, and
 toolchain directories mainly used for testing features of various
 assemblers.
 
-    CPU         m65/        MOS 6502
+    CPU         mos65/        MOS 6502
                 mc68/       Motorola MC6800
+                i8080/      Intel 8080
+                z80/        Zilog Z80
 
     Platform    a1/         Apple 1 (and clones/similar machines)
                 a2/         Apple II, including later models
+                cbm/        Commodore, all models
+                fm7/        Fujitsu FM-7/FM77
+                kc85/       Kyocera Kyotronic 85 and derivatives
+                            (NEC PC-8201, TRS-80 Model 100, etc.)
                 jr200/      National/Panasonic JR-200
+                mb6885/     Hitachi Basic Master Jr.
+                tk80/       NEC TK-80 and TK-85 trainer boards
                 tmc68/      bin/tmc6800 (testmc.mc6800) simulator
 
     Toolchain   asl/        The Macroassembler AS
                 asxxxx/     ASxxx assembler toolki
+
+    Other       bdd.pt
+                bios.md
+                cjsmon.md
+                crc_16_ccitt.py
+                filesystem.md
+                generic.py
+                notest.pt
+                objects.md
+                pmon.md
+                qdigit.py
+                stdtest.asm
+                stdtest.py
+                tmon
 
 
 Code Conventions

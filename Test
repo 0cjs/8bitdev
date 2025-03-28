@@ -120,7 +120,7 @@ manual_build=(
     #   Top-level programs whose build is not triggered by automated tests.
     src/asl/nomacro.a65         # Test/demo for ASL macro expansion
     src/a2/misc.a65
-    src/fm7.a69
+    src/fm7/fm7.a69
     #   This feels like it should be better automated.
     exe/*/*.[ai][0-9][0-9]
     exe/*/*/*.[ai][0-9][0-9]

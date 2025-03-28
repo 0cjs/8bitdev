@@ -7,7 +7,7 @@ test_rig    = '''
         include "src/mos65/std.a65"
 
         org $F689                       ; Same as Apple II Integer BASIC ROM
-        include "src/woz/sweet16.a65"
+        include "src/mos65/sweet16.a65"
 
 SAVE                                    ; For unit testing we don't bother to
 RESTORE rts                             ; restore regs after a Sweet 16 call.

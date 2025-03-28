@@ -1,11 +1,11 @@
-''' Generic test support.
+''' Generic test support functions.
 
     The routines here provide generic test functionality for use in
     ``*.pt`` test scripts. When importing functions from this, remember
     to enable pytest rewriting for this module::
 
-        pytest.register_assert_rewrite('src.generic')
-        from src.generic import …
+        pytest.register_assert_rewrite('src.generic.functions')
+        from src.generic.functions import …
 '''
 
 #   XXX There ought to be a better way to do this than to make the

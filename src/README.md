@@ -11,6 +11,8 @@ assemblers.
 
     Misc        notes/      Programming notes and ideas for software
                 skip.pt     ./Test src/skip.pt to skip all unit tests
+                generic/    Cross-CPU test code
+                generic/funtions.py  Generic test support functions
 
     CPU         mos65/      MOS 6502
                 mc68/       Motorola MC6800
@@ -34,8 +36,6 @@ assemblers.
     Other       bios.md     Test system BIOS interface
                 tmon        Documentation for tmon/ portable monitor
                 crc_16_ccitt.py
-                generic.py
-                pmon.md
                 qdigit.py
                 stdtest.asm
                 stdtest.py

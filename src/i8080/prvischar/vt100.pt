@@ -22,8 +22,8 @@ CHAR_OUTPUT = [ (char, output + sgr(0)) for char, output in [
     (0x7F, sgr(4, '?')), (0xFF, sgr(7, sgr(4, '?'))),   # DEL is special
 ]]
 
-pytest.register_assert_rewrite('src.generic')
-from src.generic import a_output_test
+pytest.register_assert_rewrite('src.generic.functions')
+from src.generic.functions import a_output_test
 @pytest.mark.parametrize('char, output', CHAR_OUTPUT, ids=tmc_tid)
 def test_prvischar(m, R, S, loadbios, char, output):
     a_output_test(S.prvischar, m, R, S, loadbios, char, output)

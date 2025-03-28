@@ -4,11 +4,10 @@
 This repo is used by cjs for development of programs in 8-bit assembly
 languages (for a variety of platforms) and tools to aid this development.
 
-If you wish to discuss any of the code here, the best way to reach me
-is to contact `0cjs` on Discord, or `cjs_cynic` on Telegram. You can
-also use the e-mail address in the commit messages, but that's more
-likely to get lost in the noise of all my e-mail and will always take
-longer to get a response.
+If you wish to discuss any of the code here, the best way to reach me is to
+contact `cjs_cynic` on Telegram or `0cjs` on Discord. You can also use the
+e-mail address in the commit messages, but that's more likely to get lost
+in the noise of all my e-mail and will always take longer to get a response.
 
 ### Contents
 
@@ -30,24 +29,23 @@ longer to get a response.
 
 ### Introduction
 
-This repo includes:
+This repo uses [`t8dev`][] (and its dependency, `r8format`) for downloading
+and building various development tools, building the code itself, unit
+testing it, building ROM and disk images, and running emulators. Here we
+bring it in a Git submodule `t8dev/` in order to do development on it along
+with code in this repo.
 
-- A Python framework (under `lib/`) for running unit tests on 6502 machine
-  code in the [py65] 6502 simulator. Unit tests use [pytest] and are in
-  `.pt` files, generally with the same base name as the source file
-  containing the code under test.
-- Scripts (under `tool/`) for downloading and building development tools,
-  including assemblers, binary file and disk image tools, and 8-bit PC
-  simulators.
+Run the top-level `Test` script build everything and run all the automated
+tests. This script also accepts other options; see below.
 
-Run the top-level `./Test` script to see everything go. Adding `-C` as the
-first flag will do a fully clean build, including re-installation of all
-tools, which may be necessary if the third-party tools have been updated.
+Source `t8dev/t8dev/t8setup.bash` to activate the Python virtualenv
+containing `t8dev`. You can also just export $T8_PROJDIR pointing to the
+root of this repo and run programs directly from `.build/virtualenv/bin/`.
 
 This currently has been tested only under Linux (Debian 9), but is likely
 to work under MacOS and other Unices. It likely can be made to work under
-Windows as well, if there's demand; contact <cjs@cynic.net> if you're
-interested in getting support for this.
+Windows as well, if there's demand; contact me if you're interested in
+getting support for this.
 
 
 File and Directory Organization
@@ -56,63 +54,31 @@ File and Directory Organization
 Here is an overview of the major files and directories in this repo.
 
 Files:
-- [`README.md`]: This file.
-- [`Test`]: Installs third-party tools where necessary, builds the code and
-  runs the unit tests. (Bash.)
-- [`b8tool/pactivate`]: When sourced in Bash (`. ./pactivate`) activates the
-  Python virtual environment, building a new one (and installing the packages
-  listed in [`requirements.txt`], such as py65 and pytest) if necessary. You
-  can also directly run programs in the virtual environment without
-  separately activating it by running them from `.build/virtualenv/bin/`.
-  Deactivate the virtual environment with `deactivate`.
+- `README.md`: This file.
+- [`Test`](./Test): Installs third-party tools where necessary, builds the
+  code and runs the unit tests. (Bash.)
+- [`requirements.txt`](./requirements.txt): t8dev and other Python
+  requirements to be installed in the Python virtualenv.
 
 Directories:
-- [`bin/`]: Development tools/scripts.
-- [`tool/`]: Third-party tool installation.
-- [`lib/testmc/`]: Unit test library Python module.
-- [`src/`]: Assembly source code, unit tests and documentation. These are
-  generally modules used by full programs under `exe/`.
-- [`exe/`]: "Top-level" assembly files for full executable program builds,
-  usually just doing configuration and including code from `src/`. See
-  [`exe/README`](exe/README.md).
-- [`tmp/`]: Ignored; used to keep developer's random files out of the way.
+- [`src/`](./src/): Assembly source code, unit tests and documentation.
+  These are generally modules used by full programs under `exe/`. Most of
+  the code is built with [ASL]. See [`src/README.md`](./src/README.md) in
+  the subdir for more on this.
+- [`exe/`](./exe/): "Top-level" assembly files for full executable program
+  builds, usually just doing configuration and including code from `src/`.
+  See [`exe/README`](exe/README.md) for more on this.
+- [`tmp/`](./tmp/): Ignored; used to keep developer's random files out of
+  the way.
 
 
 Third-party Development Tools
 -----------------------------
 
-Most of the development tools used for code in this repo are downloaded and
-built by the scripts under the `tool/` directory. Tools already available
-in the path will be used instead; see the `check_installed()` functions in
-the setup scripts for details.
-
-Beyond the packages checked above, you will need basic build tools as well.
-On Debian, `apt-get install build-essential pkgconf`. (You can also use the
-original Freedeskop.org `pkg-config` if you prefer.)
-
-__Assemblers__:
-- [The Macroassembler AS][asl] is the primary assembler, and supports a
-  wide variety of CPUs and microcontrollers.
-- The [ASxxxx Cross Assemblers][asxxxx] are optionally available (see
-  below), though little used.
-
-__Development Tools__:
-- [retroabandon/osimg] supplies ROM BIOS images for emulators and DOS disk
-  images used as a base for building test images.
-- Vince Weaver's [dos33fsprogs] provides tools for handling Apple II DOS
-  3.3 disk images and files.
-
-__Simulators and Emulators__:
-- The [py65] 6502 microprocessor simulator ([source][py65-src]) is used to
-  run unit tests.
-- The [LinApple] Apple II emulator can be used to run Apple II programs.
-
 #### py65 Notes
 
-The [PypI `py65`][py65pypi] has not been updated since July 2018 and is
-stuck at 1.1.0. That version produces warnings in modern versions of
-Python. One workaround until [this is fixed][py65i71] is to use a version
-from GitHub:
+The [PyPI `py65`][py65pypi] sometimes falls out of date. You can also
+update `requirements.txt` to the current version from GitHub:
 
     .build/virtualenv/bin/pip install -U \
         py65@git+https://github.com/mnaberez/py65.git
@@ -124,8 +90,7 @@ append `@<branch-name>` to the URL.
 
 Versions 1.42 builds 205 through at least 218 are broken for 8bitdev due to
 the "Symbols in Segment NOTHING" section disappearing from the map file.
-See [`b8tool.toolset.asl`](b8tool/pylib/b8tool/toolset/asl.py) for more
-details.
+See [`t8dev.toolset.asl`] for more details.
 
 #### ASxxxx Notes
 
@@ -173,7 +138,7 @@ Additional Tool Information
 
 ### Playing CMT (Cassette Tape) Images
 
-See [`r8format:doc/cmtconv.md`][cmtdoc].
+See [`r8format/doc/cmtconv.md`][cmtdoc].
 
 ### The py65 Monitor
 
@@ -227,29 +192,13 @@ Execution:
 
 
 <!-------------------------------------------------------------------->
-[ASxxxx]: http://shop-pdp.net/ashtml/asxxxx.htm
-[LinApple]: https://github.com/linappleii/linapple
+[`t8dev.toolset.asl`]: https://github.com/mc68-net/t8dev/blob/main/t8dev/psrc/t8dev/toolset/asl.py
+[`t8dev`]: https://github.com/mc68-net/t8dev
 [asl]: http://john.ccac.rwth-aachen.de:8000/as/
-[dos33fsprogs]: https://github.com/deater/dos33fsprogs
-[py65]: http://py65.readthedocs.org/
-[py65i71]: https://github.com/mnaberez/py65/issues/71
+[cmtdoc]: https://github.com/mc68-net/t8dev/blob/main/r8format/doc/cmtconv.md
 [py65pypi]: https://pypi.org/project/py65/#history
-[pytest]: https://github.com/0cjs/sedoc/blob/master/lang/python/test/pytest.md
-[retroabandon/osimg]: https://gitlab.com/retroabandon/osimg.git
-
-[`README.md`]: README.md
-[`Test`]: Test
-[`bin/`]: bin/
-[`exe/`]: exe/
-[`lib/testmc/`]: lib/testmc/
-[`pactivate`]: https://github.com/0cjs/pactivate
-[`requirements.txt`]: requirements.txt
-[`src/`]: src/
-[`tmp/`]: tmp/
-[`tool/`]: tool/
 
 [VICE]: https://vice-emu.sourceforge.io/
-[cmtdoc]: https://github.com/mc68-net/r8format/blob/main/doc/cmtconv.md
 [py65-cmds]: https://py65.readthedocs.io/en/latest/index.html#command-reference
 [py65-src]: https://github.com/mnaberez/py65
 [vice-mon]: http://vice-emu.sourceforge.net/vice_12.html

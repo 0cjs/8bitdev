@@ -9,10 +9,10 @@ test_rig = '''
 '''
 
 @pytest.fixture
-def REG():
+def REG(R):
     ' C flag clear on error, set on ok. '
     #   XXX not sure yet if that's the flag we want to use.
-    return lambda value, ok: Machine.Registers(a=value, C=not ok)
+    return lambda value, ok: R(a=value, C=not ok)
 
 pytest.register_assert_rewrite('src.qdigit')
 from src.qdigit import (

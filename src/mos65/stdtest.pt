@@ -5,7 +5,7 @@ test_rig = '''
             cpu 6502
             org $1000
             include src/mos65/std.a65
-            include src/stdtest.asm     ; common test rig code for all platforms
+            include src/generic/stdtest.asm
 
 ;   ZDS
 zdstest0    db  $F0     ; byte at current location
@@ -28,8 +28,8 @@ dwaligntest dwalign dwaladdr
 dwaladdr    zds 2
 '''
 
-pytest.register_assert_rewrite('src.stdtest')
-from src.stdtest import (
+pytest.register_assert_rewrite('src.generic.stdtest')
+from src.generic.stdtest import (
     test_LB_MB                  as test_LB_MB,
     test_ds_db_dw               as test_ds_db_dw_6502,
     )

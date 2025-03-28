@@ -5,12 +5,12 @@ test_rig = '''
             cpu 6800
             org $1000
             include src/mc68/std.a68
-            include src/stdtest.asm
+            include src/generic/stdtest.asm
 '''
 
 
-pytest.register_assert_rewrite('src.stdtest')
-from src.stdtest import (
+pytest.register_assert_rewrite('src.generic.stdtest')
+from src.generic.stdtest import (
     test_LB_MB                  as test_LB_MB_6800,
     test_ds_db_dw               as test_ds_db_dw_6800,
     )

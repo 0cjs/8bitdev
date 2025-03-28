@@ -30,7 +30,7 @@ def result(m):
     nextstart = m.word(S.cksum_crc_16_ccitt_start)
     return (crc, nextstart)
 
-pytest.register_assert_rewrite('src.crc_16_ccitt')
-from src.crc_16_ccitt import (
+pytest.register_assert_rewrite('src.generic.crc_16_ccitt')
+from src.generic.crc_16_ccitt import (
     test_cksum_crc_16_ccitt     as test_cksum_crc_16_ccitt_mc68
 )

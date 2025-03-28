@@ -34,11 +34,7 @@ assemblers.
                 asxxxx/     ASxxx assembler toolki
 
     Other       bios.md     Test system BIOS interface
-                tmon        Documentation for tmon/ portable monitor
-                crc_16_ccitt.py
-                qdigit.py
-                stdtest.asm
-                stdtest.py
+                tmon/       Documentation for tmon/ portable monitor
 
 
 Code Conventions

@@ -14,8 +14,8 @@ def REG(R):
     #   XXX not sure yet if that's the flag we want to use.
     return lambda value, ok: R(a=value, C=not ok)
 
-pytest.register_assert_rewrite('src.qdigit')
-from src.qdigit import (
+pytest.register_assert_rewrite('src.generic.qdigit')
+from src.generic.qdigit import (
     test_qdigit_good                as test_qdigit_good_8080,
     test_qdigit_good_exhaustive     as test_qdigit_good_exhaustive_8080,
     test_qdigit_error               as test_qdigit_error_8080,

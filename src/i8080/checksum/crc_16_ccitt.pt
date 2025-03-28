@@ -14,7 +14,7 @@ test_rig = '''
             include src/i8080/checksum/crc_16_ccitt.i80
 '''
 
-@pytest.mark.parametrize('crc, input', [
+@pytest.mark.parametrize('expected_crc, input', [
     #   These from answers to: https://stackoverflow.com/q/1918090/107294
     (0xB1E4, [0x12, 0x34, 0x56, 0x70]),
     (0x1AAD, [0x5A, 0x26, 0x19, 0x77]),
@@ -31,12 +31,21 @@ test_rig = '''
    #(  None, [0xED] * 0xDE00),
    #(  None, [0xED] * 0xDF00),      # XXX bad CRC; why?
 ], ids=tmc_tid)
-def test_cksum_crc_16_ccitt(m, S, R, crc, input):
-    if crc is None:
-        crc = crc_hqx(bytes(input), 0xFFFF)
-    DATA = 0x100
+def test_cksum_crc_16_ccitt(m, S, R, expected_crc, input):
+    if expected_crc is None:
+        expected_crc = crc_hqx(bytes(input), 0xFFFF)
+    DATA = 0x180
     m.deposit(DATA, input)
-    m.call(S.cksum_crc_16_ccitt, R(de=DATA, bc=len(input)), maxsteps=1e7)
-    print(f'len=${len(input):04X}' \
-        f' ${m.hl:04X}: {m.hexdump(DATA, len(input))[6:200]}')
-    assert crc == m.hl, f'expected ${m.hl:04X}'
+
+    m.setregs(R(de=DATA, bc=len(input)))
+
+    print(f'data {m.hexdump(DATA, 12)} …')
+    print(f' expected: crc=${expected_crc:04X} nextstart:${DATA+len(input)}')
+    m.call(S.cksum_crc_16_ccitt, maxsteps=1e7)
+
+    crc = m.hl
+    nextstart = m.de
+
+    print(f'   actual: crc=${crc:04X} nextstart:${nextstart}')
+    assert (expected_crc, DATA+len(input)) \
+        == (crc,          nextstart      )

@@ -41,15 +41,17 @@ def test_cksum_crc_16_ccitt(m, S, R, expected_crc, input):
         expected_crc = crc_hqx(bytes(input), 0xFFFF)
     DATA = 0x180
     m.deposit(DATA, input)
+
     m.depword(S.cksum_crc_16_ccitt_start, DATA)
     m.depword(S.cksum_crc_16_ccitt_len, len(input))
-    print(f'data: {m.hexdump(DATA, 12)} …')
-    print(f'  expected: crc=${expected_crc:04X} next-start:${DATA+len(input)}')
 
+    print(f'data {m.hexdump(DATA, 12)} …')
+    print(f' expected: crc=${expected_crc:04X} nextstart:${DATA+len(input)}')
     m.call(S.cksum_crc_16_ccitt, maxsteps=1e7)
-    crc = m.word(S.cksum_crc_16_ccitt_cksum)
-    start = m.word(S.cksum_crc_16_ccitt_start)
 
-    print(f'    actual: crc=${crc:04X} next-start:${start}')
+    crc = m.word(S.cksum_crc_16_ccitt_cksum)
+    nextstart = m.word(S.cksum_crc_16_ccitt_start)
+
+    print(f'   actual: crc=${crc:04X} nextstart:${nextstart}')
     assert (expected_crc, DATA+len(input)) \
-        == (crc,          start          )
+        == (crc,          nextstart      )

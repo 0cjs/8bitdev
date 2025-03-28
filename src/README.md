@@ -9,7 +9,10 @@ containing code for a particular microcomputer or other system, and
 toolchain directories mainly used for testing features of various
 assemblers.
 
-    CPU         mos65/        MOS 6502
+    Misc        notes/      Programming notes and ideas for software
+                skip.pt     ./Test src/skip.pt to skip all unit tests
+
+    CPU         mos65/      MOS 6502
                 mc68/       Motorola MC6800
                 i8080/      Intel 8080
                 z80/        Zilog Z80
@@ -28,19 +31,14 @@ assemblers.
     Toolchain   asl/        The Macroassembler AS
                 asxxxx/     ASxxx assembler toolki
 
-    Other       bdd.pt
-                bios.md
-                cjsmon.md
+    Other       bios.md     Test system BIOS interface
+                tmon        Documentation for tmon/ portable monitor
                 crc_16_ccitt.py
-                filesystem.md
                 generic.py
-                notest.pt
-                objects.md
                 pmon.md
                 qdigit.py
                 stdtest.asm
                 stdtest.py
-                tmon
 
 
 Code Conventions

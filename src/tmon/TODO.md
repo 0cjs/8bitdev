@@ -29,6 +29,28 @@ General TODO
   desired command; we don't want to do more because e.g. Epson HC-20 has
   only a 20-chars/line LCD display.)
 
+- Bank switching: Add `m`emory bank (source) and `n`ext memory bank
+  (target) parameters to read/write/copy commands. Probably we want to use
+  $FF as the "use current bank" parameter, as in many systems (e.g. MSX)
+  that will not interfere with banks given specific numbers starting at 0.
+  The Sharp MZ-700 is probably a good platform to start on.
+
+  It's not clear how we might determine the user memory bank configuration
+  and restore it on monitor exit on systems that do not provide the ability
+  to read configuration registers. Perhaps we could checksum the memory
+  area on entry and, on exit, switch through the banks to find one that
+  matches that checksum. This wouldn't work if we are changing data in the
+  banks, though perhaps we could re-checksum after a change in that area.
+
+  Systems such as MSX introduce an extra complication: we can do the
+  primary slots (0–3) for all four pages in one byte, but then $FF refers
+  to a specific mapping (bank 3 for each of the four pages) and cannot be
+  used as "current mapping." Even extending this to 16 bits doesn't help if
+  we introduce expansion slot mappings (0–3), as all 16-bit values are
+  valid for the combination of primary and expansion slots. (Plus, while
+  we can read the primary slot mappings, we cannot read the expansion
+  slot mappings.)
+
 
 Platform-specific TODO
 ----------------------

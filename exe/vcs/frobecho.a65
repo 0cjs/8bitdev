@@ -1,0 +1,45 @@
+;   Atari 2600 FROB echo program
+;
+;   Echo back bytes sent to the FROB cartridge emulator, after
+;   XORing them with $FF to show that we're processing them.
+;
+;   This assumes it's running in a FROB development cartridge set up
+;   for communications with the Apple II. For more details, see:
+;     https://gitlab.com/retroabandon/apple2-re/-/tree/main/frob
+;
+;   To load the cart, use the Applesoft BASIC `FLOAD` program supplied with
+;   the FROB system, tell it it's a 2K file, and that is hould be loaded in
+;   high memory.
+
+            cpu  6502
+
+WDATA       equ  $FFF0      ; writes here go back to Apple II
+PSTAT       equ  $FFF1      ; status port (read-only)
+RDATA       equ  $FFF2      ; reads here get data sent by Apple II
+
+; ----------------------------------------------------------------------
+
+            org  $F800      ; 2K cart, high memory.
+
+entry       lda  #'F'       ; at startup, we send an 'F' ($46)
+                            ;   to show we're alive
+            ; fallthrough
+
+write       bit  PSTAT      ; bit 7 "ready for output" set?
+            bpl  write      ;    no: wait for that bit
+            sta  WDATA      ;   yes: write data back to Apple II
+read        bit  PSTAT      ; bit 6 "read data available" set?
+            bvc  read       ;    no: wait for that bit
+            lda  RDATA      ;   yes: read data from Apple II
+            eor  #$FF       ; flip all the bits to show we read and processed
+                            ;   the data
+            jmp  write      ; return the processed data
+
+; ----------------------------------------------------------------------
+
+            org  $FFFA      ; startup/interrupt vectors
+nmi         dw   entry      ; not actually ever used
+reset       dw   entry      ; where VCS starts on power-up
+irq         dw   entry      ; IRQ/BRK unused
+
+            end  entry

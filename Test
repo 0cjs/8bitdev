@@ -135,6 +135,7 @@ command popd >/dev/null
 #   for an emulator, a tape image with that file, and a disk image with
 #   that file that autoboots, all from the same build.
 t8dev a2dsk exe/a2/charset.a65      # path relative to .build/
+p2a2bin $BUILDDIR/obj/exe/vcs/frobecho.p >$BUILDDIR/obj/exe/vcs/frobecho.obj0
 
 #   Various other builds of things from .p files.
 #   Not yet figured out how this should be integrated into t8dev.

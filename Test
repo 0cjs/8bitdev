@@ -165,6 +165,9 @@ cp $exeobj/kc85/m100/*.CO $BUILDDIR/emulator/virtualt/
 ####################################################################
 #   Tests
 
+noargs=false
+[[ $# -eq 0 ]] && noargs=true
+
 #   Unit Tests
 #   • If we are given no options, add `-nlogical` to run things more
 #     efficiently with pytest-xdist. (Using logical cores rather than
@@ -179,26 +182,17 @@ cp $exeobj/kc85/m100/*.CO $BUILDDIR/emulator/virtualt/
 [ $# -eq 0 ] && set -- -nlogical
 t8dev pytest --dist worksteal "$@" || fail
 
-#   XXX We no longer run the cmtconv functional tests from here because
-#   there are path issues when we use tool/t8dev instead of t8dev.
-#   And we really want to be running the r8format ones anyway, and
-#   need to figure out how exactly to do that without re-running
-#   all the unit tests. (Or maybe we should just be running the
-#   submodule tests using their own completely separate top-level
-#   ./Test script, in our virtual env or theirs?)
-if false; then
-
-#   Functional tests are run only if we ran all unit tests. (This is not
-#   the best way to avoid running them when unwanted, but it's a convenient
-#   hack for the moment.)
-[[ ${#@} = 0 ]] && {
+#   r8format functional tests are run only if we ran all unit tests. (This
+#   is not the best way to avoid running them when unwanted, but it's a
+#   convenient hack for the moment. (We really need to move these to pytest
+#   tests.) These also produce a few lines of output even in quiet mode,
+#   but this is a reminder to fix this.
+$noargs && {
     #   We run them in quiet mode here, but if they fail you want
     #   to do this manually without the -q.
-    ./t8dev/pylib/cmtconv/Test -q \
-        || die $? "FAILED: cmtconv/Test (exitcode=$?)"
+    $T8_PROJDIR/t8dev/r8format/Functest -q \
+        || die $? "FAILED: r8format/Funcest (exitcode=$?)"
 } || true
-
-fi
 
 ####################################################################
 #   Build Release Files

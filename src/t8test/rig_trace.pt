@@ -1,0 +1,29 @@
+from    testmc.mc6800 import  Machine
+import  pytest
+
+test_rig = '''
+            cpu 6800
+            org $1000
+
+start       lda A,#'g'
+            rts
+'''
+
+@pytest.mark.parametrize('c, tracetype', [
+    ('g',   False),
+    ('g',   0),
+    ('g',   'stdout'),
+    ('g',   'stderr'),
+    ('g',   'file:/home/cjs/z.8bd.trace'),  # absolute path
+                                            # XXX put it in projdir/.build
+    ('F',   'file:z.8bd.trace'),            # relative to curdir filename
+    ('g',   'objdir'),       # .build/{pt,}obj/.../<module>/<testname>.trace
+])
+def XXX_test_trace(m, R, S, c, tracetype):
+    ''' This is our driver for `Machine.teardown` testing that we'll
+        be using to implement trace to file, etc.
+    '''
+    m.call(S.start, trace=tracetype)
+    assert R(a=ord(c)) == m.regs
+
+

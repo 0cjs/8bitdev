@@ -1,0 +1,77 @@
+;   Sharp MZ-series tmon loaded just below 48K
+;
+;   On an MZ-80K this will load at the top of RAM. On later models, it
+;   loads well below the top of RAM, but underneath the bank-switched
+;   $D000-$FFFF area.
+
+            cpu Z80
+            include  src/i8080/std.i80
+
+tmon_loc    equ  $C800
+
+; ----------------------------------------------------------------------
+;   `.mzf` Tape Header, until we make a program that can build this.
+
+mzf         org  tmon_loc-$80       ; tape header is 128 bytes
+.type       db   $01
+.filename   db   'TMON48'
+            db   17 - ($ - .filename) dup CR
+.size       dw   end-tmon_loc
+.start      dw   tmon_loc
+.entry      dw   tmon_loc
+
+; ----------------------------------------------------------------------
+;   BIOS routines
+
+LETNL       equ  $0006
+PRNT        equ  $0012
+GETKY       equ  $001B
+BELL        equ  $003E
+
+prnl        equ  LETNL
+prchar      equ  PRNT
+
+; ----------------------------------------------------------------------
+
+BACKSPACE   equ  $1D            ; cursor left
+
+; ----------------------------------------------------------------------
+
+tmon_stksz  equ  64
+tmon_ram    equ  $CF00
+
+            org  tmon_loc
+tmon_rom    equ  $
+            include src/i8080/tmon.i80
+
+rdchar      call GETKY
+            or   a,a
+            jr   nz,rdchar
+            ret
+
+            include src/i8080/prvischar/ascii.i80       ; XXX no reverse
+            include src/i8080/prscreenchar/ascii.i80    ; XXX no reverse
+
+errbeep     jp   BELL       ; TCO ret
+
+exit        jp   $0082      ; MZ-80K monitor prompt/command loop
+            ;   XXX This should check to:
+            ;     a) see if we're on an MZ-80A or MZ-700 and go to the
+            ;        right place for those
+            ;     b) see if S-BASIC or HUBASIC is loaded and re-enter that.
+
+init_platform
+            ;   Here is where we should determine if we're on an MZ-80K,
+            ;   MZ-80A or MZ-700, and whether S-BASIC (or maybe HUBASIC)
+            ;   is loaded so we can reserve our memory space and know
+            ;   what to do with the `q` command.
+            ret
+
+; ----------------------------------------------------------------------
+;   Ensure we don't overflow RAM.
+
+    if $ >= tmon_ram
+            error 'code PC=$\{$} > ROM max $\{tmon_ram-1}'
+    endif
+
+end         end tmon_loc

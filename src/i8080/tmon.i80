@@ -1186,3 +1186,5 @@ subHLpBC    ;   load BC with [BC]
             sbc  a,b
             ld   h,a
             ret
+
+tmon_rom_end

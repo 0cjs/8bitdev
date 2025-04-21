@@ -122,8 +122,8 @@ manual_build=(
     src/a2/misc.a65
     src/fm7/fm7.a69
     #   This feels like it should be better automated.
-    exe/*/*.[ai][0-9][0-9]
-    exe/*/*/*.[ai][0-9][0-9]
+    exe/*/*.[aiz][0-9][0-9]
+    exe/*/*/*.[aiz][0-9][0-9]
 )
 t8dev asl asm "${manual_build[@]}" || fail
 

@@ -1081,14 +1081,6 @@ pr4clear    ld   b,4
             ld   a,BACKSPACE
             jp   prBchars       ; ret (TCO)
 
-;   ♠HL ♣AHL   Print the zero-terminated string at HL.
-prstr       ld   a,(hl)
-            or   a,a
-            ret  Z
-            call prchar
-            inc  hl
-            jp   prstr
-
 ;   ♠AC ♣A ♡*   Print a byte in hex as part of multiple bytes on a line.
 ;               Spacing afterwards depends on C:
 ;               • C=0:   1 space: we're done printing the line

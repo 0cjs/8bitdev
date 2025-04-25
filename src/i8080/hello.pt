@@ -3,15 +3,12 @@ from    testmc.i8080  import  Machine
 test_rig = '''
             cpu 8080
             include  src/i8080/std.i80
-            org $C000
             include testmc/i8080/tmc/biosdef.i80
-            include src/i8080/hello.i80
-'''
 
-def test_prstr(m, loadbios, S, R):
-    _, ostream = loadbios()
-    m.call(S.prstr, R(hl=S.message))
-    assert b'Hello: ' == ostream.getvalue()
+            org $C000
+            include src/i8080/hello.i80
+            include src/i8080/prstr.i80
+'''
 
 def test_hello_ctrlC_exit(m, loadbios, S, R):
     istream, ostream = loadbios(input=b'a0\rb1\x03')

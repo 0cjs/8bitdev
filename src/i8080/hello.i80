@@ -35,13 +35,3 @@ hellomsg    call prnl
             ret
 
 message     db  "Hello: \0"
-
-;   Print the 0-terminated string pointed to by HL.
-;   XXX This should be extrated to src/i8080/pr.i80 or somewhere...
-prstr       ld   a,(hl)
-            or   a,a
-            jp   Z,.done
-            call prchar
-            inc  hl
-            jp   prstr
-.done       ret

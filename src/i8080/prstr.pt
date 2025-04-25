@@ -1,0 +1,36 @@
+from    testmc.i8080  import  Machine
+
+test_rig = '''
+            cpu 8080
+            include  src/i8080/std.i80
+            include testmc/i8080/tmc/biosdef.i80
+
+;prstr       equ  0     ; uncomment to confirm code not generated if sym present
+
+            org $400
+            include src/i8080/prstr.i80
+
+msg         db 'A String.',0
+msg_end
+            db 'catch it over-running terminator'
+'''
+
+def test_prstr(m, loadbios, S, R):
+    _, ostream = loadbios()
+    m.call(S.prstr, R(hl=S.msg))
+    assert (R(hl=S.msg_end), b'A String.') == (m.regs, ostream.getvalue())
+
+def test_prnl(m, loadbios, S, R):
+    ''' This actually tests the ``testmc/i8080/tmc/bioscode.asm`` version
+        of ``prnl`` because that overrides the one in the file. It's not
+        clear how to get around this, but maybe we can consider this
+        a test that overrides work?
+
+        As well, the bioscode version does not preserve all regs. It's
+        not clear if we should make that part of the API or not; it
+        depends on the ``prnl`` supplied by most microcomputer BIOSes.
+    '''
+    _, ostream = loadbios()
+    m.call(S.prnl)
+    expected_print= '\n'    # XXX Unix value from tmc/bioscode.asm.
+    assert b'\n' == ostream.getvalue()

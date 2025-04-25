@@ -12,5 +12,6 @@ start       call hello
 
             org  $120
             include "src/i8080/hello.i80"
+            include "src/i8080/prstr.i80"
 
             end start

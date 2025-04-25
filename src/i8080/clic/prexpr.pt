@@ -1,0 +1,70 @@
+from    testmc  import LB, MB, tmc_tid
+from    testmc.i8080  import  Machine
+from    src.clic.heapbuilder  import HeapBuilder, hb
+import  pytest
+
+test_rig = '''
+            cpu  8080
+            include src/i8080/std.i80
+            include testmc/i8080/tmc/biosdef.i80
+
+            org  $400
+            include src/i8080/clic/prexpr.i80
+            include src/i8080/pr/hex.i80
+            include src/i8080/pr/dec.i80
+            include src/i8080/pr/str.i80
+'''
+
+####################################################################
+
+param   = pytest.mark.parametrize
+H       = HeapBuilder             # for easy access to constants
+
+@param('const, bstr', [
+    (H.NIL,     b'nil'      ),
+    (H.TRUE,    b'#t'       ),
+    (0xFC,      b'c#FC'     ),
+], ids=tmc_tid)
+def test_priconst(m, S, R, hb, loadbios, const, bstr):
+    _, out = loadbios()
+    hb.const(const)
+    print(const)
+    m.call(S.prcell, R(hl=hb.addr))
+    assert R(hl=hb.addr) == m.regs
+    assert bstr == out.written()
+
+@param('ptr, bstr', [
+    (0x43BC,    b'#43BC'    ),
+    (0x0100,    b'#0100'    ),
+    (0xFFFC,    b'#FFFC'    ),
+], ids=tmc_tid)
+def test_prptr(m, S, R, hb, loadbios, ptr, bstr):
+    _, out = loadbios()
+    hb.ptr(ptr)
+    print(ptr)
+    m.call(S.prcell, R(hl=hb.addr))
+    assert R(hl=hb.addr) == m.regs
+    assert bstr == out.written()
+
+@param('sym, bstr', [
+    (b'a',      b'a'),
+    (b'\x00',   b'\x00'),
+    (b'\xFF',   b'\xFF'),
+    (b'ab',     b'ab'),
+])
+def test_sym(m, S, R, hb, loadbios, sym, bstr):
+    _, out = loadbios()
+    hb.sym12(sym)
+    print(sym, m.hexdump(hb.addr, 2))
+    m.call(S.prcell, R(hl=hb.addr))
+    assert R(hl=hb.addr) == m.regs
+    assert bstr == out.written()
+
+@param('i', [0, 1, 23, 456, 7890, 8191, -1, -23, -456, -7890, -8192])
+def test_smallint(m, S, R, hb, loadbios, i):
+    _, out = loadbios()
+    hb.smallint(i)
+    print(i, hex(i), m.hexdump(hb.addr, 2))
+    m.call(S.prcell, R(hl=hb.addr))
+    assert R(hl=hb.addr) == m.regs
+    assert bytes(str(i), encoding='ASCII') == out.written()

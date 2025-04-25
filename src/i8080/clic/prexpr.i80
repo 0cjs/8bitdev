@@ -1,0 +1,143 @@
+;   pexpr.i80 - print car and heap expressions
+;
+;   Requires: prchar, prhexA, prnyb, prdec_u16, prstr
+
+PR_PTR      equ  '#'        ; pointer prefix
+
+;   ♠HL ♣ABC ♡HL    Print a cons or cdr pointed to by HL.
+;   This makes no attempt to follow references, but prints pointers
+;   as a hex value (i.e., `P_HEXVAL` plus four hex digits).
+;
+prcell      push hl
+            ld   a,(hl)
+            ld   c,a            ; save value LSB
+            inc  hl
+            ld   a,(hl)
+            ld   b,a            ; save value MSB
+            ;
+            ld   a,c            ; value LSB
+            and  a,%11          ; test type bits
+            jp   z,.ptr         ; %00: pointer
+            dec  a
+            jp   z,.smallint    ; %01: embedded 14-bit signed integer
+            dec  a
+            jp   z,.sym12       ; %10: 1- or 2-char symbol
+            halt                ; XXX obdata header--currently not supported
+            pop  hl             ; restore original pointer ro value
+            ret
+            ;
+            ;   pointer or intrinsic constant in bc
+.ptr        ld   a,b            ; value MSB
+            or   a,a            ; is zero?
+            jp   z,priconst     ;   yes: it's an intrinsic constant
+            ld   a,PR_PTR       ;    no: it's a pointer
+            call prchar
+            ld   a,b
+            call prhexA
+            ld   a,c
+            call prhexA
+            pop  hl
+            ret
+            ;
+            ;   1- or 2-char intrinsic symbol
+.sym12      ld   a,c            ; load value LSB
+            or   a,a            ; clear carry
+            rra                 ; LSR: bit0 (always=0) into carry
+            ld   c,a            ; save bits 5-0 of LSB char in bits 6-1
+            rra                 ; LSR: bit1=? into carry
+            or   a,a            ; other than type bits, LSB is zero?
+            jp   z,.sym1        ;   yes: just the one char to print
+            ld   a,b            ; load value MSB
+            and  a,$80          ; isolate top bit (which will be bit 6)
+            or   a,c            ; bring rest of first char in, clear carry
+            rra                 ; shift b6-1 to b5-0
+            call prchar         ; print first char
+            ld   a,b            ; load second char
+            and  a,$7F          ; clear bit 6 of first char
+            call prchar
+            pop  hl
+            ret
+            ;
+.sym1       ld   a,b            ; load value MSB: 8 bit char
+            call prchar
+            pop  hl
+            ret
+            ;
+            ;   intrinsic 14-bit signed integer
+.smallint   ld   a,b            ; MSB
+            or   a,a            ; negative? (also clear carry)
+            jp   p,.positive    ;    no: skip negative processing
+.negative
+            ld   a,'-'          ; print '-' sign
+            call prchar
+            ld   a,c            ; unshifted LSB
+            cpl                 ; 1s complement
+            add  a,1<<2         ; add 1 (still shfited) to get 2s complement
+            ld   c,a
+            ld   a,b            ; unshifted MSB
+            cpl                 ; 1s complement
+            adc  a,0            ; carry of +1 into MSB, clear carry
+            ld   b,a
+            ;
+.positive   ;   Entered with unshifted MSB in A
+            rra                 ; LSR, low bit to carry
+            ld   h,a            ; save rest of MSB to shift later
+            ld   a,c            ; unshifted LSB
+            rra                 ; shift MSB bit 0 (in carry) in
+            ;   Carry from bit 0 may be 0 or 1 depending on whether this is
+            ;   originally positive or is now a complemented negative.
+            or   a,a            ; clear carry
+            ld   l,a            ; save partly shifted LSB
+            ld   a,h            ; MSB with one bit remaining to shift
+            or   a,a            ; clear carry
+            rra                 ; save LSbit in carry
+            ld   h,a            ; completed shift of MSB
+            ld   a,l
+            rra                 ; MSB bit 1 → LSB bit 7
+            ld   l,a            ; completed shift of LSB
+            ;
+            call prdec_u16      ; print numeric portiion
+            ;
+            pop  hl
+            ret
+
+; ----------------------------------------------------------------------
+;   ♠C ♣A   Print representation of the intrinsic constant LSB given in C.
+;           Assumes HL has been saved on the stack.
+priconst    ld   b,c            ; save intrinsic constant value
+            ld   a,c
+            or   a,a            ; clear carry
+            rrca                ; shift 0,4,8,… right to get index 0,1,2,…
+            rrca
+            ld   c,a            ; index
+            ld   hl,iconst_names; start of names list
+            inc  c
+.curname    dec  c              ; this constant is current name in HL?
+            jp   nz,.nextname   ;   no: move to the next name
+            call prstr          ;   yes: print the name
+            pop  hl
+            ret
+            ;
+.nextname   inc  hl             ; move up...
+            ld   a,(hl)
+            or   a,a
+            jp   nz,.nextname;  ...to termination byte
+            inc  hl
+            ld   a,(hl)
+            or   a,a        ; end of list of names?
+            jp   nz,.curname;    no: see if this name is the one
+            ;
+            ld   a,'c'      ;   yes: unknown constant 'c#xx'
+            call prchar
+            ld   a,'#'
+            call prchar
+            ld   a,b        ; saved constant ID
+            call prhexA
+            pop  hl
+            ret
+            ;
+
+iconst_names
+            db   'nil',0
+            db   '#t',0
+            db   0

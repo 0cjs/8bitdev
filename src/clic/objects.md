@@ -79,20 +79,23 @@ recursively followed by the GC.
     BB   bbbbbb-10     sym2 (2-char symbol)
     LL   ffffff-11  R  obdata header: length LL, format number ffffff
 
-A smallint is a two's complement signed 14-bit value (range decimal -8192
-to 8191). As shown below, bits 13-6 are taken from the MSB of the reference
-and bits 5-0 are taken from bits 7-2 of the LSB of the reference. (i.e., do
-two arithmetic shifts right on the reference's LSB). The two LSBits being
-01 allows you to do additions and subtractions with no preprocessing of the
-values (since they will become 10 or 00 respectively) and correct the LSB
-after addition with `DEC` (or `OR #$01`, `AND $FD`) and after subtraction
-with `INC` (or `OR #$01`).
+#### Smallint
 
-           Reference LSB                 Reference MSB
-    |  7  6  5  4  3  2  1  0 |   |  7  6  5  4  3  2  1  0 |
-    ---------------------------------------------------------
-    | 05 04 03 02 01 00 xx xx |   | 13 12 11 10 09 08 07 06 |
-           smallint LSB                  smallint MSB
+A smallint is a two's complement signed 14-bit value (range decimal -8192
+to 8191) stored shifted left two bits: bits 13-6 in the MSB and bits 5-0 in
+the LSB bits 7-2, followed by the two tag bits.
+
+Because the tag bits are %01, this allows you to do additions and
+subtractions of smallints with no preprocessing of the values.
+- After addition the tag bits become %10;
+  correct with `DEC` (or `OR #$01`, `AND $FD`).
+- After subtraction the tag bits become %00;
+  correct with `INC` (or `OR #$01`).
+
+     ────────── LSB ──────────     ────────── MSB ──────────
+    | 05 04 03 02 01 00  ₀  ₁ |   | 13 12 11 10 09 08 07 06 |
+
+#### Sym1/sym2
 
 A sym1 or sym2 is a 1- or 2-character symbol packed into a tagged
 reference. If the LSB is all zeros (excepting the tag) the reference is a
@@ -107,7 +110,7 @@ first and second respectively characters of a sym2.
     |  7  6  5  4  3  2  1  0 |   |  7  6  5  4  3  2  1  0 |
     ---------------------------------------------------------
     |  0  0  0  0  0  0  1  0 |   | c7 c6 c5 c4 c3 c2 c1 c0 |  sym1
-    | d5 d4 d3 d2 d1 d0  1  0 |   | c6 c5 c4 c3 c2 c1 c0 d6 |  sym2
+    | c5 c4 c3 c2 c1 c0  1  0 |   | c6 d6 d5 d4 d3 d2 d1 d0 |  sym2
 
 Two-character symbols where either character has the high bit set or where
 the second character is $00 must be stored as allocated symbols with an

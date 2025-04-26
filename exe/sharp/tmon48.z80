@@ -33,7 +33,7 @@ prchar      equ  PRNT
 
 ; ----------------------------------------------------------------------
 
-BACKSPACE   equ  $1D            ; cursor left
+BACKSPACE   equ  $14            ; cursor left
 
 ; ----------------------------------------------------------------------
 
@@ -47,7 +47,11 @@ tmon_rom    equ  $
 rdchar      call GETKY
             or   a,a
             jr   z,rdchar
+            cp   a,$66
+            ret  nz
+            ld   a,CR
             ret
+
 
             include src/i8080/prvischar/ascii.i80       ; XXX no reverse
             include src/i8080/prscreenchar/ascii.i80    ; XXX no reverse

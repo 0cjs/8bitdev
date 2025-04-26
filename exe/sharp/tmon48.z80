@@ -46,7 +46,7 @@ tmon_rom    equ  $
 
 rdchar      call GETKY
             or   a,a
-            jr   nz,rdchar
+            jr   z,rdchar
             ret
 
             include src/i8080/prvischar/ascii.i80       ; XXX no reverse

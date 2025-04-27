@@ -37,6 +37,7 @@ cpm_setup   ;   Set up "breakpoint" RST.
 exit        jp   RST_00         ; Return to CP/M.
 
             include testmc/i8080/bios/cpmcode.i80
+            include src/i8080/pr/space.i80
 
     if $ >= tmon_ram
             error   'setup routine stomped on tmon code!'

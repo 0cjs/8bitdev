@@ -1,0 +1,8 @@
+;   Trivial generic implementation of `prspace`.
+;   Many BIOSes provide this already.
+
+;   ♣A ♡BX   Print a space.
+        ifndef prspace
+prspace     lda A,#' '
+            jmp prchar          ; RTS (TCO)
+        endif

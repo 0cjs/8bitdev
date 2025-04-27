@@ -39,11 +39,3 @@ def test_prhexHL(m, S, R, loadbios, val, chars):
     _, outchars = loadbios()
     m.call(S.prhexHL, R(hl=val))
     assert chars == outchars.getvalue()
-
-####################################################################
-
-def test_prspace(m, S, R, loadbios):
-    _, ostream = loadbios()
-    regs = R(bc=0x3456, de=0x789A, hl=0xBCDE)
-    m.call(S.prspace, regs)
-    assert (regs, b' ') == (m.regs, ostream.getvalue())

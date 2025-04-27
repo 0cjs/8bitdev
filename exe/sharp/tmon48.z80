@@ -24,12 +24,14 @@ mzf         org  tmon_loc-$80       ; tape header is 128 bytes
 ;   BIOS routines
 
 LETNL       equ  $0006
+PRNTS       equ  $000C
 PRNT        equ  $0012
 GETKY       equ  $001B
 BELL        equ  $003E
 
 prnl        equ  LETNL
 prchar      equ  PRNT
+prspace     equ  PRNTS
 
 ; ----------------------------------------------------------------------
 

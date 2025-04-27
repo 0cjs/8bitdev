@@ -1,0 +1,16 @@
+from    testmc  import *
+from    testmc.mc6800  import Machine
+
+test_rig = '''
+            cpu 6800
+            org $1000
+            include src/mc68/std.a68
+            include testmc/mc6800/tmc/biosdef.a68
+            include src/mc68/pr/space.a68
+'''
+
+def test_prspace(m, S, R, loadbios):
+    _, ostream = loadbios()
+    regs = R(b=0x34, x=0x5678)
+    m.call(S.prspace, regs)
+    assert (regs, b' ') == (m.regs, ostream.getvalue())

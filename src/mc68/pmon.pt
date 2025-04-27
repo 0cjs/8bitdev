@@ -18,6 +18,7 @@ pmon_org        equ $1000
                 include src/mc68/std.a68
                 include testmc/mc6800/tmc/biosdef.a68
                 include src/mc68/pmon.a68
+                include src/mc68/pr/space.a68
 '''
 
 @contextmanager

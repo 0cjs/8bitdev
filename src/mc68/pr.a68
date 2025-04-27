@@ -10,7 +10,6 @@
 ;   it should be wrapped in a `prchar` that does.
 ;
 
-SPACE       equ ' '
 DEL         equ $7F
 
 ; ----------------------------------------------------------------------
@@ -81,10 +80,6 @@ prnyb       and A,#$0F
             bmi .digit
             add A,#'A'-'9'-1
 .digit      jmp prchar          ; RTS (TCO)
-
-;   ♣A ♡BX Print a space.
-prspace     lda A,#SPACE
-            jmp prchar          ; RTS (TCO)
 
 ; ----------------------------------------------------------------------
 ;   ♣A ♡BX Print any (8-bit) value "visibly" as one character.

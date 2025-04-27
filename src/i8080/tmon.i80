@@ -9,6 +9,14 @@
 ;   • To-do:        W T Y : S A   # roughly priority order
 
 ; ----------------------------------------------------------------------
+;   Requirements:
+;
+;   Headers (no code generated):
+;   • std.i80: common 8080/Z80 definitions.
+;
+;   Libraries:
+;   • `prspace`: available in i8080/pt/space.i80 if not in BIOS.
+;
 ;   This requires the system-dependent files define the following before
 ;   including this file:
 ;   • tmon_ram: the workspace area, which must be RAM. No code or data

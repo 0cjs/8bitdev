@@ -10,7 +10,8 @@ pmon_org    equ $F000   ; monitor in top 4 KB
 rdlinebuf   equ pmon_org-128    ; 128 chars just below monitor
 rdlinebuf_end equ pmon_org
 
-            include "src/mc68/pmon.a68"
+            include  src/mc68/pmon.a68
+            include  src/mc68/pr/space.a68
 
 reset:      ldx #rdlinebuf   ; stack immediately below input buffer
             txs

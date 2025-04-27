@@ -1,0 +1,15 @@
+from    testmc  import *
+from    testmc.i8080  import Machine
+
+test_rig = '''
+            cpu 8080
+            include  src/i8080/std.i80
+            include  testmc/i8080/tmc/biosdef.i80
+            include  src/i8080/pr/space.i80
+'''
+
+def test_prspace(m, S, R, loadbios):
+    _, ostream = loadbios()
+    regs = R(bc=0x3456, de=0x789A, hl=0xBCDE)
+    m.call(S.prspace, regs)
+    assert (regs, b' ') == (m.regs, ostream.getvalue())

@@ -14,11 +14,12 @@ pmon_ramhi  equ $3F80   ;   POKE $08,$2E,$FF:NEW to keep BASIC from stomping it.
 rdlinebuf     equ $2F00  ; FIXME: re-use the BASIC/MON buffer
 rdlinebuf_end equ $2FFF  ; 255 chars
 
-            include "src/mc68/std.a68"
-            include "src/mb6885/biosdef.a68"
+            include  src/mc68/std.a68
+            include  src/mb6885/biosdef.a68
 
-            include "src/mc68/pmon.a68"
-            include "src/mb6885/common.a68"
+            include  src/mc68/pmon.a68
+            include  src/mb6885/common.a68
+            include  src/mc68/pr/space.a68
 
             if pmon_ramlo_end >= $100
                 error 'Direct page overflow: last addr=\{pmon_ramlo_end}'

@@ -32,11 +32,6 @@ prnyb       and  $0F
             add  a,'A'-'9'-1
 .digit      jp   prchar         ; ret (TCO)
 
-;   ♣AF ♡*   Print a space.
-;
-prspace     ld   a,' '
-            jp   prchar         ; ret (TCO)
-
 ; ----------------------------------------------------------------------
 ;   Debugging Macros (no code space used if not used).
 ;   Since we've got the hex print routines around anyway, make available

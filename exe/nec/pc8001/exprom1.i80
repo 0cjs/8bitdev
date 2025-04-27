@@ -47,6 +47,7 @@ exprom_init jp   init           ; entry point of expansion ROM initialisation
 ; ----------------------------------------------------------------------
 ;   General I/O Routines
 
+            include  src/i8080/pr/space.i80
             include  src/i8080/pr.i80
             ;   We don't use the ROM BASIC routines for `prstr` and `prnl`
             ;   becuase we need them before the ROM BASIC has been initialised.

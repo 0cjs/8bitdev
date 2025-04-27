@@ -32,8 +32,9 @@ exit        ld   a,$EF          ; request simulator exit by writing $EF
             error   'setup routine stomped on tmon code!'
     endif
 
-            include "src/i8080/tmon.i80"    ; org tmon_rom
-            include src/i8080/prvischar/vt100.i80
-            include src/i8080/prscreenchar/ascii.i80
+            include  src/i8080/tmon.i80         ; org tmon_rom
+            include  src/i8080/pr/space.i80
+            include  src/i8080/prvischar/vt100.i80
+            include  src/i8080/prscreenchar/ascii.i80
 
             end tmc

@@ -31,6 +31,7 @@ rsti        equ $6 * $8     ; address of RST 6
             jp  intentry
 
             include src/i8080/tmon.i80
+            include src/i8080/pr/space.i80
             include src/i8080/prvischar/ascii.i80
             include src/i8080/prscreenchar/ascii.i80
 

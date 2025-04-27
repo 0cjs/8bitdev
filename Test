@@ -149,6 +149,8 @@ cmtconv -p jr200 -i obj \
     -f HELLO "$exeobj/jr200/hello.p" "$exeobj/jr200/hello.wav"
 cmtconv -p mb6885 -i obj \
     -f HELLO.B "$exeobj/mb6885/hello.p" "$exeobj/mb6885/hello.wav"
+cmtconv -p mb6885 -i obj -o cas \
+    -f HELLO.B "$exeobj/mb6885/hello.p" "$exeobj/mb6885/hello.bin"
 
 p2bin -q "$exeobj/nec/pc8001/exprom1.p" "$exeobj/nec/pc8001/exprom1.bin"
 p2bin -q "$exeobj/kc85/m100/cotest.p" "$exeobj/kc85/m100/COTEST.CO"
@@ -275,6 +277,14 @@ post_emulate_run() {
                     patchspec="EXT.ROM=@$start_addr:$post_emulate"
             esac
             t8dev emu cscp "$emulator" "$patchspec"
+            ;;
+        mb6885)
+            (   cd $T8_PROJDIR/.build/obj/exe/mb6885/
+                #   ROMs in srec files `b000-e7ff.s` and `f000-ffff.s`.
+                #   Tape: bmtape2 .bin format in noname.bin, maybe?
+                $T8_PROJDIR/.build/tool/bin/bm2 \
+                   -rom_dir=. -display=g
+            )
             ;;
         kc85)
             #   No command line options for anything here. We should probably

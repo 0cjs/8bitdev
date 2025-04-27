@@ -36,13 +36,15 @@ prnyb       and  $0F
 pdebugA     macro {NOEXPAND}
             push AF             ; preserve flags
             call prhexA
-            call prspace
+            ld   a,' '          ; don't depend on prspace
+            call prchar
             pop AF
             endm
 
 pdebugHL    macro {NOEXPAND}
             push AF             ; preserve flags
             call prhexHL
-            call prspace
+            ld   a,' '          ; don't depend on prspace
+            call prchar
             pop AF
             endm

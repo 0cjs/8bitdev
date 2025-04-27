@@ -1,0 +1,43 @@
+;   pexpr.i80 - print car and heap expressions
+;
+;   Requires: prchar, prhexA, prnyb, prstr
+
+; ----------------------------------------------------------------------
+;   ♠HL ♡D   Print an unsigned number in HL as decimal without leading 0s.
+;   See also: https://map.grauw.nl/sources/external/z80bits.html#5.1
+
+        ifndef prdec_u16
+prdec_u16   ld   e,4            ; suppress up to 4 leading zeros
+            ld   bc,-10000      ; -10^5
+            call .digit
+            ld   bc,-1000       ; -10^4
+            call .digit
+            ld   bc,-100        ; -10^3
+            call .digit
+            ld   c,-10          ; -10^2 (B was set to $FF above)
+            call .digit
+            ld   c,b            ; -10^1 (because B is still $FF)
+            ;   fallthrough into subroutine returns to caller when done
+            ;
+.digit      ld   a,-1           ; count of subtractions
+.sub        inc  a              ; subtract 10^x  (and affect Z flag for later)
+            add  hl,bc          ;   via adding -10^x (affects only cy flag)
+            jp   c,.sub         ;   until we overflow
+            jp   nz,.print      ; if a≠0, print this and subsequent digits
+            dec  e              ;   yes: check if we're printing zeros yet
+            jp   p,.unsub       ;    no: skip print
+.print      call prnyb          ; hex print works fine for valid decimal digit
+            ld   e,0            ; all digits after this will be printed
+.unsub
+        if MOMCPU = 'z80'
+            sbc  hl,bc          ; undo final subtraction that set carry
+        else
+            ld   a,l
+            sub  a,c
+            ld   l,a
+            ld   a,h
+            sbc  a,b
+            ld   h,a
+        endif   ; MOMCPU=z80
+            ret
+        endif   ; !defined(prdec_u16_)

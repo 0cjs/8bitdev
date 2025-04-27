@@ -1,0 +1,21 @@
+from    testmc.i8080  import  Machine
+import  pytest
+
+test_rig = '''
+            cpu  8080
+            include src/i8080/std.i80
+            include testmc/i8080/tmc/biosdef.i80
+
+            org  $400
+            include src/i8080/pr/dec.i80
+            include src/i8080/pr/hex.i80
+'''
+
+@pytest.mark.parametrize('i', [
+    0, 1, 10, 23, 100, 456, 7890, 8191, 8192, 60000, 65535
+])
+def test_prdec_u16(m, S, R, loadbios, i):
+    _, out = loadbios()
+    print(i, hex(i))
+    m.call(S.prdec_u16, R(hl=i))
+    assert bytes(str(i), encoding='ASCII') == out.written()

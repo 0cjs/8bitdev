@@ -848,4 +848,5 @@ qcmdopts    stx OPTtable        ; save command options table location
 ; ----------------------------------------------------------------------
 ;   pr* - printing output
 
-            include "src/mc68/pr.a68"
+            include  src/mc68/pr/hex.a68
+            include  src/mc68/pr.a68

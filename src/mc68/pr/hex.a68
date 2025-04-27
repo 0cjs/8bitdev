@@ -1,0 +1,31 @@
+;   prhex - print values in hex
+;
+;   Required definitions:
+;   • prchar    ♡ABX print character in A
+;   • _x:       temporary variable
+
+;   ♣A,_x ♡BX Print value in X as 4 hex digits
+prhexX      stx _x
+prhex_x     lda A,_x
+            bsr prhex
+            lda A,_x+1
+            bra prhex           ; RTS TCO
+
+;   ♣A ♡BX Print value in A as 2 hex digits.
+prhex       psh A
+            lsr A
+            lsr A
+            lsr A
+            lsr A
+            bsr prnyb
+            pul A
+            ; fallthrough
+
+;   ♣A ♡BX Print lower nybble of A as 1 hex digit.
+prnyb       and A,#$0F
+            add A,#'0'
+            cmp A,#'9'+1
+            bmi .digit
+            add A,#'A'-'9'-1
+.digit      jmp prchar          ; RTS (TCO)
+

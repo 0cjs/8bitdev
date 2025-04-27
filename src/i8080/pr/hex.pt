@@ -1,0 +1,41 @@
+#   XXX heavy duplication of src/mc68/pr.pt
+
+from    testmc  import *
+from    testmc.i8080  import Machine
+import  pytest
+
+param = pytest.mark.parametrize
+
+test_rig = '''
+            cpu 8080
+            include  src/i8080/std.i80
+            include testmc/i8080/tmc/biosdef.i80
+            include src/i8080/pr/hex.i80
+'''
+
+####################################################################
+
+@param('val, char', (
+    (0x00, b'0'), (0x01, b'1'), (0x0E, b'E'), (0x0F, b'F'),
+    (0x10, b'0'), (0xFE, b'E'),
+), ids=tmc_tid)
+def test_prnyb(m, S, R, loadbios, val, char):
+    _, output = loadbios()
+    m.call(S.prnyb, R(a=val))
+    assert char == output.getvalue()
+
+@param('val, chars', (
+    (0x00, b'00'), (0x0F, b'0F'), (0xA0, b'A0'), (0xFF, b'FF'),
+), ids=tmc_tid)
+def test_prhexA(m, S, R, loadbios, val, chars):
+    _, outchars = loadbios()
+    m.call(S.prhexA, R(a=val))
+    assert chars == outchars.getvalue()
+
+@param('val, chars', (
+    (0x0000, b'0000'), (0x1234, b'1234'), (0xFEDC, b'FEDC'),
+), ids=tmc_tid)
+def test_prhexHL(m, S, R, loadbios, val, chars):
+    _, outchars = loadbios()
+    m.call(S.prhexHL, R(hl=val))
+    assert chars == outchars.getvalue()

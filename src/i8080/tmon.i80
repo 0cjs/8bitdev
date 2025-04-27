@@ -1126,7 +1126,7 @@ prhexval    ld   b,2            ; default to 2-digit word
             ld   a,e
             jp   prhexA         ; ret (TCO)
 
-            include "src/i8080/pr.i80"       ; printing
+            include  src/i8080/pr/hex.i80       ; printing
 
 ;   ♠HL ♣A ♡HL,*   Print HL as a hex addres, followed by a colon.
 praddrHL    call prhexHL

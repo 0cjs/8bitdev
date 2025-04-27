@@ -1,17 +1,22 @@
-#   XXX heavy duplication of src/mc68/pr.pt
+#   XXX heavy duplication in src/i8080/pr.pt
 
 from    testmc  import *
-from    testmc.i8080  import Machine
-import  pytest
+from    testmc.mc6800  import *
+import  pytest, re
 
+R = Machine.Registers
 param = pytest.mark.parametrize
 
 test_rig = '''
-            cpu 8080
-            include  src/i8080/std.i80
-            include testmc/i8080/tmc/biosdef.i80
-            include src/i8080/pr.i80
+            cpu 6800
+            org $1000
+            include testmc/mc6800/tmc/biosdef.a68
+            include src/mc68/std.a68
+            include src/mc68/pr/hex.a68
+
+_x          equ $32
 '''
+
 
 ####################################################################
 
@@ -27,15 +32,16 @@ def test_prnyb(m, S, R, loadbios, val, char):
 @param('val, chars', (
     (0x00, b'00'), (0x0F, b'0F'), (0xA0, b'A0'), (0xFF, b'FF'),
 ), ids=tmc_tid)
-def test_prhexA(m, S, R, loadbios, val, chars):
+def test_prhex(m, S, R, loadbios, val, chars):
     _, outchars = loadbios()
-    m.call(S.prhexA, R(a=val))
+    m.call(S.prhex, R(a=val))
     assert chars == outchars.getvalue()
 
 @param('val, chars', (
     (0x0000, b'0000'), (0x1234, b'1234'), (0xFEDC, b'FEDC'),
-), ids=tmc_tid)
-def test_prhexHL(m, S, R, loadbios, val, chars):
+))
+def test_prhexX(m, S, R, loadbios, val, chars):
     _, outchars = loadbios()
-    m.call(S.prhexHL, R(hl=val))
-    assert chars == outchars.getvalue()
+    m.call(S.prhexX, R(x=val))
+    assert (R(x=val+0), chars) == (m.regs, outchars.getvalue())
+

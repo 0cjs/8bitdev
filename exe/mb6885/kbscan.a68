@@ -84,8 +84,11 @@ header      db 'Keyboard Scan\r'
 
             rts
 
-            include "src/mc68/pr.a68"
-_a          ds 2
+; ----------------------------------------------------------------------
+;   Hex print routines
+
+            include  src/mc68/pr/hex.a68
 _x          ds 2
 
+; ----------------------------------------------------------------------
             end kbscan

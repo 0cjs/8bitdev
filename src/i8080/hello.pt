@@ -7,7 +7,7 @@ test_rig = '''
 
             org $C000
             include src/i8080/hello.i80
-            include src/i8080/prstr.i80
+            include src/i8080/pr/str.i80
 '''
 
 def test_hello_ctrlC_exit(m, loadbios, S, R):

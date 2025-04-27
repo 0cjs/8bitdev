@@ -1,0 +1,27 @@
+from    testmc  import *
+from    testmc.mc6800  import *
+import  pytest, re
+
+R = Machine.Registers
+param = pytest.mark.parametrize
+
+test_rig = '''
+            cpu 6800
+            org $1000
+            include testmc/mc6800/tmc/biosdef.a68
+            include src/mc68/std.a68
+            include src/mc68/pr/istr.a68
+
+_x          equ $32
+
+T_pristr    jsr pristr
+            db  "abc\\n",$01,$FF,$00
+            lda #$EA
+            rts
+'''
+
+def test_pristr(m, S, R, loadbios):
+    _, output = loadbios()
+    m.call(S.T_pristr, R(a=0x55))
+    assert (b'abc\n\x01\xFF', R(a=0xEA)) == (output.getvalue(), m.regs)
+

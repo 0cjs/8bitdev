@@ -13,7 +13,7 @@
 ;
 
 ;   To build the .PRG and then run it in VICE:
-;     ./Test src/mos65/pristr.pt && .build/tool/bin/p2bin -e 0x1001 -S L2 .build/obj/exe/cbm/ted-keymatrix.p tmp/TED-KEYMATRIX.PRG && xplus4 -silent -autostartprgmode 1 -model c16 tmp/TED-KEYMATRIX.PRG
+;     ./Test src/mos65/pr/istr.pt && .build/tool/bin/p2bin -e 0x1001 -S L2 .build/obj/exe/cbm/ted-keymatrix.p tmp/TED-KEYMATRIX.PRG && xplus4 -silent -autostartprgmode 1 -model c16 tmp/TED-KEYMATRIX.PRG
 
             cpu     6502
             include "src/mos65/std.a65"
@@ -408,4 +408,4 @@ prchar      equ CHROUT          ; ♡AXY send char in A to out channnel.
                                 ;   default screen, otherwise OPEN, CHOUT first.
 ;pristr_ptr                     ; defined in zero-page section above
 
-            include "src/mos65/pristr.a65"
+            include "src/mos65/pr/istr.a65"

@@ -17,25 +17,7 @@ test_rig = '''
 
 _a          equ $30
 _x          equ $32
-
-T_pristr    jsr pristr
-            db  "abc\\n",$01,$FF,$00
-            lda #$EA
-            rts
 '''
-
-@param('str', [b'abc', b'01\n23', b''])
-def test_prstr0(m, S, R, loadbios, str):
-    _, output = loadbios()
-    m.deposit(0x37FD, str + b'\x00XYZ')     # guard values
-    m.call(S.prstr0, R(x=0x37FD))
-    assert str == output.getvalue()
-
-def test_pristr(m, S, R, loadbios):
-    _, output = loadbios()
-    m.call(S.T_pristr, R(a=0x55))
-    assert (b'abc\n\x01\xFF', R(a=0xEA)) == (output.getvalue(), m.regs)
-
 
 ####################################################################
 

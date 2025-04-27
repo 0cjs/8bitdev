@@ -1,0 +1,18 @@
+;   ♠X ♣A ♡B  Print $00-terminated string at X
+;
+;   Leaves X pointing to the terminating $00 byte.
+;
+;   This is provided for systems where the BIOS does not already supply
+;   an appropriate routine. (Since we don't know what a BIOS may destroy,
+;   this actually makes no guarantees about the registers.)
+;
+
+    .ifndef prstr0               ; may be provided by BIOS
+prstr0      lda A,0,X
+            beq .done
+            jsr prchar
+            inx
+            bra prstr0
+.done       rts
+    .endif ; !defined(prstr0)
+

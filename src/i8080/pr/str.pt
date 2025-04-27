@@ -3,12 +3,12 @@ from    testmc.i8080  import  Machine
 test_rig = '''
             cpu 8080
             include  src/i8080/std.i80
-            include testmc/i8080/tmc/biosdef.i80
+            include  testmc/i8080/tmc/biosdef.i80
 
 ;prstr       equ  0     ; uncomment to confirm code not generated if sym present
 
             org $400
-            include src/i8080/prstr.i80
+            include  src/i8080/pr/str.i80
 
 msg         db 'A String.',0
 msg_end

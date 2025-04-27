@@ -9,7 +9,7 @@
 
             org  62800
 start       include src/i8080/hello.i80
-            include src/i8080/prstr.i80
+            include src/i8080/pr/str.i80
 
             assert_co_range
 end         end start

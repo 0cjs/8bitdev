@@ -4,9 +4,9 @@
 ### Build Scripts
 
 The build scripts in this directory are one-offs to handle build tasks that
-b8tool cannot currently handle itself; eventually b8tool should be improved
-to be able to take simpler build descriptions and do what's being done by
-these scripts.
+t8dev cannot currently handle; eventually t8dev should be improved to be
+able to take simpler build descriptions and do what's being done by these
+scripts.
 
 ### Other Scripts
 

@@ -12,6 +12,7 @@ start       jsr hello
             sta A,exitport
 
             org $120
-            include "src/mc68/hello.a68"
+            include  src/mc68/hello.a68
+            include  src/mc68/pr/str.a68
 
             end start

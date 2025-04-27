@@ -13,8 +13,8 @@ test_rig = '''
 param = pytest.mark.parametrize
 
 @param('str', [b'abc', b'01\n23', b''])
-def test_prstr0(m, S, R, loadbios, str):
+def test_prstr(m, S, R, loadbios, str):
     _, output = loadbios()
     m.deposit(0x37FD, str + b'\x00XYZ')     # guard values
-    m.call(S.prstr0, R(x=0x37FD))
+    m.call(S.prstr, R(x=0x37FD))
     assert str == output.getvalue()

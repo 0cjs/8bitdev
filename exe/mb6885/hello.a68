@@ -28,6 +28,7 @@
 
             org $3000       ; 4K below the end of RAM
 start       jsr NMICLR      ; enable BREAK key
-            include "src/mc68/hello.a68"        ; rts exits
-            include "src/mb6885/common.a68"
+            include  src/mc68/hello.a68         ; rts exits
+            include  src/mb6885/common.a68
+            include  src/mc68/pr/str.a68
             end start

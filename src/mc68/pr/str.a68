@@ -7,12 +7,12 @@
 ;   this actually makes no guarantees about the registers.)
 ;
 
-    .ifndef prstr0               ; may be provided by BIOS
-prstr0      lda A,0,X
+        .ifndef prstr                ; may be provided by BIOS
+prstr       lda A,0,X
             beq .done
             jsr prchar
             inx
-            bra prstr0
+            bra prstr 
 .done       rts
-    .endif ; !defined(prstr0)
+        .endif ; !defined(prstr)
 

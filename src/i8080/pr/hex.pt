@@ -1,10 +1,8 @@
 #   XXX heavy duplication of src/mc68/pr.pt
 
-from    testmc  import *
+from    testmc  import  tmc_tid
 from    testmc.i8080  import Machine
 import  pytest
-
-param = pytest.mark.parametrize
 
 test_rig = '''
             cpu 8080
@@ -14,6 +12,8 @@ test_rig = '''
 '''
 
 ####################################################################
+
+param = pytest.mark.parametrize
 
 @param('val, char', (
     (0x00, b'0'), (0x01, b'1'), (0x0E, b'E'), (0x0F, b'F'),

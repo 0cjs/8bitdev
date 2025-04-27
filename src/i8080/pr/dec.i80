@@ -1,6 +1,6 @@
 ;   pexpr.i80 - print car and heap expressions
 ;
-;   Requires: prchar, prhexA, prnyb, prstr
+;   Requires: prnyb (prchar)
 
 ; ----------------------------------------------------------------------
 ;   ♠HL ♡D   Print an unsigned number in HL as decimal without leading 0s.

@@ -3,20 +3,11 @@
 ;   *after* BIOS or alternate definitions of these routines to avoid
 ;   generating unnecessary second versions of these that will conflict.
 
+; ----------------------------------------------------------------------
 ;   ♠HL ♣A   Print the 0-terminated string pointed to by HL.
-;            This leaves HL at the byte after the string that's been printed.
-    ifndef prstr
-prstr       ld   a,(hl)
-            inc  hl             ; move past terminator before exit
-            or   a,a
-            ret  Z
-            call prchar
-            jp   prstr
-    endif
-
-    ifndef prnl
 ;   ♡*   Print a newline suitable for the platform on which this runs.
 ;        (This generic routine assumes CR LF is what we need.)
+        ifndef prnl
 prnl        push af
             ld   a,'\r'
             call prchar
@@ -24,4 +15,16 @@ prnl        push af
             call prchar
             pop  af
             ret
-    endif
+        endif
+
+; ----------------------------------------------------------------------
+;   ♠HL ♣A   Print the 0-terminated string pointed to by HL.
+;            This leaves HL at the byte after the string that's been printed.
+        ifndef prstr
+prstr       ld   a,(hl)
+            inc  hl             ; move past terminator before exit
+            or   a,a
+            ret  Z
+            call prchar
+            jp   prstr
+        endif

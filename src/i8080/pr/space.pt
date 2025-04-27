@@ -1,4 +1,3 @@
-from    testmc  import *
 from    testmc.i8080  import Machine
 
 test_rig = '''

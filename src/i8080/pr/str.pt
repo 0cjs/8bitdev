@@ -15,11 +15,6 @@ msg_end
             db 'catch it over-running terminator'
 '''
 
-def test_prstr(m, loadbios, S, R):
-    _, ostream = loadbios()
-    m.call(S.prstr, R(hl=S.msg))
-    assert (R(hl=S.msg_end), b'A String.') == (m.regs, ostream.getvalue())
-
 def test_prnl(m, loadbios, S, R):
     ''' This actually tests the ``testmc/i8080/tmc/bioscode.asm`` version
         of ``prnl`` because that overrides the one in the file. It's not
@@ -34,3 +29,8 @@ def test_prnl(m, loadbios, S, R):
     m.call(S.prnl)
     expected_print= '\n'    # XXX Unix value from tmc/bioscode.asm.
     assert b'\n' == ostream.getvalue()
+
+def test_prstr(m, loadbios, S, R):
+    _, ostream = loadbios()
+    m.call(S.prstr, R(hl=S.msg))
+    assert (R(hl=S.msg_end), b'A String.') == (m.regs, ostream.getvalue())

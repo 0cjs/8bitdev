@@ -17,6 +17,7 @@ build_toolsets() {
     #   Toolchains, utilities, emulators.
     t8dev toolset asl || fail
     [[ -f $all_tools ]] && { t8dev toolset asxxxx || fail; }
+    t8dev toolset disx || fail
     t8dev toolset osimg ctools dos33fs || fail
     t8dev toolset bm2 cscp linapple RunCPM VirtualT || fail
 }

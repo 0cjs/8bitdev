@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+#   On Debian/Ubuntu, install most of the things that will be requested by
+#   `t8dev toolset ...` in this repo. This simply saves a bit of time over
+#   running `Test` to find out what's missing.
+set -Eeuo pipefail
+
+sudo apt install \
+    build-essential pkg-config \
+    libncurses-dev libjpeg-dev libfltk1.3-dev \
+    libxft-dev libxinerama-dev libfontconfig-dev libsdl2-dev \
+    #

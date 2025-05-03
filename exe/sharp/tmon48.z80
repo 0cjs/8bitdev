@@ -7,18 +7,22 @@
             cpu Z80
             include  src/i8080/std.i80
 
-tmon_loc    equ  $C800
+tmon_rom    equ  $C800
+tmon_stksz  equ  64
+tmon_ram    equ  $CF00
+
+mzinit      equ  tmon_rom - 8
 
 ; ----------------------------------------------------------------------
 ;   `.mzf` Tape Header, until we make a program that can build this.
 
-mzf         org  tmon_loc-$80       ; tape header is 128 bytes
+mzf         org  mzinit - $80   ; tape header is 128 bytes
 .type       db   $01
 .filename   db   'TMON48'
             db   17 - ($ - .filename) dup CR
-.size       dw   end-tmon_loc
-.start      dw   tmon_loc
-.entry      dw   tmon_loc
+.size       dw   end - mzinit
+.start      dw   mzinit
+.entry      dw   mzinit
 
 ; ----------------------------------------------------------------------
 ;   BIOS routines
@@ -39,11 +43,15 @@ BACKSPACE   equ  $14            ; cursor left
 
 ; ----------------------------------------------------------------------
 
-tmon_stksz  equ  64
-tmon_ram    equ  $CF00
+            org  mzinit
+            call LETNL
+            jp   intentry       ; do we have a caller to which we can return?
 
-            org  tmon_loc
-tmon_rom    equ  $
+        if $ >= tmon_rom
+            error 'mzinit overflow'
+        endif
+
+            org  tmon_rom
             include src/i8080/tmon.i80
 
 rdchar      call GETKY
@@ -80,4 +88,4 @@ init_platform
             error 'code PC=$\{$} > ROM max $\{tmon_ram-1}'
     endif
 
-end         end tmon_loc
+end         end  mzinit

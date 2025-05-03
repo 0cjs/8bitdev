@@ -1,3 +1,7 @@
+#   If you are looking for a __pycache__/ ignore, it's not here. You should
+#   set $PYTHONPYCACHEPREFIX not to use source dirs for caching, e.g.:
+#       export PYTHONPYCACHEPREFIX=$HOME/.cache/pycache__
+
 /.all-tools
 /.build/
 /.download/

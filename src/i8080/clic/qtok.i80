@@ -1,0 +1,179 @@
+;   qtok.i80 - parse CLIC tokens
+
+;   Intrinsic constants.
+NIL         equ  $0000      ; nil (empty list)
+T           equ  $0004      ; t (true)
+
+;   Precomputed symbols
+symNI       equ  $E9BA      ; 'ni'
+symT        equ  $7402      ; 't'
+
+;   Currently the input base can't be changed, but this reminds that we
+;   can make it dynamicly settable, if we decide we want to.
+QNUM_BASE      equ     10
+
+;   ♠CHL ♣A ♡CHL*   Determine if token of length C at (HL) is a valid number.
+;                   Return Cy=0 if it is, or Cy=1 if not.
+;                   Token must not be zero length.
+numberQ     push bc
+            push hl
+            ;
+            ld   a,(hl)
+            inc  hl
+            cp   '+'
+            jp   Z,.firstdigit  ; continue reading digits
+            cp   '-'
+            jp   Z,.firstdigit
+            dec  hl             ; restore read pos to first char
+            inc  c              ; because we predecrement length when reading
+            ;
+.nextdigit  or   a,a            ; clear carry; default exit is good
+            dec  c
+            jp   Z,.exit
+.digittest  ld   a,(hl)
+            inc  hl
+            sub  a,'0'
+            jp   C,.exit
+            cp   a,QNUM_BASE
+            jp   NC,.errexit
+            jp   .nextdigit
+            ;
+.firstdigit dec c               ; do we have at least one digit?
+            jp   NZ,.digittest  ;   yes: process it
+            ;   fallthrough     ;    no: error
+.errexit    scf
+.exit       pop  hl
+            pop  bc
+            ret
+
+;   ♠CHL ♠HLDE ♣ABC   Parse a token of length C at (HL), returning:
+;   • Success: Cy=0, HL=HL+C, DE=objref, BC destroyed.
+;   • Failure: Cy=1, HL=????, DE=invalid, BC destroyed.
+;   It's assumed that the HL points to a textually valid token, i.e., one
+;   that does not have e.g. a token-terminating char such as ')' in it.
+;   (It's assumed that the tokenizer ensures this.)
+;
+;   XXX Does HL point to the char that caused the error?
+;
+;   XXX Possibly we should have error codes, rather than just generic
+;   "didn't parse."
+;
+;   XXX This currently handles only intrinsic object references;
+;   it never allocates on the heap.
+;
+;   XXX Only the first two chars of symbols are significant; all
+;   remaining chars are ignored.
+;
+qtok        scf                 ; indicate error
+            ld   a,c
+            or   a,a            ; zero-length token?
+            ret  Z              ;   yes: error
+            call numberQ        ; is it in correct format for a number?
+            jp   C,.symbol      ;    no: parse as a symbol
+            ;   fallthrough
+
+.number     ld   de,0           ; init return value
+            ld   a,(hl)
+            inc  hl
+            dec  c
+            push af             ; save initial char to later check for '-'
+            cp   '-'            ; leading '-'
+            jp   Z,.parsedigit  ;   is consumed
+            cp   '+'            ; leading +
+            jp   Z,.parsedigit  ;   is consumed
+            dec  hl             ; unget digit
+            inc  c
+.parsedigit ld   a,(hl)
+            call qdigit         ; must be good; numberQ said so
+            push hl
+            ld   h,d            ; multiply DE by ten
+            ld   l,e
+            add  hl,hl          ; DE*2
+            ld   d,h
+            ld   e,l
+            add  hl,hl          ; DE*4
+            add  hl,hl          ; DE*8
+            add  hl,de          ; DE*10
+            ex   de,hl
+            pop  hl
+            add  a,e            ; add new digit
+            ld   e,a
+            ld   a,d
+            adc  a,0
+            ld   d,a
+            inc  hl             ; move to next digit
+            dec  c
+            jp   NZ,.parsedigit
+            ;
+            pop  af             ; check sign, if present
+            cp   '-'
+            jp   NZ,.positive
+            ;
+.negate     ld   a,d
+            and  a,%11000000    ; overflow check: up to 8192 ok
+            jp   nz,.overflow
+            ld   a,e            ; negate DE
+            cpl
+            ld   e,a
+            ld   a,d
+            cpl
+            ;   XXX maybe don't need this because shifted out by later add
+            and  a,%00111111    ; remove complemented unused high bits
+            ld   d,a            ; DE ← 1s complement of DE
+            inc  de             ; DE ← 2s complement of DE
+            jp  .shift
+            ;   fallthrough
+.positive   ld   a,%11100000    ; up to 8191 ok
+            and  a,d            ; check for overflow
+            jp   nz,.overflow
+.shift      push hl
+            ld   h,d
+            ld   l,e
+            add  hl,hl          ; shift left one bit
+            add  hl,hl          ; shift left another bit
+            or   a,a            ; clear carry: if DE was zero, above add set it
+            ex   hl,de
+            pop  hl
+            inc  de             ; set tag bit
+            ret
+            ;
+.overflow   scf
+            ret
+
+.symbol     ld   a,(hl)         ; first char
+            inc  hl
+            dec  c
+            ld  d,a             ; 8-bit char
+            ld  e,$02           ; sym1 zero bits and tag
+            jp   NZ,.char2      ; test C decrement
+            ;                   ; (we need to clear carry before returning)
+            ld   bc,symT        ; 't' → TRUE
+            call cpBCDE         ; clears carry
+            ret  NZ
+            ld   de,T
+            ret
+            ;
+.char2      scf                 ; high bit of tag = 1
+            rla                 ; first char has high bit set?
+            ret  C              ;   yes: return error
+            rla                 ; low bit of tag = 0; carry ← char 1 bit 6
+            ld   e,a            ; sym2 LSB
+            ld   a,0            ; do not affect carry
+            rra                 ; carry to bit 7
+            ld   b,a            ; save for a moment
+            ld   a,(hl)         ; second char
+            rla                 ; bit 7 set?
+            ret  C              ;   yes: return error
+            ld   a,(hl)         ; second char again
+            or   a,b            ; OR in bit 6 of first char (clears carry)
+            ld   d,a            ; sym2 MSB
+            ;
+.skip       inc  hl             ; skip past remainder of token
+            dec  c
+            jp   NZ,.skip
+
+            ld   bc,symNI       ; 'ni' → NIL
+            call cpBCDE         ; clears carry, but was already clear
+            ret  NZ
+            ld   de,NIL
+            ret

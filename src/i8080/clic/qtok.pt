@@ -1,0 +1,100 @@
+from    testmc.i8080  import  Machine
+from    src.clic.objref  import \
+    NIL, T, sym1 as s1, sym2 as s2, smallint as i
+from    random  import randrange
+import  pytest
+
+test_rig = '''
+            cpu  8080
+            include src/i8080/std.i80
+            include testmc/i8080/tmc/biosdef.i80
+
+            org  $200
+            include src/i8080/clic/qtok.i80
+
+            include src/i8080/arith.i80
+            include src/i8080/qhex.i80
+'''
+
+####################################################################
+#   XXX This probably belongs in a more generic file somewhere,
+#   and might want to be extended for multiple consts.
+
+def zipconst(const, iterable):
+    return zip([const]*len(iterable), iterable)
+
+def test_zipconst():
+    assert [('a', 1), ('a', 2), ('a',3)] == list(zipconst('a', [1, 2, 3]))
+
+####################################################################
+
+param   = pytest.mark.parametrize
+
+@param('asm_sym, expected', [
+    ('symNI',   s2('ni')),
+    ('symT',    s1('t')),
+])
+def test_asm_syms(m, S, asm_sym, expected):
+    assert expected == S[asm_sym]
+
+@param('isnumber, input', [
+    *zipconst(True, [
+        '0',        '9',        '09090',    '90909009',
+        '+1',       '-1',       '+12345678', '-9876543210',     ]),
+    *zipconst(False, [
+        '+',        '++',       '++0',
+        '-',        '--',       '--0',
+        '--0',      '-+1',      '+-2',     '++3',
+        'w777',     '777w',
+        '+0+',      '-9-',                                      ]),
+])
+def test_numberQ(m, S, R, input, isnumber):
+    input = bytes(input, encoding='ASCII')
+    Cy = not isnumber
+    inpbuf = randrange(0x4000, 0xFFFF)
+    m.deposit(inpbuf, input + b'"')    # unread sentinel appended
+    m.call(S.numberQ, R(hl=inpbuf, c=len(input), C=not Cy))
+    assert R(C=Cy, hl=inpbuf, c=len(input)) == m.regs
+
+@param('input, expected', [
+    #   sym1
+    ('a',      s1('a')),
+    #   sym2: all combinations of bit 6 set and clear
+    ('!?',     s2('!?')),     ('3^',     s2('3^')),
+    ('Ab',     s2('Ab')),     ('~@',     s2('~@')),
+    #   We consume but ignore everything after the first two chars.
+    ('defgh#', s2('de')),
+    #   Symbols that should be converted to intrinsic constants.
+    ('nil',    NIL),             ('t',      T),
+    #   Symbols that start like ints.
+    ('0h',     s2('0h')),   ('12345m', s2('12')),
+    ('+5s',    s2('+5')),   ('-999-',  s2('-9')),
+    ('3.',     s2('3.')),   ('12345s', s2('12')),
+    #   Small integers
+    ('0',      i(0)),       ('+0',     i(0)),
+    ('1',      i(1)),       ('+1',     i(1)),
+    ('255',    i(255)),     ('256',    i(256)),
+    ('8191',   i(8191)),    ('+8191',  i(8191)),
+    ('-0',     i(0)),
+    ('-8192',  i(-8192)),   ('-1',     i(-1)),
+    ('-255',   i(-255)),    ('-256',   i(-256)),
+])
+def test_qtok_good(m, S, R, input, expected):
+    input = bytes(input, encoding='ASCII')
+    inpbuf = randrange(0x4000, 0xFFFF)
+    m.deposit(inpbuf, input)
+    #   Ensure Cy is explicitly set and B reg is ignored.
+    m.call(S.qtok, R(hl=inpbuf, c=len(input), C=1, b=0xEE, de=0xEEEE), trace=1)
+    assert R(C=0, de=expected, hl=(inpbuf+len(input))) == m.regs
+
+@param('input', [ '8192', '+8192',
+#'-8193'
+])
+#   XXX also need to test other errors?
+def test_qtok_int_overflow(m, S, R, input):
+    input = bytes(input, encoding='ASCII')
+    inpbuf = randrange(0x4000, 0xFFFF)
+    m.deposit(inpbuf, input)
+    #   Ensure Cy is explicitly set and B reg is ignored.
+    m.call(S.qtok, R(hl=inpbuf, c=len(input), C=0, b=0xEE, de=0xEEEE))
+    assert R(C=1) == m.regs

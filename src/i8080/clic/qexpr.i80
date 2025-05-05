@@ -1,0 +1,7 @@
+;   qexpr.i80 - parse CLIC expressions
+
+;   ♠HL   Parse a single object from the input, depositing the result in (HL).
+;         C=0 no error; C=1 parse error.
+qexpr
+            scf
+            ret

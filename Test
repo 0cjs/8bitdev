@@ -147,12 +147,12 @@ for i in "$exeobj"/cpm/*.p; do
     #   This assumes that your assembly output starts at $0100.
     p2bin -q "$i" "$(dirname "$i")/$(basename "$i" .p).com"
 done
-cmtconv -p jr200 -i obj \
-    -f HELLO "$exeobj/jr200/hello.p" "$exeobj/jr200/hello.wav"
-cmtconv -p mb6885 -i obj \
-    -f HELLO.B "$exeobj/mb6885/hello.p" "$exeobj/mb6885/hello.wav"
-cmtconv -p mb6885 -i obj -o cas \
-    -f HELLO.B "$exeobj/mb6885/hello.p" "$exeobj/mb6885/hello.bin"
+cmtconv -p jr200 -f HELLO \
+    "$exeobj/jr200/hello.p" "$exeobj/jr200/hello.wav"
+cmtconv -p mb6885 -f HELLO.B \
+    "$exeobj/mb6885/hello.p" "$exeobj/mb6885/hello.wav"
+cmtconv -p mb6885 -f HELLO.B -o cas \
+    "$exeobj/mb6885/hello.p" "$exeobj/mb6885/hello.bin"
 
 p2bin -q "$exeobj/nec/pc8001/exprom1.p" "$exeobj/nec/pc8001/exprom1.bin"
 p2bin -q "$exeobj/kc85/m100/cotest.p" "$exeobj/kc85/m100/COTEST.CO"

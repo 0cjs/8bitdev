@@ -1,26 +1,22 @@
-8bitdev "BIOS" Interface
-========================
+BIOS Defintion Files
+====================
 
-This repo has a standard strategy for handling machine-specific ROM and OS
-symbols, along with a set of common names for the usual I/O routines. Here
-we refer to all the vendor-provided code as "ROM" even when it may be code
-loaded into RAM as part of a standard OS. (E.g., `cpm/bios.aXX` and
-`cpm/bdos.aXX` would cover the standard APIs for the CP/M BIOS and BDOS,
-though these are usually loaded into RAM.)
+This directory contains BIOS definition files (none of which generate code)
+for all the various platforms we use. Keeping them together in one
+directory helps us more easily see the differences between what various
+BIOSes provide and also to work out what we can rely on to be common
+amongst most BIOSes.
 
-The `src/<machine>/bios.aXX` files define the low-level system routines in
-the part of the ROM typically called "BIOS," "monitor," "KERNAL," etc.
-These contain definitions only (they can be used by programs that do not
-want to bring in extra library code) and should work across all versions of
-the ROM. (E.g., on both the Apple II using Integer BASIC ROM and the Apple
-II+ using Applesoft ROM.)
+This does not include the TMC (command-line CPU simulator) BIOS files;
+those are provided by the t8dev `biosdef.*` resource files in the
+`testmc.*.tmc` modules.
 
-Separate files are used for additional ROM that may be enabled or disabled
-independently, such as the KERNAL and BASIC ROMs on CBM machines, the BIOS
-and BASIC ROMs on the National/Panasonic JR-200, or the BIOS and BDOS on
-CP/M.
+The `src/biosdef/<machine>.<cpu>` files contain definitions only (they do
+not generate code, at least not by default) and should work across all
+versions of the ROM. (E.g., on both the Apple II using Integer BASIC ROM
+and the Apple II+ using Applesoft ROM.)
 
-All these definition files are normally included at the top of the assembly
+These definition files are normally included at the top of the assembly
 file so you can see at a glance which ROMs a program uses.
 
 ### Symbol Naming
@@ -30,7 +26,7 @@ documented symbol names where known, otherwise the names are usually taken
 from the [retroabandon disassemblies][rd].
 
 The files may also contain generic names for any routines that match the
-"common" API described below. Any common routines that are not provided
+"common" API described below. common routines that are not provided
 directly by system ROM may have equivalent code provided in
 `<machine>/common.aXX`; see below for more details.
 

@@ -1,0 +1,36 @@
+from    testmc  import tmc_tid
+from    testmc.i8080  import  Machine
+import  pytest
+
+test_rig = '''
+            cpu  8080
+            include src/i8080/std.i80
+            include testmc/i8080/tmc/biosdef.i80
+
+            org  $200
+            include src/i8080/clic/qexpr.i80
+'''
+
+####################################################################
+
+param   = pytest.mark.parametrize
+
+@param(('obj', 's'), [
+    #   XXX HeapBuilder needs to be split: class to create objects
+    #   and return their word values, and a different one to deposit
+    #   these.
+    (0x0000,     b'nil'         ),
+    (0x0004,     b'#t'          ),
+    (0xFFFF,     b'a'           ),
+    (0xFFFF,     b'+'           ),
+    (0xFFFF,     b'ab'          ),
+    (0xFFFF,     b'--'          ),
+    #   For #1A2B, what's the object type? Pointer? Even if unaligned?
+])
+def test_nil(m, S, R, loadbios, obj, s):
+    loadbios(input=s + b' ')        # XXX adding the token terminator here?
+    dest = 0x1F8; m.depword(dest, 0x5A5C)   # sentinel
+
+    m.call(S.qexpr, R(hl=dest, C=1))
+    assert    obj == m.word(dest)
+    assert R(C=0) == m.regs

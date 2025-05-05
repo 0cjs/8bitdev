@@ -9,7 +9,7 @@ trap 'ec=$?; echo 1>&2 "INTERNAL ERROR: ec=$ec line=$LINENO cmd=$BASH_COMMAND";
       exit $ec;' ERR
 
 export T8_PROJDIR=$(cd "$(dirname "$0")" && pwd -P)
-. "$T8_PROJDIR"/t8dev/t8setup.bash
+. "$T8_PROJDIR"/t8dev/t8dev/t8setup.bash
 if [[ $# -gt 0 ]]; then
     exec "$@"
 else

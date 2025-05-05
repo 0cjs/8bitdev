@@ -11,7 +11,7 @@
         cpu 8085
         include  src/i8080/std.i80
 TK85    equ  1
-        include  src/tk80/biosdef.i80
+        include  src/biosdef/tk80.i80
 
 ;   Pointer to a routine that that will read a byte based on an argument
 ;   in A, and return the value read in A. Typically this will be a routine

@@ -1,8 +1,8 @@
 ;   pmon in RAM for Panasonic/National JR-200
 
             cpu 6800
-            include "src/mc68/std.a68"
-            include "src/jr200/biosdef.a68" ; bin/tmc6800 will load bioscode
+            include  src/mc68/std.a68
+            include  src/biosdef/jr200.a68
 
 EXWIDTH     equ $08     ; make default fit 32-column screen
 

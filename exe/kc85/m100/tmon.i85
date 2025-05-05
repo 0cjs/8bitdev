@@ -5,7 +5,7 @@
 
             cpu 8085
             include  src/i8080/std.i80
-            include  src/kc85/biosdef.i85
+            include  src/biosdef/kc85.i85
 
 tmon_ram    equ  $F580  ; MAXRAM - $70
 tmon_stksz  equ  $30    ; 24-word stack at bottom of tmon_ram (too much?)

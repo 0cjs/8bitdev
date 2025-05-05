@@ -1,7 +1,7 @@
 ;   Apple II: Print the charset used by COUT
 
             cpu     6502
-            include "src/a2/biosdef.a65"
+            include  src/biosdef/apple2.a65
 
 SPACE       equ     AA(' ')
 

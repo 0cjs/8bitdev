@@ -10,7 +10,7 @@
 
             cpu  8085
             include  src/i8080/std.i80
-            include  src/kc85/biosdef.i85
+            include  src/biosdef/kc85.i85
 
 ; ----------------------------------------------------------------------
 ;   This is a hack; one normally uses the r8format `p2b` program to

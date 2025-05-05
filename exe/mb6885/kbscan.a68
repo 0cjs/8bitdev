@@ -1,8 +1,8 @@
 ;   MB-6885 keyboard scanning experiments
 
             cpu 6800
-            include "src/mc68/std.a68"
-            include "src/mb6885/biosdef.a68"
+            include  src/mc68/std.a68
+            include  src/biosdef/mb6885.a68
 
 ;   For the moment we use the monitor's setting for break key processing.
 brkkey_enabled  EQU  $0013            ; BREAK key processing: $00=ignored

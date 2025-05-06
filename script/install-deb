@@ -5,7 +5,7 @@
 set -Eeuo pipefail
 
 sudo apt install \
-    build-essential pkg-config \
+    build-essential pkg-config libcurl4-openssl-dev \
     libncurses-dev libjpeg-dev libfltk1.3-dev \
     libxft-dev libxinerama-dev libfontconfig-dev libsdl2-dev \
     #

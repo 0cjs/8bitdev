@@ -1,0 +1,45 @@
+;   "Hello, world" for Sharp mz80k.
+
+            cpu z80
+            include  src/i8080/std.i80
+
+mzstart     equ $1200
+
+; ----------------------------------------------------------------------
+;   `.mzf` Tape Header, until we make a program that can build this.
+
+mzf         org  mzstart - $80   ; tape header is 128 bytes
+.type       db   $01
+.filename   db   'HELLO'
+            db   17 - ($ - .filename) dup CR
+.size       dw   end - mzstart
+.start      dw   mzstart
+.entry      dw   mzstart
+
+; ----------------------------------------------------------------------
+
+PRNT        equ  $0012
+prchar      equ  PRNT
+__KEY       equ  $09B3
+
+            org  mzstart
+            call hello
+            ret
+
+rdchar      call __KEY
+            push af
+            ld   a,'<'
+            call prchar
+            pop  af
+            push af
+            call prhexA
+            ld   a,'>'
+            call prchar
+            pop  af
+            ret
+
+            include  src/i8080/hello.i80
+            include  src/i8080/pr/str.i80
+            include  src/i8080/pr/hex.i80
+
+end         end mzstart

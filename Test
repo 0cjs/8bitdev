@@ -159,6 +159,7 @@ p2bin -q "$exeobj/kc85/m100/cotest.p" "$exeobj/kc85/m100/COTEST.CO"
 p2b kc85 "$exeobj/kc85/m100/hello.p" "$exeobj/kc85/m100/HELLO.CO"
 p2b kc85 "$exeobj/kc85/m100/tmon.p" "$exeobj/kc85/m100/TMON.CO"
 p2bin -q "$exeobj/nec/tk85/portmon.p" "$exeobj/nec/tk85/portmon.bin"
+p2bin -q "$exeobj/sharp/hello.p" "$exeobj/sharp/hello.mzf"
 p2bin -q "$exeobj/sharp/tmon48.p" "$exeobj/sharp/tmon48.mzf"
 
 #   Hack to make emulator use easier. VirtualT File » Load from HD always

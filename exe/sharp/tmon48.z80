@@ -33,6 +33,7 @@ PRNTS       equ  $000C
 PRNT        equ  $0012
 GETKY       equ  $001B
 BELL        equ  $003E
+__KEY       equ  $09B3
 
 prnl        equ  LETNL
 prchar      equ  PRNT
@@ -55,7 +56,7 @@ BACKSPACE   equ  $14            ; cursor left
             org  tmon_rom
             include src/i8080/tmon.i80
 
-rdchar      call GETKY
+rdcharXXX   call GETKY
             or   a,a
             jr   z,rdchar
             cp   a,$66
@@ -63,6 +64,8 @@ rdchar      call GETKY
             ld   a,CR
             ret
 
+rdchar      call __KEY
+            ret
 
             include src/i8080/prvischar/ascii.i80       ; XXX no reverse
             include src/i8080/prscreenchar/ascii.i80    ; XXX no reverse

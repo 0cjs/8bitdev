@@ -19,9 +19,12 @@
 ;
 ;   This requires the system-dependent files define the following before
 ;   including this file:
-;   • tmon_ram: the workspace area, which must be RAM. No code or data
-;     is generated here; it's all initialised at runtime.
-;   • tmon_stksz: size of tmon's monitor stack (separate from user stack)
+;   • tmon_ram: start of the the RAM workspace area (which extends to
+;     tmon_ram_end) No code or data is generated here; it's all initialised
+;     at runtime.
+;   • tmon_stack: start of tmon's monitor stack (separate from user stack),
+;     growing down from the address below this value. tmon itself does not
+;     use much stack, but the BIOS routines it calls may use much more.
 ;   • tmon_rom: start of code and static data, and monitor entry point.
 
 ;   Abort assembly with a clear message if an essential definition is missing.
@@ -33,7 +36,7 @@
 ;   if it's not defined.
 ;
 ;   set ______,
-;   pushv , tmon_rom, tmon_ram, tmon_stksz
+;   pushv , tmon_rom, tmon_ram, tmon_stack
 ;   popv  , ______,     ______,     ______
 
 ; ----------------------------------------------------------------------
@@ -92,9 +95,6 @@ pw          macro char,addr
 ;   RAM Work Area
 
             org  tmon_ram
-
-            ds   tmon_stksz     ; reserve space for monitor stack
-monstack                        ; first push will deposit below this
 
 ;   Registers
 ureg_AF
@@ -200,7 +200,7 @@ entry1      di                  ; ensure as best we can nothing will touch stack
             ;   Now that we've saved the user stack pointer, we can switch
             ;   to our own stack. (We must never use the user stack because
             ;   it may be invalid, e.g. pointing into ROM.)
-            ld   sp,monstack
+            ld   sp,tmon_stack
             push af
             ex   (sp),hl
             pop  de             ; clean up stack
@@ -266,7 +266,7 @@ init        call cksum_v
 ;   current line (by generating CR) if that won't overwrite any useful
 ;   input made before command execution.
 ;
-prompt      ld   sp,monstack
+prompt      ld   sp,tmon_stack
             ld   a,'.'
             call prchar         ; prompt
 .read       call rdchar

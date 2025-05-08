@@ -10,8 +10,8 @@
             cpu 8080
             include  src/i8080/std.i80
 
-tmon_ram    equ  $180
-tmon_stksz  equ  $40            ; data at $1A0
+tmon_ram    equ  $120           ; workspace and stack
+tmon_stack  equ  $200           ;   in $100 page below tmon entry
 tmon_rom    equ  $200           ; easy to remember and use
 
             org  $100           ; start of TPA

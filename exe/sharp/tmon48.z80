@@ -8,7 +8,7 @@
             include  src/i8080/std.i80
 
 tmon_rom    equ  $C800
-tmon_stksz  equ  64
+tmon_stack  equ  $D000
 tmon_ram    equ  $CF00
 
 mzinit      equ  tmon_rom - 8

@@ -7,15 +7,15 @@
 ;   Our RAM workspace and code locations are chosen here just to be easy
 ;   to remember, especially when wondering where things went wrong.
 tmon_ram    equ  $100
-tmon_stksz  equ  $100           ; data at $200
-tmon_rom    equ  $300           ; easy to remember and use
+tmon_stack  equ  $200
+tmon_rom    equ  $200
 
 ;   We set up RST $08 as a "breakpoint" instruction that will re-enter
 ;   the monitor when executed via `intentry`, so that `I` will continue
 ;   the program after that instruction.
 rsti        equ  $08            ; RST for breakpoint
 
-            org  $2E0           ; just below the monitor code; above data
+            org  $1E0           ; just below the monitor code; above data
 
 tmc         ;   Set up "breakpoint" RST.
             ld   a,$C3          ; JMP

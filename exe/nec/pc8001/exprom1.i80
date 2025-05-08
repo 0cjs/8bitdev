@@ -184,16 +184,21 @@ cmd_tmon
 
 tmon_rom    equ  $
 
-;   Start our stack/work area at the first byte after the work area used by
-;   `MON`. Nothing after the MON work area is used after initialisation.
-;   Note we allocate plenty of stack because the ROM routines use quite a
-;   bit: tmon has been seen to use 42 bytes when calling prchar and the like.
-tmon_ram    equ  $FF3D
-tmon_stksz  equ  $FF80-tmon_ram  ; 67 bytes stack
+;   The first free byte after the `MON` work area is $FF3D. We place our
+;   work area at $FF40 so we can find it conveniently when debugging, and
+;   allocate as much stack space above that as we can because the ROM
+;   routines we call use quite a bit: tmon has been seen to use 42 bytes
+;   when calling prchar and the like. (We put it a bit below the end of
+;   RAM so we can debug things that use that area.)
+tmon_ram    equ  $FF40
+tmon_stack  equ  $FFE0          ; 160 bytes total, so ~117 bytes of stack
 
 BACKSPACE   equ  $1D            ; cursor left
 
             include src/i8080/tmon.i80
+
+            message 'Stack size: $\{tmon_stack - tmon_ram_end}' \
+                    + ' ($\{tmon_stack}-$\{tmon_ram_end})'
 
             include src/i8080/prvischar/pc8001.i80      ; XXX no reverse
             include src/i8080/prscreenchar/ascii.i80    ; XXX no reverse

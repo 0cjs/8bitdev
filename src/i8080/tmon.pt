@@ -21,8 +21,8 @@ vini_width  equ  $08        ; examine width
 
 ; ----------------------------------------------------------------------
 
-tmon_ram    equ  $6F00      ; chose values for these that
-tmon_stksz  equ  $100       ;   put our data at $7000
+tmon_ram    equ  $7000
+tmon_stack  equ  tmon_ram   ; stack below work area
 tmon_rom    equ  $8000
 
 rsti        equ $6 * $8     ; address of RST 6

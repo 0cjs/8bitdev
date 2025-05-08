@@ -15,8 +15,7 @@ tmon_stksz  equ  $40            ; data at $1A0
 tmon_rom    equ  $200           ; easy to remember and use
 
             org  $100           ; start of TPA
-tpa
-            jp  cpm_setup
+tpa         jp  cpm_setup
 
             ;   We place the terminal code strings as close to the start
             ;   as we can manage to make them easy to patch. The default
@@ -26,6 +25,10 @@ ESC             equ  $1B
 prvattr_none    db   4,   ESC,'[0m', '  '
 prvattr_A       db   4,   ESC,'[4m', '  '
 prvattr_B       db   4,   ESC,'[7m', '  '
+
+    if $ >= tmon_ram
+            error   'tmon_ram stomped on prvattr!'
+    endif
 
 cpm_setup   ;   Set up "breakpoint" RST.
             ld   a,I_JP
@@ -39,7 +42,7 @@ exit        jp   RST_00         ; Return to CP/M.
             include testmc/i8080/bios/cpmcode.i80
             include src/i8080/pr/space.i80
 
-    if $ >= tmon_ram
+    if $ >= tmon_rom
             error   'setup routine stomped on tmon code!'
     endif
 

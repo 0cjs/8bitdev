@@ -18,24 +18,84 @@ mzf         org  mzstart - $80   ; tape header is 128 bytes
 
 ; ----------------------------------------------------------------------
 
+LETNL       equ  $0006
+PRNTS       equ  $000C
 PRNT        equ  $0012
 prchar      equ  PRNT
+MSG         equ  $0015
+GETKY       equ  $001B
 __KEY       equ  $09B3
+_DACN       equ  $0BB9
 
             org  mzstart
-            call hello
+
+            ld   a,$41
+            call printkeyval
+            ld   a,$61
+            call printkeyval
+
+.loop       call delay
+            call LETNL
+            ld   de,msg_getky
+            call MSG
+.getky      call GETKY
+            or   a,a
+            jr   z,.getky
+            call printkeyval
+            ;
+            call LETNL
+            ld   de,msg___key
+            call MSG
+            call delay
+            call __KEY
+            call _DACN
+            call printkeyval
+            ;
+            jr   .loop
+
+msg_getky   db   'GETKY:',CR
+msg___key   db   '__KEY:',CR
+
+savechar    ds   1
+
+printkeyval ld   (savechar),a
+            call prhexA
+            ;
+            call PRNTS
+            ld   a,(savechar)
+            call prchar
+            ;
             ret
 
-rdchar      call __KEY
-            push af
+delay       ld   b,0
+.t1         ld   c,0
+.t2         dec  c
+            jp   nz,.t2
+            dec  b
+            jp   nz,.t1
+            ret
+
+           ;call hello
+            ret
+
+rdchar      call GETKY
+            or   a,a
+            jr   z,rdchar
+            call prhexchar
+            call prchar
+            call __KEY
+            call prhexchar
+            ret
+
+;   ♣B ♡A
+prhexchar   ld   b,a
             ld   a,'<'
             call prchar
-            pop  af
-            push af
+            ld   a,b
             call prhexA
             ld   a,'>'
             call prchar
-            pop  af
+            ld   a,b
             ret
 
             include  src/i8080/hello.i80

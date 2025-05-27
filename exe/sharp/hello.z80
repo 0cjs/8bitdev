@@ -48,6 +48,7 @@ _DACN       equ  $0BB9
             call MSG
             call delay
             call __KEY
+            call printkeyval
             call _DACN
             call printkeyval
             ;

@@ -283,7 +283,7 @@ prompt      ld   sp,tmon_stack
             cmd  ',',cmd_deposit_params
             cmd  '.',cmd_deposit_bytes
             cmd  '/',cmd_calc
-          ; cmd  ':',cmd_deposit_intelhex
+            cmd  ':',cmd_deposit_intelhex
             cmd  ';',cmd_regs_deposit
             cmd  '>',cmd_deposit_words
           ; cmd  'A',cmd_examine_asm
@@ -881,6 +881,15 @@ deposit_end call prnl
             jp   Z,.noadvance
             ld   (vS_deposit),hl
 .noadvance  jp   prompt
+
+cmd_deposit_intelhex
+            ;   XXX read count (2 chars)
+            ;   XXX read addr (4 chars)
+            ;   XXX read type (2 chars)
+            ;   XXX read data bytes (2*count chars)
+            ;   XXX read checksum (2 chars)
+            call prnl
+            jp   prompt
 
 ; ----------------------------------------------------------------------
 ;   Checksum and Copy Commands

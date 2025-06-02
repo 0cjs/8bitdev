@@ -156,6 +156,25 @@ def test_qhexdigitDE(m, S, R, char, val):
     if val is not None:  assert PR(C=0, de=0x4560|val) == m.regs
     else:                assert PR(C=1, de=0x3456)     == m.regs
 
+def test_qrhex4_good(m, S, R, loadbios):
+    ''' This tests the most complex entry point into `qrhexN`
+        and the `qrhexN` routine itself.
+    '''
+    inp, out = loadbios(input=b'1F2e3')
+    m.call(S.qrhex4, R(C=1, c=2, de=0x1234, b=0xEA, hl=0x5678))
+    assert R(C=0, a=0x2E, de=0x1F2E, b=0xEA, hl=0x5678) == m.regs
+    assert ord(b'e') == m.byte(S.t0), 'last char read'
+    assert b'3' == inp.read(), 'read only 4 valid digits'
+
+@param('input', [ '1g', '/', ':', '?', ])
+def test_qrhex2_bad(m, S, R, loadbios, input):
+    ''' `qrhexN` error returns. '''
+    input = bytes(input, encoding='ASCII')
+    inp, out = loadbios(input=input)
+    m.call(S.qrhex2, R(C=0))
+    assert R(C=1) == m.regs
+    assert input[-1] == m.byte(S.t0), 'last char read'
+
 @param('size, stored, input', [
     #   We always check the word value; for byte values the MSB is $EE.
     ( 8, 0xEEEE, b' '),       (16, 0xEEEE, b' '),   # keep curval, more params
@@ -557,6 +576,7 @@ def test_memcopy_v(m, S, R):
 from src.tmon.test import ( NL,
     test_ignored, test_newline, test_comment,
     test_calc, test_params_good_bad_good,
+    test_intelhex_good, test_intelhex_errors,
     )
 
 def test_quit_default(m, S, R, loadbios):

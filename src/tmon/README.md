@@ -339,17 +339,6 @@ The full command descriptions follow.
   immediately enters that value. Enter Ctrl-F to skip over locations,
   preserving the previous value.
 
-- `:` Deposit Intel hex record. All data from the colon to the next newline
-  is read as [Intel hex format][intel] and deposited into memory at the
-  address given in the record. A warning is printed if the checksum is
-  incorrect or another format error occurs, but all data up to the error
-  are still deposited into memory.
-
-- `s` Deposit Motorola S-record. Data from the `S` (upper or lower case) to
-  the next newline is read as a [Motorola S-record][motorola] and deposited
-  into memory at the address given in the record. Error handling is as `:`
-  above.
-
 - `o` Output (write) to I/O port. Parameters are §`p##` or §`p####` for the
   port address (depending on the size of the machine's I/O address space)
   and §`v##` for the data to write. This applies only to machines with a
@@ -366,6 +355,41 @@ The full command descriptions follow.
     command).
   - The `v##` parameter takes a number of copies and set the `u####`
     parameter such that that many copies of the source range will be made.
+
+#### Data Uploads (Hex Records)
+
+- `:` Deposit [Intel hex record][intel]. The `:` command itself is the
+  start of the record. See below for more information.
+
+- `s`, `S` (Not yet implemented.) Deposit [Motorola S-record][motorola].
+  The `S` command itself is the start of the record. See below for more
+  information.
+
+These commands are intended for use via copy/paste or serial upload and
+thus work slightly differently from the interactive deposit commands.
+
+The record is read from the command character through to the end of the
+record as specified by its length field and each byte is deposited as it is
+encountered. If the record is successfully read, a newline is printed and
+tmon returns to the prompt.
+
+If an error is encountered, the bell is rung and a `?` is printed alone on
+a line. If the bad character was a CR tmon will immediately return to the
+prompt, otherwise input continues to be read but not echoed until a CR is
+encountered. (This avoids trailing characters after an error being
+interpreted as commands.) Note that any data up to the point of the error
+remains deposited.
+
+The checksum is not currently checked; any value is accepted.
+
+To support checking for errors after a large upload, the `/` command's left
+parameter value (`?`) is incremented for every record that is attempted to
+be read, and the right parameter value (`/`) is incremented on every record
+successfully read. Thus if these are set to zero (the default values on
+tmon init), executing the `/` command will print `nnnnn:mmmm` for the
+number of records attempted and the number successfully read, and the
+subtraction result at the right will indicate the number of errors.
+(Execute `/?0 /0` followed by CR to clear the counts.)
 
 #### External Storage
 

@@ -1,0 +1,15 @@
+from    src.tmon.test  import remove_command_echo
+
+import  pytest
+param = pytest.mark.parametrize
+
+@param('command, output, expected', [
+    ( 'x1',  'Z',        'Z'),
+    ( 'x2',  'x2Z',      'Z'),
+    ( 'x3',  'x3\rZ',    'Z'),
+    ( 'x4',  'x4\r\nZ',  'Z'),
+    (b'x5', b'x5Z',     b'Z'),
+    (b'x6', b'x6\r\nZ', b'Z'),
+])
+def test_remove_command_echo(command, output, expected):
+    assert expected == remove_command_echo(command, output)

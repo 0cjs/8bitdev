@@ -291,7 +291,7 @@ prompt      ld   sp,tmon_stack
             cmd  ',',cmd_deposit_params
             cmd  '.',cmd_deposit_bytes
             cmd  '/',cmd_calc
-          ; cmd  ':',cmd_deposit_intelhex
+            cmd  ':',cmd_deposit_intelhex
             cmd  ';',cmd_regs_deposit
             cmd  '>',cmd_deposit_words
           ; cmd  'A',cmd_examine_asm
@@ -484,6 +484,9 @@ qhex        call prhexval       ; load (DE=val B=#digits) and print curval
             cp   ' '            ; terminate input and continue?
             jp   Z,.storeDE     ;    yes: (TCO) store and return
             call qhexdigitDE    ;     no: parse digit, add to DE, continue
+            jp   NC,.next       ; continue on good digit
+            call errbeep        ; notify/back up over bad digit
+            call prback
             jp   .next
 
 
@@ -523,14 +526,13 @@ qhex        call prhexval       ; load (DE=val B=#digits) and print curval
             jp   .next
 
 ;   ♠ADE ♣A ♡BCHL   Parse ASCII hex digit in A and add the value to DE.
-;   • Valid hex digit: update DE and return with CY clear.
-;   • Invalid hex digit: DE unchanged, error beep/backspace generated,
-;     return with CY set. (It's assumed the caller printed a visible char
-;     over witch to backspace, e.g., with `prvis`.)
+;   Returns with CY clear on success; CY set and DE not updated if the
+;   digit is invalid.
 qhexdigitDE call qdigit
-            jp   C,.baddigit    ; if not number or letter
+            ret  C              ; return error flag if not number or letter
             cp   $10            ; digit > 'F'?
-            jp   NC,.baddigit   ;   if yes
+            ccf
+            ret  C              ;   yes: return error flag
             push bc             ; preserved registers
             ld   c,a            ; save new rightmost digit
             ;   Shift DE left one digit.
@@ -559,12 +561,7 @@ qhexdigitDE call qdigit
             ld   e,a            ; new E complete
             pop  bc
             ret                 ; clear carry indicates no error
-            ;
-.baddigit   call errbeep
-            call prback         ; always ok because we displayed with prvis
-            scf                 ; indicate error
-            ret
-;
+
 ; ======================================================================
 ;   Commands
 
@@ -900,6 +897,91 @@ deposit_end call prnl
             jp   Z,.noadvance
             ld   (vS_deposit),hl
 .noadvance  jp   prompt
+
+; ----------------------------------------------------------------------;
+;   "Hex file" Deposit Commands
+
+;   SIZE We can save ~8 bytes on 8080 by pushing `.hexerror` and using
+;   conditional returns, but only a couple on Z80 if we use `jr`.
+cmd_deposit_intelhex            ; ':' prefix has already been read
+            ld   hl,(vL_calc)   ; increment current record count
+            inc  hl
+            ld   (vL_calc),hl
+            call qrhex2
+            jp   C,.hexerror
+            ld   b,a            ; byte count of data field
+            call qrhex4
+            jp   C,.hexerror
+            ex   de,hl
+            ld   (t2),hl        ; load address
+            call qrhex2
+            jp   C,.hexerror
+            and  %11111110      ; record type $00 (data) or $01 (EOF)?
+            jp   NZ,.hexerror   ;    no: we can't handle it
+            ;   XXX No check that type 1 (EOF) has no data; we deposit anyway.
+            ;   Read data bytes.
+            ld   hl,(t2)
+            inc  b
+.databyte   dec  b
+            jp   Z,.checksum
+            call qrhex2
+            jp   C,.hexerror
+            ld   (hl),a
+            inc  hl
+            jp   .databyte
+            ;
+.checksum   call qrhex2         ; checksum is ignored
+            jp   C,.hexerror
+            ld   hl,(vR_calc)   ; increment current success count
+            inc  hl
+            ld   (vR_calc),hl
+            call prnl
+            jp   prompt
+            ;
+.hexerror   ;   On any error we:
+            ;   • Indicate error with a beep followed by a newline, `?` and
+            ;     another newline.
+            ;     (It would be nice to print the character offset of the
+            ;     error, but doing this would add considerable code.)
+            ;   • Consume all text up to the next colon or CR or colon, to
+            ;     avoid trying to read remaining data as commands. If a
+            ;     colon is found we start a new intelhex deposit command;
+            ;     if a CR is found we return to the prompt.
+            call errbeep
+            call prnl
+            ld   a,'?'
+            call prchar
+            call prnl
+            ld   a,(t0)         ; char that caused the parse failure
+.clearinp   cp   CR
+            jp   Z,prompt
+            ;   This is buggy: the `:` isn't printed to indicate that a new
+            ;   record is being read. But it's not entirely clear we should
+            ;   bother with this (supporting records w/o CR separators) at all.
+            cp   ':'
+            jp   Z,cmd_deposit_intelhex
+            call  rdchar
+            jp   .clearinp
+
+;   ♠CDE,t0 … ♡B   Read N valid hex digits into DE/A.
+;   • The char read is stored in t0 for later error handling.
+;   • Any invalid char returns with carry set.
+;   • Otherwise it returns with carry clear.
+;   • For convenience in storing the result to memory, the return value in
+;     E is copied to A.
+qrhex4      ld   c,4
+            jp   qrhexN         ; XXX we can use a skip trick to shorten this.
+qrhex2      ld   c,2
+qrhexN      ld   de,$0000
+.nextchar   call rdchar
+            ld   (t0),a         ; save char for error handler
+            call prvischar
+            call qhexdigitDE    ; ♡BCHL (must preserve these!)
+            ret  C              ; fail on error
+            dec  c
+            jp   nz,.nextchar
+.done       ld   a,e
+            ret
 
 ; ----------------------------------------------------------------------
 ;   Checksum and Copy Commands

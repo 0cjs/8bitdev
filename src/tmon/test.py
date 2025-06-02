@@ -1,5 +1,28 @@
+from    random  import randrange
 import  pytest
 param = pytest.mark.parametrize
+
+#   XXX This is unused, but we leave it in place (with test) as an example
+#   of how we should have tests for support functions in this file.
+def remove_command_echo(command, output):
+    ''' Remove `command`, a following CR if present, and a NL following
+        that if present, from the given `output`.
+    '''
+    #   Not very pretty, but at least avoids checking for particular types.
+    #   (Do this first to confirm we can handle type(output).)
+    try:
+        CR = type(output)('\r', encoding='ASCII')
+        LF = type(output)('\n', encoding='ASCII')
+    except TypeError:
+        CR = type(output)('\r')
+        LF = type(output)('\n')
+
+    if not output.startswith(command):
+        return output
+    s = output[len(command):]
+    if s.startswith(CR):  s = s[1:]
+    if s.startswith(LF):  s = s[1:]
+    return s
 
 def log_interaction(command, expected, inp, out):
     ''' Takes the command executed, the expected output, and the I/O handles.
@@ -130,3 +153,89 @@ def test_params_good_bad_good(m, S, loadbios):
     unread, echo, output = log_interaction(command, expected, inp, out)
     assert expected == output
     assert b'' == unread, 'input was completely consumed'
+
+#   Intel Hex record format: `:ccAAAAttDD…ss\r`
+#       cc   byte count for data portion
+#       AAAA address (always big-endian)
+#       tt   type
+#       DD…  data bytes, 0-255
+#       ss   checksum (currently ignored)
+#   Record Types:
+#       00: Data
+#       01: EOF: cc=00, AAAA=ignored, DD=empty
+#       02,03,04,05: Extended addresses; unsupported
+@param('command, addr, expected_dep', [
+    (b':00aaaa01ee',        0xAAAA, b''),               # EOF record
+    (b':00aabb00ee',        0xAABB, b''),               # data len=0
+    (b':01aacc0012ee',      0xAACC, b'\x12'),           # data len=1
+    (b':03cccc00876543ee',  0xCCCC, b'\x87\x65\x43'),   # data len=3
+])
+def test_intelhex_good(m, S, loadbios, command, addr, expected_dep):
+    sentinel = b'\xEE'
+    dlen = len(expected_dep)
+    m.deposit(addr-1, sentinel*(dlen+2))
+    expected_dep = sentinel + expected_dep + sentinel
+
+    record_count = randrange(60000); m.depword(S.vL_calc, record_count)
+    success_count  = randrange(60000); m.depword(S.vR_calc, success_count)
+
+    inp, out = loadbios(input=command)
+    try:
+        m.call(S['prompt.read'], stopat=[S.prompt])
+    except EOFError as ex:  print(f'OVERRUN! {ex}')
+
+    unread_actual, echo, output = log_interaction(command, '\n', inp, out)
+    actual_dep = sentinel + m.bytes(addr, dlen) + sentinel
+
+    print(f' exp_dep: {addr-1:04X}: ' \
+        + ' '.join(f'{b:02X}' for b in (expected_dep)))
+    print(f' act_dep: {m.hexdump(addr-1, dlen+2)}')
+    assert      expected_dep == actual_dep, 'deposit'
+    assert               b'' == unread_actual, 'unread'
+    assert      command + NL == echo, 'echoed command and added newline'
+
+    assert (   record_count+1,   success_count+1) \
+        == (m.word(S.vL_calc), m.word(S.vR_calc)) \
+        ,  'Record count incremented; success count incremented'
+
+IHE = b'\a\n?\n'        # error indicator: beep and '?' on a new line
+IHP = b'.Z'             # prompt and ^Z bad command echoed at `prompt.err`
+IH_ = b'00aaaa01cc'     # good end record (note no ':' prefix)
+@param( 'rcincr, command, expected', [
+    #   Bad hex digit, not CR, returns to prompt 'normally.'
+    (0, b':0x\r',           b':0x'              +IHE +IHP), # count
+    (0, b':00aaax\r',       b':00aaax'          +IHE +IHP), # addr
+    (0, b':00aaaa2x\r',     b':00aaaa2x'        +IHE +IHP), # type
+    (0, b':00aaaaFF\r',     b':00aaaaFF'        +IHE +IHP), # type ≠ 0/1
+    (0, b':00aaaa02\r',     b':00aaaa02'        +IHE +IHP), # type ≠ 0/1
+    (0, b':02aaaa00ddeX\r', b':02aaaa00ddeX'    +IHE +IHP), # data
+    (0, b':00aaaa01cX\r',   b':00aaaa01cX'      +IHE +IHP), # checksum
+    #   Bad checksum (0, XXX not yet checked)
+    #   Bad hex digit is CR or ':'; alternate code path
+    (0, b':\r',             b':M'               +IHE +IHP), # restart prompt
+    (1, b':0:' +IH_,        b':0:'     +IHE +IH_ +NL +IHP), # restart hex entry
+    #   Additional chars all consumed
+    (0, b':0x more stuff\r',b':0x'              +IHE +IHP), # \r term
+    (1, b':0x also:' +IH_,  b':0x'     +IHE +IH_ +NL +IHP), # : term
+])
+def test_intelhex_errors(m, S, loadbios, rcincr, command, expected):
+    #   rcincr should be set to the number of additional records that
+    #   are in the test, if any.
+    record_count = randrange(60000); m.depword(S.vL_calc, record_count)
+    success_count  = randrange(60000); m.depword(S.vR_calc, success_count)
+
+    command += b'\x1A'      # ^Z is bad command if sent back to prompt
+
+    inp, out = loadbios(input=command)
+    try:
+        #   We stop on prompt.err to be able to test that \r takes us
+        #   back to the prompt.
+        m.call(S['prompt.read'], stopat=[S['prompt.err']])
+    except EOFError as ex:  print(f'OVERRUN! {ex}')
+
+    unread_actual, echo, output = log_interaction(command, expected, inp, out)
+    assert expected == output
+
+    assert (   record_count+1+rcincr,   success_count+0+rcincr) \
+        == (m.word(S.vL_calc), m.word(S.vR_calc)) \
+        ,  'Record count incremented; success count not incremented'

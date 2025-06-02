@@ -4,6 +4,8 @@ from    binascii  import crc_hqx
 from    itertools  import cycle, islice
 import  pytest
 
+pytest.register_assert_rewrite('src.tmon.test')
+
 test_rig = '''
             cpu 8080
             include  src/i8080/std.i80
@@ -551,6 +553,8 @@ def test_memcopy_v(m, S, R):
 ####################################################################
 #   Commands: Other
 
+from src.tmon.test import test_calc
+
 @param('q, s, output', [
     (0x0000, 0x0000, b'\r0000:0000   0000 @    0000 @   \n'),
     (0x0040, 0x0000, b'\r0040:0000   0040 @@   0040 @@  \n'),
@@ -558,7 +562,7 @@ def test_memcopy_v(m, S, R):
     (0x1274, 0x0202, b'\r1274:0202   1476 vv   1072 rr  \n'),
     (0x6768, 0x7878, b'\r6768:7878   DFE0 `    EEF0 p   \n'),
 ], ids=tmc_tid)
-def test_slash(m, S, R, loadbios, q, s, output):
+def test_slash_i8080(m, S, R, loadbios, q, s, output):
     _, out = loadbios()
     m.depword(S.vL_calc, q)
     m.depword(S.vR_calc, s)

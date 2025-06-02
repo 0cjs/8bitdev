@@ -1,0 +1,126 @@
+;   Show keyboard scan codes and characters on Sharp MZ-home machines.
+
+            cpu  z80
+            include  src/i8080/std.i80
+
+mzstart     equ  $1200
+
+; ----------------------------------------------------------------------
+;   `.mzf` Tape Header, until we make a program that can build this.
+
+mzf         org  mzstart - $80   ; tape header is 128 bytes
+.type       db   $01
+.filename   db   'KBCHARTEST'
+            db   17 - ($ - .filename) dup CR
+.size       dw   end - mzstart
+.start      dw   mzstart
+.entry      dw   mzstart
+
+; ----------------------------------------------------------------------
+
+CR          equ  $0D
+
+LETNL       equ  $0006
+NL          equ  $0009
+PRNTS       equ  $000C
+PRNT        equ  $0012
+prchar      equ  PRNT
+MSG         equ  $0015
+MSGX        equ  $0018
+GETKY       equ  $001B
+__KEY       equ  $09B3
+_DACN       equ  $0BB9
+
+msgx        macro  str
+            ld   de,str
+            rst  MSGX
+            endm
+
+msgxln      macro  str
+            ld   de,str
+            rst  MSGX
+            call LETNL
+            endm
+
+; ----------------------------------------------------------------------
+;   Internal routines, probably; for each we need to go and see if:
+;   • The locations are common on all models, in which case we can just
+;     call it directly (assuming APIs are the same).
+;   • The APIs are common on all models, in which case we can call it
+;     indirectly, after setting up the address for the model we're running
+;     on when we start the program.
+;   • APIs are different, in which case we need to have separate
+;     subroutines that turn this into a common API.
+
+kbscan      equ  $0A50          ; MZ-80K SP-1002
+chlookup    equ  $08DA          ; MZ-80K SP-1002
+
+; ----------------------------------------------------------------------
+
+            org  mzstart
+
+            call LETNL          ; because cursor left at end of LOADING line
+            call test_nl
+            call show_kb
+.loop       jp   .loop          ; but above should never return
+
+; ----------------------------------------------------------------------
+
+test_nl     msgxln .msg_start
+            call NL
+            call NL
+            msgxln .msg_end
+            ret
+.msg_start  db   'TESTING LETNL, NL, NL:',CR
+.msg_end    db   '-----',CR
+
+
+; ----------------------------------------------------------------------
+
+;   ♣ADE ♡BCHL
+prdata      macro  name,datareg     ; ♣A XXX register must not be A!
+            ld     de,name
+            ld     a,d
+            call   prchar
+            ld     a,e
+            call   prchar
+            ld     a,'='
+            call   prchar
+            ld     a,datareg
+            call   prhexA
+            call   PRNTS
+            endm
+
+show_kb
+.loop       call kbscan
+            ld   a,b
+            rlca                ; key pressed flag to carry
+            jr   nc,.loop
+            prdata 'ST',b
+            prdata 'KB',c
+            ;
+            call mychlookup
+            ld   l,a
+            prdata 'CH',l
+            call PRNTS
+            call PRNTS
+            ;
+            ld   a,$00
+.wait       dec  a
+            jr   nz,.wait
+            ;
+            jr   .loop
+
+;   Fixes byzantine API for chlookup; takes just b=keyboard stauts, c=scancode.
+mychlookup  push bc             ; chlookup always returns through `popretHDB`
+            push de
+            push hl
+            ld   a,b            ; chlookup API takes *shifted* B from
+            rlca                ;   kbscan in A
+            jp chlookup         ; ret TCO
+
+; ----------------------------------------------------------------------
+
+            include  src/i8080/pr/hex.i80
+
+end         end  mzstart

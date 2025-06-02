@@ -283,7 +283,7 @@ prompt      ld   sp,tmon_stack
             cmd  ',',cmd_deposit_params
             cmd  '.',cmd_deposit_bytes
             cmd  '/',cmd_calc
-          ; cmd  ':',cmd_deposit_intelhex
+            cmd  ':',cmd_deposit_intelhex
             cmd  ';',cmd_regs_deposit
             cmd  '>',cmd_deposit_words
           ; cmd  'A',cmd_examine_asm
@@ -518,7 +518,7 @@ qhex        call prhexval       ; load (DE=val B=#digits) and print curval
 ;   • Valid hex digit: update DE and return with CY clear.
 ;   • Invalid hex digit: DE unchanged, error beep/backspace generated,
 ;     return with CY set. (It's assumed the caller printed a visible char
-;     over witch to backspace, e.g., with `prvis`.)
+;     over witch to backspace, e.g., with `prvischar`.)
 qhexdigitDE call qdigit
             jp   C,.baddigit    ; if not number or letter
             cp   $10            ; digit > 'F'?
@@ -553,7 +553,7 @@ qhexdigitDE call qdigit
             ret                 ; clear carry indicates no error
             ;
 .baddigit   call errbeep
-            call prback         ; always ok because we displayed with prvis
+            call prback         ; always ok because we displayed with prvischar
             scf                 ; indicate error
             ret
 ;
@@ -892,6 +892,54 @@ deposit_end call prnl
             jp   Z,.noadvance
             ld   (vS_deposit),hl
 .noadvance  jp   prompt
+
+cmd_deposit_intelhex
+            call qhex2
+            ld   (t1),a         ; record type
+            ; XXX must be 0 or 1
+            call qhex2
+            ld   b,a            ; byte count of data field
+            call qhex4
+            ex   de,hl
+            ld   (t2),hl        ; load address
+            ;   Read data bytes.
+            ld   hl,(t2)
+            inc  b
+.databyte   dec  b
+
+    ;XXX debugging printf()s
+    push af
+    call prspace
+    ld a,b
+    call prhexA
+    ld a,':'
+    call prchar
+    pop  af ;restore flags
+
+            jp   Z,.checksum
+            call qhex2
+            jp   .databyte
+            ;
+.checksum   call qhex2          ; checksum is ignored
+            call prnl
+            jp   prompt
+
+;   ♠CDE … ♡B   Read N valid hex digits into DE/A.
+;   Invalid digits produce a beep/backspace and are ignored.
+;   For convenience in storing the result to memory,
+;   the return value in E is copied to A.
+qhex4       ld   c,4
+            jp   qhexN          ; XXX we can use a skip trick to shorten this.
+qhex2       ld   c,2
+qhexN       ld   de,$0000
+.nextchar   call rdchar
+            call prvischar      ; to make sure we can backspace over it
+            call qhexdigitDE    ; ♡BCHL (must preserve these!)
+            jp   c,.nextchar    ; don't count char if it was invalid
+            dec  c
+            jp   nz,.nextchar
+.done       ld   a,e
+            ret
 
 ; ----------------------------------------------------------------------
 ;   Checksum and Copy Commands

@@ -156,6 +156,15 @@ def test_qhexdigitDE(m, S, R, char, val):
     if val is not None:  assert PR(C=0, de=0x4560|val) == m.regs
     else:                assert PR(C=1, de=0x3456)     == m.regs
 
+def test_qhex4(m, S, R, loadbios):
+    ''' This tests the most complex entry point into `qhexN` and the
+        routine itself.
+    '''
+    inp, out = loadbios(input=b'1Fx2e3')
+    m.call(S.qhex4, R(c=2, de=0x1234, b=0xEA, hl=0x5678))
+    assert R(a=0x2E, de=0x1F2E, b=0xEA, hl=0x5678) == m.regs
+    assert b'3' == inp.read(), 'read only 4 valid digits'
+
 @param('size, stored, input', [
     #   We always check the word value; for byte values the MSB is $EE.
     ( 8, 0xEEEE, b' '),       (16, 0xEEEE, b' '),   # keep curval, more params
@@ -552,6 +561,7 @@ def test_memcopy_v(m, S, R):
 #   Commands: Other
 
 from src.tmon.test import test_calc
+from src.tmon.test import test_intelhex
 
 def test_quit_default(m, S, R, loadbios):
     _, out = loadbios(input=b'q\r')

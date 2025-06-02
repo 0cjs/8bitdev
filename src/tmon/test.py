@@ -2,6 +2,28 @@ import  pytest
 
 param = pytest.mark.parametrize
 
+def log_interaction(command, expected, inp, out):
+    ''' Print out (for viewing when tests fail) the input, the
+        part of it that was unread, the echoed input, what was
+        expected, and what the actual output was, and return
+        the `(unread, echo, output)` values that we calculated.
+    '''
+    unread = inp.read()
+    echo = out.written()                        # includes echoed input
+    print(f'  unread: {unread}')
+    print(f'   input: {command}')
+    print(f'    echo: {echo}')
+    print(f'expected: {expected}')
+    if b'\r' in echo:
+        #   Removed echoed input, if present.
+        output = echo.split(b'\r', maxsplit=1)[1]
+    else:
+        output = echo
+    print(f'  output: {output}')
+    return unread, echo, output
+
+####################################################################
+
 #   XXX This is actually a generic "any input produces expected output"
 #   test, but we don't use it as such (at least not yet) until we try some
 #   tests that depend on memory state setup and/or assertions to see how
@@ -28,12 +50,37 @@ def test_calc(m, S, loadbios, command, expected):
     #   is not executed; it's not clear if there will be tests this breaks.
     m.call(S['prompt.read'], stopat=[S.prompt], maxsteps=10000)
 
-    echo = out.written()                        # includes echoed input
-    output = echo.split(b'\r', maxsplit=1)[1]   # remove echoed input
-    print(f'   input: {command}')
-    print(f'    echo: {echo}')
-    print(f'expected: {expected}')
-    print(f'  output: {output}')
-
+    unread, echo, output = log_interaction(command, expected, inp, out)
     assert expected == output
-    assert b'' == inp.read(), 'input was completely consumed'
+    assert b'' == unread, 'input was completely consumed'
+
+#   Intel Hex record format: `:ccAAAAttDD…ss\r`
+#       cc   byte count for data portion
+#       AAAA address
+#       tt   type
+#       DD   data bytes, 0-255
+#       ss   checksum (currently ignored)
+#   Record Types:
+#       00: Data
+#       01: EOF: cc=00, AAAA=ignored, DD=empty
+#       02,03,04,05: Extended addresses; unsupported
+#   XXX: Not yet testing any error handling.
+@param('command, addr, data', [
+    (b':0100aaaaEE\r',          None,   b''),
+    (b':0003A800A1B2C3EE\r',    0xA800, b'\xA1\xB2\xC3'),
+])
+def test_intelhex(m, S, loadbios, command, addr, data):
+    inp, out = loadbios(input=command)
+    try:
+        m.call(S['prompt.read'], stopat=[S.prompt])
+    except EOFError as ex:
+        print(f'overrun; output={out.written()}')
+        raise ex
+
+    expected = '\n'     # No ouput; just moves to next line and prompts again.
+
+    unread, echo, output = log_interaction(command, expected, inp, out)
+    assert '\n' == output
+    assert b'' == unread, 'input was completely consumed'
+
+    assert 0

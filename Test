@@ -57,27 +57,25 @@ build_asxxxx() {
 #   t8dev and project setup
 
 export T8_PROJDIR=$(cd "$(dirname "$0")" && pwd -P)
-t8dir=t8dev/        # or whatever your submodule path is
-[[ -r $T8_PROJDIR/$t8dir/t8dev/t8setup.bash ]] \
-    || git submodule update --init "$T8_PROJDIR/$t8dir"
-. "$T8_PROJDIR"/$t8dir/t8dev/t8setup.bash
 
-#   Build even the tools we don't use much, slowing things down
+#   LOCAL: Build even the tools we don't use much, slowing things down
 #   (and requiring extra pre-install work on some systems).
 all_tools="$T8_PROJDIR/.all-tools"
 
-#   Creating this file is useful to slightly speed the edit/build/test
-#   cycle when working on "regular" ASL code; the toolsets and asxxx builds
-#   are the majority of the wall clock time when running only a few tests.
-#   This file is never ignored or committed so `git status` will make it
-#   clear you're not building everything that might be changed.
-#   XXX This can go when we move more stuff into a single t8dev invocation.
+#   LOCAL: Avoid building toolsets.
+#   • On slower systems this saves ~2s for toolset build checks, which is
+#     helpful. (But we still really need dependency checks because another
+#     ~3s is rebuilding exe/ code.)
+#   • This file is never ignored or committed so `git status` will make it
+#     clear you're not building everything that might be changed.
 fast_hack="$T8_PROJDIR/.fast-hack"
 
 #   Extra things to clean with -C and -c.
 T8_CLEAN_C="$fast_hack"
-#T8_CLEAN_c=""
 
+t8dir=t8dev/        # or whatever your submodule path is
+[[ -r $T8_PROJDIR/$t8dir/t8dev/t8setup.bash ]] \
+    || git submodule update --init "$T8_PROJDIR/$t8dir"
 . "$T8_PROJDIR"/$t8dir/t8dev/t8setup.bash
 
 ####################################################################

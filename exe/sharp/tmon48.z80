@@ -7,9 +7,10 @@
             cpu Z80
             include  src/i8080/std.i80
 
-tmon_rom    equ  $C800
-tmon_stack  equ  $D000
+tmon_rom    equ  $C700
 tmon_ram    equ  $CF00
+MINSTACKSZ  equ  $80
+tmon_stack  equ  $D000
 
 mzinit      equ  tmon_rom - 8
 
@@ -82,10 +83,18 @@ init_platform
             ret
 
 ; ----------------------------------------------------------------------
-;   Ensure we don't overflow RAM.
+;   Checks to ensure things don't overflow their allocated space.
+;   • Code doesn't overflow into work area.
+;   • MINSTACKSZ bytes available for stack above work area.
 
-    if $ >= tmon_ram
-            error 'code PC=$\{$} > ROM max $\{tmon_ram-1}'
+    if $ > tmon_ram
+            error 'code PC=$\{$} > tmon_ram=$\{tmon_ram}'
     endif
 
-end         end  mzinit
+    if tmon_ram_end > tmon_stack - MINSTACKSZ
+            error 'tmon_ram_end=$\{tmon_ram_end} > max stack $\{tmon_stack - MINSTACKSZ}'
+    endif
+
+; ----------------------------------------------------------------------
+
+end         end mzinit

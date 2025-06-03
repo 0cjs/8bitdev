@@ -501,7 +501,26 @@ qhex        call prhexval       ; load (DE=val B=#digits) and print curval
             ret
 
             ;   Parse digit and add it to DE.
-.parsedigit call qdigit
+.parsedigit call qdigitDE
+            jp   .next
+
+.baddigit   call errbeep
+            call prback         ; always ok because we displayed with prvis
+            jp   .next
+
+.parsecharhi ld  b,$80          ; set ASCII input to high bit set
+.parsechar  call rdchar
+            or   a,b
+            call prvischar      ; to make sure we can backspace over it
+            ld   d,e
+            ld   e,a
+            call prback         ; overwrite...
+            call prback
+            ld   a,e            ;   with hex value of char
+            call prhexA
+            jp   .next
+
+qdigitDE    call qdigit
             jp   C,.baddigit
             cp   $10            ; digit > 'F'?
             jp   NC,.baddigit
@@ -528,23 +547,12 @@ qhex        call prhexval       ; load (DE=val B=#digits) and print curval
             ld   a,e
             or   a,b            ; mask new digit into E lower nybble
             ld   e,a
-            jp   .next
-
+            ret
+            ;
 .baddigit   call errbeep
             call prback         ; always ok because we displayed with prvis
-            jp   .next
+            ret
 
-.parsecharhi ld  b,$80          ; set ASCII input to high bit set
-.parsechar  call rdchar
-            or   a,b
-            call prvischar      ; to make sure we can backspace over it
-            ld   d,e
-            ld   e,a
-            call prback         ; overwrite...
-            call prback
-            ld   a,e            ;   with hex value of char
-            call prhexA
-            jp   .next
 
 ; ======================================================================
 ;   Commands
@@ -884,6 +892,14 @@ deposit_end call prnl
 
 cmd_deposit_intelhex
             ;   XXX read count (2 chars)
+            ;   Extract and use qhex.parsedigit.
+            ld  d,0
+            call rdchar
+            call prchar
+            call qdigitDE
+            call rdchar
+            call prchar
+            call qdigitDE
             ;   XXX read addr (4 chars)
             ;   XXX read type (2 chars)
             ;   XXX read data bytes (2*count chars)

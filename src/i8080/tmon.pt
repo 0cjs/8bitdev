@@ -561,22 +561,6 @@ from src.tmon.test import ( NL,
     test_calc, test_params_good_bad_good,
     )
 
-@param('q, s, output', [
-    (0x0000, 0x0000, b'\r0000:0000   0000 @    0000 @   \n'),
-    (0x0040, 0x0000, b'\r0040:0000   0040 @@   0040 @@  \n'),
-    (0x0000, 0x0040, b'\r0000:0040   0040 @@   FFC0 @   \n'),
-    (0x1274, 0x0202, b'\r1274:0202   1476 vv   1072 rr  \n'),
-    (0x6768, 0x7878, b'\r6768:7878   DFE0 `    EEF0 p   \n'),
-], ids=tmc_tid)
-def test_slash_i8080(m, S, R, loadbios, q, s, output):
-    _, out = loadbios()
-    m.depword(S.vL_calc, q)
-    m.depword(S.vR_calc, s)
-    m.call(S['cmd_calc.exec'], stopat=[S.prompt])
-    print('expected:', output)
-    print('  actual:', out.written())
-    assert output == out.written()
-
 def test_quit_default(m, S, R, loadbios):
     _, out = loadbios(input=b'q\r')
     m.deposit(S.t0, 123)               # sentinel

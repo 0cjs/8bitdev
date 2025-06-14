@@ -1,5 +1,5 @@
 from    testmc  import LB, MB, tmc_tid
-from    testmc.i8080  import  Machine
+from    testmc.i8080  import  Machine, Instructions as I
 from    binascii  import crc_hqx
 from    itertools  import cycle, islice
 import  pytest
@@ -149,12 +149,12 @@ def test_cqcancel(m, S, R, char, cancelled):
     ('g', None), ('G', None),                           # digits above hex range
 ])
 def test_qhexdigitDE(m, S, R, char, val):
-    #   Stopping early and checking the PC to get the error status is
-    #   a bit awkward....
-    good = S['qhexdigitDE.good']; baddigit = S['qhexdigitDE.baddigit']
-    m.call(S.qhexdigitDE, R(a=ord(char), de=0x3456), stopat=[good, baddigit])
-    if val is None: assert R(de=0x3456, pc=baddigit) == m.regs
-    else:           assert R(de=0x4560|val, pc=good) == m.regs
+    m.deposit(S.errbeep, I.RET)         # Don't bother loading the BIOS,
+    m.deposit(S.prchar, I.RET)          #   just make no-ops.
+    PR = R(bc=0xA1B2, hl=0xC3D4).clone  # Preserved register sentinels.
+    m.call(S.qhexdigitDE, PR(a=ord(char), de=0x3456))
+    if val is not None:  assert PR(C=0, de=0x4560|val) == m.regs
+    else:                assert PR(C=1, de=0x3456)     == m.regs
 
 @param('size, stored, input', [
     #   We always check the word value; for byte values the MSB is $EE.

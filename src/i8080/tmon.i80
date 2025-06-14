@@ -522,41 +522,47 @@ qhex        call prhexval       ; load (DE=val B=#digits) and print curval
             call prhexA
             jp   .next
 
-;   Parse ASCII hex digit in A and add the value to DE.
-;   If A is not a valid hex digit, generate error beep and backspace to
-;   move back over the input. (Generally it should have been printed with
-;   `prvis` so there's a printable char to back over.
+;   ♠ADE ♣A ♡BCHL   Parse ASCII hex digit in A and add the value to DE.
+;   • Valid hex digit: update DE and return with CY clear.
+;   • Invalid hex digit: DE unchanged, error beep/backspace generated,
+;     return with CY set. (It's assumed the caller printed a visible char
+;     over witch to backspace, e.g., with `prvis`.)
 qhexdigitDE call qdigit
-            jp   C,.baddigit
+            jp   C,.baddigit    ; if not number or letter
             cp   $10            ; digit > 'F'?
-            jp   NC,.baddigit
-            ld   b,a            ; save new digit
+            jp   NC,.baddigit   ;   if yes
+            push bc             ; preserved registers
+            ld   c,a            ; save new rightmost digit
+            ;   Shift DE left one digit.
             ld   a,d
-            rlca                ; lower nybble of D to upper nybble,
             rlca
             rlca
             rlca
-            and  $F0            ; clear lower nybble
-            ld   d,a            ; save upper byte's upper nybble
+            rlca
+            and  $F0            ;   temporarily clear lower nybble of D
+            ld   d,a            ;   save new D upper nybble
             ld   a,e
-            rlca                ; swap upper/lower nybbles
+            rlca                ;   swap E upper/lower nybbles
             rlca
             rlca
             rlca
-            push af             ; save a copy
-            and  a,$F0          ; clear lower nybble
-            ld   e,a            ; save lower byte
-            pop  af             ; restore copy
-            and  a,$0F          ; mask out lower (ex-upper) nybble
-            or   a,d            ; combine with upper byte's upper nybble
-            ld   d,a            ; and save it
-            ld   a,e
-            or   a,b            ; mask new digit into E lower nybble
-            ld   e,a
-.good       ret
-
+            ld   b,a            ;   save copy of E's old upper nybble
+            and  a,$F0          ;   temporarily clear new E lower nybble
+            ld   e,a            ;   save new E upper nybble
+            ld   a,b            ;   restore old E upper nybble
+            and  a,$0F          ;   mask E's old upper (now lower) nybble
+            or   a,d            ;   D new lower nybble ← E old upper nybble
+            ld   d,a            ;   new D complete
+            ;   DE LSnybble ← new digit and clear carry indicating no error.
+            ld   a,e            ; load new E upper upper nybble
+            or   a,c            ; mask new digit into E lower nyb, clear carry
+            ld   e,a            ; new E complete
+            pop  bc
+            ret                 ; clear carry indicates no error
+            ;
 .baddigit   call errbeep
             call prback         ; always ok because we displayed with prvis
+            scf                 ; indicate error
             ret
 ;
 ; ======================================================================

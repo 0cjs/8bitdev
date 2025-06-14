@@ -482,8 +482,10 @@ qhex        call prhexval       ; load (DE=val B=#digits) and print curval
             cp   '"'            ; ASCII char input with high bit set?
             jp   Z,.parsecharhi ;   yes
             cp   ' '            ; terminate input and continue?
-            jp   NZ,.parsedigit ;    no
-            jp   .storeDE       ; ret (TCO)
+            jp   Z,.storeDE     ;    yes: (TCO) store and return
+            call qhexdigitDE    ;     no: parse digit, add to DE, continue
+            jp   .next
+
 
 .keepval    push af
             call prhexval       ; print value again
@@ -508,8 +510,23 @@ qhex        call prhexval       ; load (DE=val B=#digits) and print curval
             call qexec          ; set Z flag if it was an execute char
             ret
 
-            ;   Parse digit and add it to DE.
-.parsedigit call qdigit
+.parsecharhi ld  b,$80          ; set ASCII input to high bit set
+.parsechar  call rdchar
+            or   a,b
+            call prvischar      ; to make sure we can backspace over it
+            ld   d,e
+            ld   e,a
+            call prback         ; overwrite...
+            call prback
+            ld   a,e            ;   with hex value of char
+            call prhexA
+            jp   .next
+
+;   Parse ASCII hex digit in A and add the value to DE.
+;   If A is not a valid hex digit, generate error beep and backspace to
+;   move back over the input. (Generally it should have been printed with
+;   `prvis` so there's a printable char to back over.
+qhexdigitDE call qdigit
             jp   C,.baddigit
             cp   $10            ; digit > 'F'?
             jp   NC,.baddigit
@@ -536,24 +553,12 @@ qhex        call prhexval       ; load (DE=val B=#digits) and print curval
             ld   a,e
             or   a,b            ; mask new digit into E lower nybble
             ld   e,a
-            jp   .next
+.good       ret
 
 .baddigit   call errbeep
             call prback         ; always ok because we displayed with prvis
-            jp   .next
-
-.parsecharhi ld  b,$80          ; set ASCII input to high bit set
-.parsechar  call rdchar
-            or   a,b
-            call prvischar      ; to make sure we can backspace over it
-            ld   d,e
-            ld   e,a
-            call prback         ; overwrite...
-            call prback
-            ld   a,e            ;   with hex value of char
-            call prhexA
-            jp   .next
-
+            ret
+;
 ; ======================================================================
 ;   Commands
 

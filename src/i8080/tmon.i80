@@ -514,10 +514,11 @@ qhex        call prhexval       ; load (DE=val B=#digits) and print curval
             call prhexA
             jp   .next
 
-;   Parse ASCII hex digit in A and add the value to DE.
-;   If A is not a valid hex digit, generate error beep and backspace to
-;   move back over the input. (Generally it should have been printed with
-;   `prvis` so there's a printable char to back over.
+;   ♠ADE ♡CHL ♣AB   Parse ASCII hex digit in A and add the value to DE.
+;   • Valid hex digit: update DE and return with CY clear.
+;   • Invalid hex digit: DE unchanged, error beep/backspace generated,
+;     return with CY set. (It's assumed the caller printed a visible char
+;     over witch to backspace, e.g., with `prvis`.)
 qhexdigitDE call qdigit
             jp   C,.baddigit
             cp   $10            ; digit > 'F'?
@@ -543,12 +544,13 @@ qhexdigitDE call qdigit
             or   a,d            ; combine with upper byte's upper nybble
             ld   d,a            ; and save it
             ld   a,e
-            or   a,b            ; mask new digit into E lower nybble
+            or   a,b            ; mask new digit into E lower nyb, clear carry
             ld   e,a
-.good       ret
-
+            ret                 ; clear carry indicates no error
+            ;
 .baddigit   call errbeep
             call prback         ; always ok because we displayed with prvis
+            scf                 ; indicate error
             ret
 ;
 ; ======================================================================

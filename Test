@@ -19,7 +19,12 @@ build_toolsets() {
     [[ -f $all_tools ]] && { t8dev toolset asxxxx || fail; }
     t8dev toolset disx || fail
     t8dev toolset osimg ctools dos33fs || fail
-    t8dev toolset bm2 cscp linapple RunCPM VirtualT || fail
+    t8dev toolset cscp RunCPM || fail
+    if [[ $(uname) != Darwin ]]; then
+        #   These don't build happily on MacOS at the moment,
+        #   and aren't required for the automated build/tests.
+        t8dev toolset bm2 linapple VirtualT || fail
+    fi
 }
 
 #   ASxxxx builds

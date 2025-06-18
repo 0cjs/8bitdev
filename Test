@@ -18,7 +18,7 @@ build_toolsets() {
     t8dev toolset asl || fail
     [[ -f $all_tools ]] && { t8dev toolset asxxxx || fail; }
     t8dev toolset disx || fail
-    t8dev toolset osimg ctools dos33fs || fail
+    t8dev toolset osimg ctools dos33fsprogs || fail
     t8dev toolset cscp RunCPM || fail
     if [[ $(uname) != Darwin ]]; then
         #   These don't build happily on MacOS at the moment,

@@ -205,6 +205,9 @@ def test_read_params_good(m, S, R, loadbios):
     m.call(S.read_params, R(hl=testtab), stopat=[S.qhex])
     assert R(pc=S.qhex, hl=0x02BB) == m.regs
 
+#   XXX need read_params_bad here? tmon/test.py test_params_bad_good()
+#   discovered a bug in the read_params routine.
+
 ####################################################################
 #   Saved parameter value initialization
 
@@ -553,7 +556,10 @@ def test_memcopy_v(m, S, R):
 ####################################################################
 #   Commands: Other
 
-from src.tmon.test import (test_newline, test_comment, test_calc)
+from src.tmon.test import (
+    test_newline, test_comment,
+    test_calc, test_params_good_bad_good,
+    )
 
 @param('q, s, output', [
     (0x0000, 0x0000, b'\r0000:0000   0000 @    0000 @   \n'),

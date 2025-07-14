@@ -90,3 +90,17 @@ def test_calc(m, S, loadbios, command, expected):
     unread, echo, output = log_interaction(command, expected, inp, out)
     assert expected == output
     assert b'' == unread, 'input was completely consumed'
+
+def test_params_good_bad_good(m, S, loadbios):
+    ''' Show that if we enter a good param then a bad param, we get an
+        error and still can enter a good param after that.
+        This depends on test_calc() working correctly.
+    '''
+    expected = b'0004:0002   0006 F    0002 B   ' + NL
+    command  = b'/ ?1 /2 x3 ?4\r'
+    inp, out = loadbios(input=command)
+    m.call(S['prompt.read'], stopat=[S.prompt], maxsteps=10000)
+
+    unread, echo, output = log_interaction(command, expected, inp, out)
+    assert expected == output
+    assert b'' == unread, 'input was completely consumed'

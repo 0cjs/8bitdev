@@ -383,9 +383,9 @@ read_params ld   (t2),hl         ; save params table
             call cqcancel       ; cancel command if requested
             call prvischar
             cp   SPACE          ; ignore spaces.
-            jp   Z,read_params
+            jp   Z,.next
             ;
-.parse_name ld   hl,(t2)
+.parse_name ld   hl,(t2)        ; load params table
             call upcase         ; force to upper case if lettter
             ld   b,a            ; table entry to match
 .tabnext    ld   a,(hl)         ; param name char from table

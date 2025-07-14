@@ -553,7 +553,7 @@ def test_memcopy_v(m, S, R):
 ####################################################################
 #   Commands: Other
 
-from src.tmon.test import (test_comment, test_calc)
+from src.tmon.test import (test_newline, test_comment, test_calc)
 
 @param('q, s, output', [
     (0x0000, 0x0000, b'\r0000:0000   0000 @    0000 @   \n'),

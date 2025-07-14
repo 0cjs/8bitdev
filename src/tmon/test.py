@@ -44,6 +44,18 @@ def log_interaction(command, expected, inp, out):
 #   if we should.
 NL = b'\n'
 
+def test_newline(m, S, loadbios):
+    command  = b'\r'
+    expected = b'M\x08 ' + NL    # erases visible ^M
+    inp, out = loadbios(input=command)
+    try:
+        m.call(S['prompt.read'], stopat=[S.prompt], maxsteps=10000)
+    except EOFError as ex:  print(f'OVERRUN! {ex}')
+
+    unread, echo, output = log_interaction(command, expected, inp, out)
+    assert expected == output, 'expected output'
+    assert b'' == unread, 'input was completely consumed'
+
 def test_comment(m, S, loadbios):
     text     = b'  Text that should be ignored.'
     command  = b'#' + text + b'\r'

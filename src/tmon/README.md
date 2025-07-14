@@ -163,6 +163,7 @@ remembered value is not shared between commands except where noted.)
 This is a summary of the commands, in ASCII (alphabetical) order.
 The full command descriptions follow.
 
+    #   comment
     '  ¹ASCII character deposit
     ,   set deposit parameters (next to ",>" deposit key)
     .  ¹hex byte deposit
@@ -374,6 +375,12 @@ The full command descriptions follow.
 #### Miscellaneous Commands
 
 - Ctrl-M: Print a newline.
+
+- `#` Comment. This will reprint the `#` at the start of the line and then
+  read and echo all characters until a CR is read. Characters are printed
+  as-is rather than visibly so that you may use terminal codes (e.g., to
+  get inverse text) in the comment. Cancel characters are not honoured;
+  they are also passed through as-is.
 
 - `/` Calculate values. This command has two parameters, the left value
   §`?####` and the right value §`/####`. It displays the values of

@@ -30,14 +30,33 @@ def log_interaction(command, expected, inp, out):
 
 ####################################################################
 
-#   XXX This is actually a generic "any input produces expected output"
-#   test, but we don't use it as such (at least not yet) until we try some
-#   tests that depend on memory state setup and/or assertions to see how
-#   the refactoring of the core bits of it roll out. We do intend to
-#   maintain, as much as reasonable, the "send a command line" form of
-#   tests for commands because that makes the tests more easily genericised
-#   across different systems, and avoids forcing certain ways of
-#   implementing the command.
+#   XXX These are close to generic "given input produces expected output"
+#   tests. But before we can factor out more of the common code, we need to
+#   try some tests that depend on memory state setup and/or assertions.
+#
+#   We intend to maintain, as much as reasonable, the "send a command line"
+#   form of tests for commands because that makes the tests more easily
+#   genericised across different systems, and avoids forcing certain ways
+#   of implementing the command.
+
+#   '\n' is what the simulator BIOS prints as a newline. We expect this
+#   to be '\r\n' on most machines; not clear how to test that, or even
+#   if we should.
+NL = b'\n'
+
+def test_comment(m, S, loadbios):
+    text     = b'  Text that should be ignored.'
+    command  = b'#' + text + b'\r'
+    expected = b'#' + text + NL
+    inp, out = loadbios(input=command)
+    try:
+        m.call(S['prompt.read'], stopat=[S.prompt], maxsteps=10000)
+    except EOFError as ex:  print(f'OVERRUN! {ex}')
+
+    unread, echo, output = log_interaction(command, expected, inp, out)
+    assert expected == output, 'expected output'
+    assert b'' == unread, 'input was completely consumed'
+
 @param('command, expected', [
     (b'/    ?0    /0\r', b'0000:0000   0000 @    0000 @   \n'),
     (b'/ ?0040 /0000\r', b'0040:0000   0040 @@   0040 @@  \n'),

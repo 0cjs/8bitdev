@@ -279,6 +279,7 @@ prompt      ld   sp,tmon_stack
             ;   • Commands that execute immediately rather than waiting for
             ;     parameters and/or confirmation should be marked somehow.
             cmd  CR, cmd_newline
+            cmd  '#',cmd_comment
             cmd  "'",cmd_deposit_ascii
             cmd  ',',cmd_deposit_params
             cmd  '.',cmd_deposit_bytes
@@ -949,6 +950,19 @@ cmd_memcopy ld   hl,ptab_target
 cmd_newline call prback         ; erase visible ^M
             call prspace
             call prnl
+            jp   prompt
+
+;   This echos non-printing chars as-is to enable the use of terminal
+;   codes or the like in comments.
+;   Kinda-bug: LF immediately after the command will leave the '#' in the
+;   second column visible, but that's pathological input and not worth fixing.
+cmd_comment call prcr
+            ld   a,'#'
+.nextchar   call prchar         ; non-printing chars echoed as-is
+            call rdchar
+            cp   CR             ; CR terminates comment
+            jp   NZ,.nextchar
+.done       call prnl
             jp   prompt
 
 ptab_port_in

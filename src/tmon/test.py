@@ -1,6 +1,34 @@
 import  pytest
-
 param = pytest.mark.parametrize
+
+def log_interaction(command, expected, inp, out):
+    ''' Takes the command executed, the expected output, and the I/O handles.
+
+        Returns `(unread, echo, output)`: any unread data still present
+        in the input, the entirety of the output including the echoed
+        command, and the output with the echoed command removed. (The
+        caller is expected to assert these values as appropriate.)
+
+        For debugging purposes, prints out the command, any unread data
+        remaining in the input, everything written to the output including
+        the echoed command (if any), the expected output passed in, and the
+        actual output with the echoed command removed.
+    '''
+    unread = inp.read()
+    echo = out.written()                        # includes echoed input
+    print(f' command: {command!r}')
+    print(f'  unread: {unread!r}')
+    print(f'    echo: {echo!r}')
+    print(f'expected: {expected!r}')
+    if b'\r' in echo:
+        #   Removed echoed input through the '\r', if present.
+        output = echo.split(b'\r', maxsplit=1)[1]
+    else:
+        output = echo
+    print(f'  output: {output}')
+    return unread, echo, output
+
+####################################################################
 
 #   XXX This is actually a generic "any input produces expected output"
 #   test, but we don't use it as such (at least not yet) until we try some
@@ -28,12 +56,6 @@ def test_calc(m, S, loadbios, command, expected):
     #   is not executed; it's not clear if there will be tests this breaks.
     m.call(S['prompt.read'], stopat=[S.prompt], maxsteps=10000)
 
-    echo = out.written()                        # includes echoed input
-    output = echo.split(b'\r', maxsplit=1)[1]   # remove echoed input
-    print(f'   input: {command}')
-    print(f'    echo: {echo}')
-    print(f'expected: {expected}')
-    print(f'  output: {output}')
-
+    unread, echo, output = log_interaction(command, expected, inp, out)
     assert expected == output
-    assert b'' == inp.read(), 'input was completely consumed'
+    assert b'' == unread, 'input was completely consumed'

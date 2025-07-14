@@ -556,8 +556,8 @@ def test_memcopy_v(m, S, R):
 ####################################################################
 #   Commands: Other
 
-from src.tmon.test import (
-    test_newline, test_comment,
+from src.tmon.test import ( NL,
+    test_ignored, test_newline, test_comment,
     test_calc, test_params_good_bad_good,
     )
 
@@ -595,20 +595,19 @@ def test_quit_param(m, S, R, loadbios, t):
 #   Command parsing
 
 @param('input, output, continued', [
-    #   All non-printable characters are "bad command" when waiting for command.
+    #   All non-ignored, non-printable characters are "bad command"
+    #   when waiting for command.
     (b'\x00',   b'.@\a\r',  True),
-    (b'\n',     b'.J\a\r',  True),
     (b'\x1F',   b'._\a\r',  True),
     (b'\x7F',   b'.?\a\r',  True),
 
     #   Printable invalid commands are echoed and backspaced over to
     #   leave the incorrect command visible.
-    (b' ',      b'. \a\r',  True),
     (b'!',      b'.!\a\r',  True),
     (b'~',      b'.~\a\r',  True),
 
     #   Newline command is the simplest to test
-    (b'\rX',    b'.M\b \n.X\a\r',  True),  # XXX but need char after?
+    (b'\vX',    b'.K\b \n.X\a\r',  True),  # XXX but need char after?
 
     #   Q command is almost as simple to test
     (b'q\n',    b'.q\n',    False),     # lower case command
@@ -617,7 +616,9 @@ def test_quit_param(m, S, R, loadbios, t):
 def test_prompt_q_nocancel(m, loadbios, S, R,  input, output, continued):
     pdone = S['prompt.end']
     inp, out = loadbios(input=input)
-    m.call(S.prompt, stopat=[pdone, S.exit])
+    try:
+        m.call(S.prompt, stopat=[pdone, S.exit])
+    except EOFError as ex:  print(f'OVERRUN! {ex}')
 
     print(f'pdone=${pdone:04X}  {m.regs}')
     print(output); print(out.written())

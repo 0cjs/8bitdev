@@ -36,8 +36,8 @@ The general goals are to have:
   recently used addresses so you need not continually re-type them and
   allowing you to intersperse hex and ASCII data input.
 * Efficient use of the display, allowing you to display just what you need
-  and minimise non-informational printing to reduce useful information
-  scrolling off the screen.
+  and minimise non-informational printing and other unnecessary output to
+  reduce the frequency of useful information scrolling off the screen.
 
 The monitor requires a terminal or display that has a non-destructive
 backspace character (i.e., moves the cursor back without erasing what's
@@ -163,6 +163,7 @@ remembered value is not shared between commands except where noted.)
 This is a summary of the commands, in ASCII (alphabetical) order.
 The full command descriptions follow.
 
+    ^K  print newline
     #   comment
     '  ¹ASCII character deposit
     ,   set deposit parameters (next to ",>" deposit key)
@@ -374,7 +375,13 @@ The full command descriptions follow.
 
 #### Miscellaneous Commands
 
-- Ctrl-M: Print a newline.
+- LF/Ctrl-J, CR/Ctrl-M, space: Not echoed and ignored. Consistent with tmon
+  avoiding unnecessary output, it's assumed that these whitespace
+  characters will appear in the input only when, e.g., copying and pasting
+  commands into the terminal or uploading script files.
+
+- Ctrl-K (vertical tab): Print newline. This is useful when you want to
+  see more separation of output than tmon normally provides.
 
 - `#` Comment. This will reprint the `#` at the start of the line and then
   read and echo all characters until a CR is read. Characters are printed

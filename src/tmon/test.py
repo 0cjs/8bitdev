@@ -44,9 +44,35 @@ def log_interaction(command, expected, inp, out):
 #   if we should.
 NL = b'\n'
 
+@param('command', [ b'\rZ', b'\nZ', b' Z', ])
+def test_ignored(m, R, S, loadbios, command):
+    ''' This is a bit awkward because ignored 'commands' should not be
+        echoed, and thus generally don't go through the stanard command
+        dispatch procedure, which echos the command char before
+        dispatching. Here instead of going through the full command
+        execution that finishes by going back to the prompt, we terminate
+        at the point where we would echo, giving an extra char for it to
+        read and echo after the ignored char.
+
+        XXX This needs to be rethought to see if there will be any issues
+        with implementations for other CPUs.
+    '''
+    expected = b''
+    inp, out = loadbios(input=command)
+    try:
+        m.call(S['prompt.read'], stopat=[S['prompt.echocmd']])
+    except EOFError as ex:  print(f'OVERRUN! {ex}')
+
+    #   XXX Probably we should just be looking at the echo.
+    assert R(a=ord('Z')) == m.regs
+
+    unread, echo, output = log_interaction(command, expected, inp, out)
+    assert expected == output, 'expected output'
+    assert b'' == unread, 'input was completely consumed'
+
 def test_newline(m, S, loadbios):
-    command  = b'\r'
-    expected = b'M\x08 ' + NL    # erases visible ^M
+    command  = b'\v'
+    expected = b'K\x08 ' + NL    # erases visible ^K
     inp, out = loadbios(input=command)
     try:
         m.call(S['prompt.read'], stopat=[S.prompt], maxsteps=10000)

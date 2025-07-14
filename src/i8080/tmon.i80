@@ -54,6 +54,7 @@
 ACK         equ  $06            ; Ctrl-F, keep current val and move forward
 BS          equ  $08            ; Ctrl-H, backspace
 LF          equ  $0A            ; Ctrl-J, linefeed
+VT          equ  $0B            ; Ctrl-K, vertical tab
 CR          equ  $0D            ; Ctrl-M, carriage return
 NAK         equ  $15            ; Ctrl-U
 CAN         equ  $18            ; Ctrl-X
@@ -270,7 +271,13 @@ prompt      ld   sp,tmon_stack
             ld   a,'.'
             call prchar         ; prompt
 .read       call rdchar
-            call prvischar      ; echo input visibly
+            cp   CR             ; ignored "commands"
+            jp   Z,.read
+            cp   LF
+            jp   Z,.read
+            cp   ' '
+            jp   Z,.read
+.echocmd    call prvischar      ; echo input visibly
             call upcase         ; force to upper case if letter
             ;   Dispatch command if we match one.
             ;   • Commands are not called but are jumped to; they must
@@ -278,7 +285,7 @@ prompt      ld   sp,tmon_stack
             ;   • Commands must generate their own initial newline; see above.
             ;   • Commands that execute immediately rather than waiting for
             ;     parameters and/or confirmation should be marked somehow.
-            cmd  CR, cmd_newline
+            cmd  VT, cmd_newline
             cmd  '#',cmd_comment
             cmd  "'",cmd_deposit_ascii
             cmd  ',',cmd_deposit_params
@@ -947,7 +954,7 @@ cmd_memcopy ld   hl,ptab_target
 ; ----------------------------------------------------------------------
 ;   Other Commands
 
-cmd_newline call prback         ; erase visible ^M
+cmd_newline call prback         ; erase visible ^K
             call prspace
             call prnl
             jp   prompt

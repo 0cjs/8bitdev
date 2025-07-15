@@ -4,6 +4,14 @@
             include  src/i8080/std.i80
             include "testmc/i8080/tmc/biosdef.i80" ; `tmc` will load bioscode
 
+; ----------------------------------------------------------------------;
+;   Memory Map (from settings below)
+;     $100-$12B     tmon RAM workspace
+;     $160-$173     tmc entry/exit code
+;     $180-$200     tmon stack
+;     $200-$8E3     tmon code
+; ----------------------------------------------------------------------;
+
 ;   Our RAM workspace and code locations are chosen here just to be easy
 ;   to remember, especially when wondering where things went wrong.
 tmon_ram    equ  $100
@@ -15,7 +23,8 @@ tmon_rom    equ  $200
 ;   the program after that instruction.
 rsti        equ  $08            ; RST for breakpoint
 
-            org  $1E0           ; just below the monitor code; above data
+            org  $160           ; well above monitor data,
+                                ;   leaving ~
 
 tmc         ;   Set up "breakpoint" RST.
             ld   a,$C3          ; JMP

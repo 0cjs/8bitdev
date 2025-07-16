@@ -743,15 +743,15 @@ ptab_regs   pb   'F',ureg_F     ; flags
             pb   'A',ureg_A
             pb   'B',ureg_B
             pb   'C',ureg_C
+            pw   'I',ureg_BC    ; mnemonic "Index" (like a count)
             pb   'D',ureg_D
             pb   'E',ureg_E
+            pw   'T',ureg_DE    ; mnemonic "Target"
             pb   'H',ureg_H
             pb   'L',ureg_L
+            pw   'M',ureg_HL    ; mnemonic "Memory"
             pw   'P',ureg_PC
             pw   'S',ureg_SP
-            pw   'M',ureg_HL    ; mnemonic "Memory"
-            pw   'T',ureg_DE    ; mnemonic "Target"
-            pw   'I',ureg_BC    ; mnemonic "Index" (like a count)
             db 0
 
 cmd_regs_deposit

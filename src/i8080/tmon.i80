@@ -281,15 +281,13 @@ prompt      ld   sp,tmon_stack
             inc  hl             ; move to address in table entry
             or   a,a            ; end of table?
             jp   Z,.cmderr      ;   yes: bad command
-            sub  a,b            ; char match?
-            jp   Z,.cmdmatch    ;   yes:
-            inc  hl             ;    no: skip to next char and retry
+            sub  a,b            ; char match? (tested 5 instructions below)
+.cmdmatch   ld   e,(hl)         ; command addr LSB
             inc  hl
-            jp   .dispatch
-.cmdmatch   ld   a,(hl)         ; command addr LSB
-            inc  hl
-            ld   h,(hl)         ; command addr MSB
-            ld   l,a
+            ld   d,(hl)         ; command addr MSB
+            inc  hl             ; move to next entry
+            jp   NZ,.dispatch   ; if char did not match
+            ex   de,hl
 .cmdjmp     jp   (hl)
             ;
 .cmderr     call errbeep        ; invalid command, signal error

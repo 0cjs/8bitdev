@@ -600,7 +600,7 @@ def test_quit_param(m, S, R, loadbios, t):
     (b'A', 0xBBAA), (b'E', 0xFFEE), (b'0x01', None), (b'0xFF', None),
 ])
 def test_command_dispatch(m, S, R, cmdchar, cmdaddr):
-    cmdtbl = 0x800; m.deposit(cmdtbl, bytes([
+    cmdtbl = 0x880; m.deposit(cmdtbl, bytes([
         ord('A'), 0xAA, 0xBB,
         ord('C'), 0xCC, 0xDD,
         ord('E'), 0xEE, 0xFF,

@@ -185,7 +185,7 @@ entry1      di                  ; ensure as best we can nothing will touch stack
             ;   we use later will affect it. We set bits in A to indicate
             ;   the value of the user carry (t0) and whether we entered via
             ;   an interrupt (b7). (`intentry` sets t0 to 1.)
-            ld   a,0
+            ld   a,0            ; do not affect flags
             jp   NC,.savecarry
             ld   a,1            ; set "carry was set" bit, flags unaffected
 .savecarry  ld   (t0),a         ; save carry and interrupt entry bits
@@ -1225,7 +1225,7 @@ prmhexA     call prhexA
 ;   On return, B is set to the length printed, 2 or 4.
 prhexval    ld   b,2            ; default to 2-digit word
             ld   d,$00          ;   with returned MSB zero just in case
-            ld   a,0
+            xor  a,a
             or   a,c            ; print 4-digit word?
             jp   Z,.print2      ;    no
             ld   b,4            ; update digit count

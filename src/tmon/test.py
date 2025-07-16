@@ -143,6 +143,8 @@ def test_cancel(m, loadbios, S, R,  command, expected):
     assert (b'', expected) == (inp.read(), out.written())
     assert cmderr == m.regs.pc
 
+####################################################################
+
 def test_newline(m, S, loadbios):
     command  = b'\v'
     expected = b'K\x08 ' + NL    # erases visible ^K
@@ -168,7 +170,28 @@ def test_comment(m, S, loadbios):
     assert expected == output, 'expected output'
     assert b'' == unread, 'input was completely consumed'
 
-####################################################################
+#   Also does some testing of parameter parsing.
+@param('command, param, expected', [
+    (b'q\n',            0, b'.q\n'),
+    (b'q   \n',         0, b'.q   \n'),
+    #   Cursor left on current param value; on CR, ???.
+    #   XXX not clear why only one `0` in the reprint.
+    (b'qt0\n',         0, b'.qt00\b\b0    \b\b\b\b\n'),
+    (b'qt3\n',         3, b'.qt00\b\b3    \b\b\b\b\n'),
+    (b'qt21\n',     0x21, b'.qt00\b\b21    \b\b\b\b\n'),
+    (b'q  t0  \n',     0, b'.q  t00\b\b0     \b\b\b\b \n'),
+    (b'qt14 t3\n',     3, b'.qt00\b\b14     \b\b\b\bt14\b\b3    \b\b\b\b\n'),
+])
+def test_quit(m, R, S, loadbios, command, param, expected):
+    inp, out = loadbios(input=command)
+    try:
+        m.call(S.prompt, stopat=[S.exit])
+    except EOFError as ex:  print(f'OVERRUN! {ex}')
+
+    unread, echo, output = log_interaction(command, expected, inp, out)
+    assert (param,    b'', expected) \
+        == (  m.a, unread, output)
+    #   XXX Should check CRC on saved params as well.
 
 @param('command, expected', [
     (b'/    ?0    /0\r', b'0000:0000   0000 @    0000 @   \n'),

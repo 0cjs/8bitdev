@@ -573,8 +573,8 @@ def test_memcopy_v(m, S, R):
 #   Commands: Other
 
 from src.tmon.test import (
-    test_invalid_command, test_ignored, test_newline, test_cancel,
-    test_comment, test_calc, test_params_good_bad_good,
+    test_invalid_command, test_ignored, test_cancel,
+    test_newline, test_comment, test_quit, test_calc, test_params_good_bad_good,
     test_intelhex_good, test_intelhex_errors,
     )
 
@@ -612,23 +612,6 @@ def test_command_dispatch(m, S, R, cmdchar, cmdaddr):
     m.call(dispatch, R(b=cmdchar[0], hl=cmdtbl), stopat=[cmdjmp, cmderr])
     if cmdaddr is None:  assert cmderr == m.pc          , 'invalid command'
     else:                assert R(hl=cmdaddr) == m.regs , 'command addr'
-
-@param('input, output', [
-    #   Q command is almost as simple to test
-    (b'q\n',    b'.q\n'  ),     # lower case command
-    (b'Q  \r',  b'.Q  \n'),     # upper case command, spaces ignored
-])
-def test_prompt_q_nocancel(m, loadbios, S, R,  input, output):
-    pdone = S['prompt.end']
-    inp, out = loadbios(input=input)
-    try:
-        m.call(S.prompt, stopat=[pdone, S.exit])
-    except EOFError as ex:  print(f'OVERRUN! {ex}')
-
-    print(f'pdone=${pdone:04X}  {m.regs}')
-    print(output); print(out.written())
-    assert (       b'',             output) \
-        == (inp.read(),      out.written())
 
 def test_prompt_examine(m, S, R, loadbios):
     commands = b'e s12aB l2 w6\nq\nEND'

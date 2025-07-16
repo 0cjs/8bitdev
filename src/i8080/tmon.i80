@@ -299,8 +299,7 @@ prompt      ld   sp,tmon_stack
             ;
 .cmderr     call errbeep        ; invalid command, signal error
             ld   a,CR           ; back up over invalid command and prompt
-            call prchar
-.end        ret                 ; to prompt
+            jp   prchar         ; TCO ret to prompt
 
 ;   Command character and address of command code definition.
 cmd         macro   char,addr
@@ -650,12 +649,13 @@ ptab_quit   pb   'T',t0         ; exit "to" whence specified by number
             db   0
 
 cmd_quit    xor  a,a
-            ld   (t0),a
+            ld   (t0),a         ; default value of param is always 0
             ld   hl,ptab_quit
-            call read_params    ;   but must confirm/cancel
+            call read_params    ; not just for param, but must confirm/cancel
             call cksum_v        ; checksum current params so we don't re-init
             ld   (v_cksum),hl   ;   on re-entry if they've not been stomped
             call prnl
+            ld   a,(t0)         ; A ← param `t` value
             jp   exit           ; system-supplied routine
 
 ; ----------------------------------------------------------------------

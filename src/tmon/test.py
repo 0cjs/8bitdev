@@ -74,6 +74,31 @@ def log_interaction(command, expected, inp, out):
 #   genericised across different systems, and avoids forcing certain ways
 #   of implementing the command.
 
+@param('command, expected', [
+    #   In all cases we expect a prompt, a `prvischar` version of our
+    #   input char, a BEL, and a CR returning us to the start of the
+    #   line (whence the prompt will be printed again, if we didn't
+    #   stop before that runs).
+    (b'\x00',   b'.@\a\r'),         # possibly we should ignore NUL
+    (ZCMD,      ZOUT + b'\a\r'),    # many tests rely on this being invalid!
+    (b'\x1F',   b'._\a\r'),
+    (b'\x7F',   b'.?\a\r'),
+    (b'\xFF',   b'.?\a\r'),
+    (b'!',      b'.!\a\r'),
+    (b'~',      b'.~\a\r'),
+])
+def test_invalid_command(m, S, loadbios, command, expected):
+    ''' Many other tests rely on this working. '''
+    #   XXX Consider using pytest-dependencies to make this explicit.
+
+    inp, out = loadbios(input=command)
+    try:
+        #   `.setstack` is required for the `ret` in `.cmderr` to work.
+        m.call(S['prompt.setstack'], stopat=[S.prompt])
+    except EOFError as ex:  print(f'OVERRUN! {ex}')
+    unread, echo, output = log_interaction(command, expected, inp, out)
+    assert expected == echo
+
 @param('command', [ b'\rZ', b'\nZ', b' Z', ])
 def test_ignored(m, R, S, loadbios, command):
     ''' This is a bit awkward because ignored 'commands' should not be

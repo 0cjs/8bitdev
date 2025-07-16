@@ -267,7 +267,7 @@ init        call cksum_v
 ;   itself that it places on the stack before jumping to any command.
 ;
 prompt      ld   sp,tmon_stack
-            ld   hl,prompt
+.setstack   ld   hl,prompt
             push hl             ; ret will go to prompt
             ld   a,'.'
             call prchar         ; prompt

@@ -271,9 +271,8 @@ prompt      ld   sp,tmon_stack
             ld   a,'.'
             call prchar         ; prompt
 .read       call rdchar
-            cmd  CR,.read       ; ignored whitespace "commands"
-            cmd  LF,.read
-            cmd  ' ',.read
+            call qignspace      ; ignored whitespace "commands"
+            jp   Z,.read
 .echocmd    call prvischar      ; echo input visibly
             call upcase         ; force to upper case if letter
             ;   Dispatch command if we match one.
@@ -1144,6 +1143,11 @@ cmd_calc
 
 ; ----------------------------------------------------------------------
 ;   Parsing Routines `q*`
+
+;   ♠A Set Z flag if the char in A is "ignored" whitespace (space, CR or LF).
+qignspace   cp  ' '
+            ret Z
+            ;   fallthrough
 
 ;   ♠A Set Z flag if the char in A is an execute command character (CR or LF).
 qexec       cp   CR

@@ -625,6 +625,7 @@ exec        call read_params
             jp   t0             ; trampoline into user code
 
 ptab_quit   pb   'T',t0         ; exit "to" whence specified by number
+            db   0
 
 cmd_quit    xor  a,a
             ld   (t0),a

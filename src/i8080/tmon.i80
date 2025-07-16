@@ -271,12 +271,9 @@ prompt      ld   sp,tmon_stack
             ld   a,'.'
             call prchar         ; prompt
 .read       call rdchar
-            cp   CR             ; ignored "commands"
-            jp   Z,.read
-            cp   LF
-            jp   Z,.read
-            cp   ' '
-            jp   Z,.read
+            cmd  CR,.read       ; ignored whitespace "commands"
+            cmd  LF,.read
+            cmd  ' ',.read
 .echocmd    call prvischar      ; echo input visibly
             call upcase         ; force to upper case if letter
             ;   Dispatch command if we match one.

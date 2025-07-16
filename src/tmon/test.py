@@ -224,13 +224,14 @@ def test_intelhex_errors(m, S, loadbios, rcincr, command, expected):
     record_count = randrange(60000); m.depword(S.vL_calc, record_count)
     success_count  = randrange(60000); m.depword(S.vR_calc, success_count)
 
-    command += b'\x1A'      # ^Z is bad command if sent back to prompt
+    command += b'\x1A'          # ^Z is bad command if sent back to prompt
+    expected = b'.' + expected  # prefix prompt
 
     inp, out = loadbios(input=command)
     try:
         #   We stop on prompt.cmderr to be able to test that \r takes us
         #   back to the prompt.
-        m.call(S['prompt.read'], stopat=[S['prompt.cmderr']])
+        m.call(S['prompt'], stopat=[S['prompt.cmderr']])
     except EOFError as ex:  print(f'OVERRUN! {ex}')
 
     unread_actual, echo, output = log_interaction(command, expected, inp, out)

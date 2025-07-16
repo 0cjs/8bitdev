@@ -254,14 +254,21 @@ init        call cksum_v
 .end
             ; FALLTHROUGH
 
-;   Print the prompt and read a command (but not the command's parameters).
+;   Reset the stack, print the prompt and read and dispatch a command
+;   (but not the command's parameters).
 ;
 ;   Commands are expected to generate a newline (moving to the next line
 ;   after the command) if necessary, though they may also overwrite the
 ;   current line (by generating CR) if that won't overwrite any useful
 ;   input made before command execution.
 ;
+;   Because this resets the stack, it may be entered via either a `jp`
+;   (with the stack in any state) or via a `ret` to the address of
+;   itself that it places on the stack before jumping to any command.
+;
 prompt      ld   sp,tmon_stack
+            ld   hl,prompt
+            push hl             ; ret will go to prompt
             ld   a,'.'
             call prchar         ; prompt
 .read       call rdchar
@@ -293,7 +300,7 @@ prompt      ld   sp,tmon_stack
 .cmderr     call errbeep        ; invalid command, signal error
             ld   a,CR           ; back up over invalid command and prompt
             call prchar
-.end        jp   prompt
+.end        ret                 ; to prompt
 
 ;   Command character and address of command code definition.
 cmd         macro   char,addr
@@ -332,14 +339,12 @@ cmdtbl      cmd  VT,  cmd_newline
 ;   Cancel current command. This may be used (via `jp`) by a routine at any
 ;   call depth. It will print a backslash at the current cursor position to
 ;   indicate that the command has been cancelled, print a newline, and then
-;   restart the prompt, which will reload the the stack pointer to be at
-;   the base of the monitor stack.
-;
+;   restart the prompt, which will reset the stack.
 cancel      call  pr4clear      ; clear any displayed value
             ld   a,BACKSLASH    ; indicate cancelled
             call prchar
             call prnl
-.prompt     jp   prompt
+.prompt     jp   prompt         ; cannot be `ret`; we don't know call depth
 
 ;   Checksum the command parameters, returning the checksum in HL.
 ;   When stored in (v_cksum), this lets us tell if param vals have changed.
@@ -724,7 +729,7 @@ cmd_examine_cur
             dec  e
             jp   NZ,.startline
             ;
-.end        jp   prompt
+.end        ret                 ; to prompt
 
 ;   ♠AHL(t0⋅1) ♣*(t2⋅3)   prexamine: If the bit in A is set in (vM_examine),
 ;   i.e. if the format is enabled, print a sequence of (vW_examine)
@@ -776,7 +781,7 @@ cmd_regs_deposit
 cmd_regs_examine
             call prcr           ; overwrite line, since we display everything
             call showregs
-.end        jp   prompt
+.end        ret                 ; to prompt
 
 showregs    ld   hl,(ureg_PC)
             call prhexHL
@@ -846,7 +851,7 @@ cmd_deposit_params
             jp   Z,.end         ;   no
             ld   hl,(vS_examine)
             ld   (vS_deposit),hl
-.end        jp   prompt
+.end        ret                 ; to prompt
 
 cmd_deposit_words
             ld   c,1            ; qhex size flag: 16-bit stores (preserved)
@@ -908,7 +913,7 @@ deposit_end call prnl
             or   a,a
             jp   Z,.noadvance
             ld   (vS_deposit),hl
-.noadvance  jp   prompt
+.noadvance  ret                 ; to prompt
 
 ; ----------------------------------------------------------------------;
 ;   "Hex file" Deposit Commands
@@ -947,8 +952,7 @@ cmd_deposit_intelhex            ; ':' prefix has already been read
             ld   hl,(vR_calc)   ; increment current success count
             inc  hl
             ld   (vR_calc),hl
-            call prnl
-            jp   prompt
+            jp   prnl           ; TCO ret to prompt
             ;
 .hexerror   ;   On any error we:
             ;   • Indicate error with a beep followed by a newline, `?` and
@@ -1026,7 +1030,7 @@ cmd_cksum   ld   hl,ptab_source
             call cksum_crc_16_ccitt
             call prhexHL
             call prnl
-.end        jp   prompt
+.end        ret                 ; to prompt
 
             ;   Included here because required for all monitors.
             include src/i8080/checksum/crc_16_ccitt.i80
@@ -1061,8 +1065,7 @@ cmd_memcopy ld   hl,ptab_target
 
 cmd_newline call prback         ; erase visible ^K
             call prspace
-            call prnl
-            jp   prompt
+            jp   prnl           ; TCO ret to prompt
 
 ;   This echos non-printing chars as-is to enable the use of terminal
 ;   codes or the like in comments.
@@ -1074,8 +1077,7 @@ cmd_comment call prcr
             call rdchar
             cp   CR             ; CR terminates comment
             jp   NZ,.nextchar
-.done       call prnl
-            jp   prompt
+.done       jp   prnl           ; TCO ret to prompt
 
 ptab_port_in
             pb   'P',vP_port_in
@@ -1114,8 +1116,7 @@ cmd_port_cont ;  Set up trampoline
             ld   a,d            ; data to write (ignored if read)
             call t0             ; call trampoline
             call prhexA
-            call prnl
-            jp   prompt
+            jp   prnl           ; TCO ret to prompt
 
 ptab_calc
             pw   '?',vL_calc    ; left value: 16 bits
@@ -1144,9 +1145,7 @@ cmd_calc
             ;   This takes us to col 31, so we don't scroll on 32-col displays.
             call prspace
             call prspace
-            call prnl
-            ;
-            jp   prompt
+            jp   prnl           ; TCO ret to prompt
             ;
 .print      call pr3sp
             call prhexHL

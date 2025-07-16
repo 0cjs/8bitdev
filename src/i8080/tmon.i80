@@ -74,12 +74,6 @@ iCALL       equ  $CD            ; 8080 CALL aaaa instruction
 iJP         equ  $C3            ; 8080 JMP aaaa instruction
 iRET        equ  $C9            ; 8080 RET instruction
 
-;   Command character and address of command code definition.
-cmd         macro   char,addr
-            cp   a,char
-            jp   Z,addr
-            endm
-
 ;   Byte-valued parameter: char followed by addr at which to store byte value.
 pb          macro char,addr
             db    char
@@ -281,38 +275,61 @@ prompt      ld   sp,tmon_stack
             ;   • Commands must generate their own initial newline; see above.
             ;   • Commands that execute immediately rather than waiting for
             ;     parameters and/or confirmation should be marked somehow.
-            cmd  VT, cmd_newline
-            cmd  '#',cmd_comment
-            cmd  "'",cmd_deposit_ascii
-            cmd  ',',cmd_deposit_params
-            cmd  '.',cmd_deposit_bytes
-            cmd  '/',cmd_calc
-            cmd  ':',cmd_deposit_intelhex
-            cmd  ';',cmd_regs_deposit
-            cmd  '>',cmd_deposit_words
-          ; cmd  'A',cmd_examine_asm
-            cmd  'B',cmd_examine_prev
-            cmd  'D',cmd_examine_cur
-            cmd  'E',cmd_examine_params
-            cmd  'F',cmd_examine_next
-            cmd  'I',cmd_iret
-            cmd  'J',cmd_jump
-            cmd  'K',cmd_call
-            cmd  'M',cmd_memcopy
-            cmd  'O',cmd_port_out
-            cmd  'P',cmd_port_in
-            cmd  'Q',cmd_quit
-            cmd  'R',cmd_regs_examine
-          ; cmd  'S',cmd_deposit_motosrec
-          ; cmd  'T',cmd_device_write
-            cmd  'V',cmd_cksum
-          ; cmd  'W',cmd_find
-          ; cmd  'Y',cmd_device_read
-            ;   No command; generate error.
-.err        call errbeep
-            ld   a,CR           ; back up over bad command and prompt
+            ld   hl,cmdtbl
+            ld   b,a            ; B ← command char to match
+.dispatch   ld   a,(hl)         ; A ← char in table entry
+            inc  hl             ; move to address in table entry
+            or   a,a            ; end of table?
+            jp   Z,.cmderr      ;   yes: bad command
+            sub  a,b            ; char match?
+            jp   Z,.cmdmatch    ;   yes:
+            inc  hl             ;    no: skip to next char and retry
+            inc  hl
+            jp   .dispatch
+.cmdmatch   ld   a,(hl)         ; command addr LSB
+            inc  hl
+            ld   h,(hl)         ; command addr MSB
+            ld   l,a
+.cmdjmp     jp   (hl)
+            ;
+.cmderr     call errbeep        ; invalid command, signal error
+            ld   a,CR           ; back up over invalid command and prompt
             call prchar
 .end        jp   prompt
+
+;   Command character and address of command code definition.
+cmd         macro   char,addr
+            db   char
+            dw   addr
+            endm
+
+cmdtbl      cmd  VT,  cmd_newline
+            cmd  '#', cmd_comment
+            cmd  "'", cmd_deposit_ascii
+            cmd  ',', cmd_deposit_params
+            cmd  '.', cmd_deposit_bytes
+            cmd  '/', cmd_calc
+            cmd  ':', cmd_deposit_intelhex
+            cmd  ';', cmd_regs_deposit
+            cmd  '>', cmd_deposit_words
+          ; cmd  'A', cmd_examine_asm
+            cmd  'B', cmd_examine_prev
+            cmd  'D', cmd_examine_cur
+            cmd  'E', cmd_examine_params
+            cmd  'F', cmd_examine_next
+            cmd  'I', cmd_iret
+            cmd  'J', cmd_jump
+            cmd  'K', cmd_call
+            cmd  'M', cmd_memcopy
+            cmd  'O', cmd_port_out
+            cmd  'P', cmd_port_in
+            cmd  'Q', cmd_quit
+            cmd  'R', cmd_regs_examine
+          ; cmd  'S', cmd_deposit_motosrec
+          ; cmd  'T', cmd_device_write
+            cmd  'V', cmd_cksum
+          ; cmd  'W', cmd_find
+          ; cmd  'Y', cmd_device_read
 
 ;   Cancel current command. This may be used (via `jp`) by a routine at any
 ;   call depth. It will print a backslash at the current cursor position to

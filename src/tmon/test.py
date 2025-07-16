@@ -199,7 +199,7 @@ def test_intelhex_good(m, S, loadbios, command, addr, expected_dep):
         ,  'Record count incremented; success count incremented'
 
 IHE = b'\a\n?\n'        # error indicator: beep and '?' on a new line
-IHP = b'.Z'             # prompt and ^Z bad command echoed at `prompt.err`
+IHP = b'.Z'             # prompt and ^Z bad command echoed at `prompt.cmderr`
 IH_ = b'00aaaa01cc'     # good end record (note no ':' prefix)
 @param( 'rcincr, command, expected', [
     #   Bad hex digit, not CR, returns to prompt 'normally.'
@@ -228,9 +228,9 @@ def test_intelhex_errors(m, S, loadbios, rcincr, command, expected):
 
     inp, out = loadbios(input=command)
     try:
-        #   We stop on prompt.err to be able to test that \r takes us
+        #   We stop on prompt.cmderr to be able to test that \r takes us
         #   back to the prompt.
-        m.call(S['prompt.read'], stopat=[S['prompt.err']])
+        m.call(S['prompt.read'], stopat=[S['prompt.cmderr']])
     except EOFError as ex:  print(f'OVERRUN! {ex}')
 
     unread_actual, echo, output = log_interaction(command, expected, inp, out)

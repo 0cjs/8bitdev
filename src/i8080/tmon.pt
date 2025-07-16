@@ -596,6 +596,24 @@ def test_quit_param(m, S, R, loadbios, t):
 ####################################################################
 #   Command parsing
 
+@param('cmdchar, cmdaddr', [
+    (b'A', 0xBBAA), (b'E', 0xFFEE), (b'0x01', None), (b'0xFF', None),
+])
+def test_command_dispatch(m, S, R, cmdchar, cmdaddr):
+    cmdtbl = 0x800; m.deposit(cmdtbl, bytes([
+        ord('A'), 0xAA, 0xBB,
+        ord('C'), 0xCC, 0xDD,
+        ord('E'), 0xEE, 0xFF,
+        0, ]))
+    print(m.hexdump(cmdtbl, 16))
+
+    dispatch = S['prompt.dispatch']
+    cmdjmp   = S['prompt.cmdjmp']
+    cmderr   = S['prompt.cmderr']
+    m.call(dispatch, R(b=cmdchar[0], hl=cmdtbl), stopat=[cmdjmp, cmderr])
+    if cmdaddr is None:  assert cmderr == m.pc          , 'invalid command'
+    else:                assert R(hl=cmdaddr) == m.regs , 'command addr'
+
 @param('input, output, continued', [
     #   All non-ignored, non-printable characters are "bad command"
     #   when waiting for command.

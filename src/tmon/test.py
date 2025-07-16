@@ -2,6 +2,18 @@ from    random  import randrange
 import  pytest
 param = pytest.mark.parametrize
 
+NAK     = b'\x15'   # Ctrl-U
+CAN     = b'\x18'   # Ctrl-X
+ZCMD    = b'\x1A'   # SUB/Ctrl-Z as an invalid command to make `prompt` error
+ZOUT    = b'.Z'     # prompt and `prvischar` output of ZCMD
+
+#   '\n' is what the simulator BIOS prints as a newline. We expect this
+#   to be '\r\n' on most machines; not clear how to test that, or even
+#   if we should.
+NL = b'\n'
+
+#####################################################################
+
 #   XXX This is unused, but we leave it in place (with test) as an example
 #   of how we should have tests for support functions in this file.
 def remove_command_echo(command, output):
@@ -62,11 +74,6 @@ def log_interaction(command, expected, inp, out):
 #   genericised across different systems, and avoids forcing certain ways
 #   of implementing the command.
 
-#   '\n' is what the simulator BIOS prints as a newline. We expect this
-#   to be '\r\n' on most machines; not clear how to test that, or even
-#   if we should.
-NL = b'\n'
-
 @param('command', [ b'\rZ', b'\nZ', b' Z', ])
 def test_ignored(m, R, S, loadbios, command):
     ''' This is a bit awkward because ignored 'commands' should not be
@@ -93,6 +100,24 @@ def test_ignored(m, R, S, loadbios, command):
     assert expected == output, 'expected output'
     assert b'' == unread, 'input was completely consumed'
 
+@param('command, expected', [
+    (b'q'+NAK,  b'.q    \b\b\b\b\\\n'),     # cancel with Ctrl-U
+    (b'q'+CAN,  b'.q    \b\b\b\b\\\n'),     # cancel with Ctrl-X
+])
+def test_cancel(m, loadbios, S, R,  command, expected):
+    command += ZCMD         # invalid command to trigger prompt error
+    expected += ZOUT
+    cmderr = S['prompt.cmderr']
+
+    inp, out = loadbios(input=command)
+    try:
+        m.call(S.prompt, stopat=[cmderr])
+    except EOFError as ex:  print(f'OVERRUN! {ex}')
+
+    unread, echo, output = log_interaction(command, expected, inp, out)
+    assert (b'', expected) == (inp.read(), out.written())
+    assert cmderr == m.regs.pc
+
 def test_newline(m, S, loadbios):
     command  = b'\v'
     expected = b'K\x08 ' + NL    # erases visible ^K
@@ -117,6 +142,8 @@ def test_comment(m, S, loadbios):
     unread, echo, output = log_interaction(command, expected, inp, out)
     assert expected == output, 'expected output'
     assert b'' == unread, 'input was completely consumed'
+
+####################################################################
 
 @param('command, expected', [
     (b'/    ?0    /0\r', b'0000:0000   0000 @    0000 @   \n'),
@@ -224,7 +251,7 @@ def test_intelhex_errors(m, S, loadbios, rcincr, command, expected):
     record_count = randrange(60000); m.depword(S.vL_calc, record_count)
     success_count  = randrange(60000); m.depword(S.vR_calc, success_count)
 
-    command += b'\x1A'          # ^Z is bad command if sent back to prompt
+    command += ZCMD             # bad command if sent back to prompt
     expected = b'.' + expected  # prefix prompt
 
     inp, out = loadbios(input=command)

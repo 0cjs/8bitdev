@@ -336,15 +336,18 @@ cmdtbl      cmd  VT,  cmd_newline
           ; cmd  'W', cmd_find
           ; cmd  'Y', cmd_device_read
 
-;   Cancel current command. This may be used (via `jp`) by a routine at any
-;   call depth. It will print a backslash at the current cursor position to
-;   indicate that the command has been cancelled, print a newline, and then
-;   restart the prompt, which will reset the stack.
+;   Cancel current command.
+;   • This may be used (via `jp`) by a routine at any call depth.
+;   • It will print a backslash at the current cursor position to indicate
+;     that the command has been cancelled, print a newline, and then restart
+;     the prompt, which will reset the stack.
+;   • We do NOT clear the entire line, because any param values entered
+;     before cancellation remain in effect.
 cancel      call  pr4clear      ; clear any displayed value
             ld   a,BACKSLASH    ; indicate cancelled
             call prchar
             call prnl
-.prompt     jp   prompt         ; cannot be `ret`; we don't know call depth
+            jp   prompt         ; cannot be `ret`; we don't know call depth
 
 ;   Checksum the command parameters, returning the checksum in HL.
 ;   When stored in (v_cksum), this lets us tell if param vals have changed.
@@ -1158,7 +1161,10 @@ cmd_calc
 ; ----------------------------------------------------------------------
 ;   Parsing Routines `q*`
 
-;   ♠A Set Z flag if the char in A is "ignored" whitespace (space, CR or LF).
+;   ♠A   Set Z flag if the char in A is "ignored" whitespace (space, CR or LF).
+;        (We might include the cancel chars here so that at a command prompt
+;        they wouldn't generate an error, but it doesn't seem worth the 6
+;        bytes it would take.)
 qignspace   cp  ' '
             ret Z
             ;   fallthrough

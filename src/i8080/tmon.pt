@@ -6,6 +6,8 @@ import  pytest
 
 pytest.register_assert_rewrite('src.tmon.test')
 
+from src.tmon.test import (NAK, CAN)
+
 test_rig = '''
             cpu 8080
             include  src/i8080/std.i80
@@ -61,9 +63,6 @@ utest_data  db   $FF, $00, $12, $23, $34, $45, $56, $67
 '''
 
 param = pytest.mark.parametrize
-
-NAK = b'\x15'   # Ctrl-U
-CAN = b'\x18'   # Ctrl-X
 
 ####################################################################
 #   Pytest improvements.
@@ -573,8 +572,8 @@ def test_memcopy_v(m, S, R):
 ####################################################################
 #   Commands: Other
 
-from src.tmon.test import ( NL,
-    test_ignored, test_newline, test_comment,
+from src.tmon.test import (
+    test_ignored, test_newline, test_cancel, test_comment,
     test_calc, test_params_good_bad_good,
     test_intelhex_good, test_intelhex_errors,
     )
@@ -644,17 +643,6 @@ def test_prompt_q_nocancel(m, loadbios, S, R,  input, output, continued):
     print(output); print(out.written())
     assert (           b'',             output,           continued) \
         == (inp.read(), out.written(),  pdone == m.regs.pc)
-
-@param('input, output', [
-    (b'q'+NAK,  b'.q    \b\b\b\b\\\n'),     # cancel with Ctrl-U
-    (b'q'+CAN,  b'.q    \b\b\b\b\\\n'),     # cancel with Ctrl-X
-])
-def test_prompt_cancel(m, loadbios, S, R,  input, output):
-    cancel_done = S['cancel.prompt']
-    inp, out = loadbios(input=input)
-    m.call(S.prompt, stopat=[cancel_done])
-    assert (b'', output) == (inp.read(), out.written())
-    assert cancel_done == m.regs.pc
 
 def test_prompt_examine(m, S, R, loadbios):
     commands = b'e s12aB l2 w6\nq\nEND'

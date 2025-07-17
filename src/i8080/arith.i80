@@ -1,0 +1,29 @@
+;   arith.i80 - miscellaneous small arithmetic routines
+;
+;   Requires: src/i8080/std.i80
+;
+;   XXX This needs some way to generate the code for only the routines that
+;   are used, rather than having unused routines also assembled into your
+;   program, taking up space.
+
+; ----------------------------------------------------------------------
+;   ♣A   HL ← HL - DE. Affected flags: Z.
+;   XXX This should be in a generic file somewhere?
+subHLDE     ld   a,l
+            sub  a,e
+            ld   l,a
+            ld   a,h
+            sbc  a,d
+            ld   h,a
+            or   a,l        ; Z flag set only if H and L are 0
+            ret
+
+; ----------------------------------------------------------------------
+;   ♠BCHL ♣AHL  Compare BC - HL and set "borrow" (carry):
+;               • BC ≥ HL ⇒ NCy (carry clear
+;               • BC < HL ⇒  Cy (carry set)
+cpBCHL      ld   a,c        ; LSB
+            sub  a,l        ; affects carry
+            ld   a,b        ; MSB
+            sbc  a,h        ; use and affect carry
+            ret

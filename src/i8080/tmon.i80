@@ -1285,26 +1285,6 @@ cmp_vE_HL   push hl
             pop  hl
             ret
 
-;   ♣A   HL ← HL - DE. Affected flags: Z.
-;   XXX This should be in a generic file somewhere?
-subHLDE     ld   a,l
-            sub  a,e
-            ld   l,a
-            ld   a,h
-            sbc  a,d
-            ld   h,a
-            or   a,l        ; Z flag set only if H and L are 0
-            ret
-
-;   ♠BCHL ♣AHL  Compare BC - HL and set "borrow" (carry):
-;               • NCy = BC ≥ HL
-;               •  Cy = BC < HL
-cpBCHL      ld   a,c        ; LSB
-            sub  a,l        ; affects carry
-            ld   a,b        ; MSB
-            sbc  a,h        ; use and affect carry
-            ret
-
 ;   ♠BCHL ♡DE ♣ABC   HL ← HL - [BC]
 subHLpBC    ;   load BC with [BC]
             ld   a,(bc)     ; LSB of [BC]
@@ -1322,5 +1302,7 @@ subHLpBC    ;   load BC with [BC]
             sbc  a,b
             ld   h,a
             ret
+
+            include  src/i8080/arith.i80
 
 tmon_rom_end

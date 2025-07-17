@@ -1,0 +1,15 @@
+from    testmc.i8080  import  Machine, Instructions as I
+import  pytest
+
+#   XXX `object_files` doesn't work because it builds the file under
+#   .build/obj/src/… instead of .build/ptobj/src/…. Probably we should
+#   just remove `object_files` since it seems used only to force an
+#   untested file to be assembled, and we can do that just as well
+#   with `test_rig` per below.
+#object_files = 'src/i8080/selasmtest.i80'
+
+test_rig = '    include src/i8080/selasmtest.i80'
+
+def test_symbols(S):
+    with pytest.raises(AttributeError): S.alpha
+    S.beta

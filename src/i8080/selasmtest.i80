@@ -1,0 +1,23 @@
+            cpu z80
+
+; ----------------------------------------------------------------------
+;   This is the top-level program that wants to include a file from
+;   which it uses some routines, but not others.
+
+
+main        call beta
+            ;   The assembler produces the following error on the above line:
+            ;   selasmtest.i80(4):18: error: symbol undefined
+
+; ----------------------------------------------------------------------
+;   This represents the included "library" file, which attempts to
+;   generate code only for the routines that are actually referenced
+;   before it is included.
+
+        ifused alpha
+alpha       ret
+        endif
+
+        ifused beta
+beta        ret
+        endif

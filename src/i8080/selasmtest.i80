@@ -1,4 +1,5 @@
             cpu z80
+            relaxed on
 
 ; ----------------------------------------------------------------------
 ;   This is the top-level program that wants to include a file from
@@ -6,7 +7,8 @@
 
 
 main        call beta
-            ;   The assembler produces the following error on the above line:
+            ;   Without the `ifnused alpha` block below, the assembler
+            ;   produces the following error on the above line:
             ;   selasmtest.i80(4):18: error: symbol undefined
 
 ; ----------------------------------------------------------------------
@@ -14,10 +16,28 @@ main        call beta
 ;   generate code only for the routines that are actually referenced
 ;   before it is included.
 
-        ifused alpha
+        ifnused alpha
+alpha       equ  $FFFF      ; dummy value for unused, but *must* be a valid addr
+        else
 alpha       ret
         endif
 
-        ifused beta
+        ifnused beta
+beta        equ  $FFFF      ; dummy value for unused
+        else
 beta        ret
         endif
+
+        ifnused gamma
+gamma       equ  $FFFF      ; dummy value for unused
+        else
+gamma       ret
+        endif
+
+; ----------------------------------------------------------------------
+;   The included file is finished, and we're back to the top-level file.
+;   Use after the above definitions doesn't work: because `gamma` wasn't
+;   used *before* the `ifnused gamma`, it's defined as $FFFF rather than
+;   the routine (for which no code was generated).
+
+notmain     call gamma      ; XXX calls $FFFF

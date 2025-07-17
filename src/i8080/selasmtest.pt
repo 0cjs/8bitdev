@@ -11,5 +11,7 @@ import  pytest
 test_rig = '    include src/i8080/selasmtest.i80'
 
 def test_symbols(S):
-    with pytest.raises(AttributeError): S.alpha
-    S.beta
+    unused = 0xFFFF
+    assert unused == S.alpha, 'unused'
+    assert unused != S.beta,  'used'
+    assert unused != S.gamma, 'used'

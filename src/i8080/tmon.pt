@@ -520,7 +520,7 @@ def test_cksum(m, S, R, loadbios, len):
 ], ids=tmc_tid)
 def test_memcopy_u(m, S, R, s, e, t, u):
     #   Set parameters (Warning: relies on param order in memory)
-    m.depword(S.vS_source, [s, e, t, u, 0])
+    m.depword(S.vS_source, [s, e, t, u])
     print('s,t,e,u', m.hexdump(S.vS_source, 8))
 
     source_data = list(map(lambda x: (x+0x80) & 0xFF, range(s, e)))
@@ -531,11 +531,22 @@ def test_memcopy_u(m, S, R, s, e, t, u):
     if destlen < 0: destlen += 0x10000
     expected_target_data = list(islice(cycle(source_data), destlen))
 
+    #   We cannot use a sentinel if we're doing a copy to an address before
+    #   the source that will overwrite the source, since the sentinel would
+    #   be changing the source. But it's fine just to do it for some tests,
+    #   since the length logic should be the same regardless.
+    sentinel = None
+    if u > e:
+        sentinel = b'\xDE\xAD\xBE\xEF'
+        m.deposit(u, sentinel)
+
     try:    # print info in case of crash
         m.call(S['cmd_memcopy.exec'], stopat=[S.prompt])
     finally:
         print(m.hexdump(t-2, destlen+4))
     assert bytes(expected_target_data) == m.bytes(t, u-t)
+    if sentinel is not None:
+        assert sentinel == m.bytes(u, len(sentinel)), 'OVERRUN'
 
 @pytest.mark.xfail
 def test_memcopy_v(m, S, R):

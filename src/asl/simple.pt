@@ -50,7 +50,7 @@ def test_negoff(m, R, S):
            ]
 
     #   Run the demo and confirm it worked.
-    m.call(S.negoffdemo, trace=True)
+    m.call(S.negoffdemo)
     assert [0xE0, b'1b6h9t', 0xE1] \
         == [ m.byte(S.no_data-1),           # guard
              bytes(m.bytes(S.no_data, 6)),  # string

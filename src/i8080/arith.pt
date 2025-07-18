@@ -15,7 +15,7 @@ test_rig = '''
     (0x0001, 0x0002, 0xFFFF),       # uses carry
 ], ids=tmc_tid)
 def test_subHLDE(m, S, R, hl, de, result):
-    m.call(S.subHLDE, R(hl=hl, de=de), trace=1)
+    m.call(S.subHLDE, R(hl=hl, de=de))
     Z = (result == 0)
     C = hl >= de            # Would be nice to affect carry, but we don't
                             # need it right now and might increase size.

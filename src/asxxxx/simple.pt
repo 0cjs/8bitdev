@@ -115,7 +115,7 @@ def test_read_ascii_byte(m, R, S):
 def test_stk(m, R, S):
     m.deposit(S.stkval_i1, 0xDE)    # sentinel to ensure overwrite
     m.deposit(S.stkval_i3, 0xDE)
-    m.call(S.stk_main, R(a=0xFF, sp=0xFF), maxsteps=100, trace=0)
+    m.call(S.stk_main, R(a=0xFF, sp=0xFF), maxsteps=100)
 
     #   Verify correct test data was pushed on the stack.
     #   No return address was pushed or popped by our call() above

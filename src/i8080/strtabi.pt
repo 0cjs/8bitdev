@@ -37,5 +37,5 @@ def test_strtabi(m, S, R, target, expZ, expC, expDEsym):
     m.deposit(taddr + len(target), [0])
     print(m.hexdump(taddr, 8))
 
-    m.call(S.strtabi, R(hl=taddr, de=S.strtab0, Z=(not expZ)), trace=0)
+    m.call(S.strtabi, R(hl=taddr, de=S.strtab0, Z=(not expZ)))
     assert R(Z=expZ, c=expC, de=S[expDEsym]) == m.regs

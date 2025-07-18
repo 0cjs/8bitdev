@@ -95,7 +95,7 @@ def test_subHLpBC(m, S, R, result, hl, bc):
     ('\x8A', False),
 ])
 def test_qexec(m, S, R, input, expected):
-    m.call(S.qexec, R(a=ord(input), Z=not expected), trace=1)
+    m.call(S.qexec, R(a=ord(input), Z=not expected))
     assert R(Z=expected) == m.regs
 
 @param('char, cancelled', [
@@ -237,7 +237,7 @@ def test_init_platform(m, S, R, loadbios):
 def test_prexamine_fclear(m, S, R):
     ' prexamine just returns if the format bit in A not set in (vM_examine). '
     m.deposit(S.vM_examine, 0b11111101)
-    m.call(S.prexamine, R(a=0b10, de=0000), stopat=[0000], trace=1)
+    m.call(S.prexamine, R(a=0b10, de=0000), stopat=[0000])
     assert 0000 != m.pc, "prexamine should not have called DE"
 
 def test_prexamine_fset(m, S, R, loadbios):
@@ -399,7 +399,7 @@ def test_jump(m, S, R, loadbios):
     m.deposit(userstack-4, b'\xEA' * 8)     # sentinels
     m.depword(S.ureg_AF, [0x12FF, 0x3456, 0x789A, 0xBCDE, userstack, 0xEBEB])
     m.depword(S.vS_exec, S.jump_test)
-    m.stepto(S.cmd_jump, stopat=[S.jump_test_E], trace=1)
+    m.stepto(S.cmd_jump, stopat=[S.jump_test_E])
     assert R(a=0x13, bc=0x3456, de=0x789A, hl=0xBCDF, pc=S.jump_test_E) == m.regs
     assert b'\xEA' * 8 == m.bytes(userstack-4, 8), 'stack trashed!'
 
@@ -411,7 +411,7 @@ def test_call(m, S, R, loadbios):
     m.depword(S.vS_exec, S.call_test)
     m.depword(S.ureg_SP, userstack)
 
-    m.stepto(S.cmd_call, stopat=[S.call_test_E], trace=1)
+    m.stepto(S.cmd_call, stopat=[S.call_test_E])
     assert R(a=0x12, bc=0x3556, de=0x789B, hl=0xBCDE,
         sp=userstack-2, pc=S.call_test_E) == m.regs
     expected_stack \
@@ -425,7 +425,7 @@ def test_iret(m, S, R, loadbios):
     m.depword(S.ureg_SP, userstack)
     m.depword(userstack, S.iret_test)
     print(f'iret_test={S.iret_test:4X} ', m.hexdump(userstack-2,8))
-    m.stepto(S.cmd_iret, stopat=[S.iret_test], trace=1)
+    m.stepto(S.cmd_iret, stopat=[S.iret_test])
     assert R(sp=userstack+2, pc=S.iret_test) == m.regs
 
 ####################################################################

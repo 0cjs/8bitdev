@@ -1,4 +1,5 @@
 ;   arith.i80 - miscellaneous small arithmetic routines
+;   This is a library file; see ../README.md.
 ;
 ;   Requires: src/i8080/std.i80
 ;
@@ -6,6 +7,9 @@
 ;   are used, rather than having unused routines also assembled into your
 ;   program, taking up space.
 
+    ifnused subHLDE
+            equ subHLDE,$FFFF   ; dummy value for unused
+    else
 ; ----------------------------------------------------------------------
 ;   ♣A   HL ← HL - DE. Affected flags: Z.
 ;   XXX This should be in a generic file somewhere?
@@ -17,7 +21,11 @@ subHLDE     ld   a,l
             ld   h,a
             or   a,l        ; Z flag set only if H and L are 0
             ret
+    endif
 
+    ifnused cpBCHL
+            equ cpBCHL,$FFFF    ; dummy value for unused
+    else
 ; ----------------------------------------------------------------------
 ;   ♠BCHL ♣AHL  Compare BC - HL and set "borrow" (carry):
 ;               • BC ≥ HL ⇒ NCy (carry clear
@@ -27,3 +35,4 @@ cpBCHL      ld   a,c        ; LSB
             ld   a,b        ; MSB
             sbc  a,h        ; use and affect carry
             ret
+    endif

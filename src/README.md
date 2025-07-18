@@ -56,3 +56,22 @@ Common symbol prefixes:
 - `q`: (Remember as "query.") Parsing routines that read data in memory and
   produce a result or error, often moving a parse position pointer.
   Sometimes designed used as parsing combinators.
+
+Library Files
+-------------
+
+Some source files, such as `src/i8080/arith.i80` are noted in their headers
+as being "library" files. These contain multiple routines and use a trick
+with `ifnused` to avoid assembling into the including file any routines
+that are not referenced.
+
+This is not entirely reliable: you _must_ reference the routine _before_
+you `include` the file for this to work. (If you are calling a routine only
+after the library file is included, you can ensure it's referenced before
+inclusion with a `set _,NAME`, where `_` can be any symbol that is not
+otherwise used.)
+
+If you fail to reference the symbol before inclusion, the routine will
+not be assembled into your output and the address will be $FFFF, causing
+a (usually mysterious) error when the code is run. Typically unit tests
+will catch this.

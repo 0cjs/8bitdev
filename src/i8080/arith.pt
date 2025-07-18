@@ -6,6 +6,9 @@ param = pytest.mark.parametrize
 test_rig = '''
             cpu 8080
             include  src/i8080/std.i80
+
+            set  _,subHLDE      ; reference to ensure routine is assembled
+            set  _,cpBCHL
             include  src/i8080/arith.i80
 '''
 
@@ -15,6 +18,7 @@ test_rig = '''
     (0x0001, 0x0002, 0xFFFF),       # uses carry
 ], ids=tmc_tid)
 def test_subHLDE(m, S, R, hl, de, result):
+    assert 0xFFFF != S.subHLDE      # ensure it's been assembled
     m.call(S.subHLDE, R(hl=hl, de=de))
     Z = (result == 0)
     C = hl >= de            # Would be nice to affect carry, but we don't
@@ -32,6 +36,7 @@ def test_subHLDE(m, S, R, hl, de, result):
     (0xFFFE, 0xFFFF, True),     (0x0000, 0xFFFF, True),
 ], ids=tmc_tid)
 def test_cpBCHL(m, S, R, bc, hl, cy):
+    assert 0xFFFF != S.cpBCHL       # ensure it's been assembled
     m.call(S.cpBCHL, R(bc=bc, hl=hl, C=not cy))
     assert R(C=cy) == m.regs
 

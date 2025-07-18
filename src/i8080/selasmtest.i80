@@ -1,3 +1,4 @@
+            warning 'MOMPASS=\{MOMPASS}'
             cpu z80
             relaxed on
 

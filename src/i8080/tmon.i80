@@ -1041,13 +1041,14 @@ cmd_cksum   ld   hl,ptab_source
 cmd_memcopy ld   hl,ptab_target
             call read_params
             call prnl
-.exec       ld   hl,(vT_target)     ; DE = current target addr
-            ex   de,hl
-            ld   hl,(vU_target)     ; BC = remaining target length to copy
-            ld   bc,vT_target       ;      (vU_target) - (vT_target)
-            call subHLpBC
+.exec       ld   hl,(vT_target)     ; BC = remaining target length to copy
+            ex   de,hl              ;      (vU_target) - (vT_target)
+            ld   hl,(vU_target)
+            call subHLDE
             ld   b,h
             ld   c,l
+            ld   hl,(vT_target)     ; DE = current target addr
+            ex   de,hl
             ld   hl,(vS_source)     ; HL = current source addr
             ;                       ;      (reset when it hits end of course)
 .loop       ld   a,c
@@ -1283,24 +1284,6 @@ cmp_vE_HL   push hl
             ld   a,l
             or   a,h                ; == 0? (setting Z flag for return)
             pop  hl
-            ret
-
-;   ♠BCHL ♡DE ♣ABC   HL ← HL - [BC]
-subHLpBC    ;   load BC with [BC]
-            ld   a,(bc)     ; LSB of [BC]
-            push af
-            inc  bc
-            ld   a,(bc)     ; MSB of [BC]
-            ld   b,a
-            pop  af         ; restore LSB
-            ld   c,a
-            ;
-            ld   a,l        ; subtract LSB from L
-            sub  a,c
-            ld   l,a
-            ld   a,h        ; subtract MSB from H
-            sbc  a,b
-            ld   h,a
             ret
 
             include  src/i8080/arith.i80

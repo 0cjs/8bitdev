@@ -73,19 +73,6 @@ def XXX(*args):
     return pytest.param(*args, marks=pytest.mark.xfail(strict=True))
 
 ####################################################################
-#   Generic routines
-
-@param('result, hl, bc', [
-    (0x0000, 0x0000, 0x0000), (0x0001, 0x0001, 0x0000), (0xFFFF, 0xFFFF, 0x0000),
-    (0xFFFE, 0xFFFF, 0x0001), (0xFFFE, 0x0002, 0x0004), (0x7000, 0x9000, 0x2000),
-], ids=tmc_tid)
-def test_subHLpBC(m, S, R, result, hl, bc):
-    addr = 0x9876
-    m.depword(addr, bc)
-    m.call(S.subHLpBC, R(hl=hl, bc=addr))
-    assert R(hl=result) == m.regs
-
-####################################################################
 #   Support routines
 
 @param('input, expected', [

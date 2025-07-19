@@ -1,6 +1,6 @@
-from    testmc  import LB, MB, tmc_tid
 from    testmc.i8080  import  Machine
-from    src.clic.heapbuilder  import HeapBuilder, hb
+from    src.clic.oref  import ORef as O
+from    random  import randrange
 import  pytest
 
 test_rig = '''
@@ -18,53 +18,35 @@ test_rig = '''
 ####################################################################
 
 param   = pytest.mark.parametrize
-H       = HeapBuilder             # for easy access to constants
 
-@param('const, bstr', [
-    (H.NIL,     b'nil'      ),
-    (H.TRUE,    b'#t'       ),
-    (0xFC,      b'c#FC'     ),
-], ids=tmc_tid)
-def test_priconst(m, S, R, hb, loadbios, const, bstr):
-    _, out = loadbios()
-    hb.const(const)
-    print(const)
-    m.call(S.prcell, R(hl=hb.addr))
-    assert R(hl=hb.addr) == m.regs
-    assert bstr == out.written()
-
-@param('ptr, bstr', [
-    (0x43BC,    b'#43BC'    ),
-    (0x0100,    b'#0100'    ),
-    (0xFFFC,    b'#FFFC'    ),
-], ids=tmc_tid)
-def test_prptr(m, S, R, hb, loadbios, ptr, bstr):
-    _, out = loadbios()
-    hb.ptr(ptr)
-    print(ptr)
-    m.call(S.prcell, R(hl=hb.addr))
-    assert R(hl=hb.addr) == m.regs
-    assert bstr == out.written()
-
-@param('sym, bstr', [
-    (b'a',      b'a'),
-    (b'\x00',   b'\x00'),
-    (b'\xFF',   b'\xFF'),
-    (b'ab',     b'ab'),
+@param('sym, s', [
+    (O.NIL,                 b'nil'),
+    (O.TRUE,                b'#t'),
+    (O.const(0xFC),         b'c#FC'),
+    (O.ptr(0x43BC),         b'#43BC'),
+    (O.ptr(0x0100),         b'#0100'),
+    (O.ptr(0xFFFC),         b'#FFFC'),
+    (O.sym12(b'a'),         b'a'),
+    (O.sym12(b'\x00'),      b'\x00'),
+    (O.sym12(b'\xFF'),      b'\xFF'),
+    (O.sym12(b'ab'),        b'ab'),
+    (O.smallint(0),         b'0'),
+    (O.smallint(1),         b'1'),
+    (O.smallint(23),        b'23'),
+    (O.smallint(456),       b'456'),
+    (O.smallint(7890),      b'7890'),
+    (O.smallint(8191),      b'8191'),
+    (O.smallint(-1),        b'-1'),
+    (O.smallint(-23),       b'-23'),
+    (O.smallint(-456),      b'-456'),
+    (O.smallint(-7890),     b'-7890'),
+    (O.smallint(-8192),     b'-8192'),
 ])
-def test_sym(m, S, R, hb, loadbios, sym, bstr):
+def test_prcell_other(m, S, R, loadbios, sym, s):
+    addr = randrange(0x4000, 0xFFFF)    # even unaligned addrs, because why not.
+    print(f'sym ${sym:04X} @ ${addr:04X}')
+    m.depword(addr, sym)
     _, out = loadbios()
-    hb.sym12(sym)
-    print(sym, m.hexdump(hb.addr, 2))
-    m.call(S.prcell, R(hl=hb.addr))
-    assert R(hl=hb.addr) == m.regs
-    assert bstr == out.written()
-
-@param('i', [0, 1, 23, 456, 7890, 8191, -1, -23, -456, -7890, -8192])
-def test_smallint(m, S, R, hb, loadbios, i):
-    _, out = loadbios()
-    hb.smallint(i)
-    print(i, hex(i), m.hexdump(hb.addr, 2))
-    m.call(S.prcell, R(hl=hb.addr))
-    assert R(hl=hb.addr) == m.regs
-    assert bytes(str(i), encoding='ASCII') == out.written()
+    m.call(S.prcell, R(hl=addr))
+    assert R(hl=addr) == m.regs      # preserve HL
+    assert s == out.written()

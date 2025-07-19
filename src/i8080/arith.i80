@@ -37,3 +37,18 @@ cpBCHL      ld   a,b
             cp   l
             ret
     endif
+
+    ifnused cpBCDE
+            equ cpBCDE,$FFFF    ; dummy value for unused
+    else
+; ----------------------------------------------------------------------
+;   ♠BCHL ♣A ♡*   Compare BC - DE and set Z and "borrow" (carry).
+;                 • Carry: clear if BC ≥ DE, set if BC < DE
+;                 •  Zero: set if BC = DE
+cpBCDE      ld   a,b
+            cp   d
+            ret  NZ
+            ld   a,c
+            cp   e
+            ret
+    endif

@@ -97,13 +97,16 @@ subtractions of smallints with no preprocessing of the values.
 #### Sym1/sym2
 
 A sym1 or sym2 is a 1- or 2-character symbol packed into a tagged
-reference. If the LSB is all zeros (excepting the tag) the reference is a
-sym1 with the symbol character ($00-$FF) in the MSB. If the LSB is anything
-else, the top 7 bits of the MSB are the first character of the symbol
-($00-$7FF) and bit 0 of the MSB and bits 7-2 of the LSB are the second
-character of the symbol (also $00-$7F). Below, `c7`-`c0` are the bits of
-the character of a sym1, and `c6`-`c0` and `d6`-`d0` are the bits of the
-first and second respectively characters of a sym2.
+reference. The two forms are:
+- sym1: LSB = $02 (all zeros except for the tag bits). The MSB contains the
+  symbol character ($00-$FF).
+- sym2: LSB ≠ $02 (non-zero bits in LSB). The top 7 bits of the MSB are the
+  first character of the symbol ($00-$7F) and bit 0 of the MSB and bits 7-2
+  of the LSB are the second character of the symbol (also $01-$7F).
+
+Below, `c7`-`c0` are the bits of the character of a sym1, and `c6`-`c0` and
+`d6`-`d0` are the bits of the first and second respectively characters of a
+sym2.
 
                 LSB                           MSB
     |  7  6  5  4  3  2  1  0 |   |  7  6  5  4  3  2  1  0 |
@@ -112,7 +115,7 @@ first and second respectively characters of a sym2.
     | c5 c4 c3 c2 c1 c0  1  0 |   | c6 d6 d5 d4 d3 d2 d1 d0 |  sym2
 
 Two-character symbols where either character has the high bit set or where
-the second character is $00 must be stored as allocated symbols with an
+the first character is $00 must be stored as allocated symbols with an
 entry in the heap, referenced by a standard pointer to a heap object.
 
 

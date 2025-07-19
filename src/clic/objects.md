@@ -5,9 +5,8 @@ This is just kicking around some ideas for the data types one would
 want for a small language to run on an 8-bit microprocessor system.
 
 Binary numbers are prefixed with "%"; hexadecimal numbers are prefixed
-with "$". "MSB"/"LSB" mean most/least significant bit or byte,
-depending on context; usually the size of the value (1-2 bits or 8
-bits) will make it clear which is meant.
+with "$". "MSB"/"LSB" mean most/least significant byte; "LSb"/"LSbit"
+means least significant bit.
 
 
 Representation of Object References and Data
@@ -37,11 +36,11 @@ storage formats.)
 
 ### Reference and Data Types and Tagging
 
-The two least significant bits (LSBs) and in some cases the most
+The two least significant bits (LSbs) and in some cases the most
 significant byte (MSB) of a reference, or the first two bytes of obdata,
 determine the type.
 
-     MSB  LSBs  Type
+     MSB  LSbs  Type
      $00  %00   Intrinsic constant; type and value determined by bits 7-2
     ≠$00  %00   Pointer to a cons cell or object data
      any  %01   Smallint: 14-bit signed integer
@@ -49,7 +48,7 @@ determine the type.
      any  %11   Obdata header; never an object reference
 
 Notes:
-- Because the intrinsic constants (MS=$00 LSBs=%00) share the format of
+- Because the intrinsic constants (MS=$00 LSbs=%00) share the format of
   pointers, addresses the lowest 256 memory locations ($00nn) cannot
   be used for object data storage. Most 8-bit processors have other
   more important uses for this page anyway (zero page for 6800/6502;
@@ -69,7 +68,7 @@ significant bits. `x` represents a don't-care bit, but see below.
 Objects marked `R` may contain further references and must be
 recursively followed by the GC.
 
-    MSB   LSBits    R  Description
+    MSB   LSbits    R  Description
     00   000000-00     nil
     00   000001-00     true, t
     00   ??????-00     (other special values?)
@@ -423,7 +422,7 @@ Considerations and Alternatives
   with the `BIT` instruction. (N=bit 7, V=bit 6, Z=all bits tested
   with the operand are zero.)
 
-- Making the smallint tag just `1` in the LSBit (i.e., smallints use tags
+- Making the smallint tag just `1` in the LSbit (i.e., smallints use tags
   `%00` and `%01`) would allow them to be 15 bits instead of 14, expanding
   their range to -16384 to +16383.
 

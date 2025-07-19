@@ -1,0 +1,97 @@
+from    src.clic.oref  import *
+import  pytest
+param   = pytest.mark.parametrize
+
+####################################################################
+
+@param('oref, expected', [
+    (ORef.NIL,          0x0000),
+    (ORef.TRUE,         0x0004),
+    (ORef.const(0x00),  0x0000),
+    (ORef.const(0xFC),  0x00FC),
+])
+def test_intrinsic_constants_good(oref, expected):
+    assert oref == expected
+
+@param('badval', [
+    -1, 0x100,                          # out of range
+    1, 2, 3, 0xFB, 0xFD, 0xFE, 0xFF,    # invalid tag bits
+])
+def test_intrinsic_constants_errors(badval):
+    with pytest.raises(ValueError) as ex:
+        ORef.const(badval)
+
+####################################################################
+
+@param('val', [ 0x0100, 0x0104, 0xFFFC ])
+def test_ptr_good(val):
+    assert val == ORef.ptr(val)
+
+@param('badval', [
+    -1, 0x0000, 0x00FC, 0x00FF, 0x10000,    # out of range
+    0x0101, 0x0102, 0x0103, 0x0105,         # invalid tag bits
+    0xFFFB, 0xFFFD, 0xFFFE, 0xFFFF,         # invalid tag bits
+])
+def test_ptr_errors(badval):
+    with pytest.raises(ValueError) as ex:
+        ORef.ptr(badval)
+
+####################################################################
+
+@param('f, chars, sym', [
+    (ORef.sym1,   b'\x00',      0x0002),
+    (ORef.sym1,   b'A',         0x4102),
+    (ORef.sym1,   b'\xFF',      0xFF02),
+    (ORef.sym2,   b'\x01\x00',  0x0006),
+    (ORef.sym2,   b'//',        0x2FBE),
+    (ORef.sym2,   b'Uz',        0xFA56),
+    (ORef.sym2,   b'\x7F\x7F',  0xFFFE),
+    (ORef.sym12,  b'A',         0x4102),
+    (ORef.sym12,  b'Uz',        0xFA56),
+])
+def test_sym_good(f, chars, sym):
+    oref = f(chars)
+    print(f'chars={chars} oref=${oref:04X}')
+    assert sym == oref
+
+@param('f, chars', [
+    #   Invalid lengths.
+    (ORef.sym1,   b''),
+    (ORef.sym1,   b'AB'),
+    (ORef.sym2,   b''),
+    (ORef.sym2,   b'A'),
+    (ORef.sym2,   b'ABC'),
+    (ORef.sym12,  b''),
+    (ORef.sym12,  b'ABC'),
+    #   Invalid chars.
+    (ORef.sym2,   b'\x80\x00'),
+    (ORef.sym2,   b'\x00\x80'),
+    #   Special invalids due to our encoding
+    (ORef.sym2,   b'\x00\x00'),
+    (ORef.sym2,   b'\x00\x01'),
+    (ORef.sym2,   b'\x00\x7F'),
+])
+def test_sym_errors(f, chars):
+    with pytest.raises(ValueError) as ex:
+        f(chars)
+    print(f'{ex.type.__name__!s}: {ex.value}')
+
+####################################################################
+
+@param('n, oref', [
+    (    0, 0x0001),
+    (    1, 0x0005),
+    ( 8191, 0x7FFD),
+    (   -1, 0xFFFD),
+    (-8192, 0x8001),
+])
+def test_smallint_good(n, oref):
+    oref = ORef.smallint(n)
+    print(f'n=${n:04X} oref=${oref:04X}')
+    assert oref == oref
+
+@param('n', [ -8193, 8192, ])
+def test_smallint_errors(n):
+    with pytest.raises(ValueError) as ex:
+        ORef.smallint(n)
+    print(f'{ex.type.__name__!s}: {ex.value}')

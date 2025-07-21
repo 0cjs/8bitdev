@@ -12,6 +12,12 @@ test_rig = '''
             include  src/i8080/arith.i80
 '''
 
+#   Shorthand for flags set and clear.
+Z  = 1
+nz = 0
+C  = 1
+nc = 0
+
 @param('hl, de, result', [
     (0x0000, 0x0000, 0x0000),
     (0x1234, 0x1233, 0x0001),
@@ -25,18 +31,18 @@ def test_subHLDE(m, S, R, hl, de, result):
                             # need it right now and might increase size.
     assert R(hl=result, de=de, Z=Z) == m.regs
 
-@param('bc, hl, cy', [
-    #   BC ≥ HL
-    (0x0000, 0x0000, False),    (0x0001, 0x0000, False),
-    (0x00FF, 0x0000, False),    (0x0100, 0x0000, False),
-    (0x8001, 0x7FFF, False),    (0xFFFF, 0x0000, False),
-    (0xFFFF, 0xFFFE, False),    (0xFFFF, 0xFFFF, False),
+@param('bc, hl, zf, cf', [
+    #   BC = HL
+    (0x0000, 0x0000,  Z, nc),   (0xFFFF, 0xFFFF,  Z, nc),
+    #   BC > HL
+    (0x0001, 0x0000, nz, nc),   (0x00FF, 0x0000, nz, nc),
+    (0x0100, 0x0000, nz, nc),   (0xFFFF, 0x0000, nz, nc),
+    (0x8001, 0x7FFF, nz, nc),   (0xFFFF, 0xFFFE, nz, nc),
     #   BC < HL
-    (0x0000, 0x0001, True),     (0x7FFF, 0x8000, True),
-    (0xFFFE, 0xFFFF, True),     (0x0000, 0xFFFF, True),
+    (0x0000, 0x0001, nz,  C),   (0x0000, 0xFFFF, nz,  C),
+    (0x7FFF, 0x8000, nz,  C),   (0xFFFE, 0xFFFF, nz,  C),
 ], ids=tmc_tid)
-def test_cpBCHL(m, S, R, bc, hl, cy):
+def test_cpBCHL(m, S, R, bc, hl, zf, cf):
     assert 0xFFFF != S.cpBCHL       # ensure it's been assembled
-    m.call(S.cpBCHL, R(bc=bc, hl=hl, C=not cy))
-    assert R(C=cy) == m.regs
-
+    m.call(S.cpBCHL, R(bc=bc, hl=hl, Z=not zf, C=not cf))
+    assert R(Z=zf, C=cf, bc=bc, hl=hl) == m.regs

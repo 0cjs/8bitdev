@@ -27,12 +27,13 @@ subHLDE     ld   a,l
             equ cpBCHL,$FFFF    ; dummy value for unused
     else
 ; ----------------------------------------------------------------------
-;   ♠BCHL ♣AHL  Compare BC - HL and set "borrow" (carry):
-;               • BC ≥ HL ⇒ NCy (carry clear
-;               • BC < HL ⇒  Cy (carry set)
-cpBCHL      ld   a,c        ; LSB
-            sub  a,l        ; affects carry
-            ld   a,b        ; MSB
-            sbc  a,h        ; use and affect carry
+;   ♠BCHL ♣A ♡*   Compare BC - HL and set Z and "borrow" (carry).
+;                 • Carry: clear if BC ≥ HL, set if BC < HL
+;                 •  Zero: set if BC = HL
+cpBCHL      ld   a,b
+            cp   h
+            ret  NZ
+            ld   a,c
+            cp   l
             ret
     endif

@@ -1,5 +1,5 @@
 from    testmc.i8080  import  Machine
-from    src.clic.oref  import ORef as O
+from    src.clic.objref  import *
 from    random  import randrange
 import  pytest
 
@@ -20,27 +20,27 @@ test_rig = '''
 param   = pytest.mark.parametrize
 
 @param('sym, s', [
-    (O.NIL,                 b'nil'),
-    (O.TRUE,                b'#t'),
-    (O.const(0xFC),         b'c#FC'),
-    (O.ptr(0x43BC),         b'#43BC'),
-    (O.ptr(0x0100),         b'#0100'),
-    (O.ptr(0xFFFC),         b'#FFFC'),
-    (O.sym12(b'a'),         b'a'),
-    (O.sym12(b'\x00'),      b'\x00'),
-    (O.sym12(b'\xFF'),      b'\xFF'),
-    (O.sym12(b'ab'),        b'ab'),
-    (O.smallint(0),         b'0'),
-    (O.smallint(1),         b'1'),
-    (O.smallint(23),        b'23'),
-    (O.smallint(456),       b'456'),
-    (O.smallint(7890),      b'7890'),
-    (O.smallint(8191),      b'8191'),
-    (O.smallint(-1),        b'-1'),
-    (O.smallint(-23),       b'-23'),
-    (O.smallint(-456),      b'-456'),
-    (O.smallint(-7890),     b'-7890'),
-    (O.smallint(-8192),     b'-8192'),
+    (NIL,               b'nil'),
+    (T,                 b'#t'),
+    (const(0xFC),       b'c#FC'),
+    (ptr(0x43BC),       b'#43BC'),
+    (ptr(0x0100),       b'#0100'),
+    (ptr(0xFFFC),       b'#FFFC'),
+    (sym12('a'),        b'a'),
+    (sym12('\x00'),     b'\x00'),
+    (sym12(b'\xFF'),    b'\xFF'),
+    (sym12('ab'),       b'ab'),
+    (smallint(0),       b'0'),
+    (smallint(1),       b'1'),
+    (smallint(23),      b'23'),
+    (smallint(456),     b'456'),
+    (smallint(7890),    b'7890'),
+    (smallint(8191),    b'8191'),
+    (smallint(-1),      b'-1'),
+    (smallint(-23),     b'-23'),
+    (smallint(-456),    b'-456'),
+    (smallint(-7890),   b'-7890'),
+    (smallint(-8192),   b'-8192'),
 ])
 def test_prcell_other(m, S, R, loadbios, sym, s):
     addr = randrange(0x4000, 0xFFFF)    # even unaligned addrs, because why not.

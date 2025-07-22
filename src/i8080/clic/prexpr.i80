@@ -139,5 +139,5 @@ priconst    ld   b,c            ; save intrinsic constant value
 
 iconst_names
             db   'nil',0
-            db   '#t',0
+            db   't',0
             db   0

@@ -21,7 +21,7 @@ param   = pytest.mark.parametrize
 
 @param('sym, s', [
     (NIL,               b'nil'),
-    (T,                 b'#t'),
+    (T,                 b't'),
     (const(0xFC),       b'c#FC'),
     (ptr(0x43BC),       b'#43BC'),
     (ptr(0x0100),       b'#0100'),

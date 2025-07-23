@@ -4,6 +4,9 @@ CLIC Grammar
 Below you will find notes and references on how [Scheme][R⁵RS] and
 [Common Lisp][cl] parse input.
 
+Symbology:
+- 'CS' is case sensitive; 'CI' is case-insensitive.
+
 We are currently tending toward the CL way of doing things: in particular,
 we read and store an entire token (which uses a little bit of memory, but
 no more than a dozen or two bytes in most cases), determine if it's a valid
@@ -11,6 +14,16 @@ format for a number, and only then do the conversion. Unlike Scheme, where
 something that starts out like a number fails to parse if it isn't one, we
 allow tokens like `1+` or `30cm` and interpret them as symbols. This leaves
 numeric parsing failures to be just overflows, it seems.
+
+#### Self-evaluating Objects
+
+Numbers e.g. `12` are _self-evaluating:_ they do not need to be quoted.
+Compare:
+
+    (cons  12 '())
+    (cons '12 '())
+    (cons   x '())
+    (cons  'x '())
 
 #### Numbers
 
@@ -28,15 +41,11 @@ machine words/bytes (which are different from smallints and bigints), but
 it would be nice to be able to enter smallints and bigints in hex and
 binary as well.
 
-#### Self-evaluating Objects
+#### Characters
 
-Numbers e.g. `12` are _self-evaluating:_ they do not need to be quoted.
-Compare:
-
-    (cons  12 '())
-    (cons '12 '())
-    (cons   x '())
-    (cons  'x '())
+Probably want to use the `#\c` syntax used by both CL and Scheme (giving a
+sym1 if we have no real chars), but that's definitely heading towards
+making `#` special, since we don't have two-char lookahead.
 
 #### NIL vs. () vs. '()
 
@@ -64,9 +73,10 @@ case on those. (Maybe print with the upper-case escapes, e.g., `"Hello"` →
 
 #### Miscellaneous
 
-CL does not appear to allow variables ending in `'`, e.g., `f'`, even
-though `'` is a non-terminating macro char.. Scheme does. Let's allow this
-in CLIC.
+CL does not appear to allow variables ending in `'`, e.g., `f'`, maybe
+because `'` is a terminating macro char? Scheme does. Let's allow this in
+CLIC? Need to examine the Scheme identifier parsing on this. (Is CL `'`
+terminating so you can say e.g. `(f ('a))`? I think not )
 
 
 Scheme
@@ -89,6 +99,13 @@ Notes:
   are letters and `!$%&*/:<=>?^_~`.
 - `()` is not a valid expression (unlike many other Lisps).
 
+The full list of uses of `#` parsing is:
+- `#t`, `#f`: true and false.
+- `#\x`: character constant _x_.
+- `#(`: introduces vector constant terminated by `)`.
+- `#b`, `#d`, `#o`, `#x`: binary, decimal, octal, hex.
+- `#e`, `#i`: exact, inexact numbers.
+
 #### Types
 
 Each object satisfies no more than one of these predicates: `boolean?`,
@@ -99,6 +116,10 @@ But any type can be used as a boolean; all are true except `#f` (including
 the empty list, `'()`.)
 
 Objects may be immutable; it's an error to `set!` etc. these.
+
+Character constants are `\#x` where _x_ (CS) is a printable character or
+space (must be followed by a delimiter), or `\#name` where _name_ (CI) is
+e.g. `space`, `newline`, etc.
 
 
 Common Lisp
@@ -146,6 +167,17 @@ following text is ignored. Non-terminating macro chars in the middle of a
 token are not treated specially; terminating macro chars terminate the
 token.
 
+The [list of `#` parsers][cl§2.4.8] is large.
+- Control chars are generally errors
+- `#` followed by `!?[]{}`: all reserved for the user.
+- `#(`: simple vector; `#*`: bit vector; `#a`: array.
+- `#|`: balanced comment.
+- `#c`: complex number.
+- `#b`, `#o`, `#x`: binary, octal, hex.
+- `#Nr`: radix _n_ number.
+- `#s`: structure
+- A bunch more.
+
 #### Case in Common Lisp
 
 In CL function names are case-sensitive, and the standard library names are
@@ -161,6 +193,12 @@ Printer."
 Maybe we want to do something like this but in the other direction on
 systems without lower-case input and/or output. (But what about those with
 charsets actually missing lower-case characters?)
+
+#### Types
+
+Character constants are `\#x` where _x_ (CS) is a printable character or
+space (macro chars ok) , or `\#name` where _name_ is `Space`, `Newline`,
+(always supported), `Page` etc. (optional).
 
 
 Other References
@@ -194,6 +232,7 @@ Other References
 [cl]: https://novaspec.org/cl
 [cl§2.1.4]: https://novaspec.org/cl/2_1_Character_Syntax#sec_2_1_4
 [cl§2.2]: https://novaspec.org/cl/2_2_Reader_Algorithm
+[cl§2.4.8]: https://novaspec.org/cl/2_4_Standard_Macro_Characters#sec_2_4_8
 [cl§22.1.3.3.2]: https://novaspec.org/cl/22_1_The_Lisp_Printer#sec_22_1_3_3_2
 [cl§23.1.2]: https://novaspec.org/cl/23_1_Reader_Concepts#sec_23_1_2
 [cl§2]: https://novaspec.org/cl/2_Syntax

@@ -163,6 +163,23 @@ systems without lower-case input and/or output. (But what about those with
 charsets actually missing lower-case characters?)
 
 
+Other References
+----------------
+
+* McCarthy, ["History of Lisp"][mac79], 1979-02-12.  
+  Information about early development of the initial key ideas (1956-58)
+  and the first language implementation (1958-62).
+
+* Steele, Gabriel, [The evolution of Lisp][ste96a].  
+  Implementations and hardware. Specific langauge features.  
+  Above link is uncut version; a slightly shorter version [[ste96b]] was
+  published in a book derived from HOPL II.
+
+* CHM Software Preservation Group, [History of Lisp][chm], ongoing.
+  Web pages covering many specific Lisp systems in detail, including
+  links to many papers and source code.
+
+
 
 <!-------------------------------------------------------------------->
 
@@ -180,3 +197,9 @@ charsets actually missing lower-case characters?)
 [cl§22.1.3.3.2]: https://novaspec.org/cl/22_1_The_Lisp_Printer#sec_22_1_3_3_2
 [cl§23.1.2]: https://novaspec.org/cl/23_1_Reader_Concepts#sec_23_1_2
 [cl§2]: https://novaspec.org/cl/2_Syntax
+
+<!-- Other -->
+[chm]: https://www.softwarepreservation.org/projects/LISP/
+[mac79]: http://jmc.stanford.edu/articles/lisp/lisp.pdf
+[ste96a]: https://www.dreamsongs.com/Files/HOPL2-Uncut.pdf
+[ste96b]: https://dl.acm.org/doi/10.1145/234286.1057818

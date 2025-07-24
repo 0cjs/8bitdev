@@ -1,0 +1,45 @@
+;   clic/qform.i80 - parse CLIC forms
+;
+;   Requires: clic/qtok
+
+qform_init  xor  a,a
+            ld   (getc_buf),a
+            ret
+
+; ----------------------------------------------------------------------
+;   Character Reads
+
+;   ♠A ♡* ┃ Parser character read. Return in A the last char pushed back
+;   into the input queue by `ungetc`, if there is one, otherwise read and
+;   return the next char from the console.
+getc:       ld   a,(getc_buf)
+            or   a,a
+            jp   NZ,.bufret
+            jp   rdchar         ; TCO
+            ;
+.bufret     push af
+            xor  a,a
+            ld   (getc_buf),a
+            pop  af
+            ret
+
+;   ♢A ♠A ♡* ┃ Parser character pushback. Make A the next char to be
+;   returned by `getc`. This wipes out any previous `ungetc`'d character,
+;   if present. Nor is there any check that A contains the character last
+;   read. It is not possible to `ungetc` the NUL ($00) character.
+ungetc:     ld   (getc_buf),a
+            ret
+
+; ----------------------------------------------------------------------
+
+;   ♠DE ♣?? ♡?? ┃ Return in DE the root of an AST read via `getc`. If the
+;   input is not an atom (or is an atom that requires objdata) this will
+;   will allocate as much memory as necessary in the heap to store the
+;   structures referenced by the AST root.
+qform       halt
+
+; ----------------------------------------------------------------------
+;   Storage
+;   XXX This needs to go into a RAM area
+
+getc_buf    ds   1              ; ; last `ungetc`'d char or $00 for no char.

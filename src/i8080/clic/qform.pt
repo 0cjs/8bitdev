@@ -1,7 +1,11 @@
 from    testmc.i8080  import  Machine
-from    src.clic.objref  import asbytes
+from    src.clic.objref  import asbytes, \
+    NIL, T, sym1 as s1, sym2 as s2, smallint as i
 from    collections  import namedtuple
 import  pytest
+
+param   = pytest.mark.parametrize
+R       = Machine.Registers
 
 test_rig = '''
             cpu  8080
@@ -18,8 +22,7 @@ test_rig = '''
 
 ####################################################################
 
-param   = pytest.mark.parametrize
-R       = Machine.Registers
+#   XXX should getc ignore NUL?
 
 class G:
     ' getc command '
@@ -52,6 +55,8 @@ def test_getc_regular(m, R, S, loadbios, testname, commands):
         m.call(S[cmd.sym], cmd.initregs)
         cmd.test(m)
 
+####################################################################
+
 def remainder(m, inp):
     pushback = m.byte(m.symtab.getc_buf)
     if pushback == 0x00:
@@ -67,7 +72,7 @@ def remainder(m, inp):
     ('ab',              '(def'),
     ('+12345',          ' '),
     ('-3.75e10',        ' '),
-    ('\r\n\t\v\f XX',   ' '),           # prec. whitespace stripped by test
+    ('\r\n\t\v\f XX',   ' '),           # leading whitespace stripped by test
     ('  (',             ')'),
     # XXX test escape chars
 ])
@@ -86,3 +91,16 @@ def test_rtok(m, R, S, loadbios, tokentext, next):
         == [m.bytes(S.tokbuf, len(expected)), remainder(m, inp)]
 
 # XXX test token too long error
+
+####################################################################
+
+@param('form, ast', [
+    ['x\r',         s1('x')],
+    ['foobar\r',    s2('fo')],
+    [')',           s1(')')],       # XXX wrong!
+    ['(',           s1('(')],       # XXX wrong!
+])
+def test_form(m, R, S, loadbios, form, ast):
+    inp, _    = loadbios(input=asbytes(form))
+    m.call(S.rform, R(de=0xFFFF))
+    assert R(de=ast) == m.regs

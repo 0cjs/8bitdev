@@ -114,9 +114,39 @@ wspQ        cp   TAB
 ;   input is not an atom (or is an atom that requires objdata) this will
 ;   will allocate as much memory as necessary in the heap to store the
 ;   structures referenced by the AST root.
+;
+;   XXX not clear how to deal with the recursion. Do I create a cons
+;   and call `rform` again asking it to deposit the root in that cons?
+;   It should cons up the entire sequence until a ')', but then how
+;   do I deal with not having a '(' at the top level, when just an
+;   atom is supplied? And then there's `()`....
+;
 rform       call rtok
+            ;   if ')': error
+            ;   if not '('
             call qtok
+            ;   call rformls
+            ;   it returns DE = cons cell it allocated
             ret
+
+rformls     ;
+            ;   read token
+            ;   if ')' return NIL
+            ;   allocate a cons cell
+            ;   if '('
+            ;       call rformls
+            ;       deposit DE in cons cell
+            ;       continue
+            ;   else
+            ;       do next token
+            ;   deposit in car
+            ;   read token
+            ;   if ')'
+            ;       deposit NIL in cdr
+            ;       return first cons addr
+            ;   allocate a cons cell
+            ;   put addr in cdr of previous cons cell
+            ;
 
 ; ----------------------------------------------------------------------
 ;   Storage

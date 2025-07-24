@@ -56,8 +56,8 @@ ungetc:     ld   (getc_buf),a
 ;   [2]: https://novaspec.org/cl/2_1_Character_Syntax#sec_2_1_4
 ;   [3]: https://novaspec.org/cl/f_read
 
-;   ♣*  ┃ Read a token, depositing it in `tokbuf`.
-;   Returns length in C, last char read in A.
+;   ♠ACHL ♣DE ♡B  ┃ Read a token, depositing it in `tokbuf`.
+;   Returns A=terminating char, C=length, HL=tokbuf.
 ;   This expects that we are at the character that terminated any
 ;   previous token.
 ;   • XXX Signal error if it's longer than tokbuflen. (We consume the
@@ -108,11 +108,15 @@ wspQ        cp   TAB
             ret  Z
             ret
 
+; ----------------------------------------------------------------------
+
 ;   ♠DE ♣?? ♡?? ┃ Return in DE the root of an AST read via `getc`. If the
 ;   input is not an atom (or is an atom that requires objdata) this will
 ;   will allocate as much memory as necessary in the heap to store the
 ;   structures referenced by the AST root.
-rform       halt
+rform       call rtok
+            call qtok
+            ret
 
 ; ----------------------------------------------------------------------
 ;   Storage

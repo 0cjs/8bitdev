@@ -1,0 +1,155 @@
+from    testmc.i8080  import  Machine
+from    src.clic.objref  import *
+from    src.clic.objref  import sym1 as s1, sym2 as s2, smallint as i
+from    collections  import namedtuple
+import  pytest
+
+param   = pytest.mark.parametrize
+R       = Machine.Registers
+
+test_rig = '''
+            cpu  8080
+            include src/i8080/std.i80
+            include testmc/i8080/tmc/biosdef.i80
+
+            org  $200
+hcons_ptop  dw   $7700+(20*4)   ; twenty cells should be enough for tests
+hcons_pbot  dw   $7700
+hcons_pcur  dw   $EEEE          ; sentinel, in case I forget to hconsini
+fatal_nomem halt
+
+            org  $400
+            include src/i8080/clic/rform.i80
+
+            include src/i8080/clic/qtok.i80
+            include src/i8080/clic/heap.i80
+            include src/i8080/arith.i80
+            include src/i8080/qhex.i80
+'''
+
+####################################################################
+#   getc and ungetc
+
+class G:
+    ' getc command '
+    def __init__(self, expected):
+        self.expected = asbytes(expected)
+        self.sym = 'getc'
+        self.initregs = R(a=0xFF)
+    def test(self, m):
+        assert R(a=ord(self.expected)) == m.regs
+
+class U:
+    ' ungetc command '
+    def __init__(self, char):
+        self.char = asbytes(char)
+        self.sym = 'ungetc'
+        self.initregs = R(a=ord(self.char))
+    def test(self, m):
+        assert True         # result tested by subsequent `getc`
+
+
+@param('testname, commands', [
+   ( 'get-only',        [ G('a'), G('b'), G('\r'), G('c') ]),
+   ( 'one-unget',       [ G('a'), U('a'), G('a'), G('b') ]),
+   ( 'unget-overwrite', [ G('a'), U('a'), U('X'), G('X'), G('b') ]),
+])
+def test_getc_regular(m, R, S, loadbios, testname, commands):
+    loadbios(input=b'ab\rcd')
+    m.call(S.rform_init)
+    for cmd in commands:
+        m.call(S[cmd.sym], cmd.initregs)
+        cmd.test(m)
+
+def test_getc_no_NUL(m, R, S, loadbios):
+    loadbios(input=b'.\x00,_\x00\x00\x00~')
+    m.call(S.rform_init)
+    m.call(S.getc); assert R(a=ord('.')) == m.regs
+    m.call(S.getc); assert R(a=ord(',')) == m.regs
+    m.call(S.ungetc, R(a=0))
+    m.call(S.getc); assert R(a=ord('_')) == m.regs
+    m.call(S.getc); assert R(a=ord('~')) == m.regs
+
+####################################################################
+#   Tokenisation: rtok
+
+def remainder(m, inp):
+    pushback = m.byte(m.symtab.getc_buf)
+    if pushback == 0x00:
+        return inp.read()
+    else:
+        return bytes([pushback]) + inp.read()
+
+@param('tokentext, next', [    # input is tokentext+next
+    ('(',               ')'),
+    ('ab',              '    '),
+    ('ab',              '\r  '),
+    ('ab',              ')'),
+    ('ab',              '(def'),
+    ('+12345',          ' '),
+    ('-3.75e10',        ' '),
+    ('\r\n\t\v\f XX',   ' '),           # leading whitespace stripped by test
+    ('  (',             ')'),
+    # XXX test escape chars
+])
+def test_rtok(m, R, S, loadbios, tokentext, next):
+    tokentext = asbytes(tokentext)
+    next      = asbytes(next)
+    inp, _    = loadbios(input=tokentext+next)
+    m.deposit(S.tokbuf, b'\xEE'*S.tokbuflen)
+
+    m.call(S.rtok)
+    print(m.hexdump(S.tokbuf, S.tokbuflen+1))
+
+    expected = tokentext.lstrip() + b'\xEE'
+    assert [                        expected,              next] \
+        == [m.bytes(S.tokbuf, len(expected)), remainder(m, inp)]
+
+# XXX test token too long error
+
+####################################################################
+
+def test_form_err_close(m, R, S, loadbios):
+    inp, _    = loadbios(input=b')')
+    m.call(S.rform, R(C=0, de=0xFFFF))
+    assert R(C=1) == m.regs
+
+@param('form, atom', [
+    #   Whitespace termination.
+    ['x\r',             s1('x')],
+    ['x\n',             s1('x')],
+    ['x ',              s1('x')],
+    #   Various types.
+    ['() ',             NIL],
+    ['nil ',            NIL],
+    ['t ',              T],
+    ['foobar ',         s2('fo')],
+    ['1234 ',           i(1234)],
+])
+def test_form_ok_atom(m, R, S, loadbios, form, atom):
+    inp, _    = loadbios(input=asbytes(form))
+    print(f'form={form!r} atom={atom}')
+    m.call(S.rform, R(C=1, de=0xFFFF))
+    assert R(C=0, de=atom) == m.regs
+
+a  = s1('a');  b = s1('b');  b0 = s2('b0'); b1 = s2('b1')
+c  = s1('c'); c0 = s2('c0'); c1 = s2('c1'); d  = s1('d')
+
+@param('listcontents, expected', [
+#   [')',       None],          # works checked "by hand"; should test above
+    ('a',                   [a]),
+    ('a b',                 [a, b]),
+    ('a (b0) (c0)',         [a, [b0], [c0]]),
+    ('a (b0 b1)',           [a, [b0, b1]]),
+    ('a (b0 b1) c',         [a, [b0, b1], c]),
+    ('a (b0 (c0 c1) b1) d', [a, [b0, [c0, c1], b1], d]),
+])
+def test_form_ok_cons(m, R, S, loadbios, listcontents, expected):
+    inp, _    = loadbios(input=asbytes(listcontents + ')'))
+    print(f'({listcontents})')
+    m.call(S.hconsini)
+    m.call(S.rcontlist, R(C=1, de=0xFFFF), trace=0)
+    print(m.regs); hconsprint(m, m.de, 5)
+   #print(); hconsdump(m, m.word(S.hcons_ptop))
+    assert R(C=0) == m.regs
+    assert expected == hconslist(m, m.de)

@@ -1,0 +1,239 @@
+;   i8080/clic/rform.i80 - parse CLIC forms
+;
+;   Requires: i8080/clic/qtok, i8080/clic/heap
+
+TAB         equ     $09
+LF          equ     $0A
+VT          equ     $0B
+FF          equ     $0C
+CR          equ     $0D
+SPACE       equ     ' '
+
+rform_init  xor  a,a
+            ld   (getc_buf),a
+            ret
+
+; ----------------------------------------------------------------------
+;   Character Reads
+
+;   ♠A ♡* ┃ Tokenizer character read. Return in A the last char pushed back
+;   into the input queue by `ungetc`, if there is one, otherwise read and
+;   return the next char from the console. NUL is always ignored, never
+;   returned.
+getc        ld   a,(getc_buf)
+            or   a,a
+            jp   NZ,.bufret
+-           call rdchar
+            or   a,a            ; NUL?
+            jp   Z,-            ;   yes: ignore and read again
+            ret
+            ;
+.bufret     push af             ; save last unget char
+            xor  a,a
+            ld   (getc_buf),a   ; clear unget
+            pop  af
+            ret
+
+;   ♢A ♡AF* ┃ Tokenizer character pushback. Make A the next char to be
+;   returned by `getc`. This wipes out any previous `ungetc`'d character,
+;   if present. Nor is there any check that A contains the character last
+;   read. It is not possible to `ungetc` the NUL ($00) character; `getc`
+;   never returns NUL.
+ungetc      ld   (getc_buf),a
+            ret
+
+; ----------------------------------------------------------------------
+;   Token Reads
+;
+;   This works along the lines of the Common Lisp reader algorithm[1],
+;   except that for us the "macro chars"[2] are only about terminating
+;   the token; other code takes care of determining how to parse the
+;   returned token.
+;
+;   Currently the terminating chars are just `(` and `)` as well as
+;   whitespace. This obviously needs to be reviewed/expanded.
+;
+;   Terminating characters that _start_ a token also immediately terminate
+;   that token; i.e., a single termination char is itself a token. This
+;   also needs to be reviewed as our rules for termination become more
+;   complex.
+;
+;   [1]: https://novaspec.org/cl/2_2_Reader_Algorithm#sec_2_2
+;   [2]: https://novaspec.org/cl/2_1_Character_Syntax#sec_2_1_4
+;   [3]: https://novaspec.org/cl/f_read
+
+;   ♠ACHL ♣DE ♡B  ┃ Read a token, depositing it in `tokbuf`. Returns:
+;     • HL tokbuf, start of token read (for convenience of caller)
+;     • C  length of token read
+;     • A  terminating char, either the character not read but pushed
+;        back for the next read or the first char read if the first char
+;        is a terminating char
+;
+;   This expects that the read point is at the character that terminated
+;   any previous token. Leading whitespace is read and skipped, and then
+;   either a single termination character or a sequence of characters up to
+;   (but not including) a termination character is read into the buffer at
+;   HL. The terminating character is always returned in A, whether or not
+;   it is also returned in the buffer.
+;
+;   • XXX should we support backspace/DEL, ^W, etc?
+;   • XXX Signal error if it's longer than tokbuflen. (We consume the
+;     remainder anyway?)
+;   • XXX In long run, allocate tokbuf on heap, w/dynamic len?
+;   • XXX Make DE return part of contract?
+;
+rtok        ld   hl,tokbuf
+            ld   d,h            ; we deposit next char in (DE)
+            ld   e,l
+            ld   c,0            ; read 0 length so far
+.firstchar  call getc
+            call wspQ           ; leading whitespace?
+            jp   Z,.firstchar   ;   yes: ignore
+            ld   (de),a
+            inc  de
+            inc  c
+            call termcharQ      ; first char is a termchar
+            ret  Z              ;   yes: it's a token itself and we're done
+            ;   Continue collecting chars until we hit a termchar.
+            ;   (XXX or the token gets too long....)
+.nextchars  call getc
+            call termcharQ      ; done with token?
+            call Z,ungetc       ;   yes: push back terminating char (this is
+            ret  Z              ;      `read-preserving-whitespace`!) and ret
+            ld   (de),a
+            inc  de
+            inc  c              ; XXX no check for run out of buffer length!
+            jp   .nextchars
+
+;   ♢A ♡* ┃ Return Z=1 if A terminates a token: (, ), whitespace.
+termcharQ   cp   '('
+            ret  Z
+            cp   ')'
+            ret  Z
+            ; fallthrough
+
+;   ♢A ♡* ┃ Return Z=1 if A is whitespace: TAB, LF, VT, FF, CR, Space.
+wspQ        cp   TAB
+            ret  Z
+            cp   LF
+            ret  Z
+            cp   VT
+            ret  Z
+            cp   FF
+            ret  Z
+            cp   CR
+            ret  Z
+            cp   SPACE
+            ret  Z
+            ret
+
+; ----------------------------------------------------------------------
+
+;   ♠DE ♣?? ♡?? ┃ Read a form, building its AST in the heap as it goes, and
+;   return a pointer to the AST in DE. Input terminates on the closing ')'.
+;   (Any whitespace in the form, including CRs, is ignored.)
+;
+;   this list. Input terminates with CR at the top level; CR in nested
+;   lists will print a newline, indent and continue input.
+;   • Success: Cy=0 DE=AST
+;   • Failure: Cy=1 DE=invalid (e.g., parse error because extra ')'
+;
+;   This uses `rtok` to read tokens, and `qtok` to parse them, and only
+;   itself does the necessary heap allocations.
+;
+;   XXX not clear how to deal with the recursion. Do I create a cons
+;   and call `rform` again asking it to deposit the root in that cons?
+;   It should cons up the entire sequence until a ')', but then how
+;   do I deal with not having a '(' at the top level, when just an
+;   atom is supplied? And then there's `()`....
+;
+rform       call rtok           ; last char in A; also first if 1-char token
+            cp   ')'            ; unmatched closing paren? (1-char token)
+            scf                 ; (error indication)
+            ret Z               ;   yes: return parse error
+            cp   '('            ; start of subform?
+            jp   NZ,qtok        ;    no: parse atom or fail (TCO)
+            jp   rcontlist      ;   yes: continue list (TCO)
+
+;   ??? ┃ Continue reading a list after its opening paren. Reads up to and
+;   including the close paren, allocating as necessary. Return the AST root
+;   in DE; Cy set indicates error. (That error can obviously never
+;   be an extra close paren since it stops reading after consuming the
+;   proper close paren).
+;
+;   XXX check for and deal with stack overflow
+;
+rcontlist   call rtok
+            ld   a,(hl)         ; the first char we actually read, not the
+                                ;   terminator that may have been pushed back
+            cp   ')'            ; close paren immediately follows open paren?
+            jp   NZ,.startlist  ;    no: we're parsing a real list
+            ld   DE,NIL         ;   yes: it's just a NIL
+            ret
+            ;
+.startlist  call hcons          ; DE ← new cons cell
+            push de             ; save head of list
+            jp   .parsetok
+
+.nexttok    ;   We enter with DE pointing to the cdr of a cons cell whose
+            ;   car has been filled with the previous parsed token.
+            push de
+            call rtok           ; read next token
+            pop  de
+            ld   a,(hl)         ; the first char we actually read, not the
+                                ;   terminator that may have been pushed back
+            cp   ')'            ; list completed?
+            jp   Z,.done        ;   yes: terminate it and return
+            ;   We have a new atom or sublist: allocate a cons for
+            ;   it and link the previous cons to the new one.
+            push de             ; save pointer to current cdr
+            call hcons          ; DE ← new cons cell
+            pop  hl             ; HL ← cdr of previous cons cell
+            ld   (hl),e         ; fill previous cdr with current cons
+            inc  hl
+            ld   (hl),d
+            ;
+            ;   On entry HL must point to the current token buffer
+            ;   and DE to the new cons cell for that token, be it
+            ;   the next entry in a list or the start of a sublist.
+.parsetok   cp   '('            ; sublist?
+            jp   Z,.sublist     ;   yes: recursive descent
+                                ;    no: parse the next token as an atom
+.atom       push de             ; save pointer to current cons
+            ld   hl,tokbuf      ; may have been destroyed by .nexttok above
+            call qtok           ; DE ← objref parsed from token len C at HL
+            pop  hl             ; HL ← (restored) pointer to current cons
+            ld   (hl),e         ; store subform pointer in the car
+            inc  hl
+            ld   (hl),d
+            inc  hl
+            ex   hl,de          ; DE ← cdr of current cons
+            jp   .nexttok
+
+.sublist    push de             ; save pointer to current cons
+            call rcontlist      ; DE ← parsed subform cons
+            pop  hl             ; HL ← restored pointer to current cons
+            ld   (hl),e         ; store subform pointer in the car
+            inc  hl
+            ld   (hl),d
+            inc  hl
+            ex   hl,de          ; DE ← cdr of current cons
+            jp   .nexttok
+            ;
+
+.done       ;   We enter with DE pointing to the cdr of a cons cell whose
+            ;   car has been filled with the previous parsed token.
+            ex  de,hl
+            ld  (hl),LB(NIL)    ; terminate list
+            inc hl
+            ld  (hl),MB(NIL)
+            pop  de             ; restore head of list we generated
+            ret                 ; and return it
+
+; ----------------------------------------------------------------------
+;   Storage
+;   XXX This needs to go into a RAM area
+
+getc_buf    ds   1              ; ; last `ungetc`'d char or $00 for no char.
+tokbuflen   equ  32
+tokbuf      ds   tokbuflen

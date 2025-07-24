@@ -1,4 +1,6 @@
-;   qtok.i80 - parse CLIC tokens
+;   clic/qtok.i80 - parse CLIC tokens
+;
+;   Requires: arith, qhex
 
 ;   Intrinsic constants.
 NIL         equ  $0000      ; nil (empty list)

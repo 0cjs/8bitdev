@@ -4,6 +4,18 @@ param   = pytest.mark.parametrize
 
 ####################################################################
 
+@param('expected, seq', [
+    (b'',       ''),
+    (b'',       b''),
+    (b'ABC',    'ABC'),
+    (b'ABC',    b'ABC'),
+    (b'ABC',    [0x41, 0x42, 0x43]),
+])
+def test_asbytes(expected, seq):
+    assert expected == asbytes(seq)
+
+####################################################################
+
 @param('oref, expected', [
     (NIL,           0x0000),
     (T,             0x0004),

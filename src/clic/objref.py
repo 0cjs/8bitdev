@@ -6,6 +6,19 @@
 '''
 
 ####################################################################
+#   Utility routines also for public consumption
+
+def asbytes(seq):
+    ' Whatever it is, make it into a `bytes` if we can. '
+    try:
+        return seq.encode('ASCII')
+    except (AttributeError, TypeError):
+        try:
+            return bytes(seq)
+        except TypeError:
+            return bytes(list(seq))
+
+####################################################################
 #   Intrinsic constants
 
 def const(n):
@@ -53,13 +66,7 @@ def _checksym(seq, goodlen):
     if len(seq) not in goodlen:
         sgoodlen = ''.join(map(str, goodlen))
         raise ValueError(f'Bad sym{sgoodlen} length {len(seq)}: {seq}')
-    try:
-        return seq.encode('ASCII')
-    except (AttributeError, TypeError):
-        try:
-            return bytes(seq)
-        except TypeError:
-            return bytes(list(seq))
+    return asbytes(seq)
 
 def sym1(chars):
     ''' Given a sequence of one character (anything that can be converted

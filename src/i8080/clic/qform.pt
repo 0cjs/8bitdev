@@ -1,0 +1,54 @@
+from    testmc.i8080  import  Machine
+from    src.clic.objref  import \
+    NIL, T, sym1 as s1, sym2 as s2, smallint as i
+from    collections  import namedtuple
+import  pytest
+
+test_rig = '''
+            cpu  8080
+            include src/i8080/std.i80
+            include testmc/i8080/tmc/biosdef.i80
+
+            org  $200
+            include src/i8080/clic/qform.i80
+
+            include src/i8080/clic/qtok.i80
+            include src/i8080/arith.i80
+            include src/i8080/qhex.i80
+'''
+
+####################################################################
+
+param   = pytest.mark.parametrize
+R       = Machine.Registers
+
+class G:
+    ' getc command '
+    def __init__(self, expected):
+        self.expected = bytes(expected, encoding='ASCII')
+        self.sym = 'getc'
+        self.initregs = R(a=0xFF)
+    def test(self, m):
+        assert R(a=ord(self.expected)) == m.regs
+
+class U:
+    ' ungetc command '
+    def __init__(self, char):
+        self.char = bytes(char, encoding='ASCII')
+        self.sym = 'ungetc'
+        self.initregs = R(a=ord(self.char))
+    def test(self, m):
+        assert True         # result tested by subsequent `getc`
+
+
+@param('testname, commands', [
+   ( 'get-only',        [ G('a'), G('b'), G('\r'), G('c') ]),
+   ( 'one-unget',       [ G('a'), U('a'), G('a'), G('b') ]),
+   ( 'unget-overwrite', [ G('a'), U('a'), U('X'), G('X'), G('b') ]),
+])
+def test_getc_regular(m, R, S, loadbios, testname, commands):
+    loadbios(input=b'ab\rcd')
+    m.call(S.qform_init)
+    for cmd in commands:
+        m.call(S[cmd.sym], cmd.initregs)
+        cmd.test(m)

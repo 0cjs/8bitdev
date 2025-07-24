@@ -1,12 +1,37 @@
 Comparing CLIC to Other Languages
 =================================
 
+LISPs
+-----
+
+    LISP 1
+    ────────────────────────────────────────────────────────────────
+    QUOTE
+    ATOM
+    EQ
+    COND
+    CAR
+    CDR
+    CONS
+    LABEL
+    LAMBDA
+    DEFINE
+    ────────────────────────────────────────────────────────────────
+
+* LISP 1 notes:
+  - Somehow `APPLY` requires `T` not `(QUOTE T)` in `COND` predicate.
+  - `DEFINE (( (f₁,d₁) (f₂,d₂) … )) ()`
+  - REPL: `fₙ (a₀…) (plist)`; _plist_ is the environment as a list of pairs.
+  - `TRACKLIST (f₁ …) ()` prints args for each _f_ every time called.
+
+BASICs
+------
+
 There's an excellent comparison of various BASICs (incuding original
 Dartmouth, Tiny and MS) at [Dialects compared][comp] on the Wikipedia [Tiny
 BASIC] page. It also shows the year of release for each one.
 
-Tiny BASIC
-----------
+### Tiny BASIC
 
 [Tiny BASIC] has several dialects; the classic one is [described][ddj1] in
 _Dr. Dobb's Journal_ v1n1, though the Wikipedia [formal grammar][tb-bnf]

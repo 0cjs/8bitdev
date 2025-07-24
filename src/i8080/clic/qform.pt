@@ -1,6 +1,5 @@
 from    testmc.i8080  import  Machine
-from    src.clic.objref  import \
-    NIL, T, sym1 as s1, sym2 as s2, smallint as i
+from    src.clic.objref  import asbytes
 from    collections  import namedtuple
 import  pytest
 
@@ -25,7 +24,7 @@ R       = Machine.Registers
 class G:
     ' getc command '
     def __init__(self, expected):
-        self.expected = bytes(expected, encoding='ASCII')
+        self.expected = asbytes(expected)
         self.sym = 'getc'
         self.initregs = R(a=0xFF)
     def test(self, m):
@@ -34,7 +33,7 @@ class G:
 class U:
     ' ungetc command '
     def __init__(self, char):
-        self.char = bytes(char, encoding='ASCII')
+        self.char = asbytes(char)
         self.sym = 'ungetc'
         self.initregs = R(a=ord(self.char))
     def test(self, m):
@@ -52,3 +51,38 @@ def test_getc_regular(m, R, S, loadbios, testname, commands):
     for cmd in commands:
         m.call(S[cmd.sym], cmd.initregs)
         cmd.test(m)
+
+def remainder(m, inp):
+    pushback = m.byte(m.symtab.getc_buf)
+    if pushback == 0x00:
+        return inp.read()
+    else:
+        return bytes([pushback]) + inp.read()
+
+@param('tokentext, next', [    # input is tokentext+next
+    ('(',               ')'),
+    ('ab',              '    '),
+    ('ab',              '\r  '),
+    ('ab',               ')'),
+    ('ab',              '(def'),
+    ('+12345',          ' '),
+    ('-3.75e10',        ' '),
+    ('\r\n\t\v\f XX',   ' '),           # prec. whitespace stripped by test
+    ('  (',             ')'),
+    # XXX test escape chars
+])
+def test_rtok(m, R, S, loadbios, tokentext, next):
+    tokentext = asbytes(tokentext)
+    next      = asbytes(next)
+    input     = tokentext + next
+    inp, _    = loadbios(input=tokentext+next)
+    m.deposit(S.tokbuf, b'\xEE'*S.tokbuflen)
+
+    m.call(S.rtok)
+    print(m.hexdump(S.tokbuf, S.tokbuflen+1))
+
+    expected = tokentext.lstrip() + b'\xEE'
+    assert [                        expected,              next] \
+        == [m.bytes(S.tokbuf, len(expected)), remainder(m, inp)]
+
+# XXX test token too long error

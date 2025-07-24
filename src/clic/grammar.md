@@ -15,6 +15,14 @@ something that starts out like a number fails to parse if it isn't one, we
 allow tokens like `1+` or `30cm` and interpret them as symbols. This leaves
 numeric parsing failures to be just overflows, it seems.
 
+#### Tokens
+
+We read only the following, ignoring all leading whitespace chars:
+
+- `()` for "nil". (Whitespace between the parens is not allowed.)
+- `(…)` for a recursive parse of `…`.
+- Anything else terminated by whitespace, `(` or `)`.
+
 #### Self-evaluating Objects
 
 Numbers e.g. `12` are _self-evaluating:_ they do not need to be quoted.

@@ -2,6 +2,13 @@
 ;
 ;   Requires: clic/qtok
 
+TAB         equ     $09
+LF          equ     $0A
+VT          equ     $0B
+FF          equ     $0C
+CR          equ     $0D
+SPACE       equ     ' '
+
 qform_init  xor  a,a
             ld   (getc_buf),a
             ret
@@ -9,7 +16,7 @@ qform_init  xor  a,a
 ; ----------------------------------------------------------------------
 ;   Character Reads
 
-;   ♠A ♡* ┃ Parser character read. Return in A the last char pushed back
+;   ♠A ♡* ┃ Tokenizer character read. Return in A the last char pushed back
 ;   into the input queue by `ungetc`, if there is one, otherwise read and
 ;   return the next char from the console.
 getc:       ld   a,(getc_buf)
@@ -23,7 +30,7 @@ getc:       ld   a,(getc_buf)
             pop  af
             ret
 
-;   ♢A ♠A ♡* ┃ Parser character pushback. Make A the next char to be
+;   ♢A ♡AF* ┃ Tokenizer character pushback. Make A the next char to be
 ;   returned by `getc`. This wipes out any previous `ungetc`'d character,
 ;   if present. Nor is there any check that A contains the character last
 ;   read. It is not possible to `ungetc` the NUL ($00) character.
@@ -31,15 +38,86 @@ ungetc:     ld   (getc_buf),a
             ret
 
 ; ----------------------------------------------------------------------
+;   Tokenization
+;
+;   This works along the lines of the Common Lisp reader algorithm[1],
+;   except that for us the "macro chars"[2] are only about terminating
+;   the token; other code takes care of determining how to parse the
+;   returned token.
+;
+;   Currently the terminating chars are just `(` and `)` as well as
+;   whitespace. This obviously needs to be reviewed/expanded.
+;
+;   Terminating characters that _start_ a token also immediately terminate
+;   that token. This also needs to be reviewed as our rules for termination
+;   become more complex.
+;
+;   [1]: https://novaspec.org/cl/2_2_Reader_Algorithm#sec_2_2
+;   [2]: https://novaspec.org/cl/2_1_Character_Syntax#sec_2_1_4
+;   [3]: https://novaspec.org/cl/f_read
+
+;   ♣*  ┃ Read a token, depositing it in `tokbuf`.
+;   Returns length in C, last char read in A.
+;   This expects that we are at the character that terminated any
+;   previous token.
+;   • XXX Signal error if it's longer than tokbuflen. (We consume the
+;     remainder anyway?)
+;   • XXX In long run, allocate tokbuf on heap, w/dynamic len?
+;
+rtok        ld   hl,tokbuf
+            ld   de,tokbuf
+            ld   c,0            ; length read
+.firstchar  call getc
+            call wspQ           ; leading whitespace?
+            jp   Z,.firstchar   ;   yes: ignore
+            ld   (de),a
+            inc  de
+            inc  c
+            call termcharQ
+            ret  Z
+            ;   Continue collecting chars until we hit a termchar.
+            ;   (XXX or the token gets too long....)
+.nextchars  call getc
+            call termcharQ      ; done with token?
+            call Z,ungetc       ;   yes: push back termnating char (this is 
+            ret  Z              ;      `read-preserving-whitespace`!) and ret
+            ld   (de),a
+            inc  de
+            inc  c
+            jp   .nextchars
+
+;   ♢A ♡* ┃ Return Z=1 if character terminates a token.
+termcharQ   cp   '('
+            ret  Z
+            cp   ')'
+            ret  Z
+            ;   fallthrough
+
+;   ♢A ♡* ┃ Return Z=1 if character is whitespace.
+wspQ        cp   TAB
+            ret  Z
+            cp   LF
+            ret  Z
+            cp   VT
+            ret  Z
+            cp   FF
+            ret  Z
+            cp   CR
+            ret  Z
+            cp   SPACE
+            ret  Z
+            ret
 
 ;   ♠DE ♣?? ♡?? ┃ Return in DE the root of an AST read via `getc`. If the
 ;   input is not an atom (or is an atom that requires objdata) this will
 ;   will allocate as much memory as necessary in the heap to store the
 ;   structures referenced by the AST root.
-qform       halt
+rform       halt
 
 ; ----------------------------------------------------------------------
 ;   Storage
 ;   XXX This needs to go into a RAM area
 
 getc_buf    ds   1              ; ; last `ungetc`'d char or $00 for no char.
+tokbuflen   equ  32
+tokbuf      ds   tokbuflen

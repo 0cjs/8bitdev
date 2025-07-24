@@ -1,6 +1,12 @@
 CLIC Standard Library
 =====================
 
+XXX After some work, it's seeming as if trying to have a cons-cell-only/
+no-obdata version of CLIC with reasonable facilities may strain the library
+definitions too much. Probably the "tiny" CLIC needs to just drop most
+functions, focusing mainly on numerical processing as the early BASICs did.
+(But keep the `m[rwc]` stuff?)
+
 Notation:
 - Parameters _x_ are in upper case in the definition: `(f X)`.
 - Optional params are preceeded by an inverted question mark, `¿`.
@@ -16,6 +22,12 @@ Notation:
 
 - From R5RS §6.4: apply, map, for-each
 - From R5RS §6.5: `eval`
+
+#### Comparisons
+
+- `(eq? X Y)`: Pointer equality.
+- `(eql? X Y)`: Conceptual equality even if pointers are different.
+- `(equal? X Y)`: Follows structure.
 
 #### Arithmetic
 
@@ -70,14 +82,14 @@ Below, _addr_ is either an integer [-32768,65535] or a list of byte values
 LSB first, e.g. `'($03 $C0)` for address $C003. (We do LSB first to make
 accessing multiple addresses in a single page easier.)
 
-* `(mr ADDR)`: Machine read ("peek").
+* `(mr ADDR)`: Machine address read ("peek").
   - Returns value in range 0–255.
 
-* `(md ADDR N)`: Machine address deposit ("poke")
+* `(mw ADDR N)`: Machine address write ("poke")
   - Deposits _n_ at _addr._ Returns ???.
   - Signals overflow if _n_ not in range [-128,255].
 
-* `(mc ADDR N M)`: Machine call.
+* `(mc ADDR N M)`: Machine address call.
   - Load the A register (or equivalent) with _n_ (range [-128,255]) and the
     index register (HL, X, XY) with _m_ (range [-32768,65535]) and then
     call the code at _addr._

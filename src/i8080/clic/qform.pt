@@ -9,15 +9,22 @@ R       = Machine.Registers
 
 test_rig = '''
             cpu  8080
-            include src/i8080/std.i80
-            include testmc/i8080/tmc/biosdef.i80
+            include  src/i8080/std.i80
+            include  testmc/i8080/tmc/biosdef.i80
+
+            org  $80
+hcons_ptop  dw   $C000
+hcons_pbot  dw   $B000
+hcons_pcur  ds   2
+fatal_nomem halt
 
             org  $200
-            include src/i8080/clic/qform.i80
+            include  src/i8080/clic/qform.i80
 
-            include src/i8080/clic/qtok.i80
-            include src/i8080/arith.i80
-            include src/i8080/qhex.i80
+            include  src/i8080/clic/qtok.i80
+            include  src/i8080/clic/heap.i80
+            include  src/i8080/arith.i80
+            include  src/i8080/qhex.i80
 '''
 
 ####################################################################

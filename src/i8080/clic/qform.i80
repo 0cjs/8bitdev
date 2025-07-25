@@ -1,6 +1,6 @@
 ;   clic/qform.i80 - parse CLIC forms
 ;
-;   Requires: clic/qtok
+;   Requires: clic/qtok, clic/heap
 
 TAB         equ     $09
 LF          equ     $0A

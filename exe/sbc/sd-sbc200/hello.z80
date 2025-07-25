@@ -1,0 +1,18 @@
+;   "Hello, world" for SDSystems SBC-200.
+;
+;   This is a start-up ROM that assumes the jumpers are set to put it
+;   the ROM and the reset start location to ROM_BASE below.
+
+ROM_BASE    equ  $E000
+
+            cpu Z80
+            include  src/i8080/std.i80
+            include  exe/sbc/sd-sbc200/bios.inc
+
+reset       RESET_INIT
+            call bios_init
+            include src/i8080/hello.i80
+            include src/i8080/pr/str.i80
+            include  exe/sbc/sd-sbc200/bioscode.inc
+
+end         end reset

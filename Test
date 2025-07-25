@@ -173,6 +173,7 @@ exebin CO  'p2bin -q'  kc85/m100/cotest.p
 exebin CO  'p2b kc85'  kc85/m100/hello.p
 exebin CO  'p2b kc85'  kc85/m100/tmon.p
 exebin bin 'p2bin -q'  nec/tk85/portmon.p
+exebin bin 'p2bin -q' 'sbc/sd-sbc200/*.p'
 #   Sharp MZ object files contain the tape header already, so directly
 #   generate the .mzf file from it. This will change when we write a
 #   conversion program that generates the tape headers and output from
@@ -181,6 +182,8 @@ exebin mzf 'p2bin -q' 'sharp/*.p'
 exebin wav 'cmtconv -p jr200  -f HELLO'          jr200/hello.p
 exebin wav 'cmtconv -p mb6885 -f HELLO.B'        mb6885/hello.p
 exebin bin 'cmtconv -p mb6885 -f HELLO.B -o cas' mb6885/hello.p
+
+
 
 #   XXX This doesn't work with exebin() becuase it uses stdout redirection.
 p2a2bin $BUILDDIR/obj/exe/vcs/frobecho.p >$BUILDDIR/obj/exe/vcs/frobecho.obj0

@@ -68,7 +68,7 @@ def remainder(m, inp):
     ('(',               ')'),
     ('ab',              '    '),
     ('ab',              '\r  '),
-    ('ab',               ')'),
+    ('ab',              ')'),
     ('ab',              '(def'),
     ('+12345',          ' '),
     ('-3.75e10',        ' '),
@@ -94,17 +94,21 @@ def test_rtok(m, R, S, loadbios, tokentext, next):
 
 ####################################################################
 
-@param('form, ast', [
+@param('form, err, ast', [
     #   Atoms
-    ['x\r',         s1('x')],
-    ['foobar ',     s2('fo')],
-    ['()',          NIL],
+    ['x ',          0, s1('x')],
+    ['foobar\r',    0, s2('fo')],
+    ['()',          0, NIL],
     #   Structures
-    ['(',           s1('(')],       # XXX wrong!
+    ['(x)',         0, s1('(')],       # XXX wrong!
     #   Errors
-    [')',           s1(')')],       # XXX wrong!
+    [')',           1, NIL],
 ])
-def test_form(m, R, S, loadbios, form, ast):
+def test_form(m, R, S, loadbios, form, err, ast):
     inp, _    = loadbios(input=asbytes(form))
-    m.call(S.rform, R(de=0xFFFF))
-    assert R(de=ast) == m.regs
+    print(f'form={form!r} err={err} ast={ast}')
+    m.call(S.rform, R(C=not err, de=0xFFFF))
+    if err == 0:
+        assert R(C=0, de=ast) == m.regs
+    else:
+        assert R(C=1) == m.regs

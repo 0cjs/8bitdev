@@ -110,10 +110,12 @@ wspQ        cp   TAB
 
 ; ----------------------------------------------------------------------
 
-;   ♠DE ♣?? ♡?? ┃ Return in DE the root of an AST read via `getc`. If the
-;   input is not an atom (or is an atom that requires objdata) this will
-;   will allocate as much memory as necessary in the heap to store the
-;   structures referenced by the AST root.
+;   ♠DE ♣?? ♡?? ┃ Read an AST read via `getc`. If the input is not an atom
+;   (or is an atom that requires objdata) this will will allocate as much
+;   memory as necessary in the heap to store the structures referenced by
+;   the AST root. Returns:
+;   • Success: Cy=0 DE=AST
+;   • Failure: Cy=1 DE=invalid
 ;
 ;   XXX not clear how to deal with the recursion. Do I create a cons
 ;   and call `rform` again asking it to deposit the root in that cons?
@@ -122,31 +124,85 @@ wspQ        cp   TAB
 ;   atom is supplied? And then there's `()`....
 ;
 rform       call rtok
-            ;   if ')': error
-            ;   if not '('
-            call qtok
-            ;   call rformls
-            ;   it returns DE = cons cell it allocated
+            cp  ')'             ; unmatched closing paren?
+            jp  Z,.error        ;   yes: parse error
+            cp  '('
+            jp  Z,.subform
+            call qtok           ; parse atom
+            or  a,a             ; clear carry
+            ret
+            ;
+.subform    call rformls
+            ; XXX handle result
+            ;   it returns DE = cons cell it allocated?
+            ;   it has carry flag indicating on return
+            ret
+.error      scf
             ret
 
-rformls     ;
-            ;   read token
-            ;   if ')' return NIL
-            ;   allocate a cons cell
-            ;   if '('
-            ;       call rformls
-            ;       deposit DE in cons cell
-            ;       continue
-            ;   else
-            ;       do next token
-            ;   deposit in car
-            ;   read token
-            ;   if ')'
-            ;       deposit NIL in cdr
-            ;       return first cons addr
-            ;   allocate a cons cell
-            ;   put addr in cdr of previous cons cell
+;   ??? ┃ Read a subform from the character _after_ the opening paren to
+;   the matching close paren, allocating as necessary. Return the AST root
+;   in DE. (XXX can this encounter errors? Certainly not a missing close
+;   paren.)
+;
+;   XXX check for and deal with stack overflow
+;
+rformls     call rtok
+            cp   ')'            ; close paren immediately follows open paren?
+            jp   NZ,.startlist  ;    no: we're parsing a list
+            ld   DE,NIL         ;   yes: it's just a NIL
+            ret
             ;
+.startlist  call hcons          ; DE ← new cons cell (must ♡CHL)
+            push de             ; save head of list
+            jp   .parsetok
+
+.nexttok    ;   We enter with DE pointing to the cdr of a cons cell whose
+            ;   car has been filled with the previous parsed token.
+            call rtok           ; read next token
+            cp   ')'            ; list completed?
+            jp   NZ,.done       ;   yes: terminate it and return
+            ;   We have a new atom or sublist: allocate a cons for
+            ;   it and link the previous cons to the new one.
+            push hl             ; save token pointer
+            ex   de,hl          ; save pointer to current cdr
+            call hcons          ; DE ← new cons cell (must ♡CHL)
+            ld   (hl),e         ; fill previous cdr with current cons
+            inc  hl
+            ld   (hl),d
+            pop  hl             ; restore token pointer
+            ;
+.parsetok   cp   '('            ; subform?
+            jp   Z,.subform
+            ;   fallthrough
+
+.atom       push de             ; save current cons
+            call qtok           ; DE ← objref parsed from token len C at HL
+            pop  hl             ; HL ← restored pointer to current cons
+            ld   (hl),e         ; store subform pointer in the car
+            inc  hl
+            ld   (hl),d
+            inc  hl
+            ex   hl,de          ; DE ← cdr of current cons
+            jp   .nexttok
+
+.subform    push de             ; save pointer to current cons
+            call rformls        ; DE ← parsed subform cons
+            pop  hl             ; HL ← restored pointer to current cons
+            ld   (hl),e         ; store subform pointer in the car
+            inc  hl
+            ld   (hl),d
+            inc  hl
+            ex   hl,de          ; DE ← cdr of current cons
+            jp   .nexttok
+            ;
+
+.done       ;   We enter with DE pointing to the cdr of a cons cell whose
+            ;   car has been filled with the previous parsed token.
+            ex  de,hl
+            ld  (hl),NIL        ; terminate list
+            pop  de             ; restore head of list we generated
+            ret                 ; and return it
 
 ; ----------------------------------------------------------------------
 ;   Storage

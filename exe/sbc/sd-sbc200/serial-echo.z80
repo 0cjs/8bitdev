@@ -8,7 +8,8 @@
 ; THIS CODE GOES IN A 2716 EPROM IN ROM0 SOCKET, AT ADDRESS 0xE000.
 ;
 
-        .ORG 0xE000
+        CPU Z80
+        ORG 0E000H
 
 START:  JP      MAIN_10
 MAIN_10:IN      A,(7FH)
@@ -42,4 +43,4 @@ SEROUT: ; SEND OUT A BYTE
 
         JP      SERIN
 
-        .END
+        END

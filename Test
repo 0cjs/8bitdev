@@ -166,6 +166,8 @@ for obj in "$exeobj/sharp"/*.p; do
     name="$(dirname "$obj")/$(basename "$obj" .p)"
     p2bin -q "$name.p" "$name.mzf"
 done
+p2bin -q "$exeobj/sbc/sd-sbc200/serial-echo.p" "$exeobj/sbc/sd-sbc200/serial-echo.bin"
+p2bin -q "$exeobj/sbc/sd-sbc200/hello.p" "$exeobj/sbc/sd-sbc200/hello.bin"
 #   Hack to make emulator use easier. VirtualT File » Load from HD always
 #   starts in the emulator dir, regardless of where you last left it.
 mkdir -p $BUILDDIR/emulator/virtualt

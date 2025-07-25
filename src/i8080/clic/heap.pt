@@ -1,0 +1,43 @@
+from    testmc.i8080  import  Machine
+import  pytest
+
+param   = pytest.mark.parametrize
+R       = Machine.Registers
+
+test_rig = '''
+            cpu  8080
+            include src/i8080/std.i80
+
+            org  $100
+hcons_ptop  dw   $C000
+hcons_pbot  dw   $C000-(8*4)    ; just eight cells for testing mem limits
+hcons_pcur  dw   $EEEE          ; sentinel
+
+            org  $180
+fatal_nomem halt
+
+            org  $200
+            include  src/i8080/clic/heap.i80
+
+            include  src/i8080/arith.i80
+'''
+
+def test_hcons(m, S):
+    #   Sentinel values to ensure that non-return registers are preserved.
+    r = R(a=3, b=4, c=5, d=6, e=7, h=8, l=9)
+    top = m.word(S.hcons_ptop)
+    def cell(n): return (top - 4 - 4*n)
+
+    m.call(S.hconsini);         assert top == m.word(S.hcons_pcur)
+    m.call(S.hcons, r);         assert r.clone(de=cell(0)) == m.regs
+    m.call(S.hcons, r);         assert r.clone(de=cell(1)) == m.regs
+    m.call(S.hcons, r);         assert r.clone(de=cell(2)) == m.regs
+
+def test_nomem(m, S):
+    top = m.word(S.hcons_ptop)
+    m.depword(S.hcons_pbot, top-4)  # one-cell heap
+    m.call(S.hconsini)
+
+    m.call(S.hcons); assert top-4 == m.de
+    m.call(S.hcons, stopat=[S.fatal_nomem])
+    assert S.fatal_nomem == m.pc

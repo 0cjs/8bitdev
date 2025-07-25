@@ -6,14 +6,14 @@ import  pytest
 
 test_rig = '''
             cpu  8080
-            include src/i8080/std.i80
-            include testmc/i8080/tmc/biosdef.i80
+            include  src/i8080/std.i80
+            include  testmc/i8080/tmc/biosdef.i80
 
             org  $200
-            include src/i8080/clic/qtok.i80
+            include  src/i8080/clic/qtok.i80
 
-            include src/i8080/arith.i80
-            include src/i8080/qhex.i80
+            include  src/i8080/arith.i80
+            include  src/i8080/qhex.i80
 '''
 
 ####################################################################

@@ -1,0 +1,67 @@
+;   clic/heap.i80 - heap allocation and management
+;
+;   Requires: i8080/arith
+
+; ----------------------------------------------------------------------;
+;   Externally-defined symbols.
+
+    reqdef   fatal_nomem
+;       Routine to call when out of memory. No stack cleanup is done.
+    reqdef   hcons_ptop
+    reqdef   hcons_pbot
+;       Addresses of pointers to the top and bottom of the cons heap. The
+;       heap will be allocated from the address below `hcons_ptop` down to
+;       the address including hcons_pbot. The pointers must be initialized
+;       externally with dword-aligned values.
+    reqdef   hcons_pcur
+;       Address below which the search for a free cell starts.
+
+
+; ----------------------------------------------------------------------
+
+;   ??? ┃ Initialise the cons heap.
+hconsini    ld hl,(hcons_ptop)
+            ld (hcons_pcur),hl
+            ;   XXX should fill all cells with "unused" value
+            ret
+
+;   ♠DE ♡* ┃ Find and return free cons cell in DE. This cell will still be
+;   marked "free" when returned, so it can be abandoned by not writing to
+;   its car, letting it remain free. (You _must_ write a value to the car
+;   before calling `hcons` again!) If no free cells are available, this
+;   will jump to `fatal_nomem`, leaving the current stack unchanged
+;   (including return addr of caller).
+;
+;   Currently this does no tracking of free cells at all; it simply
+;   allocates cells from `hcons_ptop` down to `hcons_pbot` and then signals
+;   out of memory at the next allocation attempt.
+;
+hcons       push af
+            push bc
+            push hl
+            ;   BC ← heap bottom - 1 for later check that BC < cell
+            ld   hl,(hcons_pbot)
+            dec  hl
+            ld   b,h            ; BC ← heap bottom - 1
+            ld   c,l
+            ;   Try cell below last one allocated.
+            ld   hl,(hcons_pcur)
+            dec  hl             ; move down to next cell
+            dec  hl
+            dec  hl
+            dec  hl
+            ;   XXX should check that it's free
+            ld   (hcons_pcur),hl; save start of search at next alloc
+            ld   d,h            ; DE ← found cell
+            ld   e,l
+            call cpBCDE         ; inside heap?
+            jp   NC,.nomem
+            pop  hl
+            pop  bc
+            pop  af
+            ret
+            ;
+.nomem      pop  hl             ; clean up stack so that error handler
+            pop  bc             ;   can access caller's address
+            pop  af
+            jp   fatal_nomem

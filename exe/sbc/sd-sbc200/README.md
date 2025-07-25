@@ -6,6 +6,11 @@ This is a 5"×10" compatible SBC with a 4 MHz Z80, 4× 1K-8K EPROM, 1K RAM,
 an 8251 serial port with RS-232 interface (DTE or DCE), parallel I/O, and
 compatibility with the S-100 bus.
 
+### Programs
+
+* `SD-SBC200_serial_echo.asm`: A serial port read/echo program written
+  by n1jbq on the [VCF Forums][vcf].
+
 ### Technical Notes
 
 See [the manual][man] for full details, but key points are:

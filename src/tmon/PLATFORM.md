@@ -53,6 +53,41 @@ Bugs:
   calling a `ret` does not return to the monitor and it seems that the
   return address to the monitor is not being pushed on the user stack.
 
+### SDSystems SBC-200 Single Board Computer
+
+For information about configuring the EPROM and RAM addresses of the
+SBC-200, see the 8bitdev README for the board, found in the release
+ZIPfile at `tmon/sd-sbc-200/README.md` or in the source repo at
+[`exe/sbc/sd-sbc200/README.md`][sd200-r]. The jumper details are in
+the [board manual][sd200-m].
+
+`tmon.bin` is a 2 KB ROM image starting at address $E000. This may be used
+in systems configured for EPROMs of size 1K (2× in sockets 0 and 1), 2K (1×
+in socket 0) and 4K (1× in socket 2). 1K internal RAM at $FC00.
+
+The ROM image includes code to configure the machine at reset, a small BIOS
+for serial I/O, and tmon itself. There is a jump table for the BIOS routines
+at $E010 in the ROM: see the listing file for more details on this.
+
+256 bytes of RAM are required at $FF00-$FFFF; this is usually supplied by
+the 1 KB internal RAM, leaving $FC00-$FEFF free for the user. The user
+stack is initialised to grow from $FFFF downward. The tmon stack and work
+area are 128 bytes below that. (These may safely be overwritten by user
+code, but tmon will destroy any user code in its stack/workspace area when
+it is re-entered.) The memory map is:
+
+    $0000   user stack (grows downwards below this; 128 bytes)
+    $FF80   tmon stack (grows downwards below this; ~85 bytes)
+    $FF2C   maximum tmon stack value
+    $FF00   tmon workspace (~44 bytes)
+    $FC00   user RAM
+    $E010   BIOS entry points
+    $E000   reset entry point, system init, tmon startup
+
+Additionally, a much simpler `hello.bin`, configured for the same ROM and
+RAM locations and boot address is provided. (This uses RAM only for the
+stack.) This may help with debugging the configuration of your board.
+
 
 Other CPUs
 ----------
@@ -67,3 +102,5 @@ Support is planned for 6800, 6502, and perhaps 6809 and 68000.
 <!-------------------------------------------------------------------->
 [`exe/nec/pc8001/exprom1.i80`]: https://github.com/0cjs/8bitdev/blob/main/exe/nec/pc8001/exprom1.i80
 [exprom1-rm]: https://github.com/0cjs/8bitdev/blob/main/exe/nec/pc8001/README.md
+[sd200-m]: https://deramp.com/downloads/sd_systems/manuals/SDS_SBC-200.pdf
+[sd200-r]: https://github.com/0cjs/8bitdev/blob/main/exe/sbc/sd-sbc200/README.md

@@ -1,0 +1,73 @@
+;   tmon for SDSystems SBC-200.
+
+ROM_SIZE    equ  2048           ; jumpered for 2KB ROM devices
+ROM_BASE    equ  $E000          ; for rom sockets 0,1,2,3:
+                                ;   2K config ($C000-$FFFF): socket 2 low
+                                ;   4K config ($8000-$FFFF): socket 3 low
+BIOS_API    equ  ROM_BASE + $10 ; jump table for BIOS routines (see below)
+RAM_BASE    equ  $FC00          ; assume 1 KiB at this location (usu. onboard)
+
+            cpu Z80
+            include  src/i8080/std.i80
+            include  exe/sbc/sd-sbc200/bios.inc
+
+;   Since we are also the boot ROM for the system, we set up a user stack
+;   for use by programs entered via tmon. This is 128 bytes, but it's fine
+;   if more than that is used so long as tmon is not reentered with more
+;   than 128 bytes on the stack (or tmon will trash some of it). Putting
+;   tmon's RAM workspace at $300 into the RAM leaves 768 bytes for user
+;   programs, but user programs can use more than that at the cost of tmon
+;   losing its saved parameters on re-entry.
+;
+;   Note that if we're using the on-board RAM we use the top mirror of the
+;   two (2K ROMs) or four (4K ROMs) mirrors because it makes more
+;   consistent sense to use the last one, rather than the first or third
+;   depending on which ROM size is chosen.
+;
+tmon_ram    equ  RAM_BASE+$300  ; leaves about 64 bytes for tmon stack
+tmon_stack  equ  RAM_BASE+$380  ; 128 bytes for user stack
+user_stack  equ  RAM_BASE+$400  ; top of RAM
+
+; ----------------------------------------------------------------------
+
+reset       RESET_INIT
+            ld   sp,user_stack # 65536  ; handle user_stack = top of RAM
+            call bios_init
+exit        jp   entry          ; start monitor at startup and also on exit
+    if $ >= BIOS_API
+            error   'reset routine stomped on BIOS_API!'
+    endif
+
+            ;   Place jumps to the BIOS routines at a known fixed location
+            ;   for use by user programs.
+            org  BIOS_API
+jp_init     jp   bios_init      ; ♣*     re-initialise serial port
+jp_rdchar   jp   rdchar         ; ♠A ♡*  read char from serial port
+jp_prchar   jp   prchar         ; ♢A ♡*  send char to serial port
+jp_prnl     jp   prnl           ; ♡*     print newline to serial port
+jp_prstr    jp   prstr          ; ♠HL ♣A print 0-term string at HL
+jp_errbeep  jp   errbeep        ; ♡*     Send ASCII BEL to serial port
+
+            ;   We place the "BIOS" (console I/O routines) early in the ROM
+            ;   to make them it easier to check what ports/values/etc. are
+            ;   actually being used here.
+            include  exe/sbc/sd-sbc200/bioscode.inc
+
+;   ♡* ┃ Send an ASCII BEL to the serial port
+errbeep     push af
+            ld   a,'\a'
+            call prchar
+            pop  af
+            ret
+
+tmon_rom    include  src/i8080/tmon.i80         ; org tmon_rom
+            include  src/i8080/pr/space.i80
+            include  src/i8080/pr/str.i80
+            include  src/i8080/prvischar/vt100.i80
+            include  src/i8080/prscreenchar/ascii.i80
+
+    if $ >= ROM_BASE + ROM_SIZE
+            error   'bios+tmon size $\{$} overflowed $\{ROM_SIZE} byte ROM!'
+    endif
+
+            end reset

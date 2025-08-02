@@ -10,7 +10,7 @@ ROM_BASE    equ  $E000
             include  exe/sbc/sd-sbc200/bios.inc
 
 reset       RESET_INIT
-            ld   sp,$0000       ; grow from $FFFF downward
+            ld   sp,$0000       ; grow from top of RAM downward
             call bios_init
             include src/i8080/hello.i80
             include src/i8080/pr/str.i80

@@ -238,12 +238,18 @@ $noargs && {
 
 (   command cd "$T8_PROJDIR"
     reldir=.build/release/unpacked
+    buildexe=.build/obj/exe
     rm    -rf $reldir/ .build/release/*.zip
 
-    mkdir -p  $reldir/tmon/{cpm,m100}/
+    mkdir -p  $reldir/tmon/{cpm,m100,sd-sbc200}/
     cp src/tmon/*.md                            $reldir/tmon/
     cp .build/obj/exe/cpm/tmonlo.com            $reldir/tmon/cpm/TMONLO.COM
     cp .build/obj/exe/kc85/m100/TMON.CO         $reldir/tmon/m100/
+    #   SD-SBC200: Include hello to test ROM/RAM layout; README for links
+    #   to hardware info.
+    cp  exe/sbc/sd-sbc200/README.md \
+        $buildexe/sbc/sd-sbc200/hello.{bin,lst} \
+        $buildexe/sbc/sd-sbc200/tmon.{bin,lst}   $reldir/tmon/sd-sbc200/
 
     mkdir -p  $reldir/pc8001/
     cp exe/nec/pc8001/README.md .build/obj/exe/nec/pc8001/exprom1.bin \

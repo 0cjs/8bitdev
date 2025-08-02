@@ -118,7 +118,6 @@ build_asxxxx
 #   line arguments for this. But after we must change back to the user's
 #   CWD so any relative paths in command line args work.
 command pushd "$T8_PROJDIR" >/dev/null
-
 t8dev asl t8dev || fail
 t8dev asl auto exe/ src/ --exclude=src/asxxxx/ || fail
 manual_build=(
@@ -131,8 +130,66 @@ manual_build=(
     exe/*/*/*.[aiz][0-9][0-9]
 )
 t8dev asl asm "${manual_build[@]}" || fail
-
 command popd >/dev/null
+
+#####################################################################
+#   Binary output generation
+#
+#   Various other builds of things from .p files.
+#   Not yet figured out how this should be integrated into t8dev.
+
+#   This converts .p files for things from exe/ to an appropriate binary
+#   output file using the command given. Parameters are:
+#   • The extension to give the output file. If the extension is all
+#     upper-case letters the output filename will be converted to entirely
+#     upper case.
+#   • The program and its fixed parameters/options. This must be quoted
+#     when passed; it will be used unquoted to let the shell separate the
+#     command and its parameters.
+#   • The path of the .p file, relative to .build/obj/exe/. This is also
+#     used unquoted to permit you to pass in */?/etc. patterns (which you
+#     must quote) that will be expanded by this function, with the command
+#     applied to every file in the list.
+exebin() {
+    local ext="$1"; shift
+    local prog="$1"; shift
+
+    local caseconv=cat              # default: no filename case conversion
+    #   If $ext is all upper case, convert filename to upper case, too.
+    [[ $ext == $(echo "$ext" | tr a-z A-Z) ]] && caseconv='tr a-z A-Z'
+
+    (   cd "$BUILDDIR/obj/exe"
+        for obj in $@; do           # unqoted so */?/etc. is expanded
+           #echo prog=$prog ext=$ext obj=$obj
+            local outname=$(echo "$(basename "$obj" .p).$ext" | $caseconv)
+            $prog "$obj" "$(dirname "$obj")/$outname"
+        done
+    )
+}
+
+exebin com 'p2bin -q' 'cpm/*.p'
+exebin bin 'p2bin -q'  nec/pc8001/exprom1.p
+exebin CO  'p2bin -q'  kc85/m100/cotest.p
+exebin CO  'p2b kc85'  kc85/m100/hello.p
+exebin CO  'p2b kc85'  kc85/m100/tmon.p
+exebin bin 'p2bin -q'  nec/tk85/portmon.p
+#   Sharp MZ object files contain the tape header already, so directly
+#   generate the .mzf file from it. This will change when we write a
+#   conversion program that generates the tape headers and output from
+#   the .p file.
+exebin mzf 'p2bin -q' 'sharp/*.p'
+exebin wav 'cmtconv -p jr200  -f HELLO'          jr200/hello.p
+exebin wav 'cmtconv -p mb6885 -f HELLO.B'        mb6885/hello.p
+exebin bin 'cmtconv -p mb6885 -f HELLO.B -o cas' mb6885/hello.p
+
+#   XXX This doesn't work with exebin() becuase it uses stdout redirection.
+p2a2bin $BUILDDIR/obj/exe/vcs/frobecho.p >$BUILDDIR/obj/exe/vcs/frobecho.obj0
+
+#   Hack to make emulator use easier. VirtualT File » Load from HD always
+#   starts in the emulator dir, regardless of where you last left it.
+exeobj="$BUILDDIR/obj/exe"
+mkdir -p $BUILDDIR/emulator/virtualt
+cp $exeobj/kc85/m100/*.CO $BUILDDIR/emulator/virtualt/
 
 #   This builds an Apple II disk image from an AS source file. Probably
 #   this should be in smaller steps so we can extend the idea to building
@@ -140,37 +197,6 @@ command popd >/dev/null
 #   for an emulator, a tape image with that file, and a disk image with
 #   that file that autoboots, all from the same build.
 t8dev a2dsk exe/a2/charset.a65      # path relative to .build/
-p2a2bin $BUILDDIR/obj/exe/vcs/frobecho.p >$BUILDDIR/obj/exe/vcs/frobecho.obj0
-
-#   Various other builds of things from .p files.
-#   Not yet figured out how this should be integrated into t8dev.
-
-exeobj="$BUILDDIR/obj/exe"
-for i in "$exeobj"/cpm/*.p; do
-    #   This assumes that your assembly output starts at $0100.
-    p2bin -q "$i" "$(dirname "$i")/$(basename "$i" .p).com"
-done
-cmtconv -p jr200 -f HELLO \
-    "$exeobj/jr200/hello.p" "$exeobj/jr200/hello.wav"
-cmtconv -p mb6885 -f HELLO.B \
-    "$exeobj/mb6885/hello.p" "$exeobj/mb6885/hello.wav"
-cmtconv -p mb6885 -f HELLO.B -o cas \
-    "$exeobj/mb6885/hello.p" "$exeobj/mb6885/hello.bin"
-
-p2bin -q "$exeobj/nec/pc8001/exprom1.p" "$exeobj/nec/pc8001/exprom1.bin"
-p2bin -q "$exeobj/kc85/m100/cotest.p" "$exeobj/kc85/m100/COTEST.CO"
-p2b kc85 "$exeobj/kc85/m100/hello.p" "$exeobj/kc85/m100/HELLO.CO"
-p2b kc85 "$exeobj/kc85/m100/tmon.p" "$exeobj/kc85/m100/TMON.CO"
-p2bin -q "$exeobj/nec/tk85/portmon.p" "$exeobj/nec/tk85/portmon.bin"
-for obj in "$exeobj/sharp"/*.p; do
-    name="$(dirname "$obj")/$(basename "$obj" .p)"
-    p2bin -q "$name.p" "$name.mzf"
-done
-#   Hack to make emulator use easier. VirtualT File » Load from HD always
-#   starts in the emulator dir, regardless of where you last left it.
-mkdir -p $BUILDDIR/emulator/virtualt
-cp $exeobj/kc85/m100/*.CO $BUILDDIR/emulator/virtualt/
-
 
 ####################################################################
 #   Tests

@@ -98,7 +98,7 @@ hexadecimal numbers. Entering an invalid character will produce an ASCII
 `BEL` and the cursor will be backspaced over the invalid character.
 
 The first character entered after the prompt must be one of the commands
-below. Commands marked with a superscript 1 (¹) are "single key" commands
+below. Commands marked with a ° symbol are "single key" commands
 that execute immediately. All other commands (including all that take
 parameters) must be confirmed with a newline or cancelled with a cancel
 character.
@@ -165,18 +165,18 @@ The full command descriptions follow.
 
     ^K  print newline
     #   comment
-    '  ¹ASCII character deposit
+    '  °ASCII character deposit
     ,   set deposit parameters (next to ",>" deposit key)
-    .  ¹hex byte deposit
+    .  °hex byte deposit
     /   calculate and display value
     :   deposit Intel hex record
     ;   modify (deposit to) registers
-    >  ¹hex word deposit
+    >  °hex word deposit
     a   examine assembly code
-    b  ¹examine memory Backwards (previous page)
-    d  ¹examine ("Display") memory with current parameters
+    b  °examine memory Backwards (previous page)
+    d  °examine ("Display") memory with current parameters
     e   examine memory with parameters
-    f  ¹examine memory Forward (next page)
+    f  °examine memory Forward (next page)
     i   Interrupt return
     j   Jump to address
     k   call address
@@ -184,7 +184,7 @@ The full command descriptions follow.
     o   Output (write) to I/O port
     p   read from I/O Port
     q   Quit (exit) monitor
-    r  ¹examine Registers
+    r  °examine Registers
     S   deposit Motorola S-record
     t   Transfer memory To storage device
     v   checksum (Verify) memory

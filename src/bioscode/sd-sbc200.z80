@@ -1,10 +1,6 @@
-;   sd-sbc200/bioscode.inc: A small "BIOS" for the SDSystems SBC-200.
+;   bioscode/sd-sbc200.z80: A small "BIOS" for the SDSystems SBC-200.
 ;
-;   This has extension .inc so it's not built standalone by the automatic
-;   build system; it's usable only included in a source file that sets up
-;   the CPU definitions etc. properly.
-;
-;   Requires: sd-sbc200/bios.inc
+;   Requires: biosdef/sd-sbc200.z80
 
 ; ----------------------------------------------------------------------
 ;   Serial I/O

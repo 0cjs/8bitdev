@@ -9,7 +9,7 @@ RAM_BASE    equ  $FC00          ; assume 1 KiB at this location (usu. onboard)
 
             cpu Z80
             include  src/i8080/std.i80
-            include  exe/sbc/sd-sbc200/bios.inc
+            include  src/biosdef/sd-sbc200.z80
 
 ;   Since we are also the boot ROM for the system, we set up a user stack
 ;   for use by programs entered via tmon. This is 128 bytes, but it's fine
@@ -51,7 +51,7 @@ jp_errbeep  jp   errbeep        ; ♡*     Send ASCII BEL to serial port
             ;   We place the "BIOS" (console I/O routines) early in the ROM
             ;   to make them it easier to check what ports/values/etc. are
             ;   actually being used here.
-            include  exe/sbc/sd-sbc200/bioscode.inc
+            include  src/bioscode/sd-sbc200.z80
 
 ;   ♡* ┃ Send an ASCII BEL to the serial port
 errbeep     push af

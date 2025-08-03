@@ -1,0 +1,33 @@
+;   biosdef/sd-sbc200.z80: BIOS definitions for the SDSystems SBC-200.
+;
+;   The SBC200 doesn't have a built-in BIOS, so this contains just hardware
+;   definitions and the RESET_INIT macro, which encodes what you need to do
+;   when jumpered to start at an address other than $0000.
+;
+;   BIOS code to be included in your own ROMs is in bioscode/sd-sbc200.z80.
+;
+;   Requires: std.i80
+
+; ----------------------------------------------------------------------
+;   IO Devices
+
+MK3882_ch0  equ  $78    ; CTC channel 0
+I8251_data  equ  $7C    ; UART data port
+I8251_stat  equ  $7D    ; UART status/control port
+SYS_stat    equ  $7F    ; memory control, parallel I/O handshake
+
+; ----------------------------------------------------------------------
+;   Reset code.
+;
+;   The SBC-200 can be jumpered to start at an address other than $0000. If
+;   you do this, you need to define the address you've selected for this
+;   (via jumpers X17/X18) as `ROM_BASE` and execute the following macro at
+;   the start of your ROM. (The macro will automatically `org` itself to
+;   ROM_BASE.)
+
+RESET_INIT  macro
+            org  ROM_BASE
+            jp   ROM_BASE+3     ; switch from "faked 0" addr
+                                ;   to actual address of ROM
+            in   a,(SYS_stat)   ; reset non-zero boot location circuitry
+            endm

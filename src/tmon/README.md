@@ -15,7 +15,7 @@ there are also [platform-specific notes](./PLATFORM.md).
   - [Modifying Machine State (Depositing Data)](#modifying-machine-state-depositing-data)
   - [External Storage](#external-storage)
   - [Miscellaneous Commands](#miscellaneous-commands)
-- [Release Notes](#release-notes)
+  - [Command Summary](#command-summary)
 
 
 Introduction
@@ -51,7 +51,7 @@ character input may be blocking.)
 If you've received this README as part of a binary distribution, you can
 find the current version of it and all tmon source code in the
 [`0cjs/8bitdev`] repo on GitHub.
-- The README and CPU-independent files are be under `src/tmon/`.
+- The README (this file) and CPU-independent files are be under `src/tmon/`.
 - The platform-independent source for each CPU is under `src/CPU/` where
   _CPU_ is a CPU identifier such as `i8080`.
 - The top-level source files for specific platforms are under `exe/` (e.g.,
@@ -160,38 +160,9 @@ remembered value is not shared between commands except where noted.)
 - `e####`: an end address; the first address _after_ the range used by the
   command.
 
-This is a summary of the commands, in ASCII (alphabetical) order.
-The full command descriptions follow.
-
-    ^K  print newline
-    #   comment
-    '  °ASCII character deposit
-    ,   set deposit parameters (next to ",>" deposit key)
-    .  °hex byte deposit
-    /   calculate and display value
-    :   deposit Intel hex record
-    ;   modify (deposit to) registers
-    >  °hex word deposit
-    a   examine assembly code
-    b  °examine memory Backwards (previous page)
-    d  °examine ("Display") memory with current parameters
-    e   examine memory with parameters
-    f  °examine memory Forward (next page)
-    i   Interrupt return
-    j   Jump to address
-    k   call address
-    m   Memory copy/fill ("Move")
-    o   Output (write) to I/O port
-    p   read from I/O Port
-    q   Quit (exit) monitor
-    r  °examine Registers
-    S   deposit Motorola S-record
-    t   Transfer memory To storage device
-    v   checksum (Verify) memory
-    w   find data in memory ("Where")
-    y   read into memory from storage device ("yank")
-
-    Unused letters: c g h l n u x z
+Following is a description of each command, divided into sections
+based on command function. After this is a summary table of all the
+commands.
 
 #### Execution
 
@@ -418,6 +389,40 @@ subtraction result at the right will indicate the number of errors.
   left/`?`, right/`/`, the sum of the two (left + right) .in hex, the
   character and screen code of the LSB of that result, and the same again
   for the difference (left - right).
+
+### Command Summary
+
+This is a summary of the commands, in ASCII (alphabetical) order.
+
+    ^K  print newline
+    #   comment
+    '  °ASCII character deposit
+    ,   set deposit parameters (next to ",>" deposit key)
+    .  °hex byte deposit
+    /   calculate and display value
+    :   deposit Intel hex record
+    ;   modify (deposit to) registers
+    >  °hex word deposit
+    a   examine assembly code
+    b  °examine memory Backwards (previous page)
+    d  °examine ("Display") memory with current parameters
+    e   examine memory with parameters
+    f  °examine memory Forward (next page)
+    i   Interrupt return
+    j   Jump to address
+    k   call address
+    m   Memory copy/fill ("Move")
+    o   Output (write) to I/O port
+    p   read from I/O Port
+    q   Quit (exit) monitor
+    r  °examine Registers
+    S   deposit Motorola S-record
+    t   Transfer memory To storage device
+    v   checksum (Verify) memory
+    w   find data in memory ("Where")
+    y   read into memory from storage device ("yank")
+
+    Unused letters: c g h l n u x z
 
 
 

@@ -1,0 +1,60 @@
+;   bioscode/aki80.z80: A small "BIOS" for the Akizushi-denki Aki-80 and
+;   SuperAKI-80
+
+; ----------------------------------------------------------------------
+;   Hardware definitions.
+
+SIO_Adata   equ  $18
+SIO_Acmd    equ  $19
+
+CTC_3       equ  $13
+;   Timer setup control word and timer constant.
+;       b7: 0 = no interrupt        b3: 0 = autostart
+;       b6: 0 = timer mode          b2: 1 = time constant follows
+;       b5: 0 = prescaler ÷16       b1: 1 = do software reset
+;       b4: 1 = trig. rising edge   b0: 1 = channel control word
+CTC_setupc  equ  %00010111
+CTC_setupt  equ  $04            ; 9600 bps (w/÷16)
+
+; ----------------------------------------------------------------------
+;   Serial I/O
+
+;   ♣A ♡* ┃ Initialise the serial port to 9600 bps.
+bios_init   ld   hl,.sioinitdat
+            ld   b,.sioinitend - .sioinitdat
+            ld   c,SIO_Acmd
+            otir                ; (C) <- (HL), B <- B-1, HL <- HL+1
+            ld   a,CTC_setupc
+            out  (CTC_3),a
+            ld   a,CTC_setupt
+            out  (CTC_3),a
+            ret
+            ;
+.sioinitdat db   $18
+            db   $04
+            db   $44
+            db   $03
+            db   $C1
+            db   $05
+            db   $6A
+            db   $01
+            db   $00
+.sioinitend
+
+
+;   ♠A ♡* ┃ Wait for a char from the serial port and return it in A.
+rdchar      in   a,(I8251_stat)
+            and  a,$02          ; RXRDY set?
+            jp   Z,rdchar       ;    no: wait on it
+            in   a,(I8251_data)
+            and  $7F            ; strip parity
+            ret
+
+;   ♢A ♡* ┃ Send char in a out the serial port when it's ready.
+prchar      push af             ; save char to send
+.wait       in   a,(I8251_stat)
+            and  a,$01          ; TXRDY set?
+            jp   Z,.wait        ;    no: wait on it
+            pop  af             ; restore char to send
+            out  (I8251_data),a
+            ret

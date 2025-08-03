@@ -1,0 +1,11 @@
+;   "Hello, world" for Aki-80/SuperAKI-80 SBC.
+
+            cpu Z80
+            include  src/i8080/std.i80
+
+            org  $8800
+            include "src/i8080/hello.i80"
+            include "src/i8080/pr/str.i80"
+            include "src/bioscode/aki80.z80"
+
+            end hello

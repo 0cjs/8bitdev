@@ -1,0 +1,15 @@
+;   Raw data that can be displayed in ASCII format, for testing hex uploads.
+;
+;   Upload this with `t8t akimon send .build/obj/exe/sbc/aki80/chars.p`.
+;   (This assumes that the t8t.conf file has the correct device and
+;   `send_format = 'intelhex'` set.)
+;
+;   You can confirm that the upload worked by sending (with `-f lf` format)
+;   a `DT90000008` command which should show the first eight characters
+;   (including the CR+LF) below.
+
+            cpu  z80
+            include  src/i8080/std.i80
+
+            org  $9000
+            db   'Abc\r\n0123456789'

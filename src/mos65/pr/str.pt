@@ -1,0 +1,35 @@
+from    testmc  import *
+from    testmc.mos65  import *
+import  pytest
+
+test_rig = '''
+            cpu 6502
+
+            org  $10
+prstrP      ds   2              ; zero-page "register"
+
+            org  $1000
+            include testmc/mos65/tmc/biosdef.a65
+            include src/mos65/std.a65
+            include src/mos65/pr/str.a65
+'''
+
+param = pytest.mark.parametrize
+
+@param('str', [b'abc', b'01\n23', b''])
+def test_prstr(m, S, loadbios, str):
+    _, output = loadbios()
+    loc = 0x37FD
+    m.deposit(loc, str + b'\x00XYZ')     # guard values
+    m.depword(S.prstrP, loc)
+    m.call(S.prstr)
+    assert str == output.getvalue()
+
+def test_prstr_256_limit(m, S, loadbios):
+    _, output = loadbios()
+    loc = 0x8002
+    m.deposit(loc, b'_'*300)
+    m.depword(S.prstrP, loc)
+    m.call(S.prstr)
+    s = output.getvalue()
+    assert (256, b'_'*256) == (len(s), s)

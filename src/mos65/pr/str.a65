@@ -1,0 +1,18 @@
+;   mos65/pr/str.a65 - Standard convenience routines for printing.
+;
+;   These are often supplied by a BIOS. This file should be included
+;   *after* BIOS or alternate definitions of these routines to avoid
+;   generating unnecessary second versions of these that will conflict.
+
+; ----------------------------------------------------------------------
+;   ♠prstrP ♣AY ♡X   Print $00-terminated string pointed to by prstrP
+;                    This terminates after 256 chars regardless.
+    ifndef prstr ; may be supplied by BIOS
+prstr       ldy  #0
+.next       lda  (prstrP),y
+            beq  .done
+            jsr  prchar
+            iny
+            bne .next
+.done       rts
+    endif

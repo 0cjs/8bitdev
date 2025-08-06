@@ -1,18 +1,17 @@
-;   ♠X ♣A ♡B  Print $00-terminated string at X
+;   mc68/pr/str.a68 - Standard convenience routines for printing.
 ;
-;   Leaves X pointing to the terminating $00 byte.
-;
-;   This is provided for systems where the BIOS does not already supply
-;   an appropriate routine. (Since we don't know what a BIOS may destroy,
-;   this actually makes no guarantees about the registers.)
-;
+;   These are often supplied by a BIOS. This file should be included
+;   *after* BIOS or alternate definitions of these routines to avoid
+;   generating unnecessary second versions of these that will conflict.
 
-        .ifndef prstr                ; may be provided by BIOS
+; ----------------------------------------------------------------------
+;   ♠X ♣A ♡B  Print $00-terminated string at X
+;             Leaves X pointing to the terminating $00 byte.
+    ifndef prstr ; may be supplied by BIOS
 prstr       lda A,0,X
             beq .done
             jsr prchar
             inx
-            bra prstr 
+            bra prstr
 .done       rts
-        .endif ; !defined(prstr)
-
+    endif ; !defined(prstr)

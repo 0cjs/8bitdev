@@ -12,8 +12,19 @@
 prstr       ldy  #0
 .next       lda  (prstrP),y
             beq  .done
-            jsr  prchar
+            tya
+            pha
+            lda  (prstrP),y
+            jsr  prcharTY
+            pla
+            tay
             iny
             bne .next
 .done       rts
     endif
+
+;   ♣Y An alternate version of `prchar` that trashes Y to test
+;   that the modified prstr above handles this.
+prcharTY    jsr  prchar
+            ldy  #$EE
+            rts

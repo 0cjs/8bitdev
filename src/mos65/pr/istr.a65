@@ -13,13 +13,13 @@ irtsaddr    EQU $101
 ;
 ;   prchar: print the character in A.
 ;
-;   pristr_ptr: a zero page word for the address for indirect access to
+;   pristrP: a zero page word for the address for indirect access to
 ;   data in calling code. We do not care what this is used for between
 ;   calls to pristr.
 
 ;   Abort assembly with a clear message if an essential definition is missing.
     set ______,
-    pushv , prchar, pristr_ptr
+    pushv , prchar, pristrP
     popv  , ______, ______
 
 ;---------------------------------------------------------------------
@@ -29,20 +29,20 @@ irtsaddr    EQU $101
 ;   after the call to this subroutine. (This requires a JSR.) There is no
 ;   limit on the size of the string.
 ;
-;   This requires one word of zero-page storage, pristr_ptr, for only the
+;   This requires one word of zero-page storage, pristrP, for only the
 ;   duration of each call to this routine. It may destroy additional
 ;   registers from the `prchar` call.
 ;
-pristr      tsx                     ; copy retaddr-1 to pristr_ptr
+pristr      tsx                     ; copy retaddr-1 to pristrP
             lda irtsaddr,X          ;   LSB
-            sta pristr_ptr
+            sta pristrP
             lda irtsaddr+1,X        ;   MSB
-            sta pristr_ptr+1
+            sta pristrP+1
             ldx #0
-.nextbyte   inc pristr_ptr          ; increment data pointer
+.nextbyte   inc pristrP             ; increment data pointer
             bne +
-            inc pristr_ptr+1
-+           lda (pristr_ptr,X)      ; next char; is it 0?
+            inc pristrP+1
++           lda (pristrP,X)         ; next char; is it 0?
             beq .done               ;   yes: we're finished printing
             jsr prchar
             clc                     ; same size, so might as well
@@ -51,8 +51,8 @@ pristr      tsx                     ; copy retaddr-1 to pristr_ptr
 .done       ;   Fixup return address. We did not increment past the $00
             ;   terminator, so it is the correct retaddr-1 expected by RTS.
             tsx
-            lda pristr_ptr
+            lda pristrP
             sta irtsaddr,X
-            lda pristr_ptr+1
+            lda pristrP+1
             sta irtsaddr+1,X
             rts

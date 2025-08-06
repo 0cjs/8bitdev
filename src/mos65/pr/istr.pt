@@ -6,7 +6,7 @@ test_rig = '''
             org $1F00
             include  src/mos65/std.a65
             include  testmc/mos65/tmc/biosdef.a65   ; defs for unit test BIOS
-pristr_ptr  equ $33
+pristrP     equ $33
             include  src/mos65/pr/istr.a65          ; code under test
 
             brk         ; guard, and makes memory examination easier
@@ -33,7 +33,7 @@ def test_loadbios_prchar(m, S, R, loadbios):
 def test_pristr(m, S, R, loadbios):
     _, output = loadbios()
     m.call(S.test_pristr)
-    print('pristr_ptr', m.hexdump(S.pristr_ptr, 2)) # ptr to chars to print
+    print('pristrP', m.hexdump(S.pristrP, 2)) # ptr to chars to print
     print('stack  ', m.hexdump(0x1F0, 16))          # stack
     print('debug  ', m.hexdump(S.debugval-2, 8))    # debug value area
     assert b'Hello,\x10world!' == output.getvalue()

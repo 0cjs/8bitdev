@@ -131,7 +131,7 @@ gCBM        equ     '='         ; commodore key
 
             ;   $D8-$E8 is "free zero page area for applications" on Plus/4
 
-pristr_ptr  equ     $D8         ; 2b word for pristr
+pristrP     equ     $D8         ; 2b word for pristr
 screenptr   equ     $DA         ; 2b pointer into screen/colour attr memory
 currows     equ     $DC         ; 1b current row output bits
 fkeys       equ     $DD         ; function keys currently being held down

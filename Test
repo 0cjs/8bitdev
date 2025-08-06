@@ -77,6 +77,7 @@ fast_hack="$T8_PROJDIR/.fast-hack"
 
 #   Extra things to clean with -C and -c.
 T8_CLEAN_C="$fast_hack"
+T8_CLEAN_c=
 
 t8dir=t8dev/        # or whatever your submodule path is
 [[ -r $T8_PROJDIR/$t8dir/t8dev/t8setup.bash ]] \

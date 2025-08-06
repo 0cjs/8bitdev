@@ -23,7 +23,7 @@ irtsaddr    EQU $101
     popv  , ______, ______
 
 ;---------------------------------------------------------------------
-;   ♣AX pristr: print inline string
+;   ♣AY pristr: print inline string
 ;
 ;   Using `prchar`, print the $00-terminated string from memory immediately
 ;   after the call to this subroutine. (This requires a JSR.) There is no
@@ -33,26 +33,22 @@ irtsaddr    EQU $101
 ;   duration of each call to this routine. It may destroy additional
 ;   registers from the `prchar` call.
 ;
-pristr      tsx                     ; copy retaddr-1 to pristrP
-            lda irtsaddr,X          ;   LSB
-            sta pristrP
-            lda irtsaddr+1,X        ;   MSB
-            sta pristrP+1
-            ldx #0
-.nextbyte   inc pristrP             ; increment data pointer
-            bne +
-            inc pristrP+1
-+           lda (pristrP,X)         ; next char; is it 0?
-            beq .done               ;   yes: we're finished printing
-            jsr prchar
-            clc                     ; same size, so might as well
-            bcc .nextbyte           ;   make jump relocatable
-
-.done       ;   Fixup return address. We did not increment past the $00
-            ;   terminator, so it is the correct retaddr-1 expected by RTS.
-            tsx
-            lda pristrP
-            sta irtsaddr,X
-            lda pristrP+1
-            sta irtsaddr+1,X
-            rts
+;   This is by Ross Archer, from http://6502.org/source/io/primm.htm
+;
+pristr      pla                 ; LSB of return addr/string start -1
+            sta  pristrP
+            pla                 ; MSB of return addr/string start -1
+            sta  pristrP+1
+            ldy  #1             ; compensate for -1 offset of ret addr
+.nextchar   lda  (pristrP),y    ; next char
+            inc  pristrP
+            bne  +
+            inc  pristrP+1
++           ora  #0             ; flags were destroyed by incs; re-test A
+            beq  .done          ; done on zero terminator
+            jsr  prchar
+            jmp  .nextchar
+.done       inc  pristrP
+            bne  +
+            inc  pristrP+1
++           jmp  (pristrP)      ; "return" to addr following terminator

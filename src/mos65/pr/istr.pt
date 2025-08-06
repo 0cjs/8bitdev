@@ -36,4 +36,4 @@ def test_pristr(m, S, R, loadbios):
     print('pristrP', m.hexdump(S.pristrP, 2)) # ptr to chars to print
     print('stack  ', m.hexdump(0x1F0, 16))          # stack
     print('debug  ', m.hexdump(S.debugval-2, 8))    # debug value area
-    assert b'Hello,\x10world!' == output.getvalue()
+    assert (0xAE, b'Hello,\x10world!') == (m.regs.a, output.getvalue())

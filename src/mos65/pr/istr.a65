@@ -33,22 +33,24 @@ irtsaddr    EQU $101
 ;   duration of each call to this routine. It may destroy additional
 ;   registers from the `prchar` call.
 ;
-;   This is by Ross Archer, from http://6502.org/source/io/primm.htm
-;
+;   This is adapted from the versions by Ross Archer and Mike Barry
+;   from http://6502.org/source/io/primm.htm
+
 pristr      pla                 ; LSB of return addr/string start -1
             sta  pristrP
             pla                 ; MSB of return addr/string start -1
             sta  pristrP+1
-            ldy  #1             ; compensate for -1 offset of ret addr
-.nextchar   lda  (pristrP),y    ; next char
-            inc  pristrP
+            ldy  #0
+.nextchar   inc  pristrP        ; move up to first/next char
             bne  +
             inc  pristrP+1
-+           ora  #0             ; flags were destroyed by incs; re-test A
++           lda  (pristrP),y    ; load char
             beq  .done          ; done on zero terminator
             jsr  prchar
-            jmp  .nextchar
-.done       inc  pristrP
-            bne  +
-            inc  pristrP+1
-+           jmp  (pristrP)      ; "return" to addr following terminator
+            clc                 ; (relative jump makes
+            bcc  .nextchar      ;   this routine position-independent)
+.done       lda  pristrP+1
+            pha
+            lda  pristrP
+            pha
+            rts

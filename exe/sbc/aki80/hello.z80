@@ -1,0 +1,36 @@
+;   "Hello, world" for the AKI-80/SuperAKI-80 SBC with AKI-80 モニターROM.
+;
+;   After uploading (with `t8t akimon send`), start with `\nGO9000\n`.
+;   This returns to the remote monitor (which prints `RS` on entry).
+
+            cpu z80
+            include  src/i8080/std.i80
+            include  src/biosdef/aki80.z80
+
+LF          equ  $0A
+
+            org  $9000
+entry       call hello
+            jp   monitor
+
+            include src/i8080/hello.i80
+
+prchar      push bc
+            ld   b,a
+            call prcharB
+            pop  bc
+            ret
+
+prnl        push bc
+            ld   b,CR
+            call prcharB
+            ld   b,LF
+            call prcharB
+            pop  bc
+            ret
+
+            ;   The monitor offers `prbuf` $01FE, but that prints to/including
+            ;   a newline, not a zero-terminated string. It also destroys B.
+            include src/i8080/pr/str.i80
+
+            end entry

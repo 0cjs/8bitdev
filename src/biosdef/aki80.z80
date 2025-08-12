@@ -1,0 +1,16 @@
+;   AKI-80 モニターROM BIOS definitions
+;   https://akizukidenshi.com/catalog/g/g117738/
+;   https://github.com/0cjs/sedoc/blob/main/8bit/sbc/SuperAKI-80.md#aki-80-monitor-rom
+;
+;   WARNING: This is based on the SuperAKI-80 version of the ROM; it's
+;   merely hoped that the AKI-80 version will have the same entry points.
+;
+;   The AKI-80 モニターROM has not only the monitor but also a simple
+;   hardware test (toggling the extra 8265 PIO pins) and a Tiny BASIC.
+;   This should document the memory areas used by those.
+;   ($F000-$FFFF is one area.)
+
+monitor     equ  $0100  ; AKI-80 monitor entry point
+prcharB     equ  $01B1  ; ♠B ♣A ♡* Send character in B to SIOA.
+                        ; Sent character is left in A.
+rdchar      equ  $01D8  ; ♠A ♡* Read char from SIOA into A.

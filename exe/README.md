@@ -7,3 +7,9 @@ programs for various platforms.
 - `a2/`: Apple II. Typically loaded by using `bin/p2a2bin` to generate
   a DOS 3.3 disk image containing a file (type `B`) with the object code.
   The `a2exebuild()` function in `Test` does this.
+
+This directory also has a `hello.data` file that can be used to test for
+dropped characters on serial connections. `t8t … send -f cr exe/hello.data`
+should show all the columns lining up nicely on a 80-column terminal; if it
+doesn't, characters are being dropped on the connection. (Typically this is
+fixed with `--char-delay 1` or a larger number.)

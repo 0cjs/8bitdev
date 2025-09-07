@@ -6,7 +6,8 @@
 
 ; ----------------------------------------------------------------------
 ;   ♠prstrP ♣AY ♡X   Print $00-terminated string pointed to by prstrP
-;                    This terminates after 256 chars regardless.
+;                    This terminates after 256 chars even if no $00 is found.
+;                    This assumes that `prchar` preserves XY.
     ifndef prstr ; may be supplied by BIOS
 prstr       ldy  #0
 .next       lda  (prstrP),y

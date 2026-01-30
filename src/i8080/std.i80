@@ -10,13 +10,14 @@
 ;
 ;   Our standard constant definition and storage allocation of DS/DB/DW
 ;   is native on this CPU.
-;
 
 ;   In general, we use {NOEXPAND} on macros that do not generate code in
 ;   order to keep the listing clean. However, for macros that do generate
 ;   code we do not use it so that we can see the code that was generated;
 ;   without this one sees just a (MACRO) line followed by the address after
 ;   the macro, which can be a bit confusing.
+
+            include     src/generic/std.asm
 
 ;--------------------------------------------------------------------------
 ;   CPU/Assembly Language Setup

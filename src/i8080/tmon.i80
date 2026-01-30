@@ -19,25 +19,19 @@
 ;
 ;   This requires the system-dependent files define the following before
 ;   including this file:
-;   • tmon_ram: start of the the RAM workspace area (which extends to
-;     tmon_ram_end) No code or data is generated here; it's all initialised
-;     at runtime.
-;   • tmon_stack: start of tmon's monitor stack (separate from user stack),
-;     growing down from the address below this value. tmon itself does not
-;     use much stack, but the BIOS routines it calls may use much more.
-;   • tmon_rom: start of code and static data, and monitor entry point.
+;
+    reqdef tmon_ram
+;       Start of the the RAM workspace area (which extends to tmon_ram_end)
+;       No code or data is generated here; it's all initialised at runtime.
+;
+    reqdef tmon_stack, 'grows down below this addr'
+;       Start of tmon's monitor stack (separate from user stack), growing
+;       down from the address below this value. tmon itself does not use
+;       much stack, but the BIOS routines it calls may use much more.
+;
+    reqdef tmon_rom
+;       Start of code and static data, and monitor entry point.
 
-;   Abort assembly with a clear message if an essential definition is missing.
-;   (Otherwise it says "error: expression must be evaluatable in first pass".)
-;
-;   XXX This doesn't work inside a section … endsection block. We should
-;   just change this to generate error messages in some nice way. Maybe we
-;   can set up a std.i80 macro that tests a symbol and generates an error
-;   if it's not defined.
-;
-;   set ______,
-;   pushv , tmon_rom, tmon_ram, tmon_stack
-;   popv  , ______,     ______,     ______
 
 ; ----------------------------------------------------------------------
 ;   Symbol naming:

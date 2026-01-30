@@ -24,6 +24,8 @@
 ;   without this one sees just a (MACRO) line followed by the address after
 ;   the macro, which can be a bit confusing.
 
+            include     src/generic/std.asm
+
 ;--------------------------------------------------------------------------
 ;   Machine vectors
 

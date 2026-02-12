@@ -1,6 +1,7 @@
 from    testmc.i8080  import  Machine
 from    src.clic.objref  import asbytes, \
-    NIL, T, sym1 as s1, sym2 as s2, smallint as i
+    NIL, T, sym1 as s1, sym2 as s2, smallint as i, \
+    decons
 from    collections  import namedtuple
 import  pytest
 
@@ -103,21 +104,21 @@ def test_rtok(m, R, S, loadbios, tokentext, next):
 
 @param('form, err, ast', [
     #   "Close" errors
-    [')',           1, NIL],
+    (')',           1, NIL),
     #   Atoms
-    ['x\r',         0, s1('x')],
-    ['x\n',         0, s1('x')],
-    ['foobar\r',    0, s2('fo')],
-    ['()\r',        0, NIL],
-    ['x\r',         0, [s1('x'), s1('y')] ],
+    ('x\r',         0, s1('x')),
+    ('x\n',         0, s1('x')),
+    ('foobar\r',    0, s2('fo')),
+    ('()\r',        0, NIL),                    # special syntax token
+    ('x yy 12\r',   0, ['x', 'yy', 12, ]),
     #   Structures
-#   ['(x)',         0, s1('(')],       # XXX wrong!
+#   ('(x)',         0, s1('(')),       # XXX wrong!
 ])
 def test_form(m, R, S, loadbios, form, err, ast):
     inp, _    = loadbios(input=asbytes(form))
     print(f'form={form!r} err={err} ast={ast}')
     m.call(S.rform, R(C=not err, de=0xFFFF))
     if err == 0:
-        assert R(C=0, de=ast) == m.regs
+        assert (R(C=0), ast) == (m.regs, decons(m.de))
     else:
         assert R(C=1) == m.regs

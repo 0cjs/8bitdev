@@ -114,4 +114,8 @@ def smallint(i):
     if i < 0: i += 0x4000       # negative numbers → 2s complement
     return ((i << 2) | 0b01)
 
+####################################################################
+#   decons: deconstruct heap ASTs to Python structures
 
+def decons(addr):
+    raise RuntimeError(f'XXX write me (addr=${addr:04X})')

@@ -107,3 +107,8 @@ def test_smallint_errors(n):
     with pytest.raises(ValueError) as ex:
         smallint(n)
     print(f'{ex.type.__name__!s}: {ex.value}')
+
+####################################################################
+
+def test_decons():
+    assert 0

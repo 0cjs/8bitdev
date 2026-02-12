@@ -110,5 +110,16 @@ def test_smallint_errors(n):
 
 ####################################################################
 
-def test_decons():
+@param('form, expected', [
+def test_cons_form():
+
+@param('heapwords, expected', [
+    #   We specify directly the binary words on the heap, though once we
+    #   have a function to build that from Python data structures we should
+    #   possibly use that to prove that we can round-trip.
+    ([NIL,                      ], (NIL, )                              ),
+    ([const(0xFC),              ], (const(0xFC), )                      ),
+])
+def test_decons_form(heapwords, expected):
+
     assert 0

@@ -117,5 +117,8 @@ def smallint(i):
 ####################################################################
 #   decons: deconstruct heap ASTs to Python structures
 
-def decons(addr):
+def decons_form(addr):
+    ''' Given the address of a form (list), deconstruct the values in it to
+        a (possibly nested) Python tuple.
+    '''
     raise RuntimeError(f'XXX write me (addr=${addr:04X})')

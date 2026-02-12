@@ -102,14 +102,16 @@ def test_rtok(m, R, S, loadbios, tokentext, next):
 ####################################################################
 
 @param('form, err, ast', [
-    #   Atoms
-    ['x ',          0, s1('x')],
-    ['foobar\r',    0, s2('fo')],
-    ['()',          0, NIL],
-    #   Structures
-    ['(x)',         0, s1('(')],       # XXX wrong!
-    #   Errors
+    #   "Close" errors
     [')',           1, NIL],
+    #   Atoms
+    ['x\r',         0, s1('x')],
+    ['x\n',         0, s1('x')],
+    ['foobar\r',    0, s2('fo')],
+    ['()\r',        0, NIL],
+    ['x\r',         0, [s1('x'), s1('y')] ],
+    #   Structures
+#   ['(x)',         0, s1('(')],       # XXX wrong!
 ])
 def test_form(m, R, S, loadbios, form, err, ast):
     inp, _    = loadbios(input=asbytes(form))

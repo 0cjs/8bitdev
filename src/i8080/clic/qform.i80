@@ -38,7 +38,7 @@ ungetc:     ld   (getc_buf),a
             ret
 
 ; ----------------------------------------------------------------------
-;   Tokenization
+;   Token Reads
 ;
 ;   This works along the lines of the Common Lisp reader algorithm[1],
 ;   except that for us the "macro chars"[2] are only about terminating
@@ -112,12 +112,12 @@ wspQ        cp   TAB
 
 ; ----------------------------------------------------------------------
 
-;   ♠DE ♣?? ♡?? ┃ Read an AST read via `getc`. If the input is not an atom
-;   (or is an atom that requires objdata) this will will allocate as much
-;   memory as necessary in the heap to store the structures referenced by
-;   the AST root. Returns:
+;   ♠DE ♣?? ♡?? ┃ Read a form using `rtok` and build its AST as a list in
+;   the heap, allocating as necessary. On exit DE will point to the head of
+;   this list. Input terminates with CR at the top level; CR in nested
+;   lists will print a newline, indent and continue input.
 ;   • Success: Cy=0 DE=AST
-;   • Failure: Cy=1 DE=invalid
+;   • Failure: Cy=1 DE=invalid (e.g., parse error because extra ')'
 ;
 ;   XXX not clear how to deal with the recursion. Do I create a cons
 ;   and call `rform` again asking it to deposit the root in that cons?
@@ -128,7 +128,12 @@ wspQ        cp   TAB
 rform       call rtok
             cp  ')'             ; unmatched closing paren?
             jp  Z,.error        ;   yes: parse error
+            cp  CR              ; 
+
             cp  '('
+
+; XXX
+
             jp  Z,.subform
             call qtok           ; parse atom
             or  a,a             ; clear carry

@@ -24,9 +24,9 @@ getc:       ld   a,(getc_buf)
             jp   NZ,.bufret
             jp   rdchar         ; TCO
             ;
-.bufret     push af
+.bufret     push af             ; save last unget char
             xor  a,a
-            ld   (getc_buf),a
+            ld   (getc_buf),a   ; clear unget
             pop  af
             ret
 
@@ -49,8 +49,9 @@ ungetc:     ld   (getc_buf),a
 ;   whitespace. This obviously needs to be reviewed/expanded.
 ;
 ;   Terminating characters that _start_ a token also immediately terminate
-;   that token. This also needs to be reviewed as our rules for termination
-;   become more complex.
+;   that token; i.e., a single termination char is itself a token. This
+;   also needs to be reviewed as our rules for termination become more
+;   complex.
 ;
 ;   [1]: https://novaspec.org/cl/2_2_Reader_Algorithm#sec_2_2
 ;   [2]: https://novaspec.org/cl/2_1_Character_Syntax#sec_2_1_4
@@ -65,7 +66,7 @@ ungetc:     ld   (getc_buf),a
 ;   • XXX In long run, allocate tokbuf on heap, w/dynamic len?
 ;
 rtok        ld   hl,tokbuf
-            ld   de,tokbuf
+            ld   de,tokbuf      ; deposit next char in (DE)
             ld   c,0            ; length read
 .firstchar  call getc
             call wspQ           ; leading whitespace?
@@ -73,27 +74,28 @@ rtok        ld   hl,tokbuf
             ld   (de),a
             inc  de
             inc  c
-            call termcharQ
-            ret  Z
+            call termcharQ      ; first char is a termchar
+            ret  Z              ;   yes: it's a token itself and we're done
             ;   Continue collecting chars until we hit a termchar.
             ;   (XXX or the token gets too long....)
 .nextchars  call getc
             call termcharQ      ; done with token?
-            call Z,ungetc       ;   yes: push back termnating char (this is 
+            call Z,ungetc       ;   yes: push back termnating char (this is
             ret  Z              ;      `read-preserving-whitespace`!) and ret
             ld   (de),a
             inc  de
             inc  c
             jp   .nextchars
 
-;   ♢A ♡* ┃ Return Z=1 if character terminates a token.
+;   ♢A ♡* ┃ Return Z=1 if character terminates a token: (, ), whitespace.
 termcharQ   cp   '('
             ret  Z
             cp   ')'
             ret  Z
             ;   fallthrough
 
-;   ♢A ♡* ┃ Return Z=1 if character is whitespace.
+;   ♢A ♡* ┃ Return Z=1 if character is whitespace:
+;           TAB, LF, VT, FF, CR, Space.
 wspQ        cp   TAB
             ret  Z
             cp   LF

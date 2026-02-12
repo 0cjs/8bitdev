@@ -28,7 +28,7 @@ fatal_nomem halt
 '''
 
 ####################################################################
-
+#   getc and ungetc
 #   XXX should getc ignore NUL?
 
 class G:
@@ -63,6 +63,7 @@ def test_getc_regular(m, R, S, loadbios, testname, commands):
         cmd.test(m)
 
 ####################################################################
+#   Tokenisation: rtok
 
 def remainder(m, inp):
     pushback = m.byte(m.symtab.getc_buf)
@@ -86,8 +87,7 @@ def remainder(m, inp):
 def test_rtok(m, R, S, loadbios, tokentext, next):
     tokentext = asbytes(tokentext)
     next      = asbytes(next)
-    input     = tokentext + next
-    inp, _    = loadbios(input=tokentext+next)
+    inp, _    = loadbios(input= tokentext + next)
     m.deposit(S.tokbuf, b'\xEE'*S.tokbuflen)
 
     m.call(S.rtok)

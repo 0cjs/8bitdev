@@ -18,7 +18,7 @@ rdlinebuf_end equ $2FFF  ; 255 chars
             include  src/biosdef/mb6885.a68
 
             include  src/mc68/pmon.a68
-            include  src/mb6885/common.a68
+            include  src/mach/mb6885/common.a68
             include  src/mc68/pr/space.a68
 
             if pmon_ramlo_end >= $100

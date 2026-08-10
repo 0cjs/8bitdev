@@ -124,8 +124,8 @@ t8dev asl auto exe/ src/ --exclude=src/asxxxx/ || fail
 manual_build=(
     #   Top-level programs whose build is not triggered by automated tests.
     src/asl/nomacro.a65         # Test/demo for ASL macro expansion
-    src/a2/misc.a65
-    src/fm7/fm7.a69
+    src/mach/a2/misc.a65
+    src/mach/fm7/fm7.a69
     #   This feels like it should be better automated.
     exe/*/*.[aiz][0-9][0-9]
     exe/*/*/*.[aiz][0-9][0-9]

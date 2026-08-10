@@ -17,7 +17,7 @@
 
             cpu     6502
             include "src/mos65/std.a65"
-            include "src/cbm/kernal.a65"    ; KERNAL call definitions
+            include "src/mach/cbm/kernal.a65"   ; KERNAL call definitions
 
 ;---------------------------------------------------------------------
 ;   BASIC/ML bootstrap

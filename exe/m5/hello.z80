@@ -1,0 +1,41 @@
+;   Sord M5 'Hello' Cartridge ($2000 base)
+
+            cpu z80
+            include  src/i8080/std.i80
+            include  src/mach/m5/sord.inc       ; hardware
+            include  src/mach/m5/biosrom.inc    ; BIOS routines
+            include  src/mach/m5/biosram.inc    ; BIOS memory locations
+
+;----------------------------------------------------------------------
+
+            org  $2000
+cart_header db   $02        ; do not check for cart header at $4000
+            dw   start      ; cart run routine
+            dw   ret        ; do-nothing init routine
+
+.rst20      jp   ret        ; rst20 entrypoint
+.rst28      jp   ret        ; rst28 entrypoint
+
+            db   4 dup $00  ; pad `start` to round address
+ret         ret
+
+;----------------------------------------------------------------------
+
+start
+            ;   Here we cargo-cult the TERM cartridge init…
+            call con_init
+            call con_setmode
+            ;   …and then try printing something.
+            ld   HL,str
+            ld   B,$FF      ; stop at $00, \r, 255 chars printed
+            call puts       ; works!
+
+-           jp   -
+
+str         db   "This Sord M5 computer           will explode in 10 seconds.     Turn off now!",$00
+
+            ;   These require `rdchar` and `prchar`.
+;           include  src/i8080/hello.i80
+;           include  src/i8080/pr/str.i80
+
+end         end start

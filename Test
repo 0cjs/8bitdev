@@ -173,6 +173,7 @@ exebin bin 'p2bin -q'  nec/pc8001/exprom1.p
 exebin CO  'p2bin -q'  kc85/m100/cotest.p
 exebin CO  'p2b kc85'  kc85/m100/hello.p
 exebin CO  'p2b kc85'  kc85/m100/tmon.p
+exebin bin 'p2bin -q'  m5/hello.p
 exebin bin 'p2bin -q'  nec/tk85/portmon.p
 #   Sharp MZ object files contain the tape header already, so directly
 #   generate the .mzf file from it. This will change when we write a

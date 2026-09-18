@@ -49,9 +49,13 @@ making `#` special, since we don't have two-char lookahead.
 
 #### NIL vs. () vs. '()
 
-Scheme has no `nil`, and `()` is not self-quoting; you must use `'()`. (We
-must investigate why `()` is not valid.) In CL `NIL`, `()` and `'()` are
-all equivalent.
+Scheme has no `nil`, and `()` is not self-evaluating (self-quoting); you
+must use `'()`. (And remember that `#f` is separate from these, `'()` is
+true in a boolean context.) In CL `NIL`, `()` and `'()` are all equivalent.
+
+In Scheme there's nothing structural to stop `()` from producing an empty
+list when evaluated and in fact MIT scheme accepts this. Probably the
+standards folks just thought it's not worth the extra parsing effort?
 
 What do we want to do? Clearly `()` and the like is going to require some
 special work from the tokenizer, and perhaps different work for

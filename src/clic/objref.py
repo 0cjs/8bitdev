@@ -74,23 +74,21 @@ def sym1(chars):
         object reference.
     '''
     chars = _checksym(chars, [1])
-    return ((chars[0] << 8) | 0b00000010)
+    return ((chars[0] << 8) | 0b10000010)
 
 def sym2(sym):
     ''' Given a sequence of two characters (anything that can be converted
         to `bytes`, using encoding ``ASCII`` if necessary), return a sym2
         object reference.
-
-        Note that with a sym2 the MSB contains the second char, not the first.
     '''
     sym = _checksym(sym, [2])
-    if sym[0] == 0x00:
-        raise ValueError(f'sym2 1st char cannot be $00: {sym}')
+    if chr(sym[1]) in (' ', '`'):
+        raise ValueError(f'sym2 2nd char cannot be space/backtick: {sym}')
     if sym[0] > 0x7F or sym[1] > 0x7F:
         raise ValueError(f'sym2 chars must be ≤ $7F: {sym}')
-    msb = sym[1]
-    if sym[0] & 0x40: msb |= 0x80    # copy sym0 bit 6 to MSB bit 7
-    lsb = (sym[0] << 2) & 0xFC | 0b10
+    msb = sym[0]
+    if sym[1] & 0x40: msb |= 0x80    # copy sym0 bit 6 to MSB bit 7
+    lsb = ((sym[1] & 0b00111111) << 2) | 0b10
     return ((msb << 8) | lsb)
 
 def sym12(sym):

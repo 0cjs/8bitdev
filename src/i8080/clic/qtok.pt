@@ -1,6 +1,6 @@
 from    testmc.i8080  import  Machine
 from    src.clic.objref  import \
-    NIL, T, sym1 as s1, sym2 as s2, smallint as i
+    NIL, T, asbytes, sym1 as s1, sym2 as s2, smallint as i
 from    random  import randrange
 import  pytest
 
@@ -61,18 +61,29 @@ def test_numberQ(m, S, R, input, isnumber):
 
 @param('input, expected', [
     #   sym1
+    ('\x00',   s1('\x00')),
     ('a',      s1('a')),
+    ('u',      s1('u')),    # >'t' to test other side of `cpBCDE`
+    (b'\xFF',  s1(b'\xFF')),
+
+    #   sym2: simpler tests that help debug
+    ('\x00\x00', s2('\x00\x00')),
+    ('\x01\x00', s2('\x01\x00')),
+    ('\x00\x01', s2('\x00\x01')),
+    ('\x7F\x7F', s2('\x7F\x7F')),
     #   sym2: all combinations of bit 6 set and clear
     ('!?',     s2('!?')),     ('3^',     s2('3^')),
     ('Ab',     s2('Ab')),     ('~@',     s2('~@')),
-    #   We consume but ignore everything after the first two chars.
+    #   sym2: we consume but ignore everything after the first two chars.
     ('defgh#', s2('de')),
-    #   Symbols that should be converted to intrinsic constants.
+    #   sym2: symbols that should be converted to intrinsic constants.
     ('nil',    NIL),             ('t',      T),
-    #   Symbols that start like ints.
+    ('no',     s2('no')), # second char differs from 'nil'
+    #   sym2: symbols that start like ints.
     ('0h',     s2('0h')),   ('12345m', s2('12')),
     ('+5s',    s2('+5')),   ('-999-',  s2('-9')),
     ('3.',     s2('3.')),   ('12345s', s2('12')),
+
     #   Small integers
     ('0',      i(0)),       ('+0',     i(0)),
     ('1',      i(1)),       ('+1',     i(1)),
@@ -83,25 +94,26 @@ def test_numberQ(m, S, R, input, isnumber):
     ('-255',   i(-255)),    ('-256',   i(-256)),
 ])
 def test_qtok_good(m, S, R, input, expected):
-    input = bytes(input, encoding='ASCII')
+    input = asbytes(input)
     inpbuf = randrange(0x4000, 0xFFFF)
     m.deposit(inpbuf, input)
     #   Ensure Cy is explicitly set and B reg is ignored.
-    m.call(S.qtok, R(hl=inpbuf, c=len(input), C=1, b=0xEE, de=0xEEEE), trace=1)
+    m.call(S.qtok, R(hl=inpbuf, c=len(input), C=1, b=0xEE, de=0xEEEE), trace=0)
     assert R(C=0, de=expected, hl=(inpbuf+len(input))) == m.regs
 
 def test_qtok_empty(m, S, R):
-    m.call(S.qtok, R(hl=0x4000, c=0, C=0), trace=1)
+    m.call(S.qtok, R(hl=0x4000, c=0, C=0), trace=0)
     assert R(C=1, hl=0x4000) == m.regs
 
-@param('input', [ '8192', '+8192',
-#'-8193'
+@param('input', [
+    b'\x80_', b'_\x80', '_ ', '_`',     # sym2 invalid chars
+    '8192', '+8192',                    # int overflows
+    #   XXX broken code; XXX should use tmon.pt XXX(*args) helper
+    pytest.param('-8193', marks=pytest.mark.xfail(strict=True)),
 ])
-#   XXX also need to test other errors?
-def test_qtok_int_overflow(m, S, R, input):
-    input = bytes(input, encoding='ASCII')
+def test_qtok_err(m, S, R, input):
+    input = asbytes(input)
     inpbuf = randrange(0x4000, 0xFFFF)
     m.deposit(inpbuf, input)
-    #   Ensure Cy is explicitly set and B reg is ignored.
-    m.call(S.qtok, R(hl=inpbuf, c=len(input), C=0, b=0xEE, de=0xEEEE))
+    m.call(S.qtok, R(hl=inpbuf, c=len(input), C=0, b=0xEE, de=0xEEEE), trace=0)
     assert R(C=1) == m.regs

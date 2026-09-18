@@ -4,9 +4,9 @@
 NIL         equ  $0000      ; nil (empty list)
 T           equ  $0004      ; t (true)
 
-;   Precomputed symbols
-symNI       equ  $E9BA      ; 'ni'
-symT        equ  $7402      ; 't'
+;   Precomputed symbols to match for conversion to intrinsic constants.
+symNI       equ  $EEA6      ; 'ni'
+symT        equ  $7482      ; 't'
 
 ;   Currently the input base can't be changed, but this reminds that we
 ;   can make it dynamicly settable, if we decide we want to.
@@ -140,40 +140,46 @@ qtok        ld   a,c
 .overflow   scf
             ret
 
-.symbol     ld   a,(hl)         ; first char
+.symbol     ld   a,(hl)         ; read first char
             inc  hl
             dec  c
-            ld  d,a             ; 8-bit char
-            ld  e,$02           ; sym1 zero bits and tag
-            jp   NZ,.char2      ; test C decrement
-            ;                   ; (we need to clear carry before returning)
+            ld   d,a            ; 8-bit char
+            ld   e,$82          ; sym1 sentinel and tag
+            jp   NZ,.char2      ; test DEC C done above
             ld   bc,symT        ; 't' → TRUE
-            call cpBCDE         ; clears carry
+            call cpBCDE
+            scf                 ; clear carry for return
+            ccf
             ret  NZ
             ld   de,T
             ret
             ;
-.char2      scf                 ; high bit of tag = 1
-            rla                 ; first char has high bit set?
+.char2      rla                 ; first char has high bit set?
             ret  C              ;   yes: return error
-            rla                 ; low bit of tag = 0; carry ← char 1 bit 6
-            ld   e,a            ; sym2 LSB
-            ld   a,0            ; do not affect carry
-            rra                 ; carry to bit 7
-            ld   b,a            ; save for a moment
+                                ; otherwise char is already in D reg
             ld   a,(hl)         ; second char
-            rla                 ; bit 7 set?
+            cp   a,' '          ; illegal value for second char?
+            scf                 ; (error indication)
+            ret  Z              ;   yes: return error
+            cp   a,'`'          ; illegal value for second char?
+            scf                 ; (error indication/future b1 of A below)
+            ret  Z              ;   yes: return error
+            rla                 ; has high bit set?, also 1 to LSbit
             ret  C              ;   yes: return error
-            ld   a,(hl)         ; second char again
-            or   a,b            ; OR in bit 6 of first char (clears carry)
-            ld   d,a            ; sym2 MSB
-            ;
+            rla                 ; CY=b6 A=b5-b0,1,0 from clear CY
+            ld   e,a            ; finished constructing sym2 LSB
+            ld   a,d            ; sym2 MSB w/b7 clear, char1 in rest
+            rla                 ; shift char2 b6 into b0 of char1
+            rrca                ; rotate char2 b6 into MSB b7
+            ld   d,a            ; finished constructing sym2 MSB
 .skip       inc  hl             ; skip past remainder of token
             dec  c
             jp   NZ,.skip
 
             ld   bc,symNI       ; 'ni' → NIL
-            call cpBCDE         ; clears carry, but was already clear
+            call cpBCDE
+            scf                 ; clear carry for return
+            ccf
             ret  NZ
             ld   de,NIL
             ret

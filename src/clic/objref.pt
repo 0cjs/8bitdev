@@ -51,42 +51,49 @@ def test_ptr_errors(badval):
 ####################################################################
 
 @param('sym, f, chars', [
-    (0x0002, sym1,  '\x00'),        (0x0002, sym1,  b'\x00'),
-    (0x4102, sym1,  'A'),           (0x4102, sym1,  b'A'),
-    (0x7F02, sym1,  '\x7F'),        (0xFF02, sym1,  b'\xFF'),
-    (0x0006, sym2,  '\x01\x00'),
-    (0x2FBE, sym2,  '//'),          (0x2FBE, sym2,  b'//'),
-    (0xFA56, sym2,  'Uz'),
-    (0xFFFE, sym2,  '\x7F\x7F'),
-    (0x4102, sym12, 'A'),           (0x4102, sym12, b'A'),
-    (0xFA56, sym12, 'Uz'),          (0xFA56, sym12, b'Uz'),
+    (0x0082, sym1,  '\x00'),        (0x0182, sym1,  b'\x01'),
+    (0x2082, sym1,  ' '),           (0x4082, sym1,  '@'),
+    (0x6082, sym1,  '`'),           (0x7F82, sym1,  '\x7F'),
+    (0x8082, sym1,  b'\x80'),       (0xFF82, sym1,  b'\xFF'),
+    (0x2082, sym12, ' '),
+
+    (0x31CA, sym2,  '12'),          (0xF0C6, sym2,  'pq'),
+    (0x0002, sym2,  '\x00\x00'),    (0xFFFE, sym2,  '\x7F\x7F'),
+    (0x60BA, sym2,  '`.'),          (0x20BA, sym2,  ' .'),
+    (0x31CA, sym12, '12'),
 ])
 def test_sym_good(f, chars, sym):
     oref = f(chars)
-    print(f'chars={chars} oref=${oref:04X}')
+    print(f'chars={chars!r} sym=${sym:04X} oref=${oref:04X}')
     assert sym == oref
 
 @param('f, chars', [
     #   Invalid lengths.
-    (sym1,  ''),
-    (sym1,  'AB'),
-    (sym2,  ''),
-    (sym2,  'A'),
+    (sym1,  ''),                    (sym1,  'AB'),
+    (sym2,  ''),                    (sym2,  'A'),
     (sym2,  'ABC'),
-    (sym12, ''),
-    (sym12, 'ABC'),
-    #   Invalid chars.
-    (sym2,  '\x80\x00'),
-    (sym2,  '\x00\x80'),
-    #   Special invalids due to our encoding
-    (sym2,  '\x00\x00'),
-    (sym2,  '\x00\x01'),
-    (sym2,  '\x00\x7F'),
+    (sym12, ''),                    (sym12, 'ABC'),
+    #   We accept ASCII chars only; use a bytestring for $80-$FF.
+    (sym1, 'é'),
+    #   Invalid due to our encoding
+    (sym2,  '\x80\x01'), (sym2,  '\x01\x80'),   # not 7-bit
+    (sym2,  'x '), (sym2,  'x`'),               # collides with 1/2 sentinel
 ])
 def test_sym_errors(f, chars):
+    print(f'chars={chars!r}')
     with pytest.raises(ValueError) as ex:
         f(chars)
     print(f'{ex.type.__name__!s}: {ex.value}')
+
+def test_sym2_exhaustive():
+    ''' All valid sym2s are distinct and none can be mistaken for a sym1. '''
+    orefs = [ sym2(bytes([c,d]))
+              for c in range(0x80) for d in range(0x80)
+              if d not in b' `'
+            ]
+    assert len(orefs) == len(set(orefs)), \
+        'sym2 returned duplicate syms for unique inputs'
+    assert not [ o for o in orefs if o & 0xFF == 0x82 ]
 
 ####################################################################
 

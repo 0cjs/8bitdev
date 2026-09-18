@@ -74,7 +74,7 @@ recursively followed by the GC.
     00   ??????-00     (other special values?)
     AA   aaaaaa-00  R  (AA≠00) pointer to object, address AAaaaaaa00.
     NN   nnnnnn-01     smallint: -8192 to 8191
-    cc   000000-10     sym1 (1-char symbol)
+    cc   100000-10     sym1 (1-char symbol)
     BB   bbbbbb-10     sym2 (2-char symbol)
     LL   ffffff-11  R  obdata header: length LL, format number ffffff
 
@@ -98,25 +98,23 @@ subtractions of smallints with no preprocessing of the values.
 
 A sym1 or sym2 is a 1- or 2-character symbol packed into a tagged
 reference. The two forms are:
-- sym1: LSB = $02 (all zeros except for the tag bits). The MSB contains the
-  symbol character ($00-$FF).
-- sym2: LSB ≠ $02 (non-zero bits in LSB). The top 7 bits of the MSB are the
-  first character of the symbol ($00-$7F) and bit 0 of the MSB and bits 7-2
-  of the LSB are the second character of the symbol (also $01-$7F).
+- sym1: LSB = $82. Symbol of one eight bit character.
+- sym2: LSB ≠ $82. Symbol of two seven bit characters.
+- Using $82 as the sentinel means that the second char of a sym2 may not be
+  space or backtick: those sym2 values cannot be distinguished from a sym1
+  value. (These were picked as the pair of least-used chars.)
 
 Below, `c7`-`c0` are the bits of the character of a sym1, and `c6`-`c0` and
-`d6`-`d0` are the bits of the first and second respectively characters of a
-sym2.
+`d6`-`d0` are the bits of the first and second characters of a sym2.
 
                 LSB                           MSB
     |  7  6  5  4  3  2  1  0 |   |  7  6  5  4  3  2  1  0 |
     ---------------------------------------------------------
-    |  0  0  0  0  0  0  1  0 |   | c7 c6 c5 c4 c3 c2 c1 c0 |  sym1
-    | c5 c4 c3 c2 c1 c0  1  0 |   | c6 d6 d5 d4 d3 d2 d1 d0 |  sym2
+    |  1  0  0  0  0  0  1  0 |   | c7 c6 c5 c4 c3 c2 c1 c0 |  sym1
+    | d5 d4 d3 d2 d1 d0  1  0 |   | d6 c6 c5 c4 c3 c2 c1 c0 |  sym2
 
-Two-character symbols where either character has the high bit set or where
-the first character is $00 must be stored as allocated symbols with an
-entry in the heap, referenced by a standard pointer to a heap object.
+A two-character symbol that contains disallowed chars must be stored as an
+obdata symbol referenced by a standard pointer to it.
 
 
 Heaps
@@ -179,7 +177,7 @@ __Tiny Heap__ for very small memory systems:
   4/20 (ٍ±8/6 digits).
 - Symbols are limited to ASCII numeric/punctuation and one case of alpha
   sticks; symbols of up to 4 chars packed as 4×6-bit in 24 bits.
-  Alternatively, limit symbols to 2 chars each $01-$7F and all will be
+  Alternatively, limit symbols to two 7-bit chars each and all will be
   "packed" sym1 or sym2 references.
 
 

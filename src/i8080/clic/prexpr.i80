@@ -21,7 +21,7 @@ prcell      push hl
             dec  a
             jp   z,.smallint    ; %01: embedded 14-bit signed integer
             dec  a
-            jp   z,.sym12       ; %10: 1- or 2-char symbol
+            jp   z,.sym         ; %10: 1- or 2-char symbol
             halt                ; XXX obdata header--currently not supported
             pop  hl             ; restore original pointer ro value
             ret
@@ -40,27 +40,24 @@ prcell      push hl
             ret
             ;
             ;   1- or 2-char intrinsic symbol
-.sym12      ld   a,c            ; load value LSB
-            or   a,a            ; clear carry
-            rra                 ; LSR: bit0 (always=0) into carry
-            ld   c,a            ; save bits 5-0 of LSB char in bits 6-1
-            rra                 ; LSR: bit1=? into carry
-            or   a,a            ; other than type bits, LSB is zero?
-            jp   z,.sym1        ;   yes: just the one char to print
-            ld   a,b            ; load value MSB
-            and  a,$80          ; isolate top bit (which will be bit 6)
-            or   a,c            ; bring rest of first char in, clear carry
-            rra                 ; shift b6-1 to b5-0
-            call prchar         ; print first char
-            ld   a,b            ; load second char
-            and  a,$7F          ; clear bit 6 of first char
+.sym        ld   a,c            ; load value LSB
+            cp   $82            ; sentinel for sym1?
+            jp   nz,.sym2
+.sym1       ld   a,b
             call prchar
             pop  hl
             ret
             ;
-.sym1       ld   a,b            ; load value MSB: 8 bit char
-            call prchar
-            pop  hl
+.sym2       ld   a,b            ; load MSB: first char + bit 6 of second char
+            and  $7F            ; clear bit from second char
+            call prchar         ; print first char
+            ld   a,b            ; load MSB
+            rla                 ; copy second char bit 6 to carry
+            ld   a,c            ; load LSB: shifted 2nd char
+            rra                 ; bring in bit 6 to bit 7, carry gets 0
+            rra                 ; and then to bit 6 (carry gets 1)
+            call prchar         ; print second char
+            pop hl
             ret
             ;
             ;   intrinsic 14-bit signed integer

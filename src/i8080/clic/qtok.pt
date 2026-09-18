@@ -21,6 +21,9 @@ test_rig = '''
 #   and might want to be extended for multiple consts.
 
 def zipconst(const, iterable):
+    ''' Produce a list of pairs:
+        (`const`, `iterable[0]`), (`const`, `iterable[1]`), ....
+    '''
     return zip([const]*len(iterable), iterable)
 
 def test_zipconst():

@@ -1,4 +1,5 @@
 from    testmc.i8080  import  Machine
+from    src.ptfuncs  import XFAIL
 from    src.clic.objref  import \
     NIL, T, asbytes, sym1 as s1, sym2 as s2, smallint as i
 from    random  import randrange
@@ -108,8 +109,7 @@ def test_qtok_empty(m, S, R):
 @param('input', [
     b'\x80_', b'_\x80', '_ ', '_`',     # sym2 invalid chars
     '8192', '+8192',                    # int overflows
-    #   XXX broken code; XXX should use tmon.pt XXX(*args) helper
-    pytest.param('-8193', marks=pytest.mark.xfail(strict=True)),
+    XFAIL('-8193', reason='broken code fails this'), # XXX
 ])
 def test_qtok_err(m, S, R, input):
     input = asbytes(input)

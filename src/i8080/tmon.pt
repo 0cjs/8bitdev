@@ -65,14 +65,6 @@ utest_data  db   $FF, $00, $12, $23, $34, $45, $56, $67
 param = pytest.mark.parametrize
 
 ####################################################################
-#   Pytest improvements.
-#   Possibly this should be pulled up to a more generic/shared location.
-
-def XXX(*args):
-    ' Mark test parameters as (strictly) expected to fail. '
-    return pytest.param(*args, marks=pytest.mark.xfail(strict=True))
-
-####################################################################
 #   Support routines
 
 @param('input, expected', [

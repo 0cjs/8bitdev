@@ -51,7 +51,7 @@ numberQ     push bc
 ;   • Failure: Cy=1, HL=????, DE=invalid, BC destroyed.
 ;   It's assumed that the HL points to a textually valid token, i.e., one
 ;   that does not have e.g. a token-terminating char such as ')' in it.
-;   (It's assumed that the tokenizer ensures this.)
+;   (The tokenizer must ensure this.)
 ;
 ;   XXX Does HL point to the char that caused the error?
 ;
@@ -64,9 +64,9 @@ numberQ     push bc
 ;   XXX Only the first two chars of symbols are significant; all
 ;   remaining chars are ignored.
 ;
-qtok        scf                 ; indicate error
-            ld   a,c
+qtok        ld   a,c
             or   a,a            ; zero-length token?
+            scf                 ; indicate error if we return
             ret  Z              ;   yes: error
             call numberQ        ; is it in correct format for a number?
             jp   C,.symbol      ;    no: parse as a symbol

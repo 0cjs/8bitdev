@@ -90,6 +90,10 @@ def test_qtok_good(m, S, R, input, expected):
     m.call(S.qtok, R(hl=inpbuf, c=len(input), C=1, b=0xEE, de=0xEEEE), trace=1)
     assert R(C=0, de=expected, hl=(inpbuf+len(input))) == m.regs
 
+def test_qtok_empty(m, S, R):
+    m.call(S.qtok, R(hl=0x4000, c=0, C=0), trace=1)
+    assert R(C=1, hl=0x4000) == m.regs
+
 @param('input', [ '8192', '+8192',
 #'-8193'
 ])

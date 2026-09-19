@@ -1,5 +1,8 @@
-;   Some "objects" as described in objects.md
-
+;   Some "objects" as described in src/clic/objects.md
+;
+;   XXX This uses an older format than currently described in
+;   src/clic/objects.md; smallint and sym1/2 now differ. It should be
+;   updated at some point.
 
 ;   ♣A ♡XY  Dispatch based on type of object at location.
 ;

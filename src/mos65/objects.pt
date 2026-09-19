@@ -11,6 +11,11 @@ test_rig = '''
 
 ####################################################################
 #   Tests
+#
+#   XXX The 'obj' constants below should be replaced with calls to
+#   routines from src/clic/objref.py when this is updated to use
+#   the newer format (different smallint and sym1/2) described in
+#   src/clic/objects.md.
 
 @pytest.mark.parametrize('obj, expected', (
     #   obj     (obfmtid, oblen, smallint, sym1, sym2a, sym2b)

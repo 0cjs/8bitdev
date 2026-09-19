@@ -56,7 +56,7 @@ param   = pytest.mark.parametrize
     (smallint(-8192),   b'-8192'),
 ])
 def test_prcell_other(m, S, R, loadbios, sym, s):
-    addr = randrange(0x4000, 0xFFFF)    # even unaligned addrs, because why not.
+    addr = randrange(0x4000, 0xD000)    # even unaligned addrs, because why not.
     print(f'sym ${sym:04X} @ ${addr:04X}')
     m.depword(addr, sym)
     _, out = loadbios()

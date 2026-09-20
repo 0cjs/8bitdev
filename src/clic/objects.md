@@ -490,20 +490,6 @@ Considerations and Alternatives
 
 - Add rational numbers type?
 
-#### Keyboard Issues
-
-Need to be careful having literals using punctuation chars from the
-upper half of ASCII that are missing on popular keyboards. Perhaps we
-can have control sequences enter some of these? Below, the full set
-and what some popular keyboards have.
-
-    @[\]^_`{|}~     Full set
-
-     [ ]  `{ }~     SWTPC CT-1024 (TV Typewriter)
-    @[\]↑←`         PET 2001 (calculator and typewriter)
-    @  ]^           Apple II (]  on Shift-M is unmarked)
-    @               TRS-80 Model I
-
 #### Types and Literals
 
 A basic decision to make is whether or not we want to recognize

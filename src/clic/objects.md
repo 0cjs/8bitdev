@@ -116,6 +116,11 @@ Below, `c7`-`c0` are the bits of the character of a sym1, and `c6`-`c0` and
 A two-character symbol that contains disallowed chars must be stored as an
 obdata symbol referenced by a standard pointer to it.
 
+If necessary, this can be extended to store a separate 'char' data type as
+well: use LSB = $02 for that which would add NUL and `@` as invalid second
+chars. (Other possibilities are `[\]^_` and their corresponding control
+characters or `?` and DEL.)
+
 
 Heaps
 -----

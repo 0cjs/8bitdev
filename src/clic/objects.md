@@ -124,9 +124,9 @@ Though pointers may point to cons cells or obdata (almost) anywhere in
 memory, typically a system will have one or more _heap_ areas in which
 cons cells and obdata are dynamically allocated.
 
-Unlike arbitrary areas of memory, every address in a heap is part of
-an object. Space available for allocation is indicated by "free space"
-obdata objects (_FSOs_) of type `HDT_FREE` (see below).
+Unlike arbitrary areas of memory, every address in a heap is part of an
+object. Space available for allocation in mixed and obdata heaps is
+indicated by "free space" obdata objects (format `FBO`, see below).
 
 All objects on the heap have an allocation size or _asize_, given in
 bytes, that is a multiple of four and 256 bytes or less. The next
@@ -135,12 +135,12 @@ object is located at the address of the current object plus its asize.
 Cons cells always are two words in size, thus always having an asize
 of 4 bytes.
 
-Obdata values (described in detail below) may have a size that is not
-a multiple of four bytes; in a heap they will always be padded out to
-have an asize that's a multiple of 4. (This may not be the case for
-obdata values stored outside of a heap where the immediately following
-unaligned bytes may be used for other purposes.) The asize can always
-be determined from the odsize by rounding odsize+2 up to the next dword
+Obdata values (described in detail below) may have an _odsize_ that is not a
+multiple of four bytes; in a heap they will always be padded out to have an
+asize that's a multiple of 4. (This may not be the case for obdata values
+stored outside of a heap where the immediately following unaligned bytes
+may be used for other purposes.) The asize can always be determined from
+the odsize by rounding odsize+2 (for the header) up to the next dword
 boundary. A formula for this is `(odsize+5) ∧ $FC`.
 
 Because obdata values have variable size, given an arbitrary (but
@@ -157,14 +157,24 @@ investigated.
 
 __Split heap:__ this is effectively two heaps of variable size with cons
 cells in the top half and obdata in the bottom half. Each grows towards the
-other and is GC'd separately. This should make allocation more efficient
-and also removes the need to have separate tags to distinguish obdata
-blocks from cons cells, since we know them by which heap they're in. This
-would free up bit 1 (tags %1x and %0x) to be used for GC or perhaps to help
-extend the address space.
+other and is GC'd separately. This should make allocation more efficient.
+
+This does not entirely remove the need for separate tags to distinguish
+obdata blocks from cons cells since either may be outside one of these
+heaps (e.g. in ROM or a static "core" interpreter area). However it does
+make the tag bits redundant within the obdata heap (though not the cons
+cell heap); see below for how this might help GC.
+
+Using separate heaps for cons cells and obdata values may speed up
+allocation and GC because the former heap would contain only one size of
+object (dword), thus lengths never need be read and that heap doesn't need
+regular compaction if it maintains a free list. (This might be done with an
+intrinsic constant in the car and pointer to next free entry in the cdr.)
+But note the heap does need to be compacted before a load from external
+media. (And probably save as well, for a compact save.)
 
 __Tiny Heap__ for very small memory systems:
-- This is intended to compete feature-wide with 4K BASICs.
+- This is intended to compete feature-wise with 4K BASICs.
 - If necessary, restrict pointers to 32 KB (or even 16 KB?), freeing up the
   top bit to mark object header tags.
 - Make all heap objects four bytes asize and remove length byte (length
@@ -180,27 +190,57 @@ __Tiny Heap__ for very small memory systems:
   Alternatively, limit symbols to two 7-bit chars each and all will be
   "packed" sym1 or sym2 references.
 
+__Cons Heap Only__ for extremely small systems:
+- Symbols limited to two letters; numbers limited to smallints.
+- Possibly need to reconsider how we do environments.
+- Unclear where/how we put machine code objects. (Const in car, pointer to
+  special data structure in cdr?)
+
+### Garbage Collection
+
+Read-only data outside of heaps (e.g., ROM, the static core interpreter
+loaded from tape or disk) do not need to be collected. (They cannot be
+removed themselves, nor can they refer to data in dynamically allocated
+heaps.)
+
+If a heap can contain all object types, there is currently no room in the
+heap object format for mark bits. Possibly a separate bit array could be
+allocated for this: one bit for every possible object address on the heap,
+even those that may be in the middle of obdata objects. This would increase
+heap overhead by 1/(4× 8) = 3.125%. (Double that for a Schorr-Waite
+algorithm requiring two bits.) It's also theoretically necessary only
+during collection; one might re-use an input buffer for this.
+
+If split heaps for cons cell and obdata are used, the obdata heap contains
+only obdata objects (tag %11) and so the tag becomes redundant for those
+objects within the heap, freeing the two bits to be borrowed during GC as
+mark bits. (During such a GC nothing else may touch or follow anything in
+that heap unless it also can ignore the tag bits.)
+
+However, freeing up just the %11 tag does not help for the cons cell heap
+because it frees up just one code point, only log₂(4/3) ≈ 0.4 bit of
+information.
+
 
 Obdata Types and Formats
 ------------------------
 
 An obdata value always starts with a two-byte _obdata header_.
 
-The first byte of the header describes the format. It always has its
-least significant two bits (the tag) set to `%10`. The upper six bits
-are the _format number_ (ranging from 0-63); when shifted left two
-bits with the lowest two bits set to the required `%10` this whole
-byte is referred to as the _format ID_.
+The LSB of the header describes the format. It always has its two LSbits
+(the tag) set to `%11`. The upper six bits are the _format number_ (ranging
+from 0-63); when shifted left two bits with the lowest two bits set to the
+required `%11` this whole byte is referred to as the _format ID_.
 
-The second byte contains the _odsize_ indicating the length of data
-following the header. The odsize has no alignment restrictions, and so
-when stored within a heap there may be padding at the end of the
-obdata value as described in the "Heaps" section above.
+The MSB contains the _odsize_ indicating the length of data following the
+two-byte header. The odsize has no alignment restrictions, and so when
+stored within a heap there may be padding at the end of the obdata value to
+align the next object to a 4-byte boundary (as described in the "Heaps"
+section above).
 
-        byte || --------0-------- || -------1------- ||
+        byte || -------LSB------- || ------MSB------ ||
          bit || 7 6 5 4 3 2 | 1 0 || 7 6 5 4 3 2 1 0 ||
-
-    contents || format num. | 1 0 ||     odsize      ||
+    contents || format num. | 1 1 ||     odsize      ||
              ||     format ID     ||                 ||
 
 (Storing the odsize in dwords rather than bytes was also considered,
@@ -216,7 +256,7 @@ symbol, float) have multiple formats for storage as obdata values.
 Format summary:
 
                   ID: format ID in hexadecimal
-          format num: format number (ID bits 7-2) in binary and decimal
+              format: format number (ID bits 7-2) in binary
                  num: format number in decimal
                  asz: asize (allocation size) on heap, if fixed
                  len: length, if fixed
@@ -290,7 +330,7 @@ Format details:
 
 Floating point values always consist of an 8-bit exponent in the first
 byte, followed by however many bytes of mantissa. Negative and
-positive numbers are separate heapdata formats; keeping the mantissa's
+positive numbers are separate obdata formats; keeping the mantissa's
 sign separate from the mantissa itself makes calculations easier. The
 sign can be determined from the high bit (bit 7) of the format ID.
 
@@ -417,7 +457,7 @@ Considerations and Alternatives
 
 ### Representation
 
-- Consider changing the "meaning bits" of the heapdata type bytes to
+- Consider changing the "meaning bits" of the obdata type bytes to
   put the most important distinguishers in bits 7 and 6, because
   testing these comes "for free" when testing a third or more bits
   with the `BIT` instruction. (N=bit 7, V=bit 6, Z=all bits tested
@@ -501,31 +541,6 @@ unit suffixes.)
   - It's not clear on the best way to assign precision at initial
     allocation.
 
-#### Garbage Collection
-
-Read-only heaps do not need to be collected.
-
-If heap can contain all object types, there is currently no room in
-the heap object format for mark bits. Possibly a separate bit array
-could be allocated for this: one bit for every possible address on the
-heap, even those that may be in the middle of heapdata objects. This
-would increase heap overhead by about 12.5%, but is necessary only
-during collection. A Schorr-Wait algorithm would require two bits.
-
-However, if two heaps are used, one for cons cells and the other for
-obdata, bit 0 is no longer needed to distinguish between the two,
-since the type of heap itself encodes that information. This frees bit
-0 for use as a mark bit which may be set or cleared (if one knows its
-current value) with absolute `INC` or `DEC`. (However, an object with
-a mark bit set must never be accessed during normal operation as code
-that does not know the heaps but is just following a pointer will see
-an incorrect tag.)
-
-Even without the mark bit, using separate heaps for cons cells and
-obdata values may speed up allocation and GC because the former heap
-would contain only one size of object (dword), thus lengths never need
-be read and that heap doesn't need compaction.
-
 
 References
 ----------
@@ -549,20 +564,18 @@ References
 
 #### Modern
 
-- ["Memory Management Glossary"][mps-glos] from the Memory Pool System
-  documentation. Ravenbrook. 1997-present. Very useful to find
-  particular techniques and references from terms.
-- [_Memory Management Reference_][mmr]. Site devoted to memory
-  management.
+- ["Memory Management Glossary"][mps-glos] ([archived version][mps-glos-ar])
+  from the Memory Pool System documentation. Ravenbrook. 1997-present. Very
+  useful to find particular techniques and references from terms.
+- [_Memory Management Reference_][mmr]. Site devoted to memory management.
 - David Gries, ["Presentation of the Schorr-Waite graph marking
-  algorithm"][gries2006]. 2006. GC w/o recursion. Algorithm appeared
-  in 1968. Also attributed to Peter Deutsch.
+  algorithm"][gries2006]. 2006. GC w/o recursion. Algorithm appeared in
+  1968. Also attributed to Peter Deutsch.
 - St-Amour and Feeley, ["PICOBIT: A Compact Scheme System for
   Microcontrollers"][picobit09]. Symposium on the Implementation of
-  Functional Languages. 2009. Fits in 7 KB. Stack-based VM. First
-  class continuations are 30 lines of Scheme compiling to 141 bytes of
-  bytecode. Whole-program compilation and a treeshaker heavily
-  optimize size.
+  Functional Languages. 2009. Fits in 7 KB. Stack-based VM. First class
+  continuations are 30 lines of Scheme compiling to 141 bytes of bytecode.
+  Whole-program compilation and a treeshaker heavily optimize size.
 
 #### Other Notes
 
@@ -596,6 +609,7 @@ References
 [gries2006]: https://www.cs.cornell.edu/courses/cs312/2007fa/lectures/lec21-schorr-waite.pdf
 [mmr]: https://www.memorymanagement.org
 [mps-glos]: https://www.ravenbrook.com/project/mps/master/manual/html/glossary/index.html
+[mps-glos-ar]: https://web.archive.org/web/20211026061328/https://www.ravenbrook.com/project/mps/master/manual/html/glossary/index.html
 [picobit09]: https://www.ccs.neu.edu/home/stamourv/papers/picobit.pdf
 
 <!-- Refs: Other Notes -->

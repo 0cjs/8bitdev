@@ -1,19 +1,78 @@
 CLIC Grammar
 ============
 
-Below you will find notes and references on how [Scheme][R⁵RS] and
-[Common Lisp][cl] parse input.
+Below the CLIC grammar you will find notes and references on how
+[Scheme][R⁵RS] and [Common Lisp][cl] parse input.
 
-Symbology:
-- 'CS' is case sensitive; 'CI' is case-insensitive.
+CLIC
+----
 
-We are currently tending toward the CL way of doing things: in particular,
-we read and store an entire token (which uses a little bit of memory, but
-no more than a dozen or two bytes in most cases), determine if it's a valid
-format for a number, and only then do the conversion. Unlike Scheme, where
-something that starts out like a number fails to parse if it isn't one, we
-allow tokens like `1+` or `30cm` and interpret them as symbols. This leaves
+CLIC works internally in full 8-bit characters ($00–$7F ASCII and $80–$FF
+machine-specific) with case-sensitive (CS) symbols and characters. Use on
+case-insensitive (CI) systems (typically ones that support upper case only)
+is [handled through the console drivers][`console.md`] that use an input
+prefix character, alternate display modes and/or character substitutions to
+allow both input and output of the full character set.
+
+### The Reader
+
+### General Notes
+
+We are currently leaning toward the CL way of doing things: read and store
+an entire token (which uses a little bit of memory, but no more than a
+dozen or two bytes in most cases), determine if it's a valid format for a
+number, and only then do the conversion. Unlike Scheme, where something
+that starts out like a number fails to parse if it isn't one, we allow
+tokens like `1+` or `30cm` and interpret them as symbols. This leaves
 numeric parsing failures to be just overflows, it seems.
+
+This gives us the following general parsing procedure:
+1. Tokenizer (`rtok`): reads a token typed into a buffer.
+2. Token parse (`qtok`): parses token buffer to an [object].
+3. Form read (`rform`): repeatedly calls the above to read and parse tokens
+   and generate the AST, storing it in the heap.
+4. Something calls `rform`, gets back a pointer to the AST, and evals that
+   in a given environment.
+
+#### Tokenization
+
+(XXX not all this is implemented yet.)
+
+A token is read into a buffer until it is complete. Basic editing
+(backspace, cancel entire token) will be made available at some point.
+(How to deal with backing up further than the current token is TBD.)
+
+The buffer space is of unspecified size (it may grow for large input) but
+finite: on reaching the limit the tokenizer will beep and refuse further
+input. The line editing facilities may be used to back up and change the
+entry.
+
+Token reading follows these rules:
+- NUL is ignored everywhere, even mid-token.
+- Whitespace is TAB, LF, VT, FF, CR and SPACE.
+- All leading whitespace is read and discarded.
+- `()` is a token standing for `#n` (nil).
+  No whitespace is allowed between the opening and closing paren.
+- `(` is a single token indicating the start of a form.
+- `)` is a single token indicating the end of a form.
+- `'` is a single token indicating a `(quote …)`. (Note that this is not a
+  terminator below; `'` can be part of a token after the first char.)
+- Any other character starts a token that continues with all subsequent
+  characters until a termination character: whitespace, `(`, `)`.
+
+The following are not dealt with yet, in particular because they don't
+appear in tiny CLIC:
+- Double-quoted (`"…"`) strings and the escape chars inside them.
+- EOF.
+
+XXX We don't mention comments (probably a large CLIC-only feature) here.
+Traditional Lisp comments would usually be discarded by the tokenizer,
+which is usless to us because we type in at the console and save the AST;
+we have no source files. Consider:
+- Docstrings (CL): `(df (f x) "x←x+1" (+ x 1))`, easily skipped on
+  evaluating a function.
+- Inline objects (Interlisp): `(+ 1 2 (# "comment") 3)`. More work to skip
+  in various places and doesn't work in quoted lists.
 
 #### Self-evaluating Objects
 
@@ -224,6 +283,8 @@ Other References
 
 
 <!-------------------------------------------------------------------->
+[`console.md`]: ./console.md
+[object]: ./objects.md
 
 <!-- Scheme -->
 [R⁰RS]: https://dspace.mit.edu/bitstream/handle/1721.1/5794/AIM-349.pdf

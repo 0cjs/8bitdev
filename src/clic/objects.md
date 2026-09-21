@@ -71,6 +71,7 @@ recursively followed by the GC.
     MSB   LSbits    R  Description
     00   000000-00     nil
     00   000001-00     true, t
+    00   110011-00     ($CC = free cell: mnemonic CC=clear cell)
     00   ??????-00     (other special values?)
     AA   aaaaaa-00  R  (AA≠00) pointer to object, address AAaaaaaa00.
     NN   nnnnnn-01     smallint: -8192 to 8191

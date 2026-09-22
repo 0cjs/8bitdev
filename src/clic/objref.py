@@ -9,6 +9,13 @@
     %00 pointer, const; %01 smallint; %10 sym12, sym1, sym2; %11 obdata
 '''
 
+__all__ = [
+    'asbytes',                              #   Utility
+    'ptr', 'const', 'NIL', 'T', 'FREE',     #   Construction
+    'smallint', 'sym12', 'sym1', 'sym2',
+    'refstr', 'hconsdump',                  #   Inspection/Printing.
+]
+
 #   We don't need all of testmc.generic.GenericMachine; any memory will do.
 #   XXX MemoryAccess should be exported by testmc.generic.
 #       That would fix this and mos65/machine.py:28.
@@ -156,7 +163,7 @@ def refstr(word):
 
     raise RuntimeError('INTERNAL ERROR')
 
-CONSTSTR_MAP = {
+_CONSTSTR_MAP = {
     0x00: '#n',
     0x04: '#t',
     0xCC: '--',
@@ -166,7 +173,7 @@ def _conststr(word):
         the intrinsic constant represented by `word`. Throws a `RuntimeError`
         for invalid constants.
     '''
-    s = CONSTSTR_MAP.get(word)
+    s = _CONSTSTR_MAP.get(word)
     if s is not None:  return s
     if (word >= 0x100) or ((word & 0x03) != 0x00):
         raise RuntimeError(f'INTERNAL ERROR: bad value ${word:02X}')
@@ -209,4 +216,3 @@ def hconsdump(m:MemoryAccess, htop, ncells=None):
             if (car, cdr) == (FREE, FREE):  contig_free += 1
             else:                           contig_free = 0
             if contig_free >= 2:            return
-

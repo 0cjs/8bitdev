@@ -18,6 +18,22 @@ def test_asbytes(expected, seq):
     assert expected == asbytes(seq)
 
 ####################################################################
+#   Predicates.
+
+@param('ref, predicate, expected', [
+    (r,p,e) for p,e,refs in [
+        (isconst,   True,  [ 0x0000, 0x0004, 0x00FC, ]),
+        (isconst,   False, [ 0x0001, 0x0002, 0x0003, 0x00FF, 0x0100, ]),
+        (isptr,     True,  [ 0x0100, 0x0104, 0xFFFC, ]),
+        (isptr,     False, [ 0x0000, 0x00FC, 0x00FF,
+                             0x0101, 0x0102, 0x0103, ]),
+    ] for r in refs
+])
+def test_predicate(expected, predicate, ref):
+    print(f'expected {expected} = {predicate}(${ref:04X})')
+    assert expected == predicate(ref)
+
+####################################################################
 #   Construction.
 
 @param('val', [ 0x0100, 0x0104, 0xFFFC ])

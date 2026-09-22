@@ -11,9 +11,10 @@
 
 __all__ = [
     'asbytes',                              #   Utility
+    'isptr', 'isconst',                     #   Predicates
     'ptr', 'const', 'NIL', 'T', 'FREE',     #   Construction
     'smallint', 'sym12', 'sym1', 'sym2',
-    'refstr', 'hconsdump',                  #   Inspection/Printing.
+    'refstr', 'hconsdump', 'hconsprint',    #   Inspection/Printing.
 ]
 
 #   We don't need all of testmc.generic.GenericMachine; any memory will do.
@@ -33,6 +34,12 @@ def asbytes(seq):
             return bytes(seq)
         except TypeError:
             return bytes(list(seq))
+
+####################################################################
+#   Predicates.
+
+def isptr(ref):     return ref & 0b11 == 0x00 and (ref>>8)  > 0x00
+def isconst(ref):   return ref & 0b11 == 0x00 and (ref>>8) == 0x00
 
 ####################################################################
 #   Construction.
@@ -216,3 +223,38 @@ def hconsdump(m:MemoryAccess, htop, ncells=None):
             if (car, cdr) == (FREE, FREE):  contig_free += 1
             else:                           contig_free = 0
             if contig_free >= 2:            return
+
+def _prin(*args):
+    print(*args, sep='', end='')
+
+def hconsprint(m:MemoryAccess, addr, depth=1):
+    ''' Print the spine of the cons list starting at `addr`. If `depth` is
+        greater than the default of ``1``, print on additional lines the
+        spines of the sub-lists, recursing down to the given depth.
+
+        If `addr` is not a pointer this will print, "----:" followed by the
+        value.
+
+        XXX Doesn't handle improper lists: dotted lists explode and
+        circular lists loop forever.
+    '''
+    sublists = []
+
+    if not isptr(addr):
+        print(f'----: {refstr(addr).rstrip()}')
+    else:
+        _prin(f'{addr:04X}: [')
+        while True:
+            car, cdr = m.words(addr, 2)
+            _prin(refstr(car).rstrip())
+           #_prin(f'.{refstr(cdr).rstrip()}')
+            if isptr(car):  sublists.append(car)
+            if cdr != NIL:
+                _prin(', ')
+                addr = cdr
+            else:
+                print(']')
+                break
+        if depth > 1:
+            for p in sublists:
+                hconsprint(m, p, depth-1)

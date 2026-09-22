@@ -1,5 +1,6 @@
 from    src.clic.objref  import *
 from    src.clic.objref  import _symcharstr
+from    testmc.generic.memory  import MemoryAccess
 import  pytest
 param   = pytest.mark.parametrize
 
@@ -171,3 +172,31 @@ def test_refstr(ref, expected):
     assert 8 == len(expected)
     s = refstr(ref)
     assert (8, expected) == (len(s), s)
+
+####################################################################
+#   Heap dumps
+
+class RAM(MemoryAccess):
+    ' Little-endian RAM for testing functions that read memory. '
+    is_little_endian = True
+    def __init__(self, size=0x10000):   self.mem = bytearray(size)
+    def get_memory_seq(self):           return self.mem
+
+def _dumplines(capsys, *args):
+    ' Return the output of `hconsdump(*args)` as a list of lines. '
+    hconsdump(*args)
+    return capsys.readouterr().out.splitlines()
+
+def test_hconsdump_ncells(capsys):
+    m = RAM(0x100); m.depword(0xF0, [FREE]*8)
+    output = _dumplines(capsys, m, 0x100, 2)
+    assert 4 == len(output)         # ncells plus two
+
+def test_hconsdump_free(capsys):
+    syms  = [sym2('ab')]*2; frees = [FREE]*2
+    heap = syms*3 + frees*2 + syms + frees + syms
+    m = RAM(0x100); m.depword(0x100 - 2*len(heap), heap)
+    output = _dumplines(capsys, m, 0x100)
+    assert 5 == len(output)         # stops at free pair
+    assert '00FC: 8A E1 8A E1   s:_ab_   s:_ab_' == output[0]
+    assert '00F8: CC 00 CC 00   c:--     c:--'   == output[1]

@@ -9,6 +9,11 @@
     %00 pointer, const; %01 smallint; %10 sym12, sym1, sym2; %11 obdata
 '''
 
+#   We don't need all of testmc.generic.GenericMachine; any memory will do.
+#   XXX MemoryAccess should be exported by testmc.generic.
+#       That would fix this and mos65/machine.py:28.
+from    testmc.generic.memory import MemoryAccess
+
 ####################################################################
 #   Utility routines also for public consumption
 
@@ -58,8 +63,9 @@ def const(n):   # tag %00
         f'bad tag bits %{tag:02b} for intrinsic const: ${n:02X}')
     return n
 
-NIL     = const(0);     ' Intrinsic constant NIL.'
+NIL     = const(0);     ' Intrinsic constant NIL or ().'
 T       = const(4);     ' Intrinsic constant TRUE.'
+FREE    = const(0xCC);  ' Intrinsic constant for free heap cell.'
 
 def smallint(i):    # tag %01
     ''' Given an integer between -8192 and 8191, convert it to a smallint
@@ -177,3 +183,30 @@ def _symcharstr(char:int, pos:int) -> str:
         return f'{char:02X}'
     if pos == 0:  return f'_{chr(char)}'
     else:         return f'{chr(char)}_'
+
+def hconsdump(m:MemoryAccess, htop, ncells=None):
+    ''' Given a cons heap starting below address `htop`, print in descending
+        order one line per cons cell on the heap giving address, a hexdump
+        of the four bytes (in native order) and `refstr()` output of the
+        car and cdr cells.  If `ncells` is specified, print that many cells
+        plus two more, otherwise print until two consecutive free cells
+        (car and cdr are both the `FREE` constant) are printed.
+    '''
+    contig_free = 0
+    addr = htop
+    while True:
+        addr -= 4
+        if addr < 0:  raise RuntimeError('hconsdump() reached addr < 0')
+
+        hex = m.hexdump(addr, 4)
+        car, cdr = m.words(addr, 2)
+        print(f'{hex}   {refstr(car)} {refstr(cdr)}'.rstrip())
+
+        if ncells is not None:
+            ncells -= 1
+            if ncells <= -2:  return
+        else:
+            if (car, cdr) == (FREE, FREE):  contig_free += 1
+            else:                           contig_free = 0
+            if contig_free >= 2:            return
+

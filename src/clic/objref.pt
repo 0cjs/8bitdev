@@ -114,3 +114,64 @@ def test_smallint_errors(n):
     with pytest.raises(ValueError) as ex:
         smallint(n)
     print(f'{ex.type.__name__!s}: {ex.value}')
+
+####################################################################
+#   Inspecting/Printing
+
+@param('pos, char, expected', [
+    (0, b'\x00',    '00'),
+    (1, b'\x12',    '12'),
+    (0, b'\x1F',    '1F'),
+    (1, b' ',       '20'),
+    (0, b'!',       '_!'),
+    (1, b'!',       '!_'),
+    (0, b'~',       '_~'),
+    (1, b'~',       '~_'),
+    (0, b'\x7F',    '7F'),
+    (0, b'\x80',    '80'),
+    (0, b'\xFF',    'FF'),
+])
+def test_symcharstr(pos, char, expected):
+    assert expected == symcharstr(char[0], pos)
+
+#   XXX This assumes that the constructor functions work properly!
+@param('ref, expected', [
+    #   Pointers
+    (0xFFFC,            'p:FFFC  '),
+    (0xA1B0,            'p:A1B0  '),
+    (0x0100,            'p:0100  '),
+    #   Smallints and syms.
+    (smallint(-8192),   'i:-8192 '),
+    (smallint(8191),    'i:8191  '),
+    (smallint(345),     'i:345   '),
+    (smallint(-1),      'i:-1    '),
+    (smallint(0),       'i:0     '),
+    (sym1('a'),         's:_a    '),
+    (sym1(' '),         's:20    '),
+    (sym1('_'),         's:__    '),
+    (sym1(b'\xFF'),     's:FF    '),
+    (sym2('ab'),        's:_ab_  '),
+    (sym2('A_'),        's:_A__  '),
+    (sym2('_B'),        's:__B_  '),
+    (sym2('AB'),        's:_AB_  '),
+    (sym2('!~'),        's:_!~_  '),    # printable char boundaries
+    (sym2(b'\x0Bc'),    's:0Bc_  '),
+    (sym2(b'd\x0F'),    's:_d0F  '),
+    (sym2(b'\x7F\x00'), 's:7F00  '),
+    (sym2('__'),        's:____  '),
+    #   Intrinsic constants.
+    (const(0x00),       'c:#n    '),    # nil
+    (const(0x04),       'c:#t    '),    # true
+    (const(0x08),       'c:08    '),    # (unknown type)
+    (const(0xCC),       'c:--    '),    # free cell in heap
+    (const(0xFC),       'c:FC    '),    # (unknown type)
+    #   Obdata: type and length, both in hex. Known types will later be
+    #   displayed as 2-char lower-case mnemonic codes.
+    (0x00FF,            'o:FF,00 '),    # format ID $FF (num $3F), odsize=0
+    (0x1FFB,            'o:FB,1F '),    # format ID $FB (num $3E), odsize=31
+    (0xFF03,            'o:03,FF '),    # format ID $03 (num $00), odsize=255
+])
+def test_refstr(ref, expected):
+    assert 8 == len(expected)
+    s = refstr(ref)
+    assert (8, expected) == (len(s), s)

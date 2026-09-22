@@ -1,8 +1,9 @@
-''' Object Reference generator for clic.
+''' Object Reference generator and decoder for clic.
 
-    These constants and functions generate 16-bit words as `int`s, usually
-    to be deposited with `Machine.depword()` which will handle converting
-    the word to the correct endianness.
+    The constants and functions generate and consume 16-bit words as
+    `int`s, usually to be deposited with `Machine.depword()` and read with
+    `Machine.word()` which will handle converting the word to the correct
+    endianness.
 '''
 
 ####################################################################
@@ -17,6 +18,9 @@ def asbytes(seq):
             return bytes(seq)
         except TypeError:
             return bytes(list(seq))
+
+####################################################################
+#   Constructing
 
 ####################################################################
 #   Intrinsic constants
@@ -112,4 +116,72 @@ def smallint(i):
     if i < 0: i += 0x4000       # negative numbers → 2s complement
     return ((i << 2) | 0b01)
 
+####################################################################
+#   Inspecting/Printing
 
+def refstr(word):
+    ''' Return a printable string representing the ref: a pointer,
+        smallint, sym1, sym2 or obdata header.
+
+        For ease of columnar display this always returns an 8 character
+        string padded with at least one space at the right. If you need to
+        trim it down use `rstrip()`. (The minimum length is 3 for ``i:0``.)
+
+        XXX See the test for documentation of the format.
+    '''
+    #   The longest representations are 7 chars: `o:00,FF` and `i:-8192`,
+    #   which is where we get the 8-character length from.
+    tag = word & 0x0003
+
+    if   tag == 0b00:
+        if word >= 0x100:  return f'p:{word:04X}  '         # pointer
+        else:              return f'c:{conststr(word)}    ' # intrinsic const
+
+    elif tag == 0b01:                                       # smallint
+        value = word >> 2
+        if value > 8191:  value -= 16384
+        return f'i:{value:<5} '
+
+    elif tag == 0b10:                                       # sym1/2
+        msb = word >> 8; lsb = word & 0xFF
+        if lsb == 0x82:     # sym1
+            return f's:{symcharstr(msb, 0)}    '
+        else:               # sym2
+            char2 = (lsb >> 2)
+            if msb & 0x80:  char2 |= 0x40   # msb b7 is char2 b6
+            return f's:{symcharstr(msb & 0x7F, 0)}{symcharstr(char2, 1)}  '
+
+    elif tag == 0b11:                                       # obdata
+        formatID = word & 0xFF
+        odsize = word >> 8
+        return f'o:{formatID:02X},{odsize:02X} '
+
+    raise RuntimeError('INTERNAL ERROR')
+
+CONSTSTR_MAP = {
+    0x00: '#n',
+    0x04: '#t',
+    0xCC: '--',
+}
+def conststr(word):
+    ''' Return a two-character string with a human-readable representation of
+        the intrinsic constant represented by `word`. Throws a `RuntimeError`
+        for invalid constants.
+    '''
+    s = CONSTSTR_MAP.get(word)
+    if s is not None:  return s
+    if (word >= 0x100) or ((word & 0x03) != 0x00):
+        raise RuntimeError(f'INTERNAL ERROR: bad value ${word:02X}')
+    return f'{word:02X}'
+
+def symcharstr(char:int, pos:int) -> str:
+    ''' Given an 8-bit `char` return a two-character string in a printable
+        form. Non-printing chars print as a two-digit hex number; printing
+        chars print as the char itself in the left-hand (`pos`=0) or
+        right-hand (`pos`=1) position in the field, with the other position
+        filled with an underscore ``_``.
+    '''
+    if char < ord('!') or char > ord('~'):
+        return f'{char:02X}'
+    if pos == 0:  return f'_{chr(char)}'
+    else:         return f'{chr(char)}_'

@@ -4,6 +4,9 @@
     `int`s, usually to be deposited with `Machine.depword()` and read with
     `Machine.word()` which will handle converting the word to the correct
     endianness.
+
+    Generally we order things in numerical order of tag:
+    %00 pointer, const; %01 smallint; %10 sym12, sym1, sym2; %11 obdata
 '''
 
 ####################################################################
@@ -20,34 +23,11 @@ def asbytes(seq):
             return bytes(list(seq))
 
 ####################################################################
-#   Constructing
+#   Construction.
 
-####################################################################
-#   Intrinsic constants
-
-def const(n):
-    ''' Return the object reference for intrinsic constant `n`.
-
-        This takes the value _including_ the %00 tag in the LSbits.
-        If the tag is not %00 or the constant is not in range, a
-        `ValueError` is raised.
-    '''
-    if (n < 0) or (n > 0xFF):  raise ValueError(
-        f'Instrinsic const out of range: ${n:02X}')
-    tag = n & 0x03
-    if tag != 0:  raise ValueError(
-        f'bad tag bits %{tag:02b} for intrinsic const: ${n:02X}')
-    return n
-
-NIL     = const(0);     ' Intrinsic constant NIL.'
-T       = const(4);     ' Intrinsic constant TRUE.'
-
-####################################################################
-#   Pointers
-
-def ptr(addr):
-    ''' Return pointer to `addr`. This may not be used to create
-        "intrinsic constant" pointers.
+def ptr(addr):  # tag %00
+    ''' Construct reference: pointer to `addr`. This may not be used to
+        create "intrinsic constant" pointers; use `const()` for that.
 
         If the tag (LSbits) is not %00 or the pointer is not in the
         range $0100 through $FFFC, a `ValueError` is raised.
@@ -63,16 +43,43 @@ def ptr(addr):
         f'bad tag bits %{tag:02b} for pointer: ${addr:04X}')
     return addr
 
-####################################################################
-#   Short symbols
 
-def _checksym(seq, goodlen):
-    if len(seq) not in goodlen:
-        sgoodlen = ''.join(map(str, goodlen))
-        raise ValueError(f'Bad sym{sgoodlen} length {len(seq)}: {seq}')
-    return asbytes(seq)
+def const(n):   # tag %00
+    ''' Construct reference: intrinsic constant `n`.
 
-def sym1(chars):
+        `n` includes the %00 tag bits. If the tag is not %00 or the
+        constant is not in range, a `ValueError` is raised. The
+        constants below should be used in preference to this.
+    '''
+    if (n < 0) or (n > 0xFF):  raise ValueError(
+        f'Instrinsic const out of range: ${n:02X}')
+    tag = n & 0x03
+    if tag != 0:  raise ValueError(
+        f'bad tag bits %{tag:02b} for intrinsic const: ${n:02X}')
+    return n
+
+NIL     = const(0);     ' Intrinsic constant NIL.'
+T       = const(4);     ' Intrinsic constant TRUE.'
+
+def smallint(i):    # tag %01
+    ''' Given an integer between -8192 and 8191, convert it to a smallint
+        object reference.
+    '''
+    if i > 8191 or i < -8192:
+        raise ValueError(f'smallint out of range: {i}')
+    if i < 0: i += 0x4000       # negative numbers → 2s complement
+    return ((i << 2) | 0b01)
+
+def sym12(sym):     # tag %10
+    ''' Given a sequence of one or two characters, (anything that can be
+        converted to `bytes`, using encoding ``ASCII`` if necessary),
+        return a sym1 or sym2.
+    '''
+    sym =  _checksym(sym, [1,2])
+    if   len(sym) == 1:     return sym1(sym)
+    elif len(sym) == 2:     return sym2(sym)
+
+def sym1(chars):        # tag %10
     ''' Given a sequence of one character (anything that can be converted
         to `bytes`, using encoding ``ASCII`` if necessary), return a sym1
         object reference.
@@ -80,7 +87,7 @@ def sym1(chars):
     chars = _checksym(chars, [1])
     return ((chars[0] << 8) | 0b10000010)
 
-def sym2(sym):
+def sym2(sym):      # tag %10
     ''' Given a sequence of two characters (anything that can be converted
         to `bytes`, using encoding ``ASCII`` if necessary), return a sym2
         object reference.
@@ -95,29 +102,14 @@ def sym2(sym):
     lsb = ((sym[1] & 0b00111111) << 2) | 0b10
     return ((msb << 8) | lsb)
 
-def sym12(sym):
-    ''' Given a sequence of one or two characters, (anything that can be
-        converted to `bytes`, using encoding ``ASCII`` if necessary),
-        return a sym1 or sym2.
-    '''
-    sym =  _checksym(sym, [1,2])
-    if   len(sym) == 1:     return sym1(sym)
-    elif len(sym) == 2:     return sym2(sym)
+def _checksym(seq, goodlen):
+    if len(seq) not in goodlen:
+        sgoodlen = ''.join(map(str, goodlen))
+        raise ValueError(f'Bad sym{sgoodlen} length {len(seq)}: {seq}')
+    return asbytes(seq)
 
 ####################################################################
-#   Smallints
-
-def smallint(i):
-    ''' Given an integer between -8192 and 8191, convert it to a smallint
-        object reference.
-    '''
-    if i > 8191 or i < -8192:
-        raise ValueError(f'smallint out of range: {i}')
-    if i < 0: i += 0x4000       # negative numbers → 2s complement
-    return ((i << 2) | 0b01)
-
-####################################################################
-#   Inspecting/Printing
+#   Inspection/Printing.
 
 def refstr(word):
     ''' Return a printable string representing the ref: a pointer,
@@ -135,7 +127,7 @@ def refstr(word):
 
     if   tag == 0b00:
         if word >= 0x100:  return f'p:{word:04X}  '         # pointer
-        else:              return f'c:{conststr(word)}    ' # intrinsic const
+        else:              return f'c:{_conststr(word)}    ' # intrinsic const
 
     elif tag == 0b01:                                       # smallint
         value = word >> 2
@@ -145,11 +137,11 @@ def refstr(word):
     elif tag == 0b10:                                       # sym1/2
         msb = word >> 8; lsb = word & 0xFF
         if lsb == 0x82:     # sym1
-            return f's:{symcharstr(msb, 0)}    '
+            return f's:{_symcharstr(msb, 0)}    '
         else:               # sym2
             char2 = (lsb >> 2)
             if msb & 0x80:  char2 |= 0x40   # msb b7 is char2 b6
-            return f's:{symcharstr(msb & 0x7F, 0)}{symcharstr(char2, 1)}  '
+            return f's:{_symcharstr(msb & 0x7F, 0)}{_symcharstr(char2, 1)}  '
 
     elif tag == 0b11:                                       # obdata
         formatID = word & 0xFF
@@ -163,7 +155,7 @@ CONSTSTR_MAP = {
     0x04: '#t',
     0xCC: '--',
 }
-def conststr(word):
+def _conststr(word):
     ''' Return a two-character string with a human-readable representation of
         the intrinsic constant represented by `word`. Throws a `RuntimeError`
         for invalid constants.
@@ -174,7 +166,7 @@ def conststr(word):
         raise RuntimeError(f'INTERNAL ERROR: bad value ${word:02X}')
     return f'{word:02X}'
 
-def symcharstr(char:int, pos:int) -> str:
+def _symcharstr(char:int, pos:int) -> str:
     ''' Given an 8-bit `char` return a two-character string in a printable
         form. Non-printing chars print as a two-digit hex number; printing
         chars print as the char itself in the left-hand (`pos`=0) or

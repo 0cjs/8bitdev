@@ -1,8 +1,10 @@
 from    src.clic.objref  import *
+from    src.clic.objref  import _symcharstr
 import  pytest
 param   = pytest.mark.parametrize
 
 ####################################################################
+#   Utility routines also for public consumption.
 
 @param('expected, seq', [
     (b'',       ''),
@@ -15,6 +17,20 @@ def test_asbytes(expected, seq):
     assert expected == asbytes(seq)
 
 ####################################################################
+#   Construction.
+
+@param('val', [ 0x0100, 0x0104, 0xFFFC ])
+def test_ptr_good(val):
+    assert val == ptr(val)
+
+@param('badval', [
+    -1, 0x0000, 0x00FC, 0x00FF, 0x10000,    # out of range
+    0x0101, 0x0102, 0x0103, 0x0105,         # invalid tag bits
+    0xFFFB, 0xFFFD, 0xFFFE, 0xFFFF,         # invalid tag bits
+])
+def test_ptr_errors(badval):
+    with pytest.raises(ValueError) as ex:
+        ptr(badval)
 
 @param('oref, expected', [
     (NIL,           0x0000),
@@ -33,22 +49,23 @@ def test_intrinsic_constants_errors(badval):
     with pytest.raises(ValueError) as ex:
         const(badval)
 
-####################################################################
-
-@param('val', [ 0x0100, 0x0104, 0xFFFC ])
-def test_ptr_good(val):
-    assert val == ptr(val)
-
-@param('badval', [
-    -1, 0x0000, 0x00FC, 0x00FF, 0x10000,    # out of range
-    0x0101, 0x0102, 0x0103, 0x0105,         # invalid tag bits
-    0xFFFB, 0xFFFD, 0xFFFE, 0xFFFF,         # invalid tag bits
+@param('n, oref', [
+    (    0, 0x0001),
+    (    1, 0x0005),
+    ( 8191, 0x7FFD),
+    (   -1, 0xFFFD),
+    (-8192, 0x8001),
 ])
-def test_ptr_errors(badval):
-    with pytest.raises(ValueError) as ex:
-        ptr(badval)
+def test_smallint_good(n, oref):
+    oref = smallint(n)
+    print(f'n=${n:04X} oref=${oref:04X}')
+    assert oref == oref
 
-####################################################################
+@param('n', [ -8193, 8192, ])
+def test_smallint_errors(n):
+    with pytest.raises(ValueError) as ex:
+        smallint(n)
+    print(f'{ex.type.__name__!s}: {ex.value}')
 
 @param('sym, f, chars', [
     (0x0082, sym1,  '\x00'),        (0x0182, sym1,  b'\x01'),
@@ -96,26 +113,6 @@ def test_sym2_exhaustive():
     assert not [ o for o in orefs if o & 0xFF == 0x82 ]
 
 ####################################################################
-
-@param('n, oref', [
-    (    0, 0x0001),
-    (    1, 0x0005),
-    ( 8191, 0x7FFD),
-    (   -1, 0xFFFD),
-    (-8192, 0x8001),
-])
-def test_smallint_good(n, oref):
-    oref = smallint(n)
-    print(f'n=${n:04X} oref=${oref:04X}')
-    assert oref == oref
-
-@param('n', [ -8193, 8192, ])
-def test_smallint_errors(n):
-    with pytest.raises(ValueError) as ex:
-        smallint(n)
-    print(f'{ex.type.__name__!s}: {ex.value}')
-
-####################################################################
 #   Inspecting/Printing
 
 @param('pos, char, expected', [
@@ -132,7 +129,7 @@ def test_smallint_errors(n):
     (0, b'\xFF',    'FF'),
 ])
 def test_symcharstr(pos, char, expected):
-    assert expected == symcharstr(char[0], pos)
+    assert expected == _symcharstr(char[0], pos)
 
 #   XXX This assumes that the constructor functions work properly!
 @param('ref, expected', [

@@ -203,6 +203,29 @@ def _dumplines(capsys, *args):
     hconsdump(*args)
     return capsys.readouterr().out.splitlines()
 
+@param('ref', [ T, smallint(123), sym1('x'), sym2('xy'), ])
+def test_hconslist_atom(ref):
+    print('ref=${ref:04X}')
+    assert ref == hconslist(None, ref)
+
+def test_hconslist_nil():
+    assert [] == hconslist(None, NIL)
+
+def test_hconslist_list():
+    s = smallint
+    m = RAM(0x400)
+    m.depword(0x100, [s(0),         ptr(0x104)])
+    m.depword(0x104, [ptr(0x200),   ptr(0x108)])
+    m.depword(0x108, [ptr(0x300),   NIL])
+    m.depword(0x200, [s(3),         ptr(0x204)])
+    m.depword(0x204, [NIL,          ptr(0x208)])
+    m.depword(0x208, [s(4),         NIL])
+    m.depword(0x300, [s(7),         NIL])
+    expected = [s(0), [s(3), [], s(4)], [s(7)]]
+    actual   = hconslist(m, 0x100)
+    print('expected:', expected); print('  actual:', actual)
+    assert expected == actual
+
 def test_hconsdump_ncells(capsys):
     m = RAM(0x100); m.depword(0xF0, [FREE]*8)
     output = _dumplines(capsys, m, 0x100, 2)

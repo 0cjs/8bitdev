@@ -14,7 +14,8 @@ __all__ = [
     'isptr', 'isconst',                     #   Predicates
     'ptr', 'const', 'NIL', 'T', 'FREE',     #   Construction
     'smallint', 'sym12', 'sym1', 'sym2',
-    'refstr', 'hconsdump', 'hconsprint',    #   Inspection/Printing.
+    'hconslist',                            #   Inspection/Printing.
+    'refstr', 'hconsdump', 'hconsprint',
 ]
 
 #   We don't need all of testmc.generic.GenericMachine; any memory will do.
@@ -130,6 +131,20 @@ def _checksym(seq, goodlen):
 
 ####################################################################
 #   Inspection/Printing.
+
+def hconslist(m:MemoryAccess, ref):
+    ''' Return an object representing the heap object at addr but using
+        Python lists nested as necessary. `NIL` is returned as ``[]``.
+    '''
+    if ref == NIL:      return []
+    if not isptr(ref):  return ref
+    retval = []
+    while True:
+        car, cdr = m.words(ref, 2)
+        retval.append(hconslist(m, car))
+        if cdr == NIL:  break
+        ref = cdr
+    return retval
 
 def refstr(word):
     ''' Return a printable string representing the ref: a pointer,

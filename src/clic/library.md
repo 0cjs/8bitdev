@@ -59,23 +59,23 @@ how multiple arguments work.
 
 #### Characters, Printing, Formatting, Input
 
+Per [`Language.md`], characters are (8-bit) sym1 values and read of any
+possible character is via the syntax given there. There's no need for
+a 'chr' function; just use `'\xHH` syntax.
+
+Constants:
 * `*n` / `*nl*`: List of chars needed to be printed to generate a newline
   on the output terminal. (Typically `(list (ch 'cr) (ch 'lf))`
-* `(ch SYM)` / `char`: Return sym1 of ASCII character corresponding to
-  charname _sym._ Most charnames are taken from the ASCII standard, but
-  some implementations may have additional names, e.g., `'up` for cursor
-  up. (Replace with syntax `#\`?)
-  - Ex: `(a 'sp)` gives a space (l$20).
-  - Ex: `(a 'cr)` gives a carriage return ($0D).
-* `(pr …)` / `PRint`: Print values.
 
+Printing:
+* `(pr …)` / `PRint`: Print values.
 * `(pl …)` / `PLine`: Print optional values and newline.
   - Same as `(pr … (a 'cr) (a 'lf))` or whatever platform needs for newline.
-
 * `(fp F X …)` / `fprint`: Format and print value _x_ according to
   specification _f._
   - (Can't have format-only `f` on systems w/o strings.)
 
+Reading:
 * `(rd)` / `read`
 
 #### Machine Access
@@ -113,3 +113,8 @@ Examples of Use
     (df sp (a 'sp))
     (df (greet name)                    ; params actually (gr na)
         (pr 'Hi ', sp name cr lf))
+
+
+
+<!-------------------------------------------------------------------->
+[`Language.md`]: ./Language.md

@@ -1,0 +1,200 @@
+Lisp and Scheme Notes and Comparisons
+=====================================
+
+These are used for inspiration and comparison with CLIC.
+
+
+Comparison Tables
+-----------------
+
+    LISP 1
+    ────────────────────────────────────────────────────────────────
+    QUOTE
+    ATOM
+    EQ
+    COND
+    CAR
+    CDR
+    CONS
+    LABEL
+    LAMBDA
+    DEFINE
+    ────────────────────────────────────────────────────────────────
+
+
+LISP 1
+------
+
+- Somehow `APPLY` requires `T` not `(QUOTE T)` in `COND` predicate.
+- `DEFINE (( (f₁,d₁) (f₂,d₂) … )) ()`
+- REPL: `fₙ (a₀…) (plist)`; _plist_ is the environment as a list of pairs.
+- `TRACKLIST (f₁ …) ()` prints args for each _f_ every time called.
+
+
+Scheme
+------
+
+References:
+- Scheme: An Interpreter for the Extended Lambada Calculus [[R⁰RS]]
+  (MIT AIM-349), 1975.
+- Revised⁵ Report on the Algorithmic Language Scheme: [[R⁵RS]], 1998.
+
+Naming conventions:
+- `'()`, `#f`, `#t`. No `nil`. `'()` = empty list is truthy.
+- `…?` predicates; `…!` mutators; `…->…` conversions.
+
+`'()` must be quoted; `()` is not self-evaluating (self-quoting). In Scheme
+there's nothing structural to stop `()` from producing an empty list when
+evaluated and in fact MIT scheme accepts this. Probably the standards folks
+just thought it's not worth the extra parsing effort?
+
+Notes:
+- Symbols are case-insensitive.
+- Token delimters are just whitespace and `()"`.
+- Symbols cannot start with chars that can start a number, excepting the
+  symbols `+`, `-`, `...` (and `.` where valid). Valid symbol initial chars
+  are letters and `!$%&*/:<=>?^_~`.
+- `()` is not a valid expression (unlike many other Lisps).
+
+The full list of uses of `#` parsing is:
+- `#t`, `#f`: true and false.
+- `#\x`: character constant _x_.
+- `#(`: introduces vector constant terminated by `)`.
+- `#b`, `#d`, `#o`, `#x`: binary, decimal, octal, hex.
+- `#e`, `#i`: exact, inexact numbers.
+
+#### Types
+
+Each object satisfies no more than one of these predicates: `boolean?`,
+`symbol?`, `char?`, `vector?`, `procedure?`, `pair?`, `number?`, `string?`,
+`port?`. Empty list is a separate type that satisfies none of these.
+
+But any type can be used as a boolean; all are true except `#f` (including
+the empty list, `'()`.)
+
+Objects may be immutable; it's an error to `set!` etc. these.
+
+Character constants are `\#x` where _x_ (CS) is a printable character or
+space (must be followed by a delimiter), or `\#name` where _name_ (CI) is
+e.g. `space`, `newline`, etc.
+
+
+Common Lisp
+-----------
+
+References:
+- [Common LISP Specification][cl], 1994.
+  - [§2 Syntax][cl§2], 1994.
+
+Naming conventions:
+- `nil`, `t`. (`()` and `'()` are also `nil`.)
+
+The Common Lisp _reader_ reads a single character and then dispaches on its
+_syntax type._ [cl§2.1.4] "Character Syntax"; [cl§2.2] "Reader Algorithm."
+
+- _Invalid._ Error.
+- _Whitespace:_ "newline", TAB, LF, VT, CR, space.
+  Character is discarded; reader restarts.
+- _Macro character:_ `#` non-terminating. `"'(),;` and backtick terminating.
+  Associated macro function called; see below.
+- _Single escape:_ `\` (preserves case of next char).
+  Next char _c_ read; EOF is error. _c_ treated as a consituent and
+  used to start a token.
+- _Multiple escape:_ `|` (start/end of group of case-preserved chars).
+  Starts a token.
+- _Constituent:_ BS, DEL, `$%&*+-./:<=>@^_~`, `0-9A-Za-z`. `!?[]{}`✱.
+  Starts a token.
+
+Consituent characters additionaly have traits: alphabetic, digit, package
+marker, plus sign, minus sign, dot, decimal point, ratio marker, exponent
+marker, and invalid. Additionally some are _alphadigit,_ meaning digit if
+the current input base is higher than the charactedr's value, otherwise
+alphabetic.
+
+> Whitespace characters serve as separators but are otherwise ignored.
+> Constituent and escape characters are accumulated to make a token, which is
+> then interpreted as a number or symbol. Macro characters trigger the
+> invocation of functions (possibly user-supplied) that can perform arbitrary
+> parsing actions. Macro characters are divided into two kinds, terminating
+> and non-terminating, depending on whether or not they terminate a token.
+
+Each macro character has an associated function, called by the reader on
+encountering it, which returns the parsed object or nothing if the
+following text is ignored. Non-terminating macro chars in the middle of a
+token are not treated specially; terminating macro chars terminate the
+token.
+
+The [list of `#` parsers][cl§2.4.8] is large.
+- Control chars are generally errors
+- `#` followed by `!?[]{}`: all reserved for the user.
+- `#(`: simple vector; `#*`: bit vector; `#a`: array.
+- `#|`: balanced comment.
+- `#c`: complex number.
+- `#b`, `#o`, `#x`: binary, octal, hex.
+- `#Nr`: radix _n_ number.
+- `#s`: structure
+- A bunch more.
+
+#### Case in Common Lisp
+
+In CL function names are case-sensitive, and the standard library names are
+all upper-case. The [_readtable_][cl:readtable] has a case attribute that
+can be set to `:upcase` (default), `:downcase`, `:preserve` or `:invert`.
+[cl§23.1.2]. The default converts all symbol text to upper case except for
+things that are escaped (i.e., `foo` → `FOO`, but `|foo|` → `foo`).
+
+This also affects printing, along with [`*print-case*`], and in a somewhat
+complex way. [cl§22.1.3.3.2] "Effect of Readtable Case on the Lisp
+Printer."
+
+Maybe we want to do something like this but in the other direction on
+systems without lower-case input and/or output. (But what about those with
+charsets actually missing lower-case characters?)
+
+#### Types
+
+Character constants are `\#x` where _x_ (CS) is a printable character or
+space (macro chars ok) , or `\#name` where _name_ is `Space`, `Newline`,
+(always supported), `Page` etc. (optional).
+
+
+Other References
+----------------
+
+* McCarthy, ["History of Lisp"][mac79], 1979-02-12.  
+  Information about early development of the initial key ideas (1956-58)
+  and the first language implementation (1958-62).
+
+* Steele, Gabriel, [The evolution of Lisp][ste96a].  
+  Implementations and hardware. Specific langauge features.  
+  Above link is uncut version; a slightly shorter version [[ste96b]] was
+  published in a book derived from HOPL II.
+
+* CHM Software Preservation Group, [History of Lisp][chm], ongoing.
+  Web pages covering many specific Lisp systems in detail, including
+  links to many papers and source code.
+
+
+<!-------------------------------------------------------------------->
+
+<!-- Scheme -->
+[R⁰RS]: https://dspace.mit.edu/bitstream/handle/1721.1/5794/AIM-349.pdf
+[R⁰RS]: https://standards.scheme.org/official/r0rs.pdf
+[R⁵RS]: https://standards.scheme.org/official/r5rs.pdf
+
+<!-- Common Lisp -->
+[`*print-case*`]: https://novaspec.org/cl/v_print-case
+[cl:readtable]: https://novaspec.org/cl/t_readtable
+[cl]: https://novaspec.org/cl
+[cl§2.1.4]: https://novaspec.org/cl/2_1_Character_Syntax#sec_2_1_4
+[cl§2.2]: https://novaspec.org/cl/2_2_Reader_Algorithm
+[cl§2.4.8]: https://novaspec.org/cl/2_4_Standard_Macro_Characters#sec_2_4_8
+[cl§22.1.3.3.2]: https://novaspec.org/cl/22_1_The_Lisp_Printer#sec_22_1_3_3_2
+[cl§23.1.2]: https://novaspec.org/cl/23_1_Reader_Concepts#sec_23_1_2
+[cl§2]: https://novaspec.org/cl/2_Syntax
+
+<!-- Other References -->
+[chm]: https://www.softwarepreservation.org/projects/LISP/
+[mac79]: http://jmc.stanford.edu/articles/lisp/lisp.pdf
+[ste96a]: https://www.dreamsongs.com/Files/HOPL2-Uncut.pdf
+[ste96b]: https://dl.acm.org/doi/10.1145/234286.1057818

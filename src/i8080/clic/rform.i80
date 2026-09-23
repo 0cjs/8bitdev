@@ -168,7 +168,7 @@ rcontlist   call rtok
                                 ;   terminator that may have been pushed back
             cp   ')'            ; close paren immediately follows open paren?
             jp   NZ,.startlist  ;    no: we're parsing a real list
-            ld   DE,NIL         ;   yes: it's just a NIL
+            ld   DE,C_NIL       ;   yes: it's just a #n
             ret
             ;
 .startlist  call hcons          ; DE ← new cons cell
@@ -224,9 +224,9 @@ rcontlist   call rtok
 .done       ;   We enter with DE pointing to the cdr of a cons cell whose
             ;   car has been filled with the previous parsed token.
             ex  de,hl
-            ld  (hl),LB(NIL)    ; terminate list
+            ld  (hl),LB(C_NIL)  ; terminate list
             inc hl
-            ld  (hl),MB(NIL)
+            ld  (hl),MB(C_NIL)
             pop  de             ; restore head of list we generated
             ret                 ; and return it
 

@@ -1,7 +1,7 @@
 from    testmc.i8080  import  Machine
 from    src.ptfuncs  import XFAIL
 from    src.clic.objref  import \
-    NIL, T, asbytes, sym1 as s1, sym2 as s2, smallint as i
+    NIL, TRUE, asbytes, sym1 as s1, sym2 as s2, smallint as i
 from    random  import randrange
 import  pytest
 
@@ -35,8 +35,8 @@ def test_zipconst():
 param   = pytest.mark.parametrize
 
 @param('asm_sym, expected', [
-    ('symNI',   s2('ni')),
-    ('symT',    s1('t')),
+    ('sym_hN',  s2('#n')),
+    ('sym_hT',  s2('#t')),
 ])
 def test_asm_syms(m, S, asm_sym, expected):
     assert expected == S[asm_sym]
@@ -64,7 +64,7 @@ def test_numberQ(m, S, R, input, isnumber):
     #   sym1
     ('\x00',   s1('\x00')),
     ('a',      s1('a')),
-    ('u',      s1('u')),    # >'t' to test other side of `cpBCDE`
+    ('t',      s1('t')),
     (b'\xFF',  s1(b'\xFF')),
 
     #   sym2: simpler tests that help debug
@@ -78,8 +78,8 @@ def test_numberQ(m, S, R, input, isnumber):
     #   sym2: we consume but ignore everything after the first two chars.
     ('defgh#', s2('de')),
     #   sym2: symbols that should be converted to (intrinsic) consts.
-    ('nil',    NIL),             ('t',      T),
-    ('no',     s2('no')), # second char differs from 'nil'
+    ('#n',     NIL),        ('#t',     TRUE),
+    ('ni',     s2('ni')),   # old version 'nil' no longer special
     #   sym2: symbols that start like ints.
     ('0h',     s2('0h')),   ('12345m', s2('12')),
     ('+5s',    s2('+5')),   ('-999-',  s2('-9')),

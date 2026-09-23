@@ -12,7 +12,7 @@
 __all__ = [
     'asbytes',                              #   Utility
     'isptr', 'isconst',                     #   Predicates
-    'ptr', 'const', 'NIL', 'T', 'FREE',     #   Construction
+    'ptr', 'const', 'NIL', 'TRUE', 'FREE',  #   Construction
     'smallint', 'sym12', 'sym1', 'sym2',
     'hconslist',                            #   Inspection/Printing.
     'refstr', 'hconsdump', 'hconsprint',
@@ -79,7 +79,7 @@ def const(n):   # tag %00
     return n
 
 NIL     = const(0);     ' Const NIL or ().'
-T       = const(4);     ' Const TRUE.'
+TRUE    = const(4);     ' Const TRUE.'
 FREE    = const(0xCC);  ' Const for free heap cell.'
 
 def smallint(i):    # tag %01

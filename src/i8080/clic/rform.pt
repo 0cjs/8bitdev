@@ -121,8 +121,8 @@ def test_form_err_close(m, R, S, loadbios):
     ['x ',              s1('x')],
     #   Various types.
     ['() ',             NIL],
-    ['nil ',            NIL],
-    ['t ',              T],
+    ['#n ',             NIL],
+    ['#t ',             TRUE],
     ['foobar ',         s2('fo')],
     ['1234 ',           i(1234)],
 ])

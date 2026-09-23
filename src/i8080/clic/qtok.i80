@@ -2,13 +2,13 @@
 ;
 ;   Requires: arith, qhex
 
-;   Intrinsic constants.
-NIL         equ  $0000      ; nil (empty list)
-T           equ  $0004      ; t (true)
+;   (Intrinsic) consts.
+C_NIL       equ  $0000      ; #n (empty list)
+C_TRUE      equ  $0004      ; #t (true)
 
-;   Precomputed symbols to match for conversion to (intrinsic) consts.
-symNI       equ  $EEA6      ; 'ni'
-symT        equ  $7482      ; 't'
+;   Precomputed sym2s to match for conversion to (intrinsic) consts.
+sym_hN      equ  $A3BA      ; '#n'
+sym_hT      equ  $A3D2      ; '#t'
 
 ;   Currently the input base can't be changed, but this reminds that we
 ;   can make it dynamicly settable, if we decide we want to.
@@ -148,12 +148,7 @@ qtok        ld   a,c
             ld   d,a            ; 8-bit char
             ld   e,$82          ; sym1 sentinel and tag
             jp   NZ,.char2      ; test DEC C done above
-            ld   bc,symT        ; 't' → TRUE
-            call cpBCDE
-            scf                 ; clear carry for return
-            ccf
-            ret  NZ
-            ld   de,T
+            or   a,a            ; clear carry for return
             ret
             ;
 .char2      rla                 ; first char has high bit set?
@@ -178,10 +173,19 @@ qtok        ld   a,c
             dec  c
             jp   NZ,.skip
 
-            ld   bc,symNI       ; 'ni' → NIL
+            ld   bc,sym_hN      ; '#n' → C_NIL
             call cpBCDE
-            scf                 ; clear carry for return
-            ccf
-            ret  NZ
-            ld   de,NIL
+            jp   Z,.c_nil
+            ld   bc,sym_hT      ; '#t' → C_TRUE
+            call cpBCDE
+            jp   Z,.c_true
+            or   a,a            ; clear carry for return
+            ret
+
+.c_nil      ld   de,C_NIL
+            or   a,a            ; clear carry for return
+            ret
+
+.c_true     ld   de,C_TRUE
+            or   a,a            ; clear carry for return
             ret

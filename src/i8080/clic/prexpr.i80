@@ -2,8 +2,6 @@
 ;
 ;   Requires: prchar, prhexA, prnyb, prdec_u16, prstr
 
-PR_PTR      equ  '#'        ; pointer prefix
-
 ;   ♠HL ♣ABC ♡HL    Print a cons or cdr pointed to by HL.
 ;   This makes no attempt to follow references, but prints pointers
 ;   as a hex value (i.e., `P_HEXVAL` plus four hex digits).
@@ -30,7 +28,9 @@ prcell      push hl
 .ptr        ld   a,b            ; value MSB
             or   a,a            ; is zero?
             jp   z,priconst     ;   yes: it's a const
-            ld   a,PR_PTR       ;    no: it's a pointer
+            ld   a,'#'          ;    no: it's a pointer
+            call prchar
+            ld   a,'p'
             call prchar
             ld   a,b
             call prhexA
@@ -124,9 +124,9 @@ priconst    ld   b,c            ; save const value
             or   a,a        ; end of list of names?
             jp   nz,.curname;    no: see if this name is the one
             ;
-            ld   a,'c'      ;   yes: unknown constant 'c#xx'
+            ld   a,'#'      ;   yes: unknown constant '#cXX'
             call prchar
-            ld   a,'#'
+            ld   a,'c'
             call prchar
             ld   a,b        ; saved constant ID
             call prhexA
@@ -135,6 +135,6 @@ priconst    ld   b,c            ; save const value
             ;
 
 iconst_names
-            db   'nil',0
-            db   't',0
+            db   '#n',0
+            db   '#t',0
             db   0

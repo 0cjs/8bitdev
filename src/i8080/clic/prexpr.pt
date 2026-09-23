@@ -20,12 +20,13 @@ test_rig = '''
 param   = pytest.mark.parametrize
 
 @param('sym, s', [
-    (NIL,               b'nil'),
-    (T,                 b't'),
-    (const(0xFC),       b'c#FC'),
-    (ptr(0x43BC),       b'#43BC'),
-    (ptr(0x0100),       b'#0100'),
-    (ptr(0xFFFC),       b'#FFFC'),
+    (NIL,               b'#n'),
+    (TRUE,              b'#t'),
+    (const(0x0C),       b'#c0C'),
+    (const(0xFC),       b'#cFC'),
+    (ptr(0x43BC),       b'#p43BC'),
+    (ptr(0x0100),       b'#p0100'),
+    (ptr(0xFFFC),       b'#pFFFC'),
 
     (sym1('\x00'),      b'\x00'),
     (sym1('a'),         b'a'),

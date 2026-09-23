@@ -51,7 +51,7 @@ def test_ptr_errors(badval):
 
 @param('oref, expected', [
     (NIL,           0x0000),
-    (T,             0x0004),
+    (TRUE,          0x0004),
     (const(0x00),   0x0000),
     (const(0xFC),   0x00FC),
 ])
@@ -203,7 +203,7 @@ def _dumplines(capsys, *args):
     hconsdump(*args)
     return capsys.readouterr().out.splitlines()
 
-@param('ref', [ T, smallint(123), sym1('x'), sym2('xy'), ])
+@param('ref', [ TRUE, smallint(123), sym1('x'), sym2('xy'), ])
 def test_hconslist_atom(ref):
     print('ref=${ref:04X}')
     assert ref == hconslist(None, ref)

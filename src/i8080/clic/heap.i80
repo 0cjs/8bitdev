@@ -21,7 +21,7 @@
 ; ----------------------------------------------------------------------
 
 ;   Consts.
-FREE        equ  $00CC      ; unallocated cons cell
+C_FREE      equ  $00CC      ; unallocated cons cell
 
 ;   ♣* ┃ Initialise the cons heap.
 ;   Warning: init of a zero-length heap will wipe memory.
@@ -36,7 +36,7 @@ hconsini    ld   hl,(hcons_pbot)
             ld   c,l
             ld   h,d            ; HL ← bottom of heap
             ld   l,e
-            ld   de,FREE
+            ld   de,C_FREE
 .clear      ld   (hl),e
             inc  hl
             dec  bc

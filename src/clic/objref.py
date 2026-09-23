@@ -47,14 +47,14 @@ def isconst(ref):   return ref & 0b11 == 0x00 and (ref>>8) == 0x00
 
 def ptr(addr):  # tag %00
     ''' Construct reference: pointer to `addr`. This may not be used to
-        create "intrinsic constant" pointers; use `const()` for that.
+        create (intrinsic) const refs; use `const()` for that.
 
         If the tag (LSbits) is not %00 or the pointer is not in the
         range $0100 through $FFFC, a `ValueError` is raised.
 
         XXX This assumes a 16-bit address space. It's also not clear
-        if not allowing creation of intrinsic constant pointers with
-        this is good or inconvenient.
+        if not allowing creation of const pointers with this is good or
+        inconvenient.
     '''
     if (addr < 0x0100) or (addr > 0xFFFF):  raise ValueError(
         f'pointer out of range: ${addr:04X}')
@@ -65,7 +65,7 @@ def ptr(addr):  # tag %00
 
 
 def const(n):   # tag %00
-    ''' Construct reference: intrinsic constant `n`.
+    ''' Construct reference: (intrinsic) const `n`.
 
         `n` includes the %00 tag bits. If the tag is not %00 or the
         constant is not in range, a `ValueError` is raised. The
@@ -75,12 +75,12 @@ def const(n):   # tag %00
         f'Instrinsic const out of range: ${n:02X}')
     tag = n & 0x03
     if tag != 0:  raise ValueError(
-        f'bad tag bits %{tag:02b} for intrinsic const: ${n:02X}')
+        f'bad tag bits %{tag:02b} for const: ${n:02X}')
     return n
 
-NIL     = const(0);     ' Intrinsic constant NIL or ().'
-T       = const(4);     ' Intrinsic constant TRUE.'
-FREE    = const(0xCC);  ' Intrinsic constant for free heap cell.'
+NIL     = const(0);     ' Const NIL or ().'
+T       = const(4);     ' Const TRUE.'
+FREE    = const(0xCC);  ' Const for free heap cell.'
 
 def smallint(i):    # tag %01
     ''' Given an integer between -8192 and 8191, convert it to a smallint
@@ -162,7 +162,7 @@ def refstr(word):
 
     if   tag == 0b00:
         if word >= 0x100:  return f'p:{word:04X}  '         # pointer
-        else:              return f'c:{_conststr(word)}    ' # intrinsic const
+        else:              return f'c:{_conststr(word)}    ' # const
 
     elif tag == 0b01:                                       # smallint
         value = word >> 2
@@ -192,8 +192,8 @@ _CONSTSTR_MAP = {
 }
 def _conststr(word):
     ''' Return a two-character string with a human-readable representation of
-        the intrinsic constant represented by `word`. Throws a `RuntimeError`
-        for invalid constants.
+        the const represented by `word`. Throws a `RuntimeError` for
+        invalid constants.
     '''
     s = _CONSTSTR_MAP.get(word)
     if s is not None:  return s

@@ -26,10 +26,10 @@ prcell      push hl
             pop  hl             ; restore original pointer ro value
             ret
             ;
-            ;   pointer or intrinsic constant in bc
+            ;   pointer or (intrinsic) const in bc
 .ptr        ld   a,b            ; value MSB
             or   a,a            ; is zero?
-            jp   z,priconst     ;   yes: it's an intrinsic constant
+            jp   z,priconst     ;   yes: it's a const
             ld   a,PR_PTR       ;    no: it's a pointer
             call prchar
             ld   a,b
@@ -99,9 +99,9 @@ prcell      push hl
             ret
 
 ; ----------------------------------------------------------------------
-;   ♠C ♣A   Print representation of the intrinsic constant LSB given in C.
+;   ♠C ♣A   Print representation of the (intrinsic) const LSB given in C.
 ;           Assumes HL has been saved on the stack.
-priconst    ld   b,c            ; save intrinsic constant value
+priconst    ld   b,c            ; save const value
             ld   a,c
             or   a,a            ; clear carry
             rrca                ; shift 0,4,8,… right to get index 0,1,2,…

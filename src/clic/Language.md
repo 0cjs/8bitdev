@@ -6,6 +6,19 @@ See also:
 - [`library.md`][lib]: CLIC Standard Library.
 - [`console.md`][con]: Console I/O, case and special character handling.
 
+General Notes
+-------------
+
+### Relationship to Other Lisps
+
+While inspired particularly by Scheme (and being a Lisp-1 — functions and
+variables are in the same namespace), CLIC has many Lisp 1.5/Common
+Lisp-like features as well. Names are often utterly different; they've been
+picked for ease of understanding and memory by new programmers; typical
+users are expected to have no experience with any Lisp at all.
+
+### Character Set
+
 CLIC works internally in full 8-bit characters ($00–$7F ASCII and $80–$FF
 machine-specific) with case-sensitive (CS) symbols and characters. Use on
 case-insensitive (CI) systems (typically ones that support upper case only)
@@ -13,9 +26,22 @@ is [handled through the console drivers][con] that use an input prefix
 character, alternate display modes and/or character substitutions to allow
 both input and output of the full character set.
 
-### The Reader
+#### Upper vs. Lower Case
 
-### General Notes
+CLIC uses case-sensitive symbols. Standard library symbols (and user
+symbols) are generally lower case but with upper case allowed where wanted.
+The [console driver][con] handles using upper case for lower case, escaping
+"true" upper case, as described above.
+
+This is similar (in reverse) to Common Lisp's ability to use lower case I/O
+for upper case symbols except that CL does this via its _readtable_ system
+(see [`lisp.md`]) rather than outside of the language itself.
+
+
+The Reader
+----------
+
+### Parsing Procedure
 
 We are currently leaning toward the CL way of doing things: read and store
 an entire token (which uses a little bit of memory, but no more than a
@@ -26,14 +52,15 @@ tokens like `1+` or `30cm` and interpret them as symbols. This leaves
 numeric parsing failures to be just overflows, it seems.
 
 This gives us the following general parsing procedure:
-1. Tokenizer (`rtok`): reads a token typed into a buffer.
+1. Tokenizer (`rtok`): reads a token into a buffer, stopping read when the
+   token is complete (1-char lookahead required).
 2. Token parse (`qtok`): parses token buffer to an [object][obj].
-3. Form read (`rform`): repeatedly calls the above to read and parse tokens
-   and generate the AST, storing it in the heap.
+3. Form read (`rform`): repeatedly calls both the above to read and parse
+   tokens and generate the AST, storing it in the heap.
 4. Something calls `rform`, gets back a pointer to the AST, and evals that
    in a given environment.
 
-#### Tokenization
+### Tokenization
 
 (XXX not all this is implemented yet.)
 
@@ -73,72 +100,103 @@ we have no source files. Consider:
 - Inline objects (Interlisp): `(+ 1 2 (# "comment") 3)`. More work to skip
   in various places and doesn't work in quoted lists.
 
-#### Self-evaluating Objects
+Notes:
+- These rules have been explicitly designed to allow using `'` as a 'prime'
+  on symbols so you can have functions/variables `f'`, `x'`, etc. This is
+  not allowed in CL (because `'` is a terminating macro character) or
+  Scheme.
+- The above means that, also unlike CL/Scheme, you must have a space before
+  a quote: `(f'a)` is `(f (quote a))` in CL/scheme, but a single token in
+  that list in CLIC.
 
-Numbers e.g. `12` are _self-evaluating:_ they do not need to be quoted.
-Compare:
+### Numbers
 
-    (cons  12 '())
-    (cons '12 '())
-    (cons   x '())
-    (cons  'x '())
+If a whole token can parse properly as a number, it is parsed as a number.
+Like CL and unlike Scheme, if it can't be parsed as a number it's a symbol,
+regardless of how close to a number it gets: e.g., `+0123a` is a symbol.
 
-#### Numbers
+This can be problematic. In CLIC variants with 2-char max symbols: `12O`
+(letter O at the end) doesn't parse as a number and becomes the symbol `12`
+which on output cannot be differentiated from the number `12`. Even in full
+CLIC `12O` and `120` can be difficult to distinguish. Fixing this is
+currently under consideration, but seems to be a lot of work. We ideally do
+not want a system where, like Scheme, you can't have `1+` as a symbol for
+increment.
 
-It would be interesting to take tokens like `30cm` and rewrite them as `(cm
-30)`, giving a nice "units" functionality, but we need to investigate what
-happens there when letters become a valid part of numbers. Consider
-`314e-2`, etc.; how is `123e` interpreted? Might we even use the "extract
-and apply a symbol" idea for this, turning `1.23e4` into `(e 1.23 4)`? What
-kinds of symbol names do we disallow when we do this? Do we want to
-disallow e.g. `2nd` as a function name? Is that getting more Scheme-like?
+XXX Valid formats for numbers need to be documented here.
 
-Note that the above doesn't work for things like hex input: `01ABx` would
-be split into `01` and `ABx`. We're intending to use `$01AB`/`$0A` for
-machine words/bytes (which are different from smallints and bigints), but
-it would be nice to be able to enter smallints and bigints in hex and
-binary as well.
+### Characters
 
-#### Characters
+While some versions of CLIC will have strings and some will not, in all
+versions of CLIC sym1 is re-used as the char type. This allows reading
+standard `'c` syntax for printable characters. Non-printing chars use the
+following escapes which are processed by the reader:
 
-Probably want to use the `#\c` syntax used by both CL and Scheme (giving a
-sym1 if we have no real chars), but that's definitely heading towards
-making `#` special, since we don't have two-char lookahead.
+    \0      $00 NUL
+    \a      $07 BEL terminal bell ("alert")
+    \b      $08 BS  backspace
+    \t      $09 TAB
+    \n      $0A LF  linefeed
+    \v      $0B VT  vertical tab
+    \f      $0C FF  form feed
+    \r      $0D CR  carriage return
+    \e      $1B ESC escape
+    \s      $20     space
+    \"      $22 "   double quote
+    \'      $27 '   single quote
+    \p      $28 (   open parenthesis
+    \q      $29 )   close parenthesis
+    \\      $5C \   backslash
+    \d      $7F DEL
+    \xHH    $HH (any character by hex value; hex chars are case-insensitive)
 
-#### NIL vs. () vs. '()
+Any unrecognised escape sequence (e.g., `\z`) is a parse error.
 
-Scheme has no `nil`, and `()` is not self-evaluating (self-quoting); you
-must use `'()`. (And remember that `#f` is separate from these, `'()` is
-true in a boolean context.) In CL `NIL`, `()` and `'()` are all equivalent.
+Note that none of the above include (and may not include) any of the
+tokenizer's termination characters. This allows the tokenizer to know
+nothing about character escaping.
 
-What do we want to do? Clearly `()` and the like is going to require some
-special work from the tokenizer, and perhaps different work for
-`'()`/`(quote ()`. (If we even have the `quote` macro--is it needed?)
+(Adding a separate char type is possible and there's a note in
+[`objects.md`][obj] §"Sym1/sym2" about how to do this, should it become
+necessary.)
 
-#### Upper vs. Lower Case
 
-Scheme symbols are case-insensitive. This seems awkward. CL symbols are
-entirely upper-case (at least in the standard library). CL deals with this
-by making the default [_readtable_][cl:readtable] case attribute to
-`:upcase` and [`*print-case*`] to `:downcase`. Both these affect only
-symbols.
+The Evaluator
+-------------
 
-Our situation is different. Like CL we'd like to have case, but go with
-lower-case for everything by default. And we need to deal with systems that
-cannot print lower case, so for string output we need to convert to upper
-case on those. (Maybe print with the upper-case escapes, e.g., `"Hello"` →
-`"\HELLO"`?.)
+### Self-evaluating Objects
 
-#### Miscellaneous
+A _self-evaluating_ object is one that, when passed to `eval`, comes back
+as itself. For example, when the list `(list b 2 'b '2)` is read it becomes
+a list of five objects in the heap; an `eval` of it will:
+0. Look up the value of `list` in order to get the function code to apply.
+1. Look up the value bound to `b` and use that.
+2. Use `2` for `2` because it's self-evaluating.
+3. Use `b` for `'b` because it's quoted.
+4. Use `2` for `'2` because it's quoted (quoting doesn't care whether `2`
+   is self-evaluating or not: `2` is never evaluated).
 
-CL does not appear to allow variables ending in `'`, e.g., `f'`, maybe
-because `'` is a terminating macro char? Scheme does. Let's allow this in
-CLIC? Need to examine the Scheme identifier parsing on this. (Is CL `'`
-terminating so you can say e.g. `(f ('a))`? I think not )
+(Warning: the above steps should not be taken to imply an evaluation
+_order,_ just that each step number is associated with the argument in that
+position.)
 
+In CLIC symbols and non-empty lists are evaluated; everything else is
+self-evaluating. That includes empty lists (`#n` or `()`), consts (`#t`,
+etc. as listed in [`objects.md`][obj]) and numbers.
+
+Note that, unlike Scheme, `()` does not need to be quoted.
+
+
+XXX TODO
+--------
+
+Summarise special reader forms?
+- `#rHHHH` generic ref form.
+- `#pHHHH` pointer form?
 
 
 <!-------------------------------------------------------------------->
+[`lisp.md`]: ./lisp.md
 [con]: ./console.md
 [lib]: ./library.md
 [obj]: ./objects.md

@@ -55,14 +55,14 @@ def test_ptr_errors(badval):
     (const(0x00),   0x0000),
     (const(0xFC),   0x00FC),
 ])
-def test_intrinsic_constants_good(oref, expected):
+def test_const_good(oref, expected):
     assert oref == expected
 
 @param('badval', [
     -1, 0x100,                          # out of range
     1, 2, 3, 0xFB, 0xFD, 0xFE, 0xFF,    # invalid tag bits
 ])
-def test_intrinsic_constants_errors(badval):
+def test_const_error(badval):
     with pytest.raises(ValueError) as ex:
         const(badval)
 
@@ -172,7 +172,7 @@ def test_symcharstr(pos, char, expected):
     (sym2(b'd\x0F'),    's:_d0F  '),
     (sym2(b'\x7F\x00'), 's:7F00  '),
     (sym2('__'),        's:____  '),
-    #   Intrinsic constants.
+    #   Consts
     (const(0x00),       'c:#n    '),    # nil
     (const(0x04),       'c:#t    '),    # true
     (const(0x08),       'c:08    '),    # (unknown type)

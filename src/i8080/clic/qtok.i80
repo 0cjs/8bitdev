@@ -6,7 +6,7 @@
 NIL         equ  $0000      ; nil (empty list)
 T           equ  $0004      ; t (true)
 
-;   Precomputed symbols to match for conversion to intrinsic constants.
+;   Precomputed symbols to match for conversion to (intrinsic) consts.
 symNI       equ  $EEA6      ; 'ni'
 symT        equ  $7482      ; 't'
 

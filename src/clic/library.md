@@ -12,6 +12,8 @@ Notation:
 - Optional params are preceeded by an inverted question mark, `¿`.
 - Ellipses `…` indicate previous parameters may be repeated.
 
+#### Constants
+
 #### Control Flow
 
 - ★`(cond (PRED ¿FORM) …)` Conditional choice.

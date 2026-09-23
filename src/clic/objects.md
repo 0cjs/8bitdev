@@ -1,24 +1,29 @@
-Objects for a Small Language
-============================
+CLIC Objects and References
+===========================
 
-This is just kicking around some ideas for the data types one would
-want for a small language to run on an 8-bit microprocessor system.
-
-Binary numbers are prefixed with "%"; hexadecimal numbers are prefixed
-with "$". "MSB"/"LSB" mean most/least significant byte; "LSb"/"LSbit"
-means least significant bit.
+Document conventions:
+- A _byte_ is eight bits; a _word_ is 16 bits; a _dword_ is 32 bits.
+- Binary numbers are prefixed with `%`. For readability they may use
+  punctuation to separate substrings of bits, e.g. `0101.1010`.
+- Hexadecimal numbers are prefixed with `$`. Two digits generally reprsent
+  a byte, four a word, with leading zeros where necessary.
+- "MSB"/"LSB" mean most/least significant byte; "LSb"/"LSbit" means least
+  significant bit.
+- For print/read forms, `H` specifies a hex digit (e.g., `#pHHHH` for a
+  pointer specified by four hex digits).
 
 
 Representation of Object References and Data
 --------------------------------------------
 
-_Object references_ are 16-bit _words_ (in native byte order) containing
-_[tagged]_ values that determine the type of the reference. When the value
-of a reference is a _pointer_, it points to either a _cons cell_ or object
-data _obdata_ in memory (but not necessarily in a dynamically allocated
-_heap_). Otherwise the reference is _intrinsic_ and it alone contains all
-information about the object itself. (Intrinsic constants, smallints, and
-sym1/sym2 references are intrinsic references.)
+_Object references_ (or in short form _ref_) are 16-bit _words_ in native
+byte order containing _[tagged]_ values that determine the type of the
+reference. When the value of a reference is a _pointer_, it points to
+either a _cons cell_ or object data _obdata_ in memory (but not necessarily
+in a dynamically allocated _heap_). Otherwise the reference is _intrinsic_
+(usually called "immediate" in other languages) and it alone contains all
+information about the object itself. (Consts, smallints, sym1s and sym2s
+are intrinsic references.)
 
 In memory, cons cells and obdata are [aligned] to _dword_ (32-bit or
 4-byte) addresses. They may be stored anywhere in the full address
@@ -41,23 +46,21 @@ significant byte (MSB) of a reference, or the first two bytes of obdata,
 determine the type.
 
      MSB  LSbs  Type
-     $00  %00   Intrinsic constant; type and value determined by bits 7-2
-    ≠$00  %00   Pointer to a cons cell or object data
-     any  %01   Smallint: 14-bit signed integer
-     any  %10   sym1 or sym2
-     any  %11   Obdata header; never an object reference
+     $00  %00   'const'; type and value determined by bits 7-2
+    ≠$00  %00   'pointer': to a cons cell or object data
+     any  %01   'smallint': 14-bit signed integer
+     any  %10   'sym1' or 'sym2'
+     any  %11   'obdata' header; never an object reference
 
 Notes:
-- Because the intrinsic constants (MS=$00 LSbs=%00) share the format of
-  pointers, addresses the lowest 256 memory locations ($00nn) cannot
-  be used for object data storage. Most 8-bit processors have other
-  more important uses for this page anyway (zero page for 6800/6502;
-  interrupt vectors for 8080).
-- A pointer may point to either a cons cell or obdata (unless two heaps are
-  used; see below); the type of the pointer's target is determined by
-  whether or not the first two bytes of the target are tagged as an obdata
-  header.
-- smallint has tag %01 for easier arithmetic; see the further details below.
+- Because const (MS=$00 LSbs=%00) shares the format of pointer, addresses
+  the lowest 256 memory locations ($00nn) cannot be used for object data
+  storage. Most 8-bit processors have other more important uses for this
+  page anyway (zero page for 6800/6502; interrupt vectors for 8080).
+- A pointer may point to either a cons cell or obdata; the type of the
+  pointer's target is determined by whether or not the first two bytes of
+  the target are tagged as an obdata header.
+- smallint has tag %01 for easier arithmetic; see the details below.
 
 ### Tag Format and Reference Data Types
 
@@ -69,17 +72,63 @@ Objects marked `R` may contain further references and must be
 recursively followed by the GC.
 
     MSB   LSbits    R  Description
-    00   000000-00     nil
-    00   000001-00     true, t
-    00   110011-00     ($CC = free cell: mnemonic CC=clear cell)
-    00   ??????-00     (other special values?)
+    00   000000-00     #n (Nil)
+    00   000001-00     #t (True)
+    00   110011-00     $CC = free cell: mnemonic 'clear cell'
+    00   ??????-00     other consts; see below
     AA   aaaaaa-00  R  (AA≠00) pointer to object, address AAaaaaaa00.
     NN   nnnnnn-01     smallint: -8192 to 8191
     cc   100000-10     sym1 (1-char symbol)
     BB   bbbbbb-10     sym2 (2-char symbol)
     LL   ffffff-11  R  obdata header: length LL, format number ffffff
 
-#### Smallint
+
+Object Reference Details
+------------------------
+
+All references can be printed and read as `#rHHHH`. This is not usually
+done as all output routines know more specific forms, but can be useful for
+debugging output and on input when doing systems hacking.
+
+(XXX The places where we accept `#rHHHH` need to be thought out carefully
+since misuse of this can result in quite random behaviour.)
+
+### Const
+
+Consts are typically printed a form specified for that particular constant,
+e.g., `#n` for $0000 (nil) or `#t` for $0004 (true). Consts without a
+specified form are printed as `#cHH`. `#cHH` is never accepted as input
+(because we don't know what to do with one that has incorrect tag bits);
+instead `#rHHHH` would be used.
+
+There are 64 _const_ values available: $00, $04, $08, …, $FC. The lower 32
+(LSB MSbit clear) are user-visible and generally have a `#…`
+representation. The upper 32 (MSbit set) are for internal use and have no
+user-visible representation, though debug print routines will give `#cHH`.
+
+The defined user consts are (with reader and assembly language names):
+
+- $00 `#n` `C_NIL`: 'Nil', empty list.
+- $04 `#t` `C_TRUE`: True.
+
+The defined system consts are:
+
+- $CC `C_FREE`: Free cons cell. Mnemonic for hex dumps: 'clear cell.'
+
+### Pointer
+
+Printed as `#pHHHH`. This is used when pointers aren't being followed, but
+typical output will follow the pointers instead. (E.g., `(a (b 3) 4)`
+instead of `(a #p10AB 4)`.) Never read (because we don't know what to do
+with one that has incorrect tag bits); `#rHHHH` would be used instead.
+
+Pointers may point to any 4-byte-aligned address in memory. There is no
+assumption about whether they point into a heap (see below), or a heap of
+any particular kind (code following a pointer must be prepared to handle
+obdata even in a "cons heap"). It's typical for pointers to point into
+pre-defined data in ROM.
+
+### Smallint
 
 A smallint is a two's complement signed 14-bit value (range decimal -8192
 to 8191) stored shifted left two bits: bits 13-6 in the MSB and bits 5-0 in
@@ -95,7 +144,7 @@ subtractions of smallints with no preprocessing of the values.
      ────────── LSB ──────────     ────────── MSB ──────────
     | 05 04 03 02 01 00  ₀  ₁ |   | 13 12 11 10 09 08 07 06 |
 
-#### Sym1/sym2
+### Sym1/sym2
 
 A sym1 or sym2 is a 1- or 2-character symbol packed into a tagged
 reference. The two forms are:
@@ -174,10 +223,10 @@ cell heap); see below for how this might help GC.
 Using separate heaps for cons cells and obdata values may speed up
 allocation and GC because the former heap would contain only one size of
 object (dword), thus lengths never need be read and that heap doesn't need
-regular compaction if it maintains a free list. (This might be done with an
-intrinsic constant in the car and pointer to next free entry in the cdr.)
-But note the heap does need to be compacted before a load from external
-media. (And probably save as well, for a compact save.)
+regular compaction if it maintains a free list. (This might be done with a
+const in the car and pointer to next free entry in the cdr.) But note the
+heap does need to be compacted before a load from external media. (And
+probably save as well, for a compact save.)
 
 __Tiny Heap__ for very small memory systems:
 - This is intended to compete feature-wise with 4K BASICs.
@@ -305,7 +354,8 @@ Format details:
   interpreted as ASCII characters but they may be any byte values
   (including $00). Symbols are immutable once created in order to allow
   storage in ROM. Generally symbols would be unique, with new symbols being
-  intern'd to maintain uniqueness.
+  intern'd to maintain uniqueness. (But strings should not be intern'd? And
+  also they should self-evaluate: symbols should not.)
 
 - __symbol__ substring: _len=4_. Data are a pointer to a symbol, start
   point and length. Start point (0-based) plus length must not extend
@@ -352,11 +402,6 @@ reduces the range that can be represented by a floating point value.
 Types and Literals
 ------------------
 
-#### Special Constants
-
-- __nil__
-- __true__, __t__
-
 #### Modular Numbers
 
 Whenever a modular number is involved in an expression, the result is
@@ -368,9 +413,11 @@ always generate an error. This is intended to make it easy to do
 indexed addressing, e.g., `(+ $FF00 2)`.
 
 - __byte__ (__char__): Unsigned 8-bit value; modular arithmetic.
+  - OBSOLETE: sym1 now covers this, though we should still consider,
+    the following notation for literals which should be added to that
+    already in `Langauge.md`. §"Characters" if we decide to use it.
   - Literal: `$xx` where _xx_ is a one- or two-digit hexadecimal value
   - Literal: `%n` where _n_ is a 1-8 digit binary value.
-  - Literal: `:c` where _c_ is a character (potentially escaped; see below).
   - Uses: character; data for examine/deposit.
 
 - __word__: Unsigned 16-bit value; modular arithmetic.
@@ -440,23 +487,6 @@ section above.
 
 - __environment__:
 
-### Escaped Character Literals
-
-`\` (`↓` on TRS-80, `£` on VIC) followed by a single character; any
-chars not listed here generate a parse error. There are two sets.
-
-The "double-quote" set is used with symbol/string literals using `"…"`:
-
-    \               To escape itself
-    0bfrn           The usual codes for non-printing chars.
-    "               To escape closing quote.
-
-The "quote" set is all of the above, plus
-
-    '
-    ␢               Space ("blank") character
-    ()[]{}
-
 
 Considerations and Alternatives
 -------------------------------
@@ -496,22 +526,7 @@ Considerations and Alternatives
 
 - Add rational numbers type?
 
-#### Types and Literals
-
-A basic decision to make is whether or not we want to recognize
-non-symbol literals by the _initial chars_ of the literal, and
-generate an error if the rest of the format is not correct. If we do
-that certain strings such as `+123a` will be invalid; otherwise they
-would be valid symbols. The former seems better in that it's likely to
-catch programmer errors; using symbols like `12O` seems inadvisable.
-(Also, the former gives us room for future expansion of parsing, such
-as `1a0h` for hexadecimal, or `12cm` in a system with user-defined
-unit suffixes.)
-
-- __byte__: Other options considered for literal __char__ were:
-  - `^`: Not available on TRS-80 keyboard. `↑` in PET and TRS-80 charset.
-  - `&`: Looks bigger and more awkward than `:`.
-  - Haven't investigated use of any of these symbols in earlier LISPs.
+#### Types
 
 - __integer__: Making this a fixed size, rather than arbitrary
   precision, actually saves basically no effort since operations are

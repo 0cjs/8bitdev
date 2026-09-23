@@ -77,7 +77,7 @@ def test_numberQ(m, S, R, input, isnumber):
     ('Ab',     s2('Ab')),     ('~@',     s2('~@')),
     #   sym2: we consume but ignore everything after the first two chars.
     ('defgh#', s2('de')),
-    #   sym2: symbols that should be converted to intrinsic constants.
+    #   sym2: symbols that should be converted to (intrinsic) consts.
     ('nil',    NIL),             ('t',      T),
     ('no',     s2('no')), # second char differs from 'nil'
     #   sym2: symbols that start like ints.

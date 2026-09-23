@@ -20,7 +20,7 @@
 
 ; ----------------------------------------------------------------------
 
-;   Intrinsic constants.
+;   Consts.
 FREE        equ  $00CC      ; unallocated cons cell
 
 ;   ♣* ┃ Initialise the cons heap.

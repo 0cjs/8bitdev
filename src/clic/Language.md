@@ -1,12 +1,17 @@
-CLIC Grammar
-============
+CLIC Language
+=============
+
+See also:
+- [`objects.md`][obj]: Core object types, including some constants.
+- [`library.md`][lib]: CLIC Standard Library.
+- [`console.md`][con]: Console I/O, case and special character handling.
 
 CLIC works internally in full 8-bit characters ($00–$7F ASCII and $80–$FF
 machine-specific) with case-sensitive (CS) symbols and characters. Use on
 case-insensitive (CI) systems (typically ones that support upper case only)
-is [handled through the console drivers][`console.md`] that use an input
-prefix character, alternate display modes and/or character substitutions to
-allow both input and output of the full character set.
+is [handled through the console drivers][con] that use an input prefix
+character, alternate display modes and/or character substitutions to allow
+both input and output of the full character set.
 
 ### The Reader
 
@@ -22,7 +27,7 @@ numeric parsing failures to be just overflows, it seems.
 
 This gives us the following general parsing procedure:
 1. Tokenizer (`rtok`): reads a token typed into a buffer.
-2. Token parse (`qtok`): parses token buffer to an [object].
+2. Token parse (`qtok`): parses token buffer to an [object][obj].
 3. Form read (`rform`): repeatedly calls the above to read and parse tokens
    and generate the AST, storing it in the heap.
 4. Something calls `rform`, gets back a pointer to the AST, and evals that
@@ -132,7 +137,8 @@ CLIC? Need to examine the Scheme identifier parsing on this. (Is CL `'`
 terminating so you can say e.g. `(f ('a))`? I think not )
 
 
-<!-------------------------------------------------------------------->
-[`console.md`]: ./console.md
-[object]: ./objects.md
 
+<!-------------------------------------------------------------------->
+[con]: ./console.md
+[lib]: ./library.md
+[obj]: ./objects.md

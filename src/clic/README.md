@@ -26,3 +26,22 @@ characteristics are:
   - Upper/lower case and full 8-bit character support are always available.
     Symbols are case-sensitive.
   - It's intended to be competitive with BASIC on systems of all sizes.
+
+### Files and Directories
+
+This directory, `src/clic/`, contains documentation and generic test support:
+- [`Language.md`] is the CLIC language overview and starting point for
+  further language documentation.
+- `lisp.md` and `basic.md` document other languages for the purposes of
+  comparison and stealing ideas.
+- `objref.py` is machine-independent construction and reading of CLIC
+  objects etc., mainly used by tests.
+
+The code itself is contained in:
+- [`src/i8080/clic/`]: 8080/Z80  version.
+
+
+
+<!-------------------------------------------------------------------->
+[`Language.md`]: ./Language.md
+[`src/i8080/clic/`]: ../i8080/clic/

@@ -166,7 +166,7 @@ Other References
   and the first language implementation (1958-62).
 
 * Steele, Gabriel, [The evolution of Lisp][ste96a].  
-  Implementations and hardware. Specific langauge features.  
+  Implementations and hardware. Specific language features.  
   Above link is uncut version; a slightly shorter version [[ste96b]] was
   published in a book derived from HOPL II.
 

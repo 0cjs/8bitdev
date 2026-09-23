@@ -6,6 +6,11 @@ See also:
 - [`library.md`][lib]: CLIC Standard Library.
 - [`console.md`][con]: Console I/O, case and special character handling.
 
+Note that these are design documents mainly for the langauge developers.
+However they will have to serve for the moment as user documentation as
+well until proper user documentation (for various audiences) is written.
+
+
 General Notes
 -------------
 
@@ -109,7 +114,30 @@ Notes:
   a quote: `(f'a)` is `(f (quote a))` in CL/scheme, but a single token in
   that list in CLIC.
 
-### Numbers
+### Syntax / Token Parsing
+
+Tokens are parsed as one of three forms, each described in further detail below.
+1. Reserved Tokens: `#t`, etc. that are not just regular symbols.
+2. Numbers.
+3. Symbols (including character escapes within symbols).
+
+#### Reserved Tokens
+
+Certain specific tokens produce special results when parsed. Though these
+mostly start with `#`, do _not_ take this to mean that `#` (or any other
+character) indicates a reserved token. While `#t` is a reserved token, `#q`
+is not (it's just a regular symbol), and something 'plain' like `t` could
+be a reserved token (though it isn't).
+
+The complete set of reserved tokens is:
+* `#n`: The 'nil' object; an empty list. Same as `()`.
+* `#t`: The 'true' object.
+* `#rHHHH`: Raw reference parse: gives the reference with hex value _hhhh_
+  (the hex digits are case-insensitive). This should be used with _great_
+  care: using, following or even just garbage-collecting arbitrary
+  references can easily corrupt the system.
+
+#### Numbers
 
 If a whole token can parse properly as a number, it is parsed as a number.
 Like CL and unlike Scheme, if it can't be parsed as a number it's a symbol,
@@ -125,12 +153,12 @@ increment.
 
 XXX Valid formats for numbers need to be documented here.
 
-### Characters
+#### Characters
 
 While some versions of CLIC will have strings and some will not, in all
 versions of CLIC sym1 is re-used as the char type. This allows reading
-standard `'c` syntax for printable characters. Non-printing chars use the
-following escapes which are processed by the reader:
+standard `'c` symbol syntax for printable characters. Non-printing chars
+use the following escapes which are processed by the reader:
 
     \0      $00 NUL
     \a      $07 BEL terminal bell ("alert")
@@ -152,13 +180,19 @@ following escapes which are processed by the reader:
 
 Any unrecognised escape sequence (e.g., `\z`) is a parse error.
 
-Note that none of the above include (and may not include) any of the
+Note that none of the above include (and they may not include) any of the
 tokenizer's termination characters. This allows the tokenizer to know
 nothing about character escaping.
 
 (Adding a separate char type is possible and there's a note in
 [`objects.md`][obj] §"Sym1/sym2" about how to do this, should it become
 necessary.)
+
+#### Symbols
+
+Anything not parsed as special syntax or a number is a symbol, just
+a seqeuence of characters. (Some of the characters may have been created
+via the character escape syntax described above.)
 
 
 The Evaluator

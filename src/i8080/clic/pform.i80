@@ -1,6 +1,6 @@
 ;   pform.i80 - print car and heap expressions
 ;
-;   Requires: prchar, prhexA, prnyb, prdec_u16, prstr
+;   Requires: prchar, prspace, prhexA, prnyb, prdec_u16, prstr
 
 ;----------------------------------------------------------------------
 ;   ♠DE ♡F* ┃ Print the ref in DE.
@@ -139,4 +139,42 @@ pref        push af
             rra                 ; and then to bit 6 (carry gets 1)
             call prchar         ; print second char
             pop af
+            ret
+
+;----------------------------------------------------------------------
+;   ♠DE ♣ADE ┃ Print the form in DE.
+;   Prints the bare ref if DE is intrinsic, otherwise takes it as
+;   a pointer to a list, recursing into sublists. Currently:
+;   • Obdata are printed as a header only.
+;   • Dotted lists are not handled.
+
+pform       ld   a,e
+            and  a,%11          ; tag bits: is it a pointer or const?
+            jp   NZ,pref        ;     no: print this item and done (TCO)
+            ld   a,d            ;    yes: check if it's a const
+            or   a,a            ; MSB is zero?
+            jp   Z,pref         ;    yes: print this item and done (TCO)
+.list       push hl             ;     no: we have a list
+            ld   a,'('
+            call prchar
+            ld   h,d            ; HL ← pointer to car
+            ld   l,e
+.next       ld   e,(hl)         ; DE ← car
+            inc  hl
+            ld   d,(hl)
+            inc  hl             ; now pointing at cdr
+            call pform
+            ld   e,(hl)         ; DE ← cdr
+            inc  hl
+            ld   d,(hl)
+            ld   a,d            ; cdr=$00 (NIL)?
+            or   a,e
+            jp   Z,.end         ;   yes: terminate list and we're done
+            call prspace        ;    no: next item in list
+            ex   de,hl          ; HL ← cdr
+            jp   .next
+
+.end        ld   a,')'          ;   yes: terminate list and we're done
+            call prchar
+            pop  hl
             ret

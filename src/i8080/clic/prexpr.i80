@@ -1,10 +1,11 @@
-;   pexpr.i80 - print car and heap expressions
+;   prexpr.i80 - print car and heap expressions
 ;
 ;   Requires: prchar, prhexA, prnyb, prdec_u16, prstr
 
-;   ♠HL ♣ABC ♡HL    Print a cons or cdr pointed to by HL.
-;   This makes no attempt to follow references, but prints pointers
-;   as a hex value (i.e., `P_HEXVAL` plus four hex digits).
+;----------------------------------------------------------------------
+;   ♠HL ♣ABC ♡HL ┃ Print a car or cdr pointed to by HL.
+;   This makes no attempt to follow references but prints pointers
+;   as a hex value `#pHHHH`.
 ;
 prcell      push hl
             ld   a,(hl)
@@ -15,19 +16,22 @@ prcell      push hl
             ;
             ld   a,c            ; value LSB
             and  a,%11          ; test type bits
-            jp   z,.ptr         ; %00: pointer
+            jp   Z,.ptr         ; %00: pointer
             dec  a
-            jp   z,.smallint    ; %01: embedded 14-bit signed integer
+            jp   Z,.smallint    ; %01: embedded 14-bit signed integer
             dec  a
-            jp   z,.sym         ; %10: 1- or 2-char symbol
-            halt                ; XXX obdata header--currently not supported
+            jp   Z,.sym         ; %10: 1- or 2-char symbol
+            ; fallthrough
+
+            ;   Obdata header in BC and HL saved on stack.
+.obdata     halt                ; XXX currently not supported
             pop  hl             ; restore original pointer ro value
             ret
-            ;
-            ;   pointer or (intrinsic) const in bc
+
+            ;   Pointer or (intrinsic) const in BC and HL saved on stack.
 .ptr        ld   a,b            ; value MSB
             or   a,a            ; is zero?
-            jp   z,priconst     ;   yes: it's a const
+            jp   Z,.const       ;   yes: it's a const
             ld   a,'#'          ;    no: it's a pointer
             call prchar
             ld   a,'p'
@@ -38,32 +42,49 @@ prcell      push hl
             call prhexA
             pop  hl
             ret
-            ;
-            ;   1- or 2-char intrinsic symbol
-.sym        ld   a,c            ; load value LSB
-            cp   $82            ; sentinel for sym1?
-            jp   nz,.sym2
-.sym1       ld   a,b
-            call prchar
+
+            ;   Const LSB in C and HL saved on stack.
+.const      ld   b,c            ; save const value
+            ld   a,c
+            or   a,a            ; clear carry
+            rrca                ; shift 0,4,8,… right to get index 0,1,2,…
+            rrca
+            ld   c,a            ; index
+            ld   hl,.const_names; start of names list
+            inc  c
+.curname    dec  c              ; this constant is current name in HL?
+            jp   NZ,.nextname   ;   no: move to the next name
+            call prstr          ;   yes: print the name
             pop  hl
             ret
             ;
-.sym2       ld   a,b            ; load MSB: first char + bit 6 of second char
-            and  $7F            ; clear bit from second char
-            call prchar         ; print first char
-            ld   a,b            ; load MSB
-            rla                 ; copy second char bit 6 to carry
-            ld   a,c            ; load LSB: shifted 2nd char
-            rra                 ; bring in bit 6 to bit 7, carry gets 0
-            rra                 ; and then to bit 6 (carry gets 1)
-            call prchar         ; print second char
-            pop hl
+.nextname   inc  hl             ; move up...
+            ld   a,(hl)
+            or   a,a
+            jp   NZ,.nextname   ;  ...to termination byte
+            inc  hl
+            ld   a,(hl)
+            or   a,a            ; end of list of names?
+            jp   NZ,.curname    ;    no: see if this name is the one
+            ;
+            ld   a,'#'          ;   yes: unknown constant '#cXX'
+            call prchar
+            ld   a,'c'
+            call prchar
+            ld   a,b            ; saved constant ID
+            call prhexA
+            pop  hl
             ret
             ;
-            ;   intrinsic 14-bit signed integer
+.const_names                    ; Names for consts $00, $04, $08, …
+            db   '#n',0
+            db   '#t',0
+            db   0
+
+            ;   Intrinsic 14-bit signed integer in BC and HL saved on stack.
 .smallint   ld   a,b            ; MSB
             or   a,a            ; negative? (also clear carry)
-            jp   p,.positive    ;    no: skip negative processing
+            jp   P,.positive    ;    no: skip negative processing
 .negative
             ld   a,'-'          ; print '-' sign
             call prchar
@@ -98,43 +119,23 @@ prcell      push hl
             pop  hl
             ret
 
-; ----------------------------------------------------------------------
-;   ♠C ♣A   Print representation of the (intrinsic) const LSB given in C.
-;           Assumes HL has been saved on the stack.
-priconst    ld   b,c            ; save const value
-            ld   a,c
-            or   a,a            ; clear carry
-            rrca                ; shift 0,4,8,… right to get index 0,1,2,…
-            rrca
-            ld   c,a            ; index
-            ld   hl,iconst_names; start of names list
-            inc  c
-.curname    dec  c              ; this constant is current name in HL?
-            jp   nz,.nextname   ;   no: move to the next name
-            call prstr          ;   yes: print the name
+            ;   1- or 2-char intrinsic symbol in BC and HL saved on stack.
+.sym        ld   a,c            ; load value LSB
+            cp   $82            ; sentinel for sym1?
+            jp   NZ,.sym2
+.sym1       ld   a,b
+            call prchar
             pop  hl
             ret
             ;
-.nextname   inc  hl             ; move up...
-            ld   a,(hl)
-            or   a,a
-            jp   nz,.nextname;  ...to termination byte
-            inc  hl
-            ld   a,(hl)
-            or   a,a        ; end of list of names?
-            jp   nz,.curname;    no: see if this name is the one
-            ;
-            ld   a,'#'      ;   yes: unknown constant '#cXX'
-            call prchar
-            ld   a,'c'
-            call prchar
-            ld   a,b        ; saved constant ID
-            call prhexA
-            pop  hl
+.sym2       ld   a,b            ; load MSB: first char + bit 6 of second char
+            and  $7F            ; clear bit from second char
+            call prchar         ; print first char
+            ld   a,b            ; load MSB
+            rla                 ; copy second char bit 6 to carry
+            ld   a,c            ; load LSB: shifted 2nd char
+            rra                 ; bring in bit 6 to bit 7, carry gets 0
+            rra                 ; and then to bit 6 (carry gets 1)
+            call prchar         ; print second char
+            pop hl
             ret
-            ;
-
-iconst_names
-            db   '#n',0
-            db   '#t',0
-            db   0

@@ -20,29 +20,13 @@ test_rig = '''
 param   = pytest.mark.parametrize
 
 @param('sym, s', [
+    (ptr(0x43BC),       b'#p43BC'),
+    (ptr(0x0100),       b'#p0100'),
+    (ptr(0xFFFC),       b'#pFFFC'),
     (NIL,               b'#n'),
     (TRUE,              b'#t'),
     (const(0x0C),       b'#c0C'),
     (const(0xFC),       b'#cFC'),
-    (ptr(0x43BC),       b'#p43BC'),
-    (ptr(0x0100),       b'#p0100'),
-    (ptr(0xFFFC),       b'#pFFFC'),
-
-    (sym1('\x00'),      b'\x00'),
-    (sym1('a'),         b'a'),
-    (sym1(b'\xFF'),     b'\xFF'),
-
-    (sym2('\x00\x00'),  b'\x00\x00'),
-    (sym2('\x7F\x7F'),  b'\x7F\x7F'),
-    (sym2('01'),        b'01'),
-    (sym2('ab'),        b'ab'),         # 2nd char bit 6 clear…
-    (sym2(' .'),        b' .'),         #   …and set
-    (sym2('`.'),        b'`.'),         # valid as ch1 but not ch2
-
-    #   If we didn't declare space/backtick illegal as the 2nd char of a sym2,
-    #   these sym values could be interpreted as a sym2 instead of a sym1.
-    (0x7F82,            b'\x7F'),
-    (0xFF82,            b'\xFF'),
 
     (smallint(0),       b'0'),
     (smallint(1),       b'1'),
@@ -55,6 +39,22 @@ param   = pytest.mark.parametrize
     (smallint(-456),    b'-456'),
     (smallint(-7890),   b'-7890'),
     (smallint(-8192),   b'-8192'),
+
+    (sym1('\x00'),      b'\x00'),
+    (sym1('a'),         b'a'),
+    (sym1(b'\xFF'),     b'\xFF'),
+    #
+    (sym2('\x00\x00'),  b'\x00\x00'),
+    (sym2('\x7F\x7F'),  b'\x7F\x7F'),
+    (sym2('01'),        b'01'),
+    (sym2('ab'),        b'ab'),         # 2nd char bit 6 clear…
+    (sym2(' .'),        b' .'),         #   …and set
+    (sym2('`.'),        b'`.'),         # valid as ch1 but not ch2
+    #
+    #   If we didn't declare space/backtick illegal as the 2nd char of a sym2,
+    #   these sym values could be interpreted as a sym2 instead of a sym1.
+    (0x7F82,            b'\x7F'),
+    (0xFF82,            b'\xFF'),
 ])
 def test_prcell_other(m, S, R, loadbios, sym, s):
     addr = randrange(0x4000, 0xD000)    # even unaligned addrs, because why not.

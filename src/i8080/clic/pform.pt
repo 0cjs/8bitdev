@@ -77,8 +77,7 @@ def test_pform_direct(m, S, R, loadbios, s, ref):
     _, out = loadbios()
     r = R(bc=0x33bc, de=ref, hl=0x5678)
     m.call(S.pform, r)
-    assert s == out.written().decode('ASCII', errors='backslashreplace'), \
-        'output incorrect'
+    assert s == out.written_str(print=True), 'output incorrect'
     assert r == m.regs, 'registers not preserved'
 
 a = sym1('a'); b = sym1('b'); c = sym1('c'); d = sym1('d')
@@ -91,7 +90,6 @@ a = sym1('a'); b = sym1('b'); c = sym1('c'); d = sym1('d')
     ('(#n #t)',             [(0,-1), (TRUE,0)])
 ])
 def test_pform_heap(m, S, R, loadbios, s, form):
-    print('expected:', s)
     heap = 0x0700
     m.depword(heap-0x40, [FREE, FREE]*0x10)
     for (car,cdr),addr in zip(form, range(heap-4, 0x600, -4)):
@@ -102,10 +100,8 @@ def test_pform_heap(m, S, R, loadbios, s, form):
     _, out = loadbios()
     preserved = R(bc=0x33bc, hl=0x5678)
     m.call(S.pform, preserved.clone(de=ptr(heap-4)))
-    #   XXX This should be added to t8dev as written_str().
-    actual = out.written().decode('ASCII', errors='backslashreplace')
-    print('  actual:', actual)
-    assert s == actual, 'output incorrect'
+    print('expect/actual:'); print(s)
+    assert s == out.written_str(print=True), 'output incorrect'
     assert preserved == m.regs, 'registers not preserved'
 
 def hval(heap, n):

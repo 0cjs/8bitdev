@@ -6,14 +6,14 @@
     endianness.
 
     Generally we order things in numerical order of tag:
-    %00 pointer, const; %01 smallint; %10 sym12, sym1, sym2; %11 obdata
+    %00 pointer, const; %01 smallint; %10 sym, sym1, sym2; %11 obdata
 '''
 
 __all__ = [
     'asbytes',                              #   Utility
     'isptr', 'isconst',                     #   Predicates
     'ptr', 'const', 'NIL', 'TRUE', 'FREE',  #   Construction
-    'smallint', 'sym12', 'sym1', 'sym2',
+    'smallint', 'sym', 'sym1', 'sym2',
     'hconslist',                            #   Inspection/Printing.
     'refstr', 'hconsdump', 'hconsprint',
 ]
@@ -91,7 +91,7 @@ def smallint(i):    # tag %01
     if i < 0: i += 0x4000       # negative numbers → 2s complement
     return ((i << 2) | 0b01)
 
-def sym12(sym):     # tag %10
+def sym(sym):     # tag %10
     ''' Given a sequence of one or two characters, (anything that can be
         converted to `bytes`, using encoding ``ASCII`` if necessary),
         return a sym1 or sym2.

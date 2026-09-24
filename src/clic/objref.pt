@@ -88,12 +88,12 @@ def test_smallint_errors(n):
     (0x2082, sym1,  ' '),           (0x4082, sym1,  '@'),
     (0x6082, sym1,  '`'),           (0x7F82, sym1,  '\x7F'),
     (0x8082, sym1,  b'\x80'),       (0xFF82, sym1,  b'\xFF'),
-    (0x2082, sym12, ' '),
+    (0x2082, sym,   ' '),
 
     (0x31CA, sym2,  '12'),          (0xF0C6, sym2,  'pq'),
     (0x0002, sym2,  '\x00\x00'),    (0xFFFE, sym2,  '\x7F\x7F'),
     (0x60BA, sym2,  '`.'),          (0x20BA, sym2,  ' .'),
-    (0x31CA, sym12, '12'),
+    (0x31CA, sym,   '12'),
 ])
 def test_sym_good(f, chars, sym):
     oref = f(chars)
@@ -105,7 +105,7 @@ def test_sym_good(f, chars, sym):
     (sym1,  ''),                    (sym1,  'AB'),
     (sym2,  ''),                    (sym2,  'A'),
     (sym2,  'ABC'),
-    (sym12, ''),                    (sym12, 'ABC'),
+    (sym,   ''),                    (sym,   'ABC'),
     #   We accept ASCII chars only; use a bytestring for $80-$FF.
     (sym1, 'é'),
     #   Invalid due to our encoding

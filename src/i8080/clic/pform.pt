@@ -70,7 +70,7 @@ def test_pref_other(m, S, R, loadbios, ref, s):
 
 @param('ref, s', [
     (NIL,       '#n'),    (TRUE,      '#t'),
-    (sym12('a'),'a'),     (0x0123,    '#o0123'),
+    (sym('a'),  'a'),     (0x0123,    '#o0123'),
 ])
 def test_pform_direct(m, S, R, loadbios, s, ref):
     print(refstr(ref).rstrip(), '→', s)

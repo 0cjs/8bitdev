@@ -119,7 +119,7 @@ def sym2(chars):      # tag %10
     if chars[0] > 0x7F or chars[1] > 0x7F:
         raise ValueError(f'sym2 chars must be ≤ $7F: {chars}')
     msb = chars[0]
-    if chars[1] & 0x40: msb |= 0x80    # copy sym0 bit 6 to MSB bit 7
+    if chars[1] & 0x40: msb |= 0x80    # copy 2nd char bit 6 to MSB bit 7
     lsb = ((chars[1] & 0b00111111) << 2) | 0b10
     return ((msb << 8) | lsb)
 

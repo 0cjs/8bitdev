@@ -55,6 +55,10 @@ param   = pytest.mark.parametrize
     #   these sym values could be interpreted as a sym2 instead of a sym1.
     (0x7F82,            b'\x7F'),
     (0xFF82,            b'\xFF'),
+
+    #   obdata
+    (0x0003,            b'#o0003'),
+    (0xFFFF,            b'#oFFFF'),
 ])
 def test_prcell_other(m, S, R, loadbios, sym, s):
     addr = randrange(0x4000, 0xD000)    # even unaligned addrs, because why not.

@@ -4,10 +4,10 @@
 
 ;----------------------------------------------------------------------
 ;   ♠HL ♣ABC ♡HL ┃ Print a car or cdr pointed to by HL.
-;   This makes no attempt to follow references but prints pointers
-;   as a hex value `#pHHHH`.
+;   This makes no attempt to follow references or interpret obdata;
+;   it prints them both as hex values `#pHHHH` and `#oHHHH`.
 ;
-prcell      push hl
+prcell      push hl             ; save original pointer value
             ld   a,(hl)
             ld   c,a            ; save value LSB
             inc  hl
@@ -21,12 +21,14 @@ prcell      push hl
             jp   Z,.smallint    ; %01: embedded 14-bit signed integer
             dec  a
             jp   Z,.sym         ; %10: 1- or 2-char symbol
-            ; fallthrough
+            ; fallthrough       ; %11: obdata header
 
             ;   Obdata header in BC and HL saved on stack.
-.obdata     halt                ; XXX currently not supported
-            pop  hl             ; restore original pointer ro value
-            ret
+.obdata     ld   a,'#'
+            call prchar
+            ld   a,'o'
+            call prchar
+            jp   .hexout
 
             ;   Pointer or (intrinsic) const in BC and HL saved on stack.
 .ptr        ld   a,b            ; value MSB
@@ -36,7 +38,7 @@ prcell      push hl
             call prchar
             ld   a,'p'
             call prchar
-            ld   a,b
+.hexout     ld   a,b
             call prhexA
             ld   a,c
             call prhexA

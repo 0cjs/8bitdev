@@ -280,7 +280,10 @@ information.
 Obdata Types and Formats
 ------------------------
 
-An obdata value always starts with a two-byte _obdata header_.
+An obdata value always starts with a two-byte _obdata header_. Routines
+that do not do further decoding may print this as `#oHHHH`. That format is
+never read (because we don't know what to do with one that has incorrect
+tag bits); `#rHHHH` would be used instead.
 
 The LSB of the header describes the format. It always has its two LSbits
 (the tag) set to `%11`. The upper six bits are the _format number_ (ranging

@@ -132,16 +132,21 @@ def _checksym(seq, goodlen):
 ####################################################################
 #   Inspection/Printing.
 
-def hconslist(m:MemoryAccess, ref):
+def hconslist(m:MemoryAccess, ref, mapper=None):
     ''' Return an object representing the heap object at addr but using
         Python lists nested as necessary. `NIL` is returned as ``[]``.
+
+        If `mapper` is given, non-pointer and non-NIL refs are mapped
+        through that function. A typical use is ``mapper=refstr`` to get a
+        debug display.
     '''
+    if mapper is None:  mapper = lambda x: x
     if ref == NIL:      return []
-    if not isptr(ref):  return ref
+    if not isptr(ref):  return mapper(ref)
     retval = []
     while True:
         car, cdr = m.words(ref, 2)
-        retval.append(hconslist(m, car))
+        retval.append(hconslist(m, car, mapper))
         if cdr == NIL:  break
         ref = cdr
     return retval

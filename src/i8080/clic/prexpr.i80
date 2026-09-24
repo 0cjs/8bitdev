@@ -3,7 +3,7 @@
 ;   Requires: prchar, prhexA, prnyb, prdec_u16, prstr
 
 ;----------------------------------------------------------------------
-;   ♠HL ♣ABC ♡HL ┃ Print a car or cdr pointed to by HL.
+;   ♠HL ♣ABC ♡DEHL ┃ Print a car or cdr pointed to by HL.
 ;   This makes no attempt to follow references or interpret obdata;
 ;   it prints them both as hex values `#pHHHH` and `#oHHHH`.
 ;

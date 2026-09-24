@@ -65,6 +65,6 @@ def test_prcell_other(m, S, R, loadbios, sym, s):
     print(f'sym ${sym:04X} @ ${addr:04X}')
     m.depword(addr, sym)
     _, out = loadbios()
-    m.call(S.prcell, R(hl=addr))
-    assert R(hl=addr) == m.regs      # preserve HL
+    m.call(S.prcell, R(hl=addr, de=0xCAFE))
+    assert R(hl=addr, de=0xCAFE) == m.regs      # preserve HD, DE
     assert s == out.written()

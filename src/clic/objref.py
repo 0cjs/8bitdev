@@ -91,14 +91,14 @@ def smallint(i):    # tag %01
     if i < 0: i += 0x4000       # negative numbers → 2s complement
     return ((i << 2) | 0b01)
 
-def sym(sym):     # tag %10
+def sym(chars):     # tag %10
     ''' Given a sequence of one or two characters, (anything that can be
         converted to `bytes`, using encoding ``ASCII`` if necessary),
         return a sym1 or sym2.
     '''
-    sym =  _checksym(sym, [1,2])
-    if   len(sym) == 1:     return sym1(sym)
-    elif len(sym) == 2:     return sym2(sym)
+    chars =  _checksym(chars, [1,2])
+    if   len(chars) == 1:     return sym1(chars)
+    elif len(chars) == 2:     return sym2(chars)
 
 def sym1(chars):        # tag %10
     ''' Given a sequence of one character (anything that can be converted
@@ -108,19 +108,19 @@ def sym1(chars):        # tag %10
     chars = _checksym(chars, [1])
     return ((chars[0] << 8) | 0b10000010)
 
-def sym2(sym):      # tag %10
+def sym2(chars):      # tag %10
     ''' Given a sequence of two characters (anything that can be converted
         to `bytes`, using encoding ``ASCII`` if necessary), return a sym2
         object reference.
     '''
-    sym = _checksym(sym, [2])
-    if chr(sym[1]) in (' ', '`'):
-        raise ValueError(f'sym2 2nd char cannot be space/backtick: {sym}')
-    if sym[0] > 0x7F or sym[1] > 0x7F:
-        raise ValueError(f'sym2 chars must be ≤ $7F: {sym}')
-    msb = sym[0]
-    if sym[1] & 0x40: msb |= 0x80    # copy sym0 bit 6 to MSB bit 7
-    lsb = ((sym[1] & 0b00111111) << 2) | 0b10
+    chars = _checksym(chars, [2])
+    if chr(chars[1]) in (' ', '`'):
+        raise ValueError(f'sym2 2nd char cannot be space/backtick: {chars}')
+    if chars[0] > 0x7F or chars[1] > 0x7F:
+        raise ValueError(f'sym2 chars must be ≤ $7F: {chars}')
+    msb = chars[0]
+    if chars[1] & 0x40: msb |= 0x80    # copy sym0 bit 6 to MSB bit 7
+    lsb = ((chars[1] & 0b00111111) << 2) | 0b10
     return ((msb << 8) | lsb)
 
 def _checksym(seq, goodlen):

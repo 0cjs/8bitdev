@@ -44,7 +44,7 @@ The header comments for a routine generally use the following conventions
 to describe register and flag usage:
 
     Flags are assumed to be destroyed unless otherwise indicated.
-    ♠ indicates registers and locations holding return values.
+    ♠ indicates registers and locations holding inputs and return values.
     ♡ indicates registers preserved
     ♣ indicates registers and locations destroyed.
 

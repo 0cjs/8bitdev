@@ -1,0 +1,25 @@
+;   CLIC REPL for `testmc.tmc i8080` simulator.
+
+            cpu 8080
+            include  src/i8080/std.i80
+            include "testmc/i8080/tmc/biosdef.i80" ; `tmc` will load bioscode
+
+            ;   Note: BIOS uses all addresses up to $100.
+
+            org  $100   ; system variables
+hcons_ptop  dw   $8000
+hcons_pbot  dw   $4000
+hcons_pcur  dw   $EEEE  ; sentinel, in case I forget to hconsini
+fatal_nomem halt
+            ;   XXX need to set up tokbuf, etc.
+
+            org  $200
+start       call repl
+            ld   a,exitportcmd  ; request simulator exit
+            ld   (exitport),a
+
+            org  $210
+            include src/i8080/clic/heap.i80
+            include src/i8080/clic/repl.i80
+
+            end start

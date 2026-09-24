@@ -1,0 +1,24 @@
+;   repl.i80 - CLIC Read/Evaluate/Print Loop
+
+repl
+            call hconsini
+.loop       ld   a,'_'          ; prompt
+            call prchar
+            call rform          ; DE ← form
+            call prnl
+            call pform          ; print it (yeah, we're actually an 'RPL')
+            call prnl
+            ret                 ; until we can figure out how to exit
+            jp   .loop
+
+            include src/i8080/clic/pform.i80
+            include src/i8080/pr/space.i80
+            include src/i8080/pr/hex.i80
+            include src/i8080/pr/dec.i80
+            include src/i8080/pr/str.i80
+
+            include src/i8080/clic/rform.i80
+            include src/i8080/clic/qtok.i80
+            include src/i8080/arith.i80
+            include src/i8080/qhex.i80
+

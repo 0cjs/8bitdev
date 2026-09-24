@@ -1,4 +1,4 @@
-;   prexpr.i80 - print car and heap expressions
+;   pform.i80 - print car and heap expressions
 ;
 ;   Requires: prchar, prhexA, prnyb, prdec_u16, prstr
 

@@ -8,7 +8,7 @@ test_rig = '''
             include testmc/i8080/tmc/biosdef.i80
 
             org  $400
-            include src/i8080/clic/prexpr.i80
+            include src/i8080/clic/pform.i80
             include src/i8080/pr/hex.i80
             include src/i8080/pr/dec.i80
             include src/i8080/pr/str.i80

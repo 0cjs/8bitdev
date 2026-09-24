@@ -59,7 +59,7 @@ param   = pytest.mark.parametrize
     (0x0003,            b'#o0003'),
     (0xFFFF,            b'#oFFFF'),
 ])
-def test_prcell_other(m, S, R, loadbios, ref, s):
+def test_pref_other(m, S, R, loadbios, ref, s):
     print(f'ref ${ref:04X}')
     _, out = loadbios()
     r = R(a=12, bc=0x33bc, de=ref, hl=0x5678)

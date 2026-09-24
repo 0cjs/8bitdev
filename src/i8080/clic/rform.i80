@@ -34,7 +34,7 @@ getc        ld   a,(getc_buf)
             pop  af
             ret
 
-;   ♢A ♡AF* ┃ Tokenizer character pushback. Make A the next char to be
+;   ♠A ♡AF* ┃ Tokenizer character pushback. Make A the next char to be
 ;   returned by `getc`. This wipes out any previous `ungetc`'d character,
 ;   if present. Nor is there any check that A contains the character last
 ;   read. It is not possible to `ungetc` the NUL ($00) character; `getc`
@@ -105,14 +105,14 @@ rtok        ld   hl,tokbuf
             inc  c              ; XXX no check for run out of buffer length!
             jp   .nextchars
 
-;   ♢A ♡* ┃ Return Z=1 if A terminates a token: (, ), whitespace.
+;   ♠A ♡* ┃ Return Z=1 if A terminates a token: (, ), whitespace.
 termcharQ   cp   '('
             ret  Z
             cp   ')'
             ret  Z
             ; fallthrough
 
-;   ♢A ♡* ┃ Return Z=1 if A is whitespace: TAB, LF, VT, FF, CR, Space.
+;   ♠A ♡* ┃ Return Z=1 if A is whitespace: TAB, LF, VT, FF, CR, Space.
 wspQ        cp   TAB
             ret  Z
             cp   LF

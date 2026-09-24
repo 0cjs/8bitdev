@@ -1,6 +1,5 @@
 from    testmc.i8080  import  Machine
 from    src.clic.objref  import *
-from    random  import randrange
 import  pytest
 
 test_rig = '''
@@ -19,7 +18,7 @@ test_rig = '''
 
 param   = pytest.mark.parametrize
 
-@param('sym, s', [
+@param('ref, s', [
     (ptr(0x43BC),       b'#p43BC'),
     (ptr(0x0100),       b'#p0100'),
     (ptr(0xFFFC),       b'#pFFFC'),
@@ -60,11 +59,10 @@ param   = pytest.mark.parametrize
     (0x0003,            b'#o0003'),
     (0xFFFF,            b'#oFFFF'),
 ])
-def test_prcell_other(m, S, R, loadbios, sym, s):
-    addr = randrange(0x4000, 0xD000)    # even unaligned addrs, because why not.
-    print(f'sym ${sym:04X} @ ${addr:04X}')
-    m.depword(addr, sym)
+def test_prcell_other(m, S, R, loadbios, ref, s):
+    print(f'ref ${ref:04X}')
     _, out = loadbios()
-    m.call(S.prcell, R(hl=addr, de=0xCAFE))
-    assert R(hl=addr, de=0xCAFE) == m.regs      # preserve HD, DE
-    assert s == out.written()
+    r = R(a=12, bc=0x33bc, de=ref, hl=0x5678)
+    m.call(S.pref, r)
+    assert s == out.written(), 'output incorrect'
+    assert r == m.regs, 'registers not preserved'

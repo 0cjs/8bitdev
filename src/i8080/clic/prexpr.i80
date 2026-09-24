@@ -3,18 +3,12 @@
 ;   Requires: prchar, prhexA, prnyb, prdec_u16, prstr
 
 ;----------------------------------------------------------------------
-;   ♠HL ♣ABC ♡DEHL ┃ Print a car or cdr pointed to by HL.
+;   ♠DE ♡F* ┃ Print the ref in DE.
 ;   This makes no attempt to follow references or interpret obdata;
 ;   it prints them both as hex values `#pHHHH` and `#oHHHH`.
 ;
-prcell      push hl             ; save original pointer value
-            ld   a,(hl)
-            ld   c,a            ; save value LSB
-            inc  hl
-            ld   a,(hl)
-            ld   b,a            ; save value MSB
-            ;
-            ld   a,c            ; value LSB
+pref        push af
+            ld   a,e            ; value LSB
             and  a,%11          ; test type bits
             jp   Z,.ptr         ; %00: pointer
             dec  a
@@ -23,31 +17,31 @@ prcell      push hl             ; save original pointer value
             jp   Z,.sym         ; %10: 1- or 2-char symbol
             ; fallthrough       ; %11: obdata header
 
-            ;   Obdata header in BC and HL saved on stack.
 .obdata     ld   a,'#'
             call prchar
             ld   a,'o'
             call prchar
             jp   .hexout
 
-            ;   Pointer or (intrinsic) const in BC and HL saved on stack.
-.ptr        ld   a,b            ; value MSB
+.ptr        ld   a,d            ; value MSB
             or   a,a            ; is zero?
             jp   Z,.const       ;   yes: it's a const
             ld   a,'#'          ;    no: it's a pointer
             call prchar
             ld   a,'p'
             call prchar
-.hexout     ld   a,b
+.hexout     ld   a,d
             call prhexA
-            ld   a,c
+            ld   a,e
             call prhexA
-            pop  hl
+            pop  af
             ret
 
-            ;   Const LSB in C and HL saved on stack.
-.const      ld   b,c            ; save const value
-            ld   a,c
+            ;   Const LSB in E and AF saved on stack.
+.const      push bc
+            push hl
+            ld   b,e            ; save const value
+            ld   a,e
             or   a,a            ; clear carry
             rrca                ; shift 0,4,8,… right to get index 0,1,2,…
             rrca
@@ -57,8 +51,7 @@ prcell      push hl             ; save original pointer value
 .curname    dec  c              ; this constant is current name in HL?
             jp   NZ,.nextname   ;   no: move to the next name
             call prstr          ;   yes: print the name
-            pop  hl
-            ret
+            jp   .cexit
             ;
 .nextname   inc  hl             ; move up...
             ld   a,(hl)
@@ -75,7 +68,9 @@ prcell      push hl             ; save original pointer value
             call prchar
             ld   a,b            ; saved constant ID
             call prhexA
-            pop  hl
+.cexit      pop  hl
+            pop  bc
+            pop  af
             ret
             ;
 .const_names                    ; Names for consts $00, $04, $08, …
@@ -83,26 +78,28 @@ prcell      push hl             ; save original pointer value
             db   '#t',0
             db   0
 
-            ;   Intrinsic 14-bit signed integer in BC and HL saved on stack.
-.smallint   ld   a,b            ; MSB
+            ;   Intrinsic 14-bit signed integer in DE and AF saved on stack.
+.smallint   push de
+            push hl
+            ld   a,d            ; MSB
             or   a,a            ; negative? (also clear carry)
             jp   P,.positive    ;    no: skip negative processing
 .negative
             ld   a,'-'          ; print '-' sign
             call prchar
-            ld   a,c            ; unshifted LSB
+            ld   a,e            ; unshifted LSB
             cpl                 ; 1s complement
             add  a,1<<2         ; add 1 (still shfited) to get 2s complement
-            ld   c,a
-            ld   a,b            ; unshifted MSB
+            ld   e,a
+            ld   a,d            ; unshifted MSB
             cpl                 ; 1s complement
             adc  a,0            ; carry of +1 into MSB, clear carry
-            ld   b,a
+            ld   d,a
             ;
 .positive   ;   Entered with unshifted MSB in A
             rra                 ; LSR, low bit to carry
             ld   h,a            ; save rest of MSB to shift later
-            ld   a,c            ; unshifted LSB
+            ld   a,e            ; unshifted LSB
             rra                 ; shift MSB bit 0 (in carry) in
             ;   Carry from bit 0 may be 0 or 1 depending on whether this is
             ;   originally positive or is now a complemented negative.
@@ -119,25 +116,27 @@ prcell      push hl             ; save original pointer value
             call prdec_u16      ; print numeric portiion
             ;
             pop  hl
+            pop  de
+            pop  af
             ret
 
-            ;   1- or 2-char intrinsic symbol in BC and HL saved on stack.
-.sym        ld   a,c            ; load value LSB
+            ;   1- or 2-char intrinsic symbol in DE and AF saved on stack.
+.sym        ld   a,e            ; load value LSB
             cp   $82            ; sentinel for sym1?
             jp   NZ,.sym2
-.sym1       ld   a,b
+.sym1       ld   a,d
             call prchar
-            pop  hl
+            pop  af
             ret
             ;
-.sym2       ld   a,b            ; load MSB: first char + bit 6 of second char
+.sym2       ld   a,d            ; load MSB: first char + bit 6 of second char
             and  $7F            ; clear bit from second char
             call prchar         ; print first char
-            ld   a,b            ; load MSB
+            ld   a,d            ; load MSB
             rla                 ; copy second char bit 6 to carry
-            ld   a,c            ; load LSB: shifted 2nd char
+            ld   a,e            ; load LSB: shifted 2nd char
             rra                 ; bring in bit 6 to bit 7, carry gets 0
             rra                 ; and then to bit 6 (carry gets 1)
             call prchar         ; print second char
-            pop hl
+            pop af
             ret

@@ -17,5 +17,7 @@ test_rig = '''
 def test_prdec_u16(m, S, R, loadbios, i):
     _, out = loadbios()
     print(i, hex(i))
-    m.call(S.prdec_u16, R(hl=i))
+    r = R(hl=i, a=0x12, bc=0x34bc, de=0x56de)
+    m.call(S.prdec_u16, r)
     assert bytes(str(i), encoding='ASCII') == out.written()
+    assert r == m.regs

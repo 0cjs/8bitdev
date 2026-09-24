@@ -3,11 +3,16 @@
 ;   Requires: prnyb (prchar)
 
 ; ----------------------------------------------------------------------
-;   ♠HL ♡D   Print an unsigned number in HL as decimal without leading 0s.
+;   ♠HL ♡F* ┃ Print an unsigned int in HL as decimal without leading 0s.
 ;   See also: https://map.grauw.nl/sources/external/z80bits.html#5.1
 
         ifndef prdec_u16
-prdec_u16   ld   e,4            ; suppress up to 4 leading zeros
+prdec_u16   push af
+            push bc
+            push de
+            push hl
+
+            ld   e,4            ; suppress up to 4 leading zeros
             ld   bc,-10000      ; -10^5
             call .digit
             ld   bc,-1000       ; -10^4
@@ -17,7 +22,12 @@ prdec_u16   ld   e,4            ; suppress up to 4 leading zeros
             ld   c,-10          ; -10^2 (B was set to $FF above)
             call .digit
             ld   c,b            ; -10^1 (because B is still $FF)
-            ;   fallthrough into subroutine returns to caller when done
+            call .digit
+            pop  hl
+            pop  de
+            pop  bc
+            pop  af
+            ret
             ;
 .digit      ld   a,-1           ; count of subtractions
 .sub        inc  a              ; subtract 10^x  (and affect Z flag for later)

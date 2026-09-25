@@ -1,0 +1,95 @@
+from    testmc.i8080  import  Machine
+from    src.clic.objref  import *
+import  pytest
+
+param   = pytest.mark.parametrize
+R       = Machine.Registers
+
+test_rig = '''
+            cpu  8080
+            include src/i8080/std.i80
+            include testmc/i8080/tmc/biosdef.i80
+
+            org  $400
+            include src/i8080/clic/rtok.i80
+'''
+
+####################################################################
+#   getc and ungetc
+
+class G:
+    ' getc command '
+    def __init__(self, expected):
+        self.expected = asbytes(expected)
+        self.sym = 'getc'
+        self.initregs = R(a=0xFF)
+    def test(self, m):
+        assert R(a=ord(self.expected)) == m.regs
+
+class U:
+    ' ungetc command '
+    def __init__(self, char):
+        self.char = asbytes(char)
+        self.sym = 'ungetc'
+        self.initregs = R(a=ord(self.char))
+    def test(self, m):
+        assert True         # result tested by subsequent `getc`
+
+
+@param('testname, commands', [
+   ( 'get-only',        [ G('a'), G('b'), G('\r'), G('c') ]),
+   ( 'one-unget',       [ G('a'), U('a'), G('a'), G('b') ]),
+   ( 'unget-overwrite', [ G('a'), U('a'), U('X'), G('X'), G('b') ]),
+])
+def test_getc_regular(m, R, S, loadbios, testname, commands):
+    loadbios(input=b'ab\rcd')
+    m.call(S.rtok_init)
+    for cmd in commands:
+        m.call(S[cmd.sym], cmd.initregs)
+        cmd.test(m)
+
+def test_getc_no_NUL(m, R, S, loadbios):
+    loadbios(input=b'.\x00,_\x00\x00\x00~')
+    m.call(S.rtok_init)
+    m.call(S.getc); assert R(a=ord('.')) == m.regs
+    m.call(S.getc); assert R(a=ord(',')) == m.regs
+    m.call(S.ungetc, R(a=0))
+    m.call(S.getc); assert R(a=ord('_')) == m.regs
+    m.call(S.getc); assert R(a=ord('~')) == m.regs
+
+####################################################################
+#   Tokenisation: rtok
+
+def remainder(m, inp):
+    pushback = m.byte(m.symtab.getc_buf)
+    if pushback == 0x00:
+        return inp.read()
+    else:
+        return bytes([pushback]) + inp.read()
+
+@param('tokentext, next', [    # input is tokentext+next
+    ('(',               ')'),
+    ('ab',              '    '),
+    ('ab',              '\r  '),
+    ('ab',              ')'),
+    ('ab',              '(def'),
+    ('+12345',          ' '),
+    ('-3.75e10',        ' '),
+    ('\r\n\t\v\f XX',   ' '),           # leading whitespace stripped by test
+    ('  (',             ')'),
+    # XXX test escape chars
+])
+def test_rtok(m, R, S, loadbios, tokentext, next):
+    tokentext = asbytes(tokentext)
+    next      = asbytes(next)
+    inp, _    = loadbios(input=tokentext+next)
+    m.deposit(S.tokbuf, b'\xEE'*S.tokbuflen)
+
+    m.call(S.rtok)
+    print(m.hexdump(S.tokbuf, S.tokbuflen+1))
+
+    expected = tokentext.lstrip() + b'\xEE'
+    assert [                        expected,              next] \
+        == [m.bytes(S.tokbuf, len(expected)), remainder(m, inp)]
+
+# XXX test token too long error

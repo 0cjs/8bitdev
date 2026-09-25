@@ -18,6 +18,7 @@ repl
             include src/i8080/pr/str.i80
 
             include src/i8080/clic/rform.i80
+            include src/i8080/clic/rtok.i80
             include src/i8080/clic/qtok.i80
             include src/i8080/arith.i80
             include src/i8080/qhex.i80

@@ -1,0 +1,136 @@
+;   i8080/clic/rtok.i80 - read (ASCII) tokens
+;
+;   Requires: rdchar
+
+TAB         equ     $09
+LF          equ     $0A
+VT          equ     $0B
+FF          equ     $0C
+CR          equ     $0D
+SPACE       equ     ' '
+
+rtok_init   xor  a,a
+            ld   (getc_buf),a
+            ret
+
+; ----------------------------------------------------------------------
+;   Character Reads
+
+;   ♠A ♡* ┃ Tokenizer character read. Return in A the last char pushed back
+;   into the input queue by `ungetc`, if there is one, otherwise read and
+;   return the next char from the console. NUL is always ignored, never
+;   returned.
+getc        ld   a,(getc_buf)
+            or   a,a
+            jp   NZ,.bufret
+-           call rdchar
+            or   a,a            ; NUL?
+            jp   Z,-            ;   yes: ignore and read again
+            ret
+            ;
+.bufret     push af             ; save last unget char
+            xor  a,a
+            ld   (getc_buf),a   ; clear unget
+            pop  af
+            ret
+
+;   ♠A ♡AF* ┃ Tokenizer character pushback. Make A the next char to be
+;   returned by `getc`. This wipes out any previous `ungetc`'d character,
+;   if present. Nor is there any check that A contains the character last
+;   read. It is not possible to `ungetc` the NUL ($00) character; `getc`
+;   never returns NUL.
+ungetc      ld   (getc_buf),a
+            ret
+
+; ----------------------------------------------------------------------
+;   Token Reads
+;
+;   This works along the lines of the Common Lisp reader algorithm[1],
+;   except that for us the "macro chars"[2] are only about terminating
+;   the token; other code takes care of determining how to parse the
+;   returned token.
+;
+;   Currently the terminating chars are just `(` and `)` as well as
+;   whitespace. This obviously needs to be reviewed/expanded.
+;
+;   Terminating characters that _start_ a token also immediately terminate
+;   that token; i.e., a single termination char is itself a token. This
+;   also needs to be reviewed as our rules for termination become more
+;   complex.
+;
+;   [1]: https://novaspec.org/cl/2_2_Reader_Algorithm#sec_2_2
+;   [2]: https://novaspec.org/cl/2_1_Character_Syntax#sec_2_1_4
+;   [3]: https://novaspec.org/cl/f_read
+
+;   ♠ACHL ♣DE ♡B  ┃ Read a token, depositing it in `tokbuf`. Returns:
+;     • HL tokbuf, start of token read (for convenience of caller)
+;     • C  length of token read
+;     • A  terminating char, either the character not read but pushed
+;        back for the next read or the first char read if the first char
+;        is a terminating char
+;
+;   This expects that the read point is at the character that terminated
+;   any previous token. Leading whitespace is read and skipped, and then
+;   either a single termination character or a sequence of characters up to
+;   (but not including) a termination character is read into the buffer at
+;   HL. The terminating character is always returned in A, whether or not
+;   it is also returned in the buffer.
+;
+;   • XXX should we support backspace/DEL, ^W, etc?
+;   • XXX Signal error if it's longer than tokbuflen. (We consume the
+;     remainder anyway?)
+;   • XXX In long run, allocate tokbuf on heap, w/dynamic len?
+;   • XXX Make DE return part of contract?
+;
+rtok        ld   hl,tokbuf
+            ld   d,h            ; we deposit next char in (DE)
+            ld   e,l
+            ld   c,0            ; read 0 length so far
+.firstchar  call getc
+            call wspQ           ; leading whitespace?
+            jp   Z,.firstchar   ;   yes: ignore
+            ld   (de),a
+            inc  de
+            inc  c
+            call termcharQ      ; first char is a termchar
+            ret  Z              ;   yes: it's a token itself and we're done
+            ;   Continue collecting chars until we hit a termchar.
+            ;   (XXX or the token gets too long....)
+.nextchars  call getc
+            call termcharQ      ; done with token?
+            call Z,ungetc       ;   yes: push back terminating char (this is
+            ret  Z              ;      `read-preserving-whitespace`!) and ret
+            ld   (de),a
+            inc  de
+            inc  c              ; XXX no check for run out of buffer length!
+            jp   .nextchars
+
+;   ♠A ♡* ┃ Return Z=1 if A terminates a token: (, ), whitespace.
+termcharQ   cp   '('
+            ret  Z
+            cp   ')'
+            ret  Z
+            ; fallthrough
+
+;   ♠A ♡* ┃ Return Z=1 if A is whitespace: TAB, LF, VT, FF, CR, Space.
+wspQ        cp   TAB
+            ret  Z
+            cp   LF
+            ret  Z
+            cp   VT
+            ret  Z
+            cp   FF
+            ret  Z
+            cp   CR
+            ret  Z
+            cp   SPACE
+            ret  Z
+            ret
+
+; ----------------------------------------------------------------------
+;   Storage
+;   XXX This needs to go into a RAM area
+
+getc_buf    ds   1              ; ; last `ungetc`'d char or $00 for no char.
+tokbuflen   equ  32
+tokbuf      ds   tokbuflen

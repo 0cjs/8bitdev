@@ -32,6 +32,7 @@ fatal_nomem halt
 
 def test_form_err_close(m, R, S, loadbios):
     inp, _    = loadbios(input=b')')
+    m.call(S.rtok_init); m.call(S.hconsini)
     m.call(S.rform, R(C=0, de=0xFFFF))
     assert R(C=1) == m.regs
 
@@ -50,6 +51,7 @@ def test_form_err_close(m, R, S, loadbios):
 def test_form_ok_atom(m, R, S, loadbios, form, atom):
     inp, _    = loadbios(input=asbytes(form))
     print(f'form={form!r} atom={atom}')
+    m.call(S.rtok_init); m.call(S.hconsini)
     m.call(S.rform, R(C=1, de=0xFFFF))
     assert R(C=0, de=atom) == m.regs
 
@@ -68,7 +70,7 @@ c  = s1('c'); c0 = s2('c0'); c1 = s2('c1'); d  = s1('d')
 def test_form_ok_cons(m, R, S, loadbios, listcontents, expected):
     inp, _    = loadbios(input=asbytes(listcontents + ')'))
     print(f'({listcontents})')
-    m.call(S.hconsini)
+    m.call(S.rtok_init); m.call(S.hconsini)
     m.call(S.rcontlist, R(C=1, de=0xFFFF), trace=0)
     print(m.regs); hconsprint(m, m.de, 5)
    #print(); hconsdump(m, m.word(S.hcons_ptop))

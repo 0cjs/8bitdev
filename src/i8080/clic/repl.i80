@@ -1,6 +1,6 @@
 ;   repl.i80 - CLIC Read/Evaluate/Print Loop
 
-repl
+repl        call rtok_init
             call hconsini
 .loop       ld   a,'_'          ; prompt
             call prchar

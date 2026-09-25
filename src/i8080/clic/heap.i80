@@ -26,6 +26,10 @@ C_FREE      equ  $00CC      ; unallocated cons cell
 ;   ♣* ┃ Initialise the cons heap.
 ;   Warning: init of a zero-length heap will wipe memory.
 ;
+;   XXX It would be nice to have a facility where interpreter restart doesn't
+;   wipe an existing heap, if present. That could be done with a magic number
+;   at the top of the heap, e.g., (sym('cl') . sym('ic')).
+;
 hconsini    ld   hl,(hcons_pbot)
             ld   d,h            ; DE ← (hcons_pbot)
             ld   e,l

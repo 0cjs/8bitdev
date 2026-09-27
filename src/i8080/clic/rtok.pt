@@ -15,6 +15,30 @@ test_rig = '''
 '''
 
 ####################################################################
+#   Character Tests
+
+@param('name, c, z', [     # z=1 terminator; z=0 not
+    ('termcharQ', 'a', 0),
+    ('termcharQ', '1', 0),
+    ('termcharQ', '9', 0),
+    ('termcharQ', '(', 1),
+    ('termcharQ', ')', 1),
+    ('termcharQ', '\t', 1),
+    ('termcharQ', ' ', 1),
+
+    ('wspQ', '(', 0),
+    ('wspQ', ')', 0),
+    ('wspQ', '1', 0),
+    ('wspQ', '\t', 1),
+    ('wspQ', '\r', 1),
+    ('wspQ', ' ', 1),
+])
+def test_Q(m, S, name, c, z):
+    expected = R(a=ord(c), Z=z, bc=0x34BC, de=0x56DE, hl=0x789F)
+    m.call(S[name], expected.clone(a=ord(c), Z=(not z)))
+    assert expected == m.regs
+
+####################################################################
 #   getc and ungetc
 
 class G:

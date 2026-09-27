@@ -14,6 +14,31 @@ rtok_init   xor  a,a
             ret
 
 ; ----------------------------------------------------------------------
+;   Character Tests
+
+;   ♠A ♡* ┃ Return Z=1 if A terminates a token: (, ), whitespace.
+termcharQ   cp   '('
+            ret  Z
+            cp   ')'
+            ret  Z
+            ; fallthrough
+
+;   ♠A ♡* ┃ Return Z=1 if A is whitespace: TAB, LF, VT, FF, CR, Space.
+wspQ        cp   TAB
+            ret  Z
+            cp   LF
+            ret  Z
+            cp   VT
+            ret  Z
+            cp   FF
+            ret  Z
+            cp   CR
+            ret  Z
+            cp   SPACE
+            ret  Z
+            ret
+
+; ----------------------------------------------------------------------
 ;   Character Reads
 
 ;   ♠A ♡* ┃ Tokenizer character read. Return in A the last char pushed back
@@ -104,28 +129,6 @@ rtok        ld   hl,tokbuf
             inc  de
             inc  c              ; XXX no check for run out of buffer length!
             jp   .nextchars
-
-;   ♠A ♡* ┃ Return Z=1 if A terminates a token: (, ), whitespace.
-termcharQ   cp   '('
-            ret  Z
-            cp   ')'
-            ret  Z
-            ; fallthrough
-
-;   ♠A ♡* ┃ Return Z=1 if A is whitespace: TAB, LF, VT, FF, CR, Space.
-wspQ        cp   TAB
-            ret  Z
-            cp   LF
-            ret  Z
-            cp   VT
-            ret  Z
-            cp   FF
-            ret  Z
-            cp   CR
-            ret  Z
-            cp   SPACE
-            ret  Z
-            ret
 
 ; ----------------------------------------------------------------------
 ;   Storage
